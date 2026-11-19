@@ -676,6 +676,28 @@ function ForeverLogic.BuildMailPlan(lines, stock)
 	return out
 end
 
+--- Crafted items waiting to go back to the seller, clamped to what the bags still hold.
+--- toSeller[itemID] = quantity owed, bagItems[itemID] = { quantity, name }. Returns no destination
+--- without a seller or without anything to send, else one: { kind = "crafts", characterKey,
+--- mailName, items = { { itemID, quantity, name } }, totalQuantity }, items sorted by name.
+function ForeverLogic.BuildReturnToSellerPlan(toSeller, bagItems, sellerKey)
+	local dest = { kind = "crafts", characterKey = sellerKey, mailName = tostring(sellerKey or ""):match("^([^%-]+)"),
+		items = {}, totalQuantity = 0 }
+	for itemID, owed in pairs(toSeller or {}) do
+		local bag = bagItems and bagItems[itemID]
+		local quantity = math.min(tonumber(owed) or 0, bag and tonumber(bag.quantity) or 0)
+		if quantity > 0 then
+			dest.items[#dest.items + 1] = { itemID = itemID, quantity = quantity, name = bag.name }
+			dest.totalQuantity = dest.totalQuantity + quantity
+		end
+	end
+	if not sellerKey or #dest.items == 0 then
+		return {}
+	end
+	table.sort(dest.items, function(a, b) return tostring(a.name) < tostring(b.name) end)
+	return { dest }
+end
+
 -- Classic recipe reagent slot from (itemID, quantity).
 function ForeverLogic.MakeClassicReagentSlot(slotIndex, itemID, quantity)
 	itemID = tonumber(itemID)

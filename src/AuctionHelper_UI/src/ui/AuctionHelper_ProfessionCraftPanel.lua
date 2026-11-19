@@ -364,6 +364,9 @@ function ProfessionExporter:OnProfessionRecipeCraftedResult(craftingItemResultDa
 		local entry = storage[targetKey]
 		if pending.outputItemID == nil or resultItemID == nil or tonumber(resultItemID) == tonumber(pending.outputItemID) then
 			local orderID = entry and tonumber(entry.orderID)
+			if not orderID and self.NoteCraftForSeller then
+				self:NoteCraftForSeller(resultItemID or entry.outputItemID, craftedQuantity)
+			end
 			self:UpdateCraftQueueQuantity(targetKey, (tonumber(entry.quantity) or 0) - craftedQuantity)
 			if orderID and self.RemoveCraftingOrderFromWorkQueue then
 				self:RemoveCraftingOrderFromWorkQueue(orderID)
@@ -379,6 +382,9 @@ function ProfessionExporter:OnProfessionRecipeCraftedResult(craftingItemResultDa
 		for queueKey, entry in pairs(storage) do
 			if tonumber(entry and entry.outputItemID) == tonumber(resultItemID) then
 				local orderID = entry and tonumber(entry.orderID)
+				if not orderID and self.NoteCraftForSeller then
+					self:NoteCraftForSeller(resultItemID, craftedQuantity)
+				end
 				self:UpdateCraftQueueQuantity(queueKey, (tonumber(entry.quantity) or 0) - craftedQuantity)
 				if orderID and self.RemoveCraftingOrderFromWorkQueue then
 					self:RemoveCraftingOrderFromWorkQueue(orderID)

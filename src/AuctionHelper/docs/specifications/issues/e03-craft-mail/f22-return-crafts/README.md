@@ -20,11 +20,11 @@ Remember what a crafter makes from the craft queue, and let them mail it to the 
 
 ## Acceptance criteria
 
-- [ ] Crafting a queued recipe on a crafter adds the result to the list; crafting outside the queue does not
-- [ ] One click mails the listed items that are in the bags to the seller
-- [ ] The list shrinks by what was mailed and survives `/reload`
-- [ ] On the seller, or with no seller set, the row is not shown
-- [ ] Offline tests cover: clamp to bags, item gone, no seller, several items
+- [x] Crafting a queued recipe on a crafter adds the result to the list; crafting outside the queue does not
+- [x] One click mails the listed items that are in the bags to the seller
+- [x] The list shrinks by what was mailed and survives `/reload`
+- [x] On the seller, or with no seller set, the row is not shown
+- [x] Offline tests cover: clamp to bags, item gone, no seller, several items
 
 ## Verification
 
@@ -34,7 +34,7 @@ npm test
 
 In-game: queue a craft for a crafter → craft it → open the mailbox → Send → the item arrives on the seller.
 
-Confirm first that Forever fires `TRADE_SKILL_ITEM_CRAFTED_RESULT`; if it does not, find the Forever signal that ticks the queue down and hang the list on that.
+Still to confirm in-game: that Forever fires `TRADE_SKILL_ITEM_CRAFTED_RESULT`. The list is filled from the same handler that ticks the queue down, so if the queue counts down after a craft, this works too.
 
 ## Dependencies
 

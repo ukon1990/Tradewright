@@ -12,5 +12,5 @@
 | [e03-craft-mail](issues/e03-craft-mail/README.md) | Craft mail: materials to crafters, crafts and surplus back to the seller | planned |
 | [f20-ah-character](issues/e03-craft-mail/f20-ah-character/README.md) | Auction house / bank character setting | done |
 | [f21-auto-send-materials](issues/e03-craft-mail/f21-auto-send-materials/README.md) | Send materials when collected | done |
-| [f22-return-crafts](issues/e03-craft-mail/f22-return-crafts/README.md) | Send crafts back to the seller | planned |
+| [f22-return-crafts](issues/e03-craft-mail/f22-return-crafts/README.md) | Send crafts back to the seller | done |
 | [f23-keep-and-send-surplus](issues/e03-craft-mail/f23-keep-and-send-surplus/README.md) | Keep amounts and mail the surplus | planned |

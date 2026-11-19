@@ -266,6 +266,19 @@ do
 	check("Mail plan: empty", #FL.BuildMailPlan({}, {}) == 0 and #FL.BuildMailPlan(nil, nil) == 0)
 end
 
+-- Crafted items going back to the seller
+do
+	local bags = { [10] = { quantity = 3, name = "Potion" }, [11] = { quantity = 9, name = "Elixir" } }
+	local plan = FL.BuildReturnToSellerPlan({ [10] = 5, [11] = 4, [12] = 2 }, bags, "Banker-R")
+	check("Return crafts: one destination for the seller", #plan == 1 and plan[1].characterKey == "Banker-R" and plan[1].mailName == "Banker"
+		and plan[1].kind == "crafts")
+	check("Return crafts: clamped to the bags, gone items dropped", #plan[1].items == 2 and plan[1].items[1].name == "Elixir"
+		and plan[1].items[1].quantity == 4 and plan[1].items[2].quantity == 3 and plan[1].totalQuantity == 7)
+	check("Return crafts: no seller", #FL.BuildReturnToSellerPlan({ [10] = 5 }, bags, nil) == 0)
+	check("Return crafts: nothing owed or nothing in the bags", #FL.BuildReturnToSellerPlan({}, bags, "Banker-R") == 0
+		and #FL.BuildReturnToSellerPlan({ [12] = 2 }, bags, "Banker-R") == 0)
+end
+
 -- TOC sniff (Forever load markers)
 local toc = assert(io.open(root .. "/AuctionHelper.toc", "r")):read("*a")
 check("TOC Interface 16001", toc:find("Interface: 16001", 1, true) ~= nil)

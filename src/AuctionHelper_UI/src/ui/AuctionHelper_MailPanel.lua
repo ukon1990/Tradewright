@@ -85,6 +85,7 @@ local function buildMailParcels(destinations)
 				parcels[#parcels + 1] = {
 					mailName = dest.mailName,
 					characterKey = dest.characterKey,
+					kind = dest.kind,
 					items = parcelItems,
 				}
 				parcelItems = {}
@@ -146,6 +147,10 @@ function ProfessionExporter:AdvanceMailSendQueue(success)
 	end
 	if success then
 		st.sent = (st.sent or 0) + 1
+		local parcel = st.parcels and st.parcels[st.index]
+		if parcel and self.OnMailParcelSent then
+			self:OnMailParcelSent(parcel)
+		end
 	end
 	st.index = (st.index or 0) + 1
 	if st.cancel or st.index > #(st.parcels or {}) then
@@ -255,20 +260,7 @@ function ProfessionExporter:AutoSendReadyMaterials()
 end
 
 function ProfessionExporter:StartMailSendAll()
-	local plan = self.BuildShoppingMailSendPlan and self:BuildShoppingMailSendPlan() or {}
-	return self:StartMailSendQueue(plan)
-end
-
-function ProfessionExporter:StartMailSendForCharacter(characterKey)
-	characterKey = tostring(characterKey or "")
-	local plan = self.BuildShoppingMailSendPlan and self:BuildShoppingMailSendPlan() or {}
-	local filtered = {}
-	for _, dest in ipairs(plan) do
-		if tostring(dest.characterKey) == characterKey then
-			filtered[#filtered + 1] = dest
-		end
-	end
-	return self:StartMailSendQueue(filtered)
+	return self:StartMailSendQueue(self:BuildMailPanelPlan())
 end
 
 local MAIL_PAD = 12
@@ -292,7 +284,7 @@ local function createMailRow(pe, parent)
 			return
 		end
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:SetText(characterLabel(pe, self.dest.characterKey), 1, 1, 1)
+		GameTooltip:SetText("To " .. characterLabel(pe, self.dest.characterKey), 1, 1, 1)
 		local muted = pe:GetTheme().textMuted
 		for _, it in ipairs(self.dest.items or {}) do
 			GameTooltip:AddDoubleLine(it.name or "?", pe:FormatNumberGrouped(it.quantity or 0), muted.r, muted.g, muted.b, 1, 1, 1)
@@ -409,7 +401,7 @@ function ProfessionExporter:EnsureMailPanel()
 	panel.empty = self:CreateEmptyState(panel)
 	panel.empty:SetPoint("TOPLEFT", scroll, "TOPLEFT")
 	panel.empty:SetPoint("BOTTOMRIGHT", scroll, "BOTTOMRIGHT", 14, 0)
-	panel.empty:SetMessage("Nothing to mail", "Your bags hold nothing the queue needs on another character.")
+	panel.empty:SetMessage("Nothing to mail", "Your bags hold nothing to send to another character.")
 	panel.rows = {}
 	self:SkinTree(panel)
 
@@ -443,8 +435,8 @@ function ProfessionExporter:RefreshMailPanel()
 	local expanded = self:GetSetting("mail.sidePanelExpanded", true)
 	panel.applyExpanded(expanded)
 
-	panel.summary:SetText(roleText(self) .. " Listed below: reagents in your bags that your queue needs on other characters.")
-	local plan = self.BuildShoppingMailSendPlan and self:BuildShoppingMailSendPlan() or {}
+	panel.summary:SetText(roleText(self))
+	local plan = self:BuildMailPanelPlan()
 	local itemCount = 0
 	for index, dest in ipairs(plan) do
 		itemCount = itemCount + (tonumber(dest.totalQuantity) or 0)
@@ -458,10 +450,12 @@ function ProfessionExporter:RefreshMailPanel()
 		row:SetPoint("TOPRIGHT", panel.content, "TOPRIGHT", 0, -((index - 1) * MAIL_ROW))
 		row.dest = dest
 		local theme = self:GetTheme()
-		local muted, state = theme.textMuted, dest.complete and theme.success or theme.warning
-		row.name:SetText(string.format("%s |cff%02x%02x%02x· %s items|r |cff%02x%02x%02x· %s|r", characterLabel(self, dest.characterKey),
+		local muted, state = theme.textMuted, dest.complete ~= false and theme.success or theme.warning
+		local title = dest.kind == "crafts" and ("Crafted items → " .. characterLabel(self, dest.characterKey))
+			or characterLabel(self, dest.characterKey)
+		row.name:SetText(string.format("%s |cff%02x%02x%02x· %s items|r |cff%02x%02x%02x· %s|r", title,
 			muted.r * 255, muted.g * 255, muted.b * 255, self:FormatNumberGrouped(dest.totalQuantity or 0),
-			state.r * 255, state.g * 255, state.b * 255, dest.complete and "ready" or (#dest.missing .. " still missing")))
+			state.r * 255, state.g * 255, state.b * 255, dest.complete ~= false and "ready" or (#dest.missing .. " still missing")))
 		local parts = {}
 		for j = 1, math.min(3, #(dest.items or {})) do
 			local it = dest.items[j]
@@ -471,9 +465,8 @@ function ProfessionExporter:RefreshMailPanel()
 			parts[#parts + 1] = string.format("and %d more", #dest.items - 3)
 		end
 		row.items:SetText(table.concat(parts, ", "))
-		local ck = dest.characterKey
 		row.send:SetScript("OnClick", function()
-			ProfessionExporter:StartMailSendForCharacter(ck)
+			ProfessionExporter:StartMailSendQueue({ dest })
 		end)
 		row:Show()
 	end
