@@ -20,10 +20,10 @@ Let the player say which character is the auction house / bank character on each
 
 ## Acceptance criteria
 
-- [ ] The select lists only characters on the current realm and saves per realm
-- [ ] A removed or unknown character resolves to "None" instead of erroring
-- [ ] The current character's role is visible in the mailbox panel
-- [ ] Offline tests cover: chosen, unset, unknown character, other realm
+- [x] The select lists only characters on the current realm and saves per realm
+- [x] A removed or unknown character resolves to "None" instead of erroring
+- [x] The current character's role is visible in the mailbox panel
+- [x] Offline tests cover: chosen, unset, unknown character, other realm
 
 ## Verification
 

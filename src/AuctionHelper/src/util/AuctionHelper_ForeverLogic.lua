@@ -624,6 +624,16 @@ function ForeverLogic.SummarizeSales(events, now, days)
 	return { totals = totals, items = items, daily = daily, recent = recent, spanDays = spanDays }
 end
 
+--- The auction house / bank character chosen for `realm`, or nil when none is chosen or the
+--- chosen character is no longer known. sellerByRealm[realm] = characterKey ("" means none).
+function ForeverLogic.ResolveSellerCharacter(sellerByRealm, realm, knownCharacters)
+	local key = type(sellerByRealm) == "table" and realm and sellerByRealm[realm] or nil
+	if type(key) ~= "string" or key == "" or not (knownCharacters and knownCharacters[key]) then
+		return nil
+	end
+	return key
+end
+
 -- Classic recipe reagent slot from (itemID, quantity).
 function ForeverLogic.MakeClassicReagentSlot(slotIndex, itemID, quantity)
 	itemID = tonumber(itemID)

@@ -18,6 +18,17 @@ local function characterLabel(pe, characterKey)
 	return tostring(characterKey or "?"):match("^([^%-]+)") or tostring(characterKey or "?")
 end
 
+-- One line saying what this character is in the mail loop.
+local function roleText(pe)
+	local seller = pe.GetSellerCharacterKey and pe:GetSellerCharacterKey()
+	if not seller then
+		return "No auction house / bank character is set for this realm. Choose one in Settings."
+	elseif seller == pe:GetCharacterKey() then
+		return "This is your auction house / bank character."
+	end
+	return "Crafter. Your auction house / bank character is " .. characterLabel(pe, seller) .. "."
+end
+
 local function clearMailAttachments()
 	for i = 1, ATTACHMENTS_MAX do
 		if GetSendMailItem and GetSendMailItem(i) then
@@ -384,6 +395,7 @@ function ProfessionExporter:RefreshMailPanel()
 	local expanded = self:GetSetting("mail.sidePanelExpanded", true)
 	panel.applyExpanded(expanded)
 
+	panel.summary:SetText(roleText(self) .. " Listed below: reagents in your bags that your queue needs on other characters.")
 	local plan = self.BuildShoppingMailSendPlan and self:BuildShoppingMailSendPlan() or {}
 	local itemCount = 0
 	for index, dest in ipairs(plan) do

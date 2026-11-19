@@ -240,6 +240,17 @@ do
 	check("Sales: empty ledger", FL.SummarizeSales({}, now, 30).totals.sales == 0)
 end
 
+-- Auction house / bank character per realm
+do
+	local sellers = { Stormrage = "Banker-Stormrage", Draenor = "", Azralon = "Gone-Azralon" }
+	local known = { ["Banker-Stormrage"] = true, ["Smith-Stormrage"] = true, ["Alt-Draenor"] = true }
+	check("Seller: chosen character on this realm", FL.ResolveSellerCharacter(sellers, "Stormrage", known) == "Banker-Stormrage")
+	check("Seller: none chosen", FL.ResolveSellerCharacter(sellers, "Draenor", known) == nil)
+	check("Seller: realm without a choice", FL.ResolveSellerCharacter(sellers, "Ragnaros", known) == nil)
+	check("Seller: unknown character resolves to none", FL.ResolveSellerCharacter(sellers, "Azralon", known) == nil)
+	check("Seller: no settings table", FL.ResolveSellerCharacter(nil, "Stormrage", known) == nil)
+end
+
 -- TOC sniff (Forever load markers)
 local toc = assert(io.open(root .. "/AuctionHelper.toc", "r")):read("*a")
 check("TOC Interface 16001", toc:find("Interface: 16001", 1, true) ~= nil)

@@ -32,6 +32,15 @@ end
 
 -- Every setting on the tab. kind: check | select | note. Sections go in `column` 1 or 2.
 local function buildSections(pe)
+	-- The auction house / bank character is chosen per realm, from the characters known there.
+	local sellerOptions = { { value = "", label = "None" } }
+	local realmKeys, realm = {}, "?"
+	if pe.GetRealmCharacterKeys then
+		realmKeys, realm = pe:GetRealmCharacterKeys()
+	end
+	for _, characterKey in ipairs(realmKeys) do
+		sellerOptions[#sellerOptions + 1] = { value = characterKey, label = characterKey:match("^([^%-]+)") or characterKey }
+	end
 	local sections = {
 		{ column = 1, title = "General", items = {
 			{ kind = "check", label = "Show minimap button", path = "general.showMinimapButton", default = true,
@@ -64,6 +73,10 @@ local function buildSections(pe)
 				path = "auction.autoCraftEconomyRefreshOnOpen", default = false },
 			{ kind = "check", label = "Include optional reagents in the craft scan", path = "auction.craftScanIncludeOptionalSlots", default = false },
 			{ kind = "check", label = "Count the lost deposit when cancelling undercut auctions", path = "auction.repostIncludeDeposit", default = true },
+		} },
+		{ column = 2, title = "Mail", items = {
+			{ kind = "select", label = "Auction house / bank character", path = "mail.sellerByRealm." .. realm, default = "",
+				options = sellerOptions },
 		} },
 		{ column = 2, title = "Other price sources", items = {
 			{ kind = "check", label = "Use Auctionator when there is no scanned price", path = "integrations.economyUseAuctionatorFallback",
