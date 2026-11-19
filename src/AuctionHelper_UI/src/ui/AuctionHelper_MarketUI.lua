@@ -59,9 +59,109 @@ function ProfessionExporter:LayoutMarketPanel(panel)
 	local selected = self.ui.marketSelectedRow ~= nil
 	panel.detailEmpty:SetShown(not selected)
 	panel.detailBody:SetShown(selected)
-	if panel.marketDetailGraph then
-		panel.marketDetailGraph:SetWidth(DETAIL_WIDTH - PAD * 2)
+end
+
+-- One auction listing's history: optional header, key facts, hourly price graph and the recent hours.
+-- Used by the Market tab detail card and the item details window. `opts.noHeader` hides the header.
+function ProfessionExporter:CreateMarketHistoryView(parent, opts)
+	opts = opts or {}
+	local pe = self
+	local view = CreateFrame("Frame", nil, parent)
+	local top = view
+	if not opts.noHeader then
+		view.header = self:CreateDetailHeader(view)
+		view.header:SetPoint("TOPLEFT")
+		view.header:SetPoint("TOPRIGHT")
+		top = view.header
 	end
+	view.facts = self:CreateKeyValueList(view)
+	view.facts:SetPoint("TOPLEFT", top, top == view and "TOPLEFT" or "BOTTOMLEFT", 0, top == view and 0 or -10)
+	view.facts:SetPoint("TOPRIGHT", top, top == view and "TOPRIGHT" or "BOTTOMRIGHT", 0, top == view and 0 or -10)
+	local graphHeading = self:CreateHeading(view, "Hourly price")
+	graphHeading:SetPoint("TOPLEFT", view.facts, "BOTTOMLEFT", 0, -10)
+	graphHeading:SetPoint("TOPRIGHT", view.facts, "BOTTOMRIGHT", 0, -10)
+	view.graph = self:CreateTimeSeriesGraph(view, {
+		showTitle = false,
+		plotHeight = opts.plotHeight or 96,
+		emptyText = "No hourly history yet. Run a full scan at the auction house.",
+		yFormatter = function(v) return pe:FormatCopperShort(v) end,
+	})
+	view.graph:SetPoint("TOPLEFT", graphHeading, "BOTTOMLEFT", 0, -6)
+	view.historyTable = self:CreateReusableTable(view, {
+		autoFitToScroll = true,
+		emptyTitle = "No history",
+		emptyHint = "Each full scan adds an hour.",
+	})
+	view.historyTable.frame:SetPoint("TOPLEFT", view.graph, "BOTTOMLEFT", 0, -8)
+	view.historyTable.frame:SetPoint("BOTTOMRIGHT", view, "BOTTOMRIGHT", 0, 0)
+	view.historyTable:SetColumns({
+		{ id = "at", label = "Hour", width = 80, flex = 1, minWidth = 60, getText = function(p) return pe:FormatScanTimestamp(p.at) end },
+		{ id = "last", label = "Price", width = 78, justifyH = "RIGHT", getText = function(p) return pe:FormatCopperShort(p.last or p.avg or p.min) end },
+		{ id = "qty", label = "Qty", width = 52, justifyH = "RIGHT", getText = function(p) return pe:FormatNumberGrouped(p.qty or 0) end },
+	})
+	view:SetScript("OnSizeChanged", function(self, width)
+		self.graph:SetWidth(width)
+	end)
+
+	-- rowData: a Market browser row (storageKey, itemID, price, marketHigh, sampleSize, listingCount, seenAt).
+	function view:ShowRow(rowData)
+		if self.header then
+			self.header:SetItem(rowData.itemID, rowData.name or pe:GetItemDisplayName(rowData.itemID),
+				string.format("Item %s · %s", tostring(rowData.itemID or "?"), rowData.scope == "commodity" and "commodity" or "item"))
+		end
+		self.facts:SetRows({
+			{ "Lowest", pe:FormatCopperFull(rowData.price) },
+			{ "Highest", pe:FormatCopperFull(rowData.marketHigh or rowData.price) },
+			{ "Quantity", pe:FormatNumberGrouped(rowData.sampleSize or 0) },
+			{ "Listings", (tonumber(rowData.listingCount) or 0) > 0 and pe:FormatNumberGrouped(rowData.listingCount) or "-" },
+			{ "Seen", pe:FormatScanTimestamp(rowData.seenAt) },
+		})
+
+		local auction = pe:InitAuctionDB()
+		local hourly = auction and auction.history and auction.history.hourly and auction.history.hourly[rowData.storageKey]
+		local FL = pe.ForeverLogic
+		local points = FL and FL.BuildMarketHistorySeries and FL.BuildMarketHistorySeries(hourly) or {}
+		local primary, secondary, quantity, recent = {}, {}, {}, {}
+		for i = math.max(1, #points - 47), #points do
+			local p = points[i]
+			primary[#primary + 1] = { at = p.at, value = p.last or p.avg or p.min or 0, meta = { min = p.min, max = p.max } }
+			if p.min then
+				secondary[#secondary + 1] = { at = p.at, value = p.min }
+			end
+			quantity[#quantity + 1] = { at = p.at, value = p.qty or 0 }
+			table.insert(recent, 1, p)
+		end
+		for index, p in ipairs(recent) do
+			p._rowIdentity = index
+		end
+		self.historyTable:SetRows(recent)
+		self.historyTable:Refresh()
+
+		self.graph:SetSeries(primary)
+		self.graph:SetSecondarySeries(secondary)
+		self.graph:SetQuantitySeries(quantity)
+		self.graph:SetSeriesLabels("Price", "Lowest", "Listed", nil)
+		self.graph:SetTooltipBuilder(nil)
+		self.graph:Refresh()
+	end
+	return view
+end
+
+-- The Market browser row for one storage key, or nil when nothing is saved under it.
+function ProfessionExporter:GetMarketRowForStorageKey(storageKey)
+	local auction = self:InitAuctionDB()
+	if not (auction and storageKey) then
+		return nil
+	end
+	local commodity = auction.snapshot.commodities[storageKey]
+	local item = auction.snapshot.items[storageKey]
+	if not (commodity or item) then
+		return nil
+	end
+	return self.ForeverLogic.BuildMarketBrowserRows(
+		commodity and { [storageKey] = commodity } or {},
+		item and { [storageKey] = item } or {},
+		{ resolveName = function(itemID) return ProfessionExporter:GetItemDisplayName(itemID, true) end })[1]
 end
 
 function ProfessionExporter:EnsureMarketPanel(container)
@@ -165,37 +265,9 @@ function ProfessionExporter:EnsureMarketPanel(container)
 	panel.detailEmpty:SetAllPoints()
 	panel.detailEmpty:SetMessage("Select an item", "Click a row to see its prices and hourly history from past scans.")
 
-	panel.detailBody = CreateFrame("Frame", nil, panel.detailCard)
+	panel.detailBody = self:CreateMarketHistoryView(panel.detailCard)
 	panel.detailBody:SetPoint("TOPLEFT", PAD, -PAD)
 	panel.detailBody:SetPoint("BOTTOMRIGHT", -PAD, PAD)
-	panel.detailHeader = self:CreateDetailHeader(panel.detailBody)
-	panel.detailHeader:SetPoint("TOPLEFT")
-	panel.detailHeader:SetPoint("TOPRIGHT")
-	panel.detailFacts = self:CreateKeyValueList(panel.detailBody)
-	panel.detailFacts:SetPoint("TOPLEFT", panel.detailHeader, "BOTTOMLEFT", 0, -10)
-	panel.detailFacts:SetPoint("TOPRIGHT", panel.detailHeader, "BOTTOMRIGHT", 0, -10)
-	panel.graphHeading = self:CreateHeading(panel.detailBody, "Hourly price")
-	panel.graphHeading:SetPoint("TOPLEFT", panel.detailFacts, "BOTTOMLEFT", 0, -10)
-	panel.graphHeading:SetPoint("TOPRIGHT", panel.detailFacts, "BOTTOMRIGHT", 0, -10)
-	panel.marketDetailGraph = self:CreateTimeSeriesGraph(panel.detailBody, {
-		showTitle = false,
-		plotHeight = 96,
-		emptyText = "No hourly history yet. Run a full scan at the auction house.",
-		yFormatter = function(v) return ProfessionExporter:FormatCopperShort(v) end,
-	})
-	panel.marketDetailGraph:SetPoint("TOPLEFT", panel.graphHeading, "BOTTOMLEFT", 0, -6)
-	panel.historyTable = self:CreateReusableTable(panel.detailBody, {
-		autoFitToScroll = true,
-		emptyTitle = "No history",
-		emptyHint = "Each full scan adds an hour.",
-	})
-	panel.historyTable.frame:SetPoint("TOPLEFT", panel.marketDetailGraph, "BOTTOMLEFT", 0, -8)
-	panel.historyTable.frame:SetPoint("BOTTOMRIGHT", panel.detailBody, "BOTTOMRIGHT", 0, 0)
-	panel.historyTable:SetColumns({
-		{ id = "at", label = "Hour", width = 80, flex = 1, minWidth = 60, getText = function(p) return pe:FormatScanTimestamp(p.at) end },
-		{ id = "last", label = "Price", width = 78, justifyH = "RIGHT", getText = function(p) return pe:FormatCopperShort(p.last or p.avg or p.min) end },
-		{ id = "qty", label = "Qty", width = 52, justifyH = "RIGHT", getText = function(p) return pe:FormatNumberGrouped(p.qty or 0) end },
-	})
 
 	-- Table fills the rest.
 	local sortKey = self:GetSetting("market.sortColumn", "name")
@@ -338,44 +410,76 @@ function ProfessionExporter:RenderMarketDetails(rowData)
 		return
 	end
 
-	panel.detailHeader:SetItem(rowData.itemID, rowData.name or self:GetItemDisplayName(rowData.itemID),
-		string.format("Item %s · %s", tostring(rowData.itemID or "?"), rowData.scope == "commodity" and "commodity" or "item"))
-	panel.detailFacts:SetRows({
-		{ "Lowest", self:FormatCopperFull(rowData.price) },
-		{ "Highest", self:FormatCopperFull(rowData.marketHigh or rowData.price) },
-		{ "Quantity", self:FormatNumberGrouped(rowData.sampleSize or 0) },
-		{ "Listings", (tonumber(rowData.listingCount) or 0) > 0 and self:FormatNumberGrouped(rowData.listingCount) or "-" },
-		{ "Seen", self:FormatScanTimestamp(rowData.seenAt) },
-	})
-
-	local auction = self:InitAuctionDB()
-	local hourly = auction and auction.history and auction.history.hourly and auction.history.hourly[rowData.storageKey]
-	local FL = self.ForeverLogic
-	local points = FL and FL.BuildMarketHistorySeries and FL.BuildMarketHistorySeries(hourly) or {}
-	local primary, secondary, quantity, recent = {}, {}, {}, {}
-	for i = math.max(1, #points - 47), #points do
-		local p = points[i]
-		primary[#primary + 1] = { at = p.at, value = p.last or p.avg or p.min or 0, meta = { min = p.min, max = p.max } }
-		if p.min then
-			secondary[#secondary + 1] = { at = p.at, value = p.min }
-		end
-		quantity[#quantity + 1] = { at = p.at, value = p.qty or 0 }
-		table.insert(recent, 1, p)
-	end
-	for index, p in ipairs(recent) do
-		p._rowIdentity = index
-	end
-	panel.historyTable:SetRows(recent)
-	panel.historyTable:Refresh()
-
-	local graph = panel.marketDetailGraph
-	graph:SetSeries(primary)
-	graph:SetSecondarySeries(secondary)
-	graph:SetQuantitySeries(quantity)
-	graph:SetSeriesLabels("Price", "Lowest", "Listed", nil)
-	graph:SetTooltipBuilder(nil)
-	graph:Refresh()
+	panel.detailBody:ShowRow(rowData)
 	self:LayoutMarketPanel(panel)
+end
+
+local MODAL_W, MODAL_H = 760, 540
+
+local function createItemDetailsWindow(pe)
+	local theme = pe:GetTheme()
+	local header = theme.size.header
+	local frame = CreateFrame("Frame", addonName .. "ItemDetails", UIParent, "BackdropTemplate")
+	frame:SetSize(MODAL_W, MODAL_H)
+	frame:SetPoint("CENTER")
+	frame:SetFrameStrata("DIALOG")
+	frame:SetClampedToScreen(true)
+	frame:SetMovable(true)
+	frame:EnableMouse(true)
+	frame:RegisterForDrag("LeftButton")
+	frame:SetScript("OnDragStart", frame.StartMoving)
+	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+	pe:StyleWindow(frame)
+	tinsert(UISpecialFrames, frame:GetName())
+
+	local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+	close:ClearAllPoints()
+	close:SetPoint("RIGHT", frame, "TOPRIGHT", -6, -(header / 2))
+	pe:SkinCloseButton(close)
+	local title = pe:CreateText(frame, "GameFontNormalLarge", "gold")
+	title:SetPoint("LEFT", frame, "TOPLEFT", GAP, -(header / 2) - 1)
+	title:SetText("Item details")
+
+	-- Left: the item (owned, craft cost, chart, recipes). Right: its auction listing history.
+	frame.itemPane = pe:CreateItemDetailPane(frame, { metricSettingKey = "inventory.detailsGraphMetric" })
+	frame.itemPane:SetPoint("TOPLEFT", GAP, -(header + GAP))
+	frame.itemPane:SetPoint("BOTTOMLEFT", GAP, GAP)
+	frame.marketCard = pe:CreateInset(frame)
+	frame.marketCard:SetPoint("TOPLEFT", frame.itemPane, "TOPRIGHT", GAP, 0)
+	frame.marketCard:SetPoint("BOTTOMRIGHT", -GAP, GAP)
+	local heading = pe:CreateHeading(frame.marketCard, "Auction house")
+	heading:SetPoint("TOPLEFT", PAD, -PAD)
+	heading:SetPoint("TOPRIGHT", -PAD, -PAD)
+	frame.market = pe:CreateMarketHistoryView(frame.marketCard, { noHeader = true, plotHeight = 140 })
+	frame.market:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -8)
+	frame.market:SetPoint("BOTTOMRIGHT", -PAD, PAD)
+	frame.marketEmpty = pe:CreateEmptyState(frame.marketCard)
+	frame.marketEmpty:SetAllPoints()
+	frame.marketEmpty:SetMessage("No auction data", "Scan the auction house to see this item's prices and hourly history.")
+	frame:Hide()
+	return frame
+end
+
+-- Item details window: everything the Inventory and Market detail panes show, for one item.
+-- storageKey picks the auction listing; without one, the item's full-scan listing is used.
+function ProfessionExporter:ShowItemDetailsWindow(itemID, storageKey)
+	itemID = tonumber(itemID)
+	if not itemID then
+		return
+	end
+	local ui = self.ui
+	ui.itemDetailsWindow = ui.itemDetailsWindow or createItemDetailsWindow(self)
+	local frame = ui.itemDetailsWindow
+	frame:Show()
+	frame:Raise()
+	frame.itemPane:ShowItem(itemID, { selectedCharacters = {}, rangeKey = self:GetInventoryMetricRange() })
+	local row = self:GetMarketRowForStorageKey(storageKey)
+		or (self.BuildAuctionStorageKey and self:GetMarketRowForStorageKey(self:BuildAuctionStorageKey(itemID, "item", tostring(itemID))))
+	frame.market:SetShown(row ~= nil)
+	frame.marketEmpty:SetShown(row == nil)
+	if row then
+		frame.market:ShowRow(row)
+	end
 end
 
 function ProfessionExporter:RefreshMarketTab()

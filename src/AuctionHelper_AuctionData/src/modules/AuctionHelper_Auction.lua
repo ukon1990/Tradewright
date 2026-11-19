@@ -466,7 +466,7 @@ function ProfessionExporter:GetLiveAuctionSearchAggregate(itemID, keyFields)
 		local n = tonumber(C_AuctionHouse.GetNumCommoditySearchResults(itemID)) or 0
 		if n > 0 then
 			local totalQty = 0
-			local minUnit = nil
+			local minUnit, maxUnit = nil, nil
 			for i = 1, n do
 				local info = C_AuctionHouse.GetCommoditySearchResultInfo(itemID, i)
 				if info then
@@ -474,6 +474,7 @@ function ProfessionExporter:GetLiveAuctionSearchAggregate(itemID, keyFields)
 					local u = tonumber(info.unitPrice)
 					if u and u > 0 then
 						minUnit = minUnit and math.min(minUnit, u) or u
+						maxUnit = maxUnit and math.max(maxUnit, u) or u
 					end
 				end
 			end
@@ -482,7 +483,9 @@ function ProfessionExporter:GetLiveAuctionSearchAggregate(itemID, keyFields)
 					kind = "commodity",
 					itemID = itemID,
 					minUnitPrice = minUnit,
+					maxUnitPrice = maxUnit,
 					totalQuantity = math.max(1, totalQty),
+					listingCount = n,
 				}
 			end
 		end
@@ -506,29 +509,33 @@ function ProfessionExporter:GetLiveAuctionSearchAggregate(itemID, keyFields)
 				local rowKey = tostring(info.itemKey)
 				local g = groups[rowKey]
 				if not g then
-					g = { itemKey = info.itemKey, totalQuantity = 0, minUnitPrice = nil }
+					g = { itemKey = info.itemKey, totalQuantity = 0, minUnitPrice = nil, maxUnitPrice = nil, listingCount = 0 }
 					groups[rowKey] = g
 				end
 				local qty = math.max(1, tonumber(info.quantity) or 1)
 				g.totalQuantity = g.totalQuantity + qty
+				g.listingCount = g.listingCount + 1
 				local buyout = tonumber(info.buyoutAmount)
 				if buyout and buyout > 0 then
 					local unit = math.floor(buyout / qty)
 					if unit and unit > 0 then
 						g.minUnitPrice = g.minUnitPrice and math.min(g.minUnitPrice, unit) or unit
+						g.maxUnitPrice = g.maxUnitPrice and math.max(g.maxUnitPrice, unit) or unit
 					end
 				end
 			end
 		end
 	end
 	local variantList = {}
-	local totalAll = 0
-	local cheapestGlobal = nil
+	local totalAll, listingsAll = 0, 0
+	local cheapestGlobal, highestGlobal = nil, nil
 	for _, g in pairs(groups) do
 		if g.minUnitPrice and g.minUnitPrice > 0 then
 			variantList[#variantList + 1] = g
 			totalAll = totalAll + math.max(1, tonumber(g.totalQuantity) or 1)
+			listingsAll = listingsAll + g.listingCount
 			cheapestGlobal = cheapestGlobal and math.min(cheapestGlobal, g.minUnitPrice) or g.minUnitPrice
+			highestGlobal = highestGlobal and math.max(highestGlobal, g.maxUnitPrice) or g.maxUnitPrice
 		end
 	end
 	if #variantList == 0 then
@@ -542,7 +549,9 @@ function ProfessionExporter:GetLiveAuctionSearchAggregate(itemID, keyFields)
 		itemID = itemID,
 		variants = variantList,
 		cheapestUnitPrice = cheapestGlobal,
+		highestUnitPrice = highestGlobal,
 		totalQuantityAll = math.max(1, totalAll),
+		listingCountAll = listingsAll,
 	}
 end
 
@@ -2305,6 +2314,43 @@ function ProfessionExporter:TrySelectPendingAuctionBrowseResult()
 		return true
 	end
 	return false
+end
+
+-- Classic AuctionFrame: Browse tab, item name in the search box, run the browse search.
+local function searchClassicAuctionFrame(itemName)
+	local frame, nameBox = _G.AuctionFrame, _G.BrowseName
+	if not (frame and frame:IsShown() and nameBox and type(AuctionFrameBrowse_Search) == "function") then
+		return false
+	end
+	if _G.AuctionFrameTab1 and type(AuctionFrameTab_OnClick) == "function" then
+		pcall(AuctionFrameTab_OnClick, _G.AuctionFrameTab1, 1)
+	end
+	nameBox:SetText(itemName)
+	if type(CanSendAuctionQuery) == "function" and not CanSendAuctionQuery() then
+		return false
+	end
+	return pcall(AuctionFrameBrowse_Search) == true
+end
+
+--- Show an item's buy page in the open auction house (F30). Searches only; buying stays a player click.
+function ProfessionExporter:OpenItemInAuctionHouse(itemID)
+	itemID = normalizeItemID(itemID)
+	if not itemID or not self:IsAuctionHouseFrameOpen() then
+		return false
+	end
+	local desc = self:ResolveItemDescriptor(itemID)
+	local itemName = desc and desc.name
+	if not itemName or itemName == "" then
+		self:GetItemDisplayName(itemID) -- asks the client to load the item for the next click
+		self:PrintMessage("Item info is still loading. Click again in a moment.")
+		return false
+	end
+	self:PauseAuctionScanForManualBuy("dashboard_buy")
+	local ok = self:OpenAuctionBrowseSearchForItem(itemID, itemName, 1) or searchClassicAuctionFrame(itemName)
+	if not ok then
+		self:PrintMessage(string.format("Could not search the auction house for %s right now. Try again in a moment.", itemName))
+	end
+	return ok
 end
 
 function ProfessionExporter:SearchAuctionCartRow(row)
@@ -4202,8 +4248,8 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 	local selID = self:GetSelectedAuctionPanelItemID()
 	local selScanLabel = selID and self:FormatAuctionScanAge(self:GetItemLastAuctionScanAt(selID)) or "n/a"
 	if panel.footerText then
-		local footer = cooldownRemaining > 0 and ("Full scan ready in " .. formatDurationShort(cooldownRemaining))
-			or (fullDumpActive and "Full scan running")
+		local footer = fullDumpActive and "Full scan running"
+			or cooldownRemaining > 0 and ("Full scan ready in " .. formatDurationShort(cooldownRemaining))
 			or "Full scan ready"
 		panel.footerText:SetText(string.format("%s · Last full scan %s", footer, lastFullDumpLabel))
 	end
@@ -5300,9 +5346,21 @@ function ProfessionExporter:SetLastFullAuctionScanAt(ts)
 	auction.lastFullScanAt[self:GetAuctionRegionKey() .. ":" .. self:GetAuctionConnectedRealmID()] = ts
 end
 
+--- The server answers one full scan request per cooldown, so the cooldown also runs from the last
+--- request. That time is saved too: after a /reload in the middle of a scan the button shows the
+--- wait instead of starting a scan the server will not answer.
+function ProfessionExporter:SetLastFullAuctionScanRequestAt(ts)
+	local auction = self:InitAuctionDB()
+	auction.lastFullScanRequestAt = type(auction.lastFullScanRequestAt) == "table" and auction.lastFullScanRequestAt or {}
+	auction.lastFullScanRequestAt[self:GetAuctionRegionKey() .. ":" .. self:GetAuctionConnectedRealmID()] = ts
+end
+
 function ProfessionExporter:GetFullAuctionDumpCooldownRemaining()
-	local lastAt = self:GetLastFullAuctionScanAt()
-	return lastAt and math.max(0, lastAt + FULL_AH_DUMP_COOLDOWN_SEC - now()) or 0
+	local requests = self:InitAuctionDB().lastFullScanRequestAt
+	local requestedAt = type(requests) == "table"
+		and tonumber(requests[self:GetAuctionRegionKey() .. ":" .. self:GetAuctionConnectedRealmID()]) or 0
+	local lastAt = math.max(self:GetLastFullAuctionScanAt() or 0, requestedAt)
+	return math.max(0, lastAt + FULL_AH_DUMP_COOLDOWN_SEC - now())
 end
 
 function ProfessionExporter:IsFullAuctionDumpRunning()
@@ -5892,7 +5950,8 @@ function ProfessionExporter:OnFullAuctionDumpTimeout(token)
 	end
 	local startedAt = tonumber(dump.requestStartedAt) or now()
 	if (now() - startedAt) >= FULL_AH_DUMP_REQUEST_TIMEOUT_SEC then
-		self:FailFullAuctionDump("Timed out waiting for replicate results.")
+		self:FailFullAuctionDump("the server did not answer. It allows one full scan every "
+			.. formatDurationShort(FULL_AH_DUMP_COOLDOWN_SEC) .. ", so try again later")
 		return
 	end
 	C_Timer.After(FULL_AH_DUMP_REQUEST_POLL_SEC, function()
@@ -6272,6 +6331,7 @@ function ProfessionExporter:StartAuctionDump(mode)
 			if not ok then
 				return self:StartClassicFullAuctionDump(token)
 			end
+			self:SetLastFullAuctionScanRequestAt(now())
 			self:RefreshAuctionHousePanel()
 			C_Timer.After(FULL_AH_DUMP_REQUEST_POLL_SEC, function()
 				ProfessionExporter:OnFullAuctionDumpTimeout(token)
@@ -6410,7 +6470,50 @@ function ProfessionExporter:ApplyAuctionSearchResultToDatabase(itemID, keyFields
 	end
 	self:RecordLiveAuctionObservationsFromAggregate(itemID, agg, tostring(sourceTag or "manual_search"))
 	self:ApplyLiveAggregateToNativePrice(itemID, agg)
+	self:SaveLiveSearchToScanEntry(itemID, agg)
 	self:UpdateAuctionPanelRowPrice(itemID, self:BuildAuctionPanelPriceState(itemID))
+	return true
+end
+
+--- The full scan keeps one entry per item ID (item scope, key = item ID), and Market and the
+--- Gold dashboard read that entry. A live search lands under other keys, so copy its price,
+--- quantity and auction count there when they changed; otherwise only mark the entry as seen now.
+function ProfessionExporter:SaveLiveSearchToScanEntry(itemID, agg)
+	local price = tonumber(agg.minUnitPrice or agg.cheapestUnitPrice)
+	if not price or price <= 0 then
+		return false
+	end
+	local quantity = tonumber(agg.totalQuantity or agg.totalQuantityAll)
+	local listings = tonumber(agg.listingCount or agg.listingCountAll)
+	local auction = self:InitAuctionDB()
+	local storageKey = self:BuildAuctionStorageKey(itemID, "item", tostring(itemID))
+	local saved = storageKey and auction.snapshot.items[storageKey]
+	if not self.ForeverLogic.LiveSearchDiffers(saved, price, quantity, listings) then
+		saved.t = now()
+		return false
+	end
+	self:RecordAuctionObservation({
+		itemID = itemID,
+		isCommodity = false,
+		itemKey = tostring(itemID),
+		marketLow = price,
+		minBuyout = price,
+		marketHigh = tonumber(agg.maxUnitPrice or agg.highestUnitPrice),
+		sampleSize = quantity,
+		listingCount = listings,
+		source = "results_live_search",
+		seenAt = now(),
+	})
+	-- One changed item: let the dashboard rebuild now instead of waiting out the scan throttle.
+	local state = self:GetState()
+	state.marketInsightsForceRebuild = true
+	local dash = self.ui and self.ui.goldDashboard
+	if dash and dash:IsVisible() then
+		dash:Refresh()
+	end
+	if self.RefreshMarketTab then
+		self:RefreshMarketTab()
+	end
 	return true
 end
 

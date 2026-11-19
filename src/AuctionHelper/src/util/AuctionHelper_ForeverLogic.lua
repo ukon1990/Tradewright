@@ -742,4 +742,25 @@ function ForeverLogic.MakeClassicReagentSlot(slotIndex, itemID, quantity)
 	}
 end
 
+-- Where a click on a dashboard deal goes: left click shows the item details; right click opens the
+-- auction house buy page while the auction house is open, else the Market tab.
+function ForeverLogic.ResolveDealRowClick(button, ahOpen)
+	if button ~= "RightButton" then
+		return "details"
+	end
+	return ahOpen and "auction" or "market"
+end
+
+-- True when a live auction house search differs from the saved scan entry ({ p = price, q = quantity, n = auctions }).
+-- A value the search did not report (nil) is never a difference.
+function ForeverLogic.LiveSearchDiffers(saved, price, quantity, listings)
+	if type(saved) ~= "table" then
+		return true
+	end
+	local function differs(old, new)
+		return tonumber(new) ~= nil and tonumber(old) ~= tonumber(new)
+	end
+	return differs(saved.p, price) or differs(saved.q, quantity) or differs(saved.n, listings)
+end
+
 return ForeverLogic

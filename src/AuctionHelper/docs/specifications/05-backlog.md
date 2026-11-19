@@ -14,5 +14,5 @@
 | [f21-auto-send-materials](issues/e03-craft-mail/f21-auto-send-materials/README.md) | Send materials when collected | done |
 | [f22-return-crafts](issues/e03-craft-mail/f22-return-crafts/README.md) | Send crafts back to the seller | done |
 | [f23-keep-and-send-surplus](issues/e03-craft-mail/f23-keep-and-send-surplus/README.md) | Keep amounts and mail the surplus | done |
-| [e04-ah-shortcuts](issues/e04-ah-shortcuts/README.md) | AH shortcuts: from AuctionHelper lists to the auction house | planned |
-| [f30-buy-in-ah](issues/e04-ah-shortcuts/f30-buy-in-ah/README.md) | Open a deal's buy page in the auction house | planned |
+| [e04-ah-shortcuts](issues/e04-ah-shortcuts/README.md) | AH shortcuts: from AuctionHelper lists to the auction house | in progress |
+| [f30-buy-in-ah](issues/e04-ah-shortcuts/f30-buy-in-ah/README.md) | Open a deal's buy page in the auction house | in progress |

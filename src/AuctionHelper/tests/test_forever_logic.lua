@@ -307,6 +307,24 @@ do
 	check("Surplus: nothing configured", #FL.BuildSurplusPlan(bags, {}, {}, false) == 0)
 end
 
+-- Deal row click target
+check("Deal click: left click shows details, AH open or not", FL.ResolveDealRowClick("LeftButton", true) == "details" and FL.ResolveDealRowClick("LeftButton", false) == "details")
+check("Deal click: right click with AH open goes to the buy page", FL.ResolveDealRowClick("RightButton", true) == "auction")
+check("Deal click: right click with AH closed opens Market", FL.ResolveDealRowClick("RightButton", false) == "market")
+check("Deal click: right click, unknown AH state opens Market", FL.ResolveDealRowClick("RightButton", nil) == "market")
+
+-- Live search vs saved scan entry
+do
+	local saved = { p = 1850, q = 40, n = 4 }
+	check("Live search: nothing saved yet", FL.LiveSearchDiffers(nil, 1850, 40, 4))
+	check("Live search: same price, quantity, auctions", not FL.LiveSearchDiffers(saved, 1850, 40, 4))
+	check("Live search: price changed", FL.LiveSearchDiffers(saved, 1900, 40, 4))
+	check("Live search: quantity changed", FL.LiveSearchDiffers(saved, 1850, 12, 4))
+	check("Live search: auction count changed", FL.LiveSearchDiffers(saved, 1850, 40, 2))
+	check("Live search: unknown auction count is not a change", not FL.LiveSearchDiffers(saved, 1850, 40, nil))
+	check("Live search: fills in a missing auction count", FL.LiveSearchDiffers({ p = 1850, q = 40 }, 1850, 40, 3))
+end
+
 -- TOC sniff (Forever load markers)
 local toc = assert(io.open(root .. "/AuctionHelper.toc", "r")):read("*a")
 check("TOC Interface 16001", toc:find("Interface: 16001", 1, true) ~= nil)

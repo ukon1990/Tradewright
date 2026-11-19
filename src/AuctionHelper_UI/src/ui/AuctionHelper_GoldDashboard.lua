@@ -79,17 +79,18 @@ local function attachTable(pe, card, columns, opts)
 		emptyHint = opts.emptyHint,
 		onRowEnter = function(rowFrame, row)
 			if row then
-				pe:ShowItemRowTooltip(rowFrame, row.itemID, opts.tooltipPairs and opts.tooltipPairs(row), opts.hint)
+				local hint = type(opts.hint) == "function" and opts.hint() or opts.hint
+				pe:ShowItemRowTooltip(rowFrame, row.itemID, opts.tooltipPairs and opts.tooltipPairs(row), hint)
 			end
 		end,
 		onRowLeave = function()
 			GameTooltip:Hide()
 		end,
-		onRowClick = function(_, row)
+		onRowClick = function(_, row, button)
 			if not row or pe:HandleItemRowModifiedClick(row.itemID) then
 				return
 			end
-			opts.onClick(row)
+			opts.onClick(row, button)
 		end,
 	})
 	tbl:SetColumns(columns)
@@ -101,6 +102,33 @@ end
 
 local function openMarket(pe, row)
 	pe:OpenMarketItem(row.storageKey)
+end
+
+-- F30: left click shows the item details window. Right click on a deal or mover opens its auction
+-- house buy page while the auction house is open; otherwise (and always for owned items) Market.
+local function canBuyNow(pe, buyable)
+	return buyable and pe.IsAuctionHouseFrameOpen and pe.OpenItemInAuctionHouse and pe:IsAuctionHouseFrameOpen() or false
+end
+
+local function rowClickHandler(pe, buyable)
+	return function(row, button)
+		local target = pe.ForeverLogic.ResolveDealRowClick(button, canBuyNow(pe, buyable))
+		if target == "details" then
+			pe:ShowItemDetailsWindow(row.itemID, row.storageKey)
+		elseif target == "auction" then
+			pe:OpenItemInAuctionHouse(row.itemID)
+		else
+			openMarket(pe, row)
+		end
+	end
+end
+
+local function rowHint(pe, buyable)
+	return function()
+		return "Click for price history · Right-click to "
+			.. (canBuyNow(pe, buyable) and "buy at the auction house" or "open in Market")
+			.. " · Shift-click to link"
+	end
 end
 
 function ProfessionExporter:CreateGoldDashboard(parent)
@@ -135,8 +163,8 @@ function ProfessionExporter:CreateGoldDashboard(parent)
 	}, {
 		emptyTitle = "No deals right now",
 		emptyHint = "Deals show when an item is listed well below its usual price. Scan the auction house a few times to learn usual prices.",
-		hint = "Click to open in Market. Shift-click to link.",
-		onClick = function(row) openMarket(pe, row) end,
+		hint = rowHint(pe, true),
+		onClick = rowClickHandler(pe, true),
 		tooltipPairs = function(row)
 			return {
 				{ "Usual price (" .. (row.refSource or "?") .. ")", pe:FormatCopperFull(row.ref) },
@@ -193,8 +221,8 @@ function ProfessionExporter:CreateGoldDashboard(parent)
 	}, {
 		emptyTitle = "Nothing to sell yet",
 		emptyHint = "Refresh your inventory and scan the auction house to price what you own.",
-		hint = "Click to open in Market. Shift-click to link.",
-		onClick = function(row) openMarket(pe, row) end,
+		hint = rowHint(pe, false),
+		onClick = rowClickHandler(pe, false),
 		tooltipPairs = function(row)
 			return {
 				{ "You own", string.format("%s (bags %s, bank %s)", pe:FormatNumberGrouped(row.total),
@@ -241,8 +269,8 @@ function ProfessionExporter:CreateGoldDashboard(parent)
 	}, {
 		emptyTitle = "No big moves",
 		emptyHint = "Movers compare today's price and supply with the last 7 days of your scans.",
-		hint = "Click to open in Market. Shift-click to link.",
-		onClick = function(row) openMarket(pe, row) end,
+		hint = rowHint(pe, true),
+		onClick = rowClickHandler(pe, true),
 		tooltipPairs = function(row)
 			return {
 				{ "7-day average", pe:FormatCopperFull(row.avg7d) },

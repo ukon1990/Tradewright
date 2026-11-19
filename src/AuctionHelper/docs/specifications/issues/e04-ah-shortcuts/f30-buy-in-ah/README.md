@@ -20,19 +20,25 @@ While the auction house is open, clicking a row in **Deals to buy** or **Market 
   - modern frame: reuse `OpenAuctionBrowseSearchForItem(itemID, nil, 1)` so the pending selection opens the buy page
   - classic `AuctionFrame` only: Browse tab, item name in the search box, run the browse search
   - when the search cannot start (throttled, item name not cached yet): one chat line, auction house left as is
-- Gold dashboard, Deals to buy and Market movers: row click calls `OpenItemInAuctionHouse` when the auction house is open, otherwise `openMarket`
-- Row tooltip hint follows the same rule: "Click to buy at the auction house. Shift-click to link." while it is open, else the current Market hint
-- Pure decision helper in `AuctionHelper_ForeverLogic.lua`: `ResolveDealRowClick(ahOpen) -> "auction" | "market"`, with an offline test
+- Gold dashboard, Deals to buy and Market movers: left click opens the item details window; right click calls `OpenItemInAuctionHouse` when the auction house is open, otherwise `openMarket`
+- Sell what I own: left click opens the item details window; right click opens Market
+- Item details window (`ShowItemDetailsWindow`): the Inventory item pane (owned, craft cost, chart, recipes) next to the Market listing history (facts, hourly price graph, recent hours); movable, closes with Escape
+- Row tooltip hint names both clicks: "Click for price history · Right-click to buy at the auction house · Shift-click to link" while it is open, else "… Right-click to open in Market …"
+- When the buy page loads, its lowest price, quantity and auction count are saved to the item's full-scan entry (the one Market and the dashboard read) if any of them changed; otherwise the entry is only marked as seen now. The dashboard rebuilds right away.
+- Pure decision helper in `AuctionHelper_ForeverLogic.lua`: `ResolveDealRowClick(button, ahOpen) -> "details" | "auction" | "market"`, with an offline test
 
 ## Acceptance criteria
 
-- [ ] Auction house open: clicking a deal shows that item's buy page
+- [x] Auction house open: clicking a deal shows that item's buy page (now right click)
+- [ ] Left click on a deal, mover or owned item opens the item details window with the price history
 - [ ] Works for a stackable item (commodity buy page) and for a piece of gear (item buy list)
-- [ ] Auction house closed: the click opens the Market tab, as before
+- [ ] Auction house closed: right click opens the Market tab, as before
 - [ ] Shift-click still links the item in chat
 - [ ] A running full scan is paused, not broken, and the dashboard says so
 - [ ] Nothing is bought: the player still clicks Buy Now
-- [ ] Offline test of `ResolveDealRowClick`
+- [ ] After the search, the deal's price, Listed quantity and "seen" time match the auction house
+- [x] Offline test of `ResolveDealRowClick`
+- [x] Offline test of `LiveSearchDiffers`
 
 ## Verification
 
@@ -56,6 +62,5 @@ In-game on Forever:
 ## Out of scope
 
 - Buying automatically, or pre-filling a quantity
-- A separate Buy button per row
 - "Sell what I own" → Sell tab (candidate F31)
 - The Market tab's item detail pane

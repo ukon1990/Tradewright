@@ -136,8 +136,9 @@ function ProfessionExporter:GetMarketInsights(onDone)
 	if (cached and state.marketInsightsRevision == revision) or state.marketInsightsBuilding then
 		return cached
 	end
-	-- Scans bump the revision per observation; rebuild at most every 30 seconds meanwhile.
-	if cached and now() - (cached.builtAt or 0) < 30 then
+	-- Scans bump the revision per observation; rebuild at most every 30 seconds meanwhile,
+	-- unless a single live search asked for a rebuild.
+	if cached and not state.marketInsightsForceRebuild and now() - (cached.builtAt or 0) < 30 then
 		return cached
 	end
 
@@ -145,6 +146,7 @@ function ProfessionExporter:GetMarketInsights(onDone)
 	local auction = self:InitAuctionDB()
 	local keys = collectKeys(auction)
 	local byItemID, index, ts = {}, 1, now()
+	state.marketInsightsForceRebuild = nil
 	state.marketInsightsBuilding = revision
 	state.marketInsightsProgress = 0
 
