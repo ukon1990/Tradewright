@@ -265,6 +265,7 @@ end
 
 local MAIL_PAD = 12
 local MAIL_ROW = 48
+local ROW_TITLES = { crafts = "Crafted items to ", surplus = "Surplus to " }
 
 -- One destination: character and item count, the first items, and a Send button.
 local function createMailRow(pe, parent)
@@ -388,8 +389,19 @@ function ProfessionExporter:EnsureMailPanel()
 	panel.summary:SetPoint("TOPLEFT", panel, "TOPLEFT", MAIL_PAD, -(theme.size.header + 1 + MAIL_PAD))
 	panel.summary:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -MAIL_PAD, -(theme.size.header + 1 + MAIL_PAD))
 	panel.summary:SetText("Reagents in your bags that your queue needs on other characters.")
+	-- Crafters only: what else goes to the seller. Collapses to nothing on the seller.
+	panel.surplusRow = CreateFrame("Frame", nil, panel)
+	panel.surplusRow:SetPoint("TOPLEFT", panel.summary, "BOTTOMLEFT", 0, -8)
+	panel.surplusRow:SetPoint("TOPRIGHT", panel.summary, "BOTTOMRIGHT", 0, -8)
+	panel.keepBtn = self:CreateButton(panel.surplusRow, "Keep…", function() pe:ShowMailKeepWindow() end, { small = true })
+	panel.keepBtn:SetPoint("RIGHT")
+	panel.sendOthers = self:CreateCheckbox(panel.surplusRow, "Send other sellable items", function(checked)
+		pe:SetMailSendOthers(checked)
+		pe:RefreshMailPanel()
+	end)
+	panel.sendOthers:SetPoint("LEFT")
 	local scroll = CreateFrame("ScrollFrame", addonName .. "MailPanelScroll", panel, "UIPanelScrollFrameTemplate")
-	scroll:SetPoint("TOPLEFT", panel.summary, "BOTTOMLEFT", 0, -10)
+	scroll:SetPoint("TOPLEFT", panel.surplusRow, "BOTTOMLEFT", 0, -10)
 	scroll:SetPoint("BOTTOMRIGHT", panel.progressRow, "TOPRIGHT", -14, 10)
 	panel.scroll = scroll
 	panel.content = CreateFrame("Frame", nil, scroll)
@@ -436,6 +448,13 @@ function ProfessionExporter:RefreshMailPanel()
 	panel.applyExpanded(expanded)
 
 	panel.summary:SetText(roleText(self))
+	local seller = self:GetSellerCharacterKey()
+	local crafter = seller ~= nil and seller ~= self:GetCharacterKey()
+	panel.surplusRow:SetShown(crafter)
+	panel.surplusRow:SetHeight(crafter and 26 or 1)
+	if crafter then
+		panel.sendOthers.check:SetChecked(self:GetMailSendOthers())
+	end
 	local plan = self:BuildMailPanelPlan()
 	local itemCount = 0
 	for index, dest in ipairs(plan) do
@@ -451,8 +470,7 @@ function ProfessionExporter:RefreshMailPanel()
 		row.dest = dest
 		local theme = self:GetTheme()
 		local muted, state = theme.textMuted, dest.complete ~= false and theme.success or theme.warning
-		local title = dest.kind == "crafts" and ("Crafted items → " .. characterLabel(self, dest.characterKey))
-			or characterLabel(self, dest.characterKey)
+		local title = (ROW_TITLES[dest.kind] or "") .. characterLabel(self, dest.characterKey)
 		row.name:SetText(string.format("%s |cff%02x%02x%02x· %s items|r |cff%02x%02x%02x· %s|r", title,
 			muted.r * 255, muted.g * 255, muted.b * 255, self:FormatNumberGrouped(dest.totalQuantity or 0),
 			state.r * 255, state.g * 255, state.b * 255, dest.complete ~= false and "ready" or (#dest.missing .. " still missing")))
@@ -489,6 +507,9 @@ function ProfessionExporter:RefreshMailPanel()
 	end
 	panel.sendAllBtn:SetEnabled(#plan > 0 and not sending)
 	panel.cancelBtn:SetEnabled(st.running == true)
+	if self.RefreshMailKeepWindow then
+		self:RefreshMailKeepWindow()
+	end
 end
 
 function ProfessionExporter:OnMailFrameShow()

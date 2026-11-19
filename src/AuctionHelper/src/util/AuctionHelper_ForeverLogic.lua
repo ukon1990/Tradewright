@@ -698,6 +698,26 @@ function ForeverLogic.BuildReturnToSellerPlan(toSeller, bagItems, sellerKey)
 	return { dest }
 end
 
+--- What a character can spare from its bags. bagItems[itemID] = { quantity, quality, sellable, name };
+--- keep[itemID] is how many this character keeps; held[itemID] is how many are already spoken for
+--- (its own queued crafts, other mail rows). An item with a keep amount is spare above keep + held;
+--- one without is spare above held only when `sendOthers` is on. Never spare: items that are not
+--- sellable or are poor quality. Returns { { itemID, quantity, name } } sorted by name.
+function ForeverLogic.BuildSurplusPlan(bagItems, keep, held, sendOthers)
+	local items = {}
+	for itemID, bag in pairs(bagItems or {}) do
+		local kept = tonumber(keep and keep[itemID])
+		if bag.sellable and (tonumber(bag.quality) or 0) >= 1 and (kept or sendOthers) then
+			local quantity = (tonumber(bag.quantity) or 0) - (kept or 0) - (tonumber(held and held[itemID]) or 0)
+			if quantity > 0 then
+				items[#items + 1] = { itemID = itemID, quantity = quantity, name = bag.name }
+			end
+		end
+	end
+	table.sort(items, function(a, b) return tostring(a.name) < tostring(b.name) end)
+	return items
+end
+
 -- Classic recipe reagent slot from (itemID, quantity).
 function ForeverLogic.MakeClassicReagentSlot(slotIndex, itemID, quantity)
 	itemID = tonumber(itemID)

@@ -22,12 +22,12 @@ Close the loop between the auction house character and the crafters. Materials b
 
 ## Acceptance criteria
 
-- [ ] An auction house character can be chosen per realm and is used by the mail plan
+- [x] An auction house character can be chosen per realm and is used by the mail plan
 - [ ] Opening the mailbox on the auction house character mails every complete material set without a click
-- [ ] Queued crafts made on a crafter can be mailed to the seller with one click
-- [ ] A character's surplus above its keep amounts can be mailed to the seller with one click, without touching materials it still needs
+- [x] Queued crafts made on a crafter can be mailed to the seller with one click
+- [x] A character's surplus above its keep amounts can be mailed to the seller with one click, without touching materials it still needs
 - [ ] Retail and Forever both work, or the feature is cleanly hidden where the mail APIs are missing
-- [ ] `npm test` passes
+- [x] `npm test` passes
 
 ## Verification
 

@@ -1717,7 +1717,6 @@ function ProfessionExporter:EnsureAuctionReserveWindow()
 	f.itemName:SetPoint("RIGHT", f, "RIGHT", -12, 0)
 	f.label = self:CreateText(f, "GameFontHighlightSmall", "textMuted")
 	f.label:SetPoint("TOPLEFT", f.icon, "BOTTOMLEFT", 0, -10)
-	f.label:SetText("Never post below this many")
 	f.input = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
 	f.input:SetHeight(22)
 	f.input:SetPoint("TOPLEFT", f.label, "BOTTOMLEFT", 6, -6)
@@ -1727,8 +1726,8 @@ function ProfessionExporter:EnsureAuctionReserveWindow()
 	f.input:SetMaxLetters(6)
 	self:SkinEditBox(f.input)
 	local function accept()
-		if f.itemID then
-			pe:ApplyAuctionReserve(f.itemID, f.input:GetText())
+		if f.itemID and f.onAccept then
+			f.onAccept(f.itemID, f.input:GetText())
 		end
 		f:Hide()
 	end
@@ -1753,18 +1752,27 @@ function ProfessionExporter:ShowAuctionReservePrompt(itemID)
 		self:PrintMessage("Select an auction row first.")
 		return
 	end
+	local current = tonumber((self:GetAuctionItemRule(itemID) or {}).reserveQty) or 0
+	self:ShowKeepPrompt(itemID, "Never post below this many", current, self.ui and self.ui.auctionPanel, function(id, text)
+		self:ApplyAuctionReserve(id, text)
+	end)
+end
+
+--- The "Keep in bags" prompt for any keep rule: `label` under the item, the `current` amount, shown
+--- over `anchor` when that is visible, and `onAccept(itemID, text)` when the player confirms.
+function ProfessionExporter:ShowKeepPrompt(itemID, label, current, anchor, onAccept)
 	local f = self:EnsureAuctionReserveWindow()
 	f.itemID = itemID
+	f.onAccept = onAccept
+	f.label:SetText(label)
 	f.icon:SetItem(itemID)
 	local _, color = self:GetItemLook(itemID)
 	f.itemName:SetText(self:GetItemDisplayName(itemID))
 	f.itemName:SetTextColor(color.r, color.g, color.b)
-	local current = tonumber((self:GetAuctionItemRule(itemID) or {}).reserveQty) or 0
 	f.input:SetText(current > 0 and tostring(current) or "")
 	f:ClearAllPoints()
-	local panel = self.ui and self.ui.auctionPanel
-	if panel and panel:IsShown() then
-		f:SetPoint("TOPLEFT", panel, "TOPLEFT", 40, -120)
+	if anchor and anchor:IsShown() then
+		f:SetPoint("TOPLEFT", anchor, "TOPLEFT", 40, -120)
 	else
 		f:SetPoint("CENTER")
 	end

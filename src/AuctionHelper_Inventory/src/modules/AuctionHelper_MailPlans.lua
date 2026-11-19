@@ -84,8 +84,69 @@ function ProfessionExporter:NoteCraftForSeller(itemID, quantity)
 	toSeller[itemID] = (toSeller[itemID] or 0) + quantity
 end
 
+--- Whether this character also mails items without a keep amount to the seller.
+function ProfessionExporter:GetMailSendOthers()
+	return characterStore(self, "surplusByCharacter").sendOthers == true
+end
+
+function ProfessionExporter:SetMailSendOthers(enabled)
+	characterStore(self, "surplusByCharacter").sendOthers = enabled == true or nil
+end
+
+--- How many of an item this character keeps; nil or 0 clears the keep amount.
+function ProfessionExporter:SetMailKeepAmount(itemID, quantity)
+	quantity = math.floor(tonumber(quantity) or 0)
+	characterStore(self, "keepByCharacter")[tonumber(itemID)] = quantity > 0 and quantity or nil
+end
+
+--- Rows for the keep-amounts window: every sellable, non-trash item in the bags, plus items that
+--- have a keep amount but are not in the bags right now.
+function ProfessionExporter:BuildMailKeepRows()
+	local keep = characterStore(self, "keepByCharacter")
+	local rows, seen = {}, {}
+	for itemID, bag in pairs(self:GetBagItems()) do
+		if bag.sellable and bag.quality >= 1 then
+			seen[itemID] = true
+			rows[#rows + 1] = { itemID = itemID, name = bag.name, quantity = bag.quantity, keep = keep[itemID] }
+		end
+	end
+	for itemID, quantity in pairs(keep) do
+		if not seen[itemID] then
+			rows[#rows + 1] = { itemID = itemID, name = self:GetItemDisplayName(itemID), quantity = 0, keep = quantity }
+		end
+	end
+	return rows
+end
+
+-- Materials this character still needs for its own queued crafts, plus everything the other mail
+-- rows already take: none of it is surplus.
+local function heldQuantities(pe, plan)
+	local held = {}
+	local function hold(itemID, quantity)
+		held[itemID] = (held[itemID] or 0) + (tonumber(quantity) or 0)
+	end
+	local current = pe:GetCharacterKey()
+	local orders = pe.BuildCraftingOrderWorkQueueSummary and pe:BuildCraftingOrderWorkQueueSummary() or {}
+	for _, lines in ipairs({ pe:BuildCraftQueueSummary().reagentLines or {}, orders.reagentLines or {} }) do
+		for _, line in ipairs(lines) do
+			for _, source in ipairs(line.sources or {}) do
+				if source.characterKey == current then
+					hold(tonumber(line.itemID), source.quantity)
+				end
+			end
+		end
+	end
+	for _, dest in ipairs(plan) do
+		for _, item in ipairs(dest.items) do
+			hold(item.itemID, item.quantity)
+		end
+	end
+	return held
+end
+
 --- Everything the mailbox panel can send from this character: materials for crafters, and on a
---- crafter the crafted items owed to the seller. Each destination carries its `kind`.
+--- crafter the crafted items owed to the seller and the surplus above its keep amounts. Each
+--- destination carries its `kind`.
 function ProfessionExporter:BuildMailPanelPlan()
 	local plan = self:BuildShoppingMailSendPlan()
 	for _, dest in ipairs(plan) do
@@ -104,6 +165,16 @@ function ProfessionExporter:BuildMailPanelPlan()
 	end
 	for _, dest in ipairs(self.ForeverLogic.BuildReturnToSellerPlan(toSeller, bags, seller)) do
 		plan[#plan + 1] = dest
+	end
+	local surplus = self.ForeverLogic.BuildSurplusPlan(bags, characterStore(self, "keepByCharacter"), heldQuantities(self, plan),
+		self:GetMailSendOthers())
+	if #surplus > 0 then
+		local total = 0
+		for _, item in ipairs(surplus) do
+			total = total + item.quantity
+		end
+		plan[#plan + 1] = { kind = "surplus", characterKey = seller, mailName = seller:match("^([^%-]+)") or seller,
+			items = surplus, totalQuantity = total }
 	end
 	return plan
 end
