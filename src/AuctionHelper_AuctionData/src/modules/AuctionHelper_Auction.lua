@@ -2929,7 +2929,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	panel.progressText:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 44)
 	panel.progressText:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 44)
 	panel.progressText:SetJustifyH("LEFT")
-	panel.progressText:SetText("Idle")
+	panel.progressText:SetText("")
 
 	panel.progressBar = CreateFrame("StatusBar", nil, panel)
 	panel.progressBar:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 24)
@@ -4314,11 +4314,8 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 			local verb = scanPaused and "Paused" or "Scanning"
 			panel.progressText:SetText(string.format("%s %d of %d", verb, math.min(done, total), total))
 			panel.progressText:Show()
-		elseif cooldownRemaining > 0 then
-			panel.progressText:SetText("")
-			panel.progressText:Hide()
 		else
-			panel.progressText:SetText("Idle")
+			panel.progressText:SetText("")
 			panel.progressText:Hide()
 		end
 	end
@@ -5751,6 +5748,9 @@ function ProfessionExporter:FinishFullAuctionDump()
 	self:RefreshAuctionHousePanel()
 	if self.RefreshMarketTab then
 		self:RefreshMarketTab()
+	end
+	if self.RefreshShellStatus then
+		self:RefreshShellStatus()
 	end
 end
 

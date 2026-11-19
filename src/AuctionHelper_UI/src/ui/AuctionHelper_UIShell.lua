@@ -438,9 +438,17 @@ function ProfessionExporter:RefreshShellStatus()
 	local state = self:GetState()
 	local currentKey = self:GetCharacterKey()
 	local charData = self.db and self.db.characters and self.db.characters[currentKey]
-	local scanState = state.scanInProgress and ("Scanning " .. tostring(state.currentProfession and state.currentProfession.professionName or "professions") .. "…") or "Idle"
+	-- Left: what is running now, else how fresh the AH prices are.
+	local leftText = ""
+	if state.scanInProgress then
+		leftText = "Scanning " .. tostring(state.currentProfession and state.currentProfession.professionName or "professions") .. "…"
+	elseif self.GetLastFullAuctionScanAt then
+		local lastScanAt = self:GetLastFullAuctionScanAt()
+		leftText = lastScanAt and ("Prices from full AH scan " .. self:FormatScanTimestamp(lastScanAt))
+			or "No full AH scan yet · open the auction house to get prices"
+	end
 	local stored = self:TableCount(self.db and self.db.characters or {})
-	ui.mainFrame.statusText:SetText(scanState)
+	ui.mainFrame.statusText:SetText(leftText)
 	local text = string.format("%d %s stored", stored, stored == 1 and "character" or "characters")
 	-- Profession scan time only matters when this character has a profession to scan.
 	if #self:GetPlayerProfessions() > 0 then
