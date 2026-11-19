@@ -32,4 +32,8 @@ function AuctionHelper:PrintMessage(message)
 	DEFAULT_CHAT_FRAME:AddMessage("|cffffd100AuctionHelper|r: " .. tostring(message))
 end
 
+--- The debug log lives in the Professions module, which loads after this one and after Auction
+--- Data. Until it replaces this, log calls made while those modules start up do nothing.
+function AuctionHelper:DebugLog() end
+
 addonTable = AuctionHelper

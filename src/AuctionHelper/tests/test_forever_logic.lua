@@ -106,6 +106,27 @@ local byPrice = FL.BuildMarketBrowserRows(
 )
 check("Market sort price desc default", #byPrice == 2 and byPrice[1].price == 100 and byPrice[2].price == 50)
 
+-- One row per item ID: a commodity entry, the full scan's entry and variant entries share an item
+do
+	local one = FL.BuildMarketBrowserRows(
+		{ ["EU:4306"] = { p = 197, q = 26930, t = 100, s = "commodity_results_event" }, ["EU:9"] = { p = 5, q = 1, t = 300, s = "queue" } },
+		{
+			["EU:1:4306"] = { p = 191, q = 41323, n = 1273, t = 200, s = "replicate_full" },
+			["EU:1:9"] = { p = 7, q = 3, n = 2, t = 200, s = "replicate_full" },
+			["EU:1:77:16:0:0"] = { p = 30, q = 2, t = 400, s = "native_refresh_itemkey" },
+			["EU:1:77"] = { p = 30, q = 5, n = 5, t = 400, s = "results_live_search" },
+			["EU:1:77:30:0:0"] = { p = 90, q = 3, t = 400, s = "native_refresh_itemkey" },
+		},
+		{ sortKey = "name", resolveName = function(id) return "Item" .. tostring(id) end }
+	)
+	local byID = {}
+	for _, row in ipairs(one) do byID[row.itemID] = row end
+	check("Market: one row per item ID", #one == 3)
+	check("Market: newer full scan beats an older commodity entry", byID[4306].storageKey == "EU:1:4306" and byID[4306].listingCount == 1273)
+	check("Market: a newer live search beats an older scan", byID[9].storageKey == "EU:9" and byID[9].price == 5)
+	check("Market: same time, the scan entry beats variants", byID[77].storageKey == "EU:1:77" and byID[77].sampleSize == 5)
+end
+
 do
 	local info = {
 		[2589] = { classLabel = "Trade Goods", subclassLabel = "Cloth", quality = 1 },

@@ -348,7 +348,21 @@ local function compareMarketRows(a, b, sortKey, sortAsc)
 	return left > right
 end
 
---- Build Market browser rows from snapshot roots.
+-- One item can be saved under several keys: the full scan's entry per item ID, a commodity entry
+-- from a live search, and one entry per variant (item level, suffix). True when `row` should be
+-- shown instead of `other`: the newer one, and on a tie the full scan's entry (the shortest item key).
+local function marketRowWins(row, other)
+	local seen, otherSeen = row.seenAt or 0, other.seenAt or 0
+	if seen ~= otherSeen then
+		return seen > otherSeen
+	end
+	if row.scope ~= other.scope then
+		return row.scope == "item"
+	end
+	return #row.storageKey < #other.storageKey
+end
+
+--- Build Market browser rows from snapshot roots, one row per item ID (see marketRowWins).
 --- resolveName(itemID) optional; query is plain substring (lowered by caller or here).
 function ForeverLogic.BuildMarketBrowserRows(commodities, items, options)
 	options = options or {}
@@ -362,17 +376,15 @@ function ForeverLogic.BuildMarketBrowserRows(commodities, items, options)
 		end
 	end
 
-	local rows = {}
+	local byItemID = {}
 	local function absorb(root, scope)
 		for storageKey, entry in pairs(root or {}) do
 			local fields = ForeverLogic.NormalizeMarketSnapshotFields(entry)
 			local itemID = ForeverLogic.ParseItemIDFromStorageKey(storageKey)
 			if fields and itemID then
-				local name = (type(resolveName) == "function" and resolveName(itemID)) or ("#" .. tostring(itemID))
 				local row = {
 					storageKey = storageKey,
 					itemID = itemID,
-					name = name,
 					scope = scope,
 					price = fields.price,
 					marketHigh = fields.marketHigh or fields.price,
@@ -381,14 +393,21 @@ function ForeverLogic.BuildMarketBrowserRows(commodities, items, options)
 					seenAt = fields.seenAt,
 					source = fields.source,
 				}
-				if marketRowMatchesQuery(row, query) then
-					rows[#rows + 1] = row
+				if not byItemID[itemID] or marketRowWins(row, byItemID[itemID]) then
+					byItemID[itemID] = row
 				end
 			end
 		end
 	end
 	absorb(commodities, "commodity")
 	absorb(items, "item")
+	local rows = {}
+	for itemID, row in pairs(byItemID) do
+		row.name = (type(resolveName) == "function" and resolveName(itemID)) or ("#" .. tostring(itemID))
+		if marketRowMatchesQuery(row, query) then
+			rows[#rows + 1] = row
+		end
+	end
 	table.sort(rows, function(a, b)
 		return compareMarketRows(a, b, sortKey, sortAsc)
 	end)
