@@ -16,4 +16,4 @@
 | [f23-keep-and-send-surplus](issues/e03-craft-mail/f23-keep-and-send-surplus/README.md) | Keep amounts and mail the surplus | done |
 | [e04-ah-shortcuts](issues/e04-ah-shortcuts/README.md) | AH shortcuts: from AuctionHelper lists to the auction house | in progress |
 | [f30-buy-in-ah](issues/e04-ah-shortcuts/f30-buy-in-ah/README.md) | Open a deal's buy page in the auction house | in progress |
-| [e05-table-paging](issues/e05-table-paging/README.md) | Paging in the shared table | in review |
+| [e05-table-paging](issues/e05-table-paging/README.md) | Paging in the shared table | implemented, in-game check pending |

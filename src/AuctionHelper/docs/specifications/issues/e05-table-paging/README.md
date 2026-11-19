@@ -18,19 +18,20 @@ Long lists are no longer cut off. The shared table shows one page at a time and 
   - `maxRows` becomes the page size; `RefreshRows` shows the current page's slice of the sorted rows
   - `SetPage(page)` to move between pages
   - a pager in the footer (Prev, "Page N of M", Next), shown only when there is more than one page; the caller's right-hand footer text moves left of it
-  - the footer's left text reads "Showing A-B of N" while paged
+  - the footer's left text reads "Showing A-B of N" while paged and keeps its full width; the caller's text is cut short first when the table is narrow
+  - `SetRows` updates the footer, because some callers set their footer text before the rows
 - No change in the tabs themselves: they already hand all their rows to the table
 
 ## Acceptance criteria
 
-- [ ] A table with `maxRows` and a footer shows `maxRows` rows per page; Prev and Next move between pages; the footer reads "Showing A-B of N" and "Page P of M"
-- [ ] With everything on one page the pager is hidden and the caller's own footer text is shown
-- [ ] Sorting applies to the whole list and returns to page 1
-- [ ] Changing page scrolls back to the top
-- [ ] When a search or filter leaves fewer pages, the current page is clamped to the last one; a refresh with the same rows keeps the page
-- [ ] A table with `maxRows` but no footer still shows only the first `maxRows` rows and does not error
-- [ ] Tables without `maxRows` behave as before
-- [ ] Offline tests cover the paging maths: first, middle, short last page, clamping above and below, exact multiple, single page, no page size
+- [x] A table with `maxRows` and a footer shows `maxRows` rows per page; Prev and Next move between pages; the footer reads "Showing A-B of N" and "Page P of M"
+- [x] With everything on one page the pager is hidden and the caller's own footer text is shown
+- [x] Sorting applies to the whole list and returns to page 1
+- [x] Changing page scrolls back to the top
+- [x] When a search or filter leaves fewer pages, the current page is clamped to the last one; a refresh with the same rows keeps the page
+- [x] A table with `maxRows` but no footer still shows only the first `maxRows` rows and does not error
+- [x] Tables without `maxRows` behave as before
+- [x] Offline tests cover the paging maths: first, middle, short last page, clamping above and below, exact multiple, single page, no page size
 
 ## Verification
 
@@ -50,3 +51,4 @@ In-game: Market with more than 500 items → footer shows the pager → Next sho
 - Jumping straight to a page number
 - Returning to page 1 on every search or filter change (the page is only clamped)
 - Keyboard or mouse-wheel paging
+- Queueing the Crafts tab's price refresh for the rows of a newly opened page. It is queued on scroll, so a page change (like a sort) at the top of the list waits for the next scroll or tab refresh

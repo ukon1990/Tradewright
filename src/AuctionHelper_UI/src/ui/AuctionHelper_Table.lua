@@ -130,6 +130,9 @@ end
 function TableMixin:SetRows(rows)
 	self.rows = rows or {}
 	self:RefreshRows()
+	-- The footer shows the page position, so it follows every row change, also for callers that
+	-- set their footer text before the rows.
+	self:UpdateFooter()
 end
 
 function TableMixin:SetContext(context)
@@ -671,11 +674,11 @@ function TableMixin:RefreshRows(opts)
 	self.totalRowCount = count
 	-- maxRows is the page size. Paging needs the footer for its controls; without one only the
 	-- first page is shown.
-	local first, last
-	self.page, self.pageCount, first, last = ProfessionExporter.ForeverLogic.PageBounds(count, self.maxRows, self.pager and self.page or 1)
+	self.page, self.pageCount, self.pageFirst, self.pageLast = ProfessionExporter.ForeverLogic.PageBounds(count, self.maxRows,
+		self.pager and self.page or 1)
 	if self.pageCount > 1 then
 		local pageRows = {}
-		for index = first, last do
+		for index = self.pageFirst, self.pageLast do
 			pageRows[#pageRows + 1] = self.displayRows[index]
 		end
 		self.displayRows = pageRows
@@ -758,29 +761,30 @@ function TableMixin:UpdateFooter()
 		return
 	end
 	local pe = ProfessionExporter
-	local shown, total = #(self.displayRows or {}), self.totalRowCount or 0
-	local left = self.footerLeftOverride
+	local left, right = self.footer.left, self.footer.right
 	local paged = (self.pageCount or 1) > 1
-	if paged then
-		local first = (self.page - 1) * self.maxRows
-		left = string.format("Showing %s-%s of %s", pe:FormatNumberGrouped(first + 1), pe:FormatNumberGrouped(first + shown), pe:FormatNumberGrouped(total))
-	end
-	self.footer.left:SetText(left or "")
+	left:SetText(paged and string.format("Showing %s-%s of %s", pe:FormatNumberGrouped(self.pageFirst), pe:FormatNumberGrouped(self.pageLast),
+		pe:FormatNumberGrouped(self.totalRowCount)) or self.footerLeftOverride or "")
 	local pager = self.pager
 	if not pager then
 		return
 	end
-	-- The pager sits at the right edge while there are pages; the right-hand text makes room for it.
 	pager:SetShown(paged)
-	self.footer.right:ClearAllPoints()
+	left:ClearAllPoints()
+	right:ClearAllPoints()
+	left:SetPoint("LEFT", 8, 0)
 	if paged then
+		-- Pager at the right edge. "Showing A-B of N" keeps its full width, and the caller's text
+		-- gets what is left between the two, cut short when the table is narrow.
 		pager.label:SetText(string.format("Page %d of %d", self.page, self.pageCount))
 		pager.prev:SetEnabled(self.page > 1)
 		pager.next:SetEnabled(self.page < self.pageCount)
 		pager:SetWidth(pager.prev:GetWidth() + pager.next:GetWidth() + math.ceil(pager.label:GetStringWidth()) + 16)
-		self.footer.right:SetPoint("RIGHT", pager, "LEFT", -12, 0)
+		right:SetPoint("LEFT", left, "RIGHT", 12, 0)
+		right:SetPoint("RIGHT", pager, "LEFT", -12, 0)
 	else
-		self.footer.right:SetPoint("RIGHT", self.footer, "RIGHT", -pager.gutter, 0)
+		right:SetPoint("RIGHT", self.footer, "RIGHT", -pe:GetTheme().size.scrollGutter, 0)
+		left:SetPoint("RIGHT", right, "LEFT", -12, 0)
 	end
 end
 
@@ -873,7 +877,6 @@ function ProfessionExporter:CreateReusableTable(parent, options)
 		-- Tables with a page size get Prev / "Page N of M" / Next, shown once there is a second page.
 		if widget.maxRows then
 			local pager = CreateFrame("Frame", nil, footer)
-			pager.gutter = gutter
 			pager:SetPoint("RIGHT", -gutter, 0)
 			pager:SetHeight(footerHeight)
 			pager.next = ProfessionExporter:CreateButton(pager, "Next", function() widget:SetPage(widget.page + 1) end, { small = true })
