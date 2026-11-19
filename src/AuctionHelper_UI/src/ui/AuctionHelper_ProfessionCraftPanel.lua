@@ -560,8 +560,11 @@ function ProfessionExporter:LayoutProfessionCraftEconomyPanel(panel)
 	panel:SetFrameLevel(baseLevel + 20)
 	panel:ClearAllPoints()
 	panel:SetWidth(400)
-	panel:SetPoint("TOPLEFT", pf, "TOPRIGHT", 8, -20)
-	panel:SetPoint("BOTTOMLEFT", pf, "BOTTOMRIGHT", 8, 16)
+	-- Forever hangs its profession selector tabs off the frame's right edge; dock clear of them.
+	local sideTab = pf.ProfessionsOverviewTab
+	local x = 8 + (sideTab and math.ceil(sideTab:GetWidth()) or 0)
+	panel:SetPoint("TOPLEFT", pf, "TOPRIGHT", x, -20)
+	panel:SetPoint("BOTTOMLEFT", pf, "BOTTOMRIGHT", x, 16)
 	if panel.panelToggleBtn then
 		anchorProfessionPanelToggleButton(panel.panelToggleBtn, pf)
 	end
