@@ -365,8 +365,9 @@ function ProfessionExporter:CreateGoldDashboard(parent)
 			self.stats[4]:SetValues("Deals found", pe:FormatNumberGrouped(insights.dealCount),
 				best and string.format("Best %s below usual", string.format("%.0f%%", best.discount * 100)) or "None right now",
 				insights.dealCount > 0 and "gold" or nil)
-			local stale = not insights.lastSeenAt or time() - insights.lastSeenAt > 24 * 3600
-			self.stats[5]:SetValues("Market data", insights.lastSeenAt and pe:FormatScanTimestamp(insights.lastSeenAt) or "No scan",
+			local lastScanAt = pe.GetLastFullAuctionScanAt and pe:GetLastFullAuctionScanAt()
+			local stale = not lastScanAt or time() - lastScanAt > 24 * 3600
+			self.stats[5]:SetValues("Market data", lastScanAt and pe:FormatScanTimestamp(lastScanAt) or "No full scan",
 				string.format("%s items", pe:FormatNumberGrouped(insights.itemCount)), stale and "warning" or nil)
 		else
 			local progress = pe:GetState().marketInsightsProgress or 0

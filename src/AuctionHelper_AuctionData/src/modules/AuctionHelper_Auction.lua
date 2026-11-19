@@ -4174,7 +4174,7 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 	local src = refreshState.auctionSourceCounts or {}
 	local dumpState = refreshState.auctionDump
 	local cooldownRemaining = self:GetFullAuctionDumpCooldownRemaining()
-	local lastFullDumpLabel = self:FormatScanTimestamp(tonumber(refreshState.auctionLastFullDumpAt))
+	local lastFullDumpLabel = self:FormatScanTimestamp(self:GetLastFullAuctionScanAt())
 	local fullDumpActive = dumpState and dumpState.mode == "full" and dumpState.running == true
 	local loadingLine = "idle"
 	if refreshState.auctionRefreshRunning then
@@ -5277,10 +5277,27 @@ function ProfessionExporter:RunQueuedAuctionRefresh()
 	self:ContinueQueuedAuctionRefresh()
 end
 
+-- The one record of when this realm's last full scan finished (saved, so it survives
+-- /reload and relog). The badge, dashboard, AH panel and the cooldown all read it.
+function ProfessionExporter:GetLastFullAuctionScanAt()
+	local auction = self:InitAuctionDB()
+	local byRealm = auction and auction.lastFullScanAt
+	local realmKey = self:GetAuctionRegionKey() .. ":" .. self:GetAuctionConnectedRealmID()
+	return type(byRealm) == "table" and tonumber(byRealm[realmKey]) or nil
+end
+
+function ProfessionExporter:SetLastFullAuctionScanAt(ts)
+	local auction = self:InitAuctionDB()
+	if not auction then
+		return
+	end
+	auction.lastFullScanAt = type(auction.lastFullScanAt) == "table" and auction.lastFullScanAt or {}
+	auction.lastFullScanAt[self:GetAuctionRegionKey() .. ":" .. self:GetAuctionConnectedRealmID()] = ts
+end
+
 function ProfessionExporter:GetFullAuctionDumpCooldownRemaining()
-	local state = self:GetState()
-	local untilTs = tonumber(state.auctionFullDumpCooldownUntil) or 0
-	return math.max(0, untilTs - now())
+	local lastAt = self:GetLastFullAuctionScanAt()
+	return lastAt and math.max(0, lastAt + FULL_AH_DUMP_COOLDOWN_SEC - now()) or 0
 end
 
 function ProfessionExporter:IsFullAuctionDumpRunning()
@@ -5708,7 +5725,6 @@ function ProfessionExporter:FailFullAuctionDump(reason)
 	dump.status = "failed"
 	dump.error = tostring(reason or "unknown")
 	dump.finishedAt = now()
-	state.auctionLastFullDumpAt = tonumber(dump.finishedAt) or now()
 	self:PrintMessage("Full AH dump failed: " .. tostring(reason or "unknown"))
 	self:RefreshAuctionHousePanel()
 end
@@ -5722,8 +5738,7 @@ function ProfessionExporter:FinishFullAuctionDump()
 	dump.running = false
 	dump.status = "complete"
 	dump.finishedAt = now()
-	state.auctionLastFullDumpAt = tonumber(dump.finishedAt) or now()
-	state.auctionFullDumpCooldownUntil = (tonumber(dump.finishedAt) or now()) + FULL_AH_DUMP_COOLDOWN_SEC
+	self:SetLastFullAuctionScanAt(dump.finishedAt)
 	self:PrintMessage(string.format("Full AH dump complete: %s items aggregated.", self:FormatNumberGrouped(tonumber(dump.persistTotal) or 0)))
 	self:RefreshAuctionHousePanel()
 	if self.RefreshMarketTab then

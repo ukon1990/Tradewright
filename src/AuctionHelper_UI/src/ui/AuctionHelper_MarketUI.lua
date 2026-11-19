@@ -425,9 +425,8 @@ function ProfessionExporter:RefreshMarketTab()
 		ui.marketTable:SetRows(rows)
 	end
 
-	local state = (type(self.GetState) == "function" and self:GetState()) or {}
-	local lastDump = tonumber(state.auctionLastFullDumpAt)
-	if lastDump and lastDump > 0 then
+	local lastDump = self.GetLastFullAuctionScanAt and self:GetLastFullAuctionScanAt()
+	if lastDump then
 		panel.scanBadge:SetBadge("Full scan " .. self:FormatScanTimestamp(lastDump), "accent")
 	else
 		panel.scanBadge:SetBadge("No full scan yet", "warning")
