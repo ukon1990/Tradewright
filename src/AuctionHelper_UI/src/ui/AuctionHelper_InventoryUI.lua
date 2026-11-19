@@ -6,6 +6,7 @@ local ACCT_KEY = ProfessionExporter.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
 -- Fixed column widths: money columns fit a short amount such as "1,240[g] 35[s]".
 local COL = {
 	qty = 52,
+	holders = 170,
 	loc = 92,
 	currentAh = 86,
 	lastSeen = 86,
@@ -46,6 +47,17 @@ end
 
 local function rankMarkup(rankIndex)
 	return ProfessionExporter:GetRankMarkup(rankIndex)
+end
+
+-- "Bånkey 30, Alt 10": who holds the item (bags + bank), most first.
+local function holdersText(pe, row)
+	local muted = pe:GetTheme().textMuted
+	local countFmt = string.format(" |cff%02x%02x%02x%%s|r", muted.r * 255, muted.g * 255, muted.b * 255)
+	local parts = {}
+	for _, holder in ipairs(row.holders or {}) do
+		parts[#parts + 1] = pe:GetCharacterNameMarkup(holder.key) .. string.format(countFmt, pe:FormatNumberGrouped(holder.count))
+	end
+	return #parts > 0 and table.concat(parts, ", ") or "-"
 end
 
 function ProfessionExporter:BuildInventoryFilterState()
@@ -208,6 +220,26 @@ function ProfessionExporter:GetInventoryColumnDefinitions()
 			end,
 			getText = function(row)
 				return ProfessionExporter:FormatNumberGrouped(row.total or 0)
+			end,
+		},
+		{
+			id = "holders",
+			label = "Characters",
+			optional = true,
+			dropFirst = true, -- first column to go when the window is narrow
+			tooltipTitle = "Characters",
+			tooltipText = "Who holds the item in bags and bank, most first. Hover a row for the full list.",
+			width = COL.holders,
+			minWidth = 100,
+			flex = 0,
+			sortable = true,
+			defaultSort = "desc",
+			defaultVisible = true,
+			sortValue = function(row)
+				return #(row.holders or {})
+			end,
+			getText = function(row)
+				return holdersText(ProfessionExporter, row)
 			end,
 		},
 		{
@@ -494,9 +526,13 @@ function ProfessionExporter:HandleInventoryRowEnter(rowFrame, rowData)
 	if self.IS_RETAIL and (rowData.warband or 0) > 0 then
 		where = where .. " · " .. self:FormatNumberGrouped(rowData.warband) .. " warband"
 	end
-	self:ShowItemRowTooltip(rowFrame, rowData.itemID, {
+	local lines = {
 		{ "On the shown characters", self:FormatNumberGrouped(rowData.total or 0) .. " · " .. where },
-	}, "Click for details · Shift-click to link")
+	}
+	for _, holder in ipairs(rowData.holders or {}) do
+		lines[#lines + 1] = { self:GetCharacterNameMarkup(holder.key), self:FormatNumberGrouped(holder.count) }
+	end
+	self:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, "Click for details · Shift-click to link")
 end
 
 local GAP = 12

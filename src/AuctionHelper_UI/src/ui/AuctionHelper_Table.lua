@@ -396,7 +396,8 @@ function TableMixin:GetLayoutColumnWidth(column)
 end
 
 -- Layout rule: fixed columns keep their width; flex columns share what is left (never below
--- minWidth). When even that does not fit, columns marked `optional` are dropped from the right.
+-- minWidth). When even that does not fit, `optional` columns are dropped: those marked
+-- `dropFirst` before any other, then from the right.
 function TableMixin:RecomputeLayoutColumnWidths()
 	local visible = self:GetVisibleColumns()
 	self._layoutColumnWidths = {}
@@ -446,9 +447,12 @@ function TableMixin:RecomputeLayoutColumnWidths()
 	while fixed + minFlex > viewport do
 		local dropIndex
 		for index = #columns, 1, -1 do
-			if columns[index].optional then
+			local col = columns[index]
+			if col.optional and (col.dropFirst or not dropIndex) then
 				dropIndex = index
-				break
+				if col.dropFirst then
+					break
+				end
 			end
 		end
 		if not dropIndex then

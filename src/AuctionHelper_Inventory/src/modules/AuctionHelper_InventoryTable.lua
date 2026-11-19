@@ -246,6 +246,7 @@ function ProfessionExporter:BuildInventoryRowsAggregatedByItem(db, characterSele
 				bank = totals.bank or 0,
 				warband = totals.warband or 0,
 				total = totals.total or 0,
+				holders = totals.holders,
 			}
 		end
 	end

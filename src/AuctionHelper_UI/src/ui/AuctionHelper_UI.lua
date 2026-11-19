@@ -42,6 +42,18 @@ function ProfessionExporter:GetDashboardSidebarCharacterLabel(characterKey, char
 	return tostring(characterKey)
 end
 
+-- Character name without realm, in its class color when known.
+function ProfessionExporter:GetCharacterNameMarkup(characterKey)
+	local data = self.db and self.db.characters and self.db.characters[characterKey]
+	local meta = data and data.meta
+	local name = meta and meta.name or (tostring(characterKey or "?"):match("^([^%-]+)") or "?")
+	local color = meta and meta.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[meta.class]
+	if color then
+		return string.format("|cff%02x%02x%02x%s|r", color.r * 255, color.g * 255, color.b * 255, name)
+	end
+	return name
+end
+
 -- "today 14:32", "yesterday 21:40", else "2026-11-17 09:05"; "never" when missing.
 function ProfessionExporter:FormatScanTimestamp(ts)
 	ts = tonumber(ts)

@@ -469,6 +469,7 @@ function ProfessionExporter:BuildInventoryItemTotals(itemID, selectedCharacters)
 		bank = 0,
 		warband = 0,
 		total = 0,
+		holders = {}, -- { { key = characterKey, count = n }, ... }, most first
 	}
 	for characterKey, characterData in pairs(self.db.characters or {}) do
 		if isCharacterSelected(selectedCharacters, characterKey) then
@@ -481,9 +482,20 @@ function ProfessionExporter:BuildInventoryItemTotals(itemID, selectedCharacters)
 				totals.bank = totals.bank + (tonumber(itemEntry.bank) or 0)
 				totals.warband = totals.warband + (tonumber(itemEntry.warband) or 0)
 				totals.total = totals.total + (tonumber(itemEntry.total) or 0)
+				-- Bags + bank only: the warband bank is shared, so it belongs to no one character.
+				local own = (tonumber(itemEntry.bags) or 0) + (tonumber(itemEntry.bank) or 0)
+				if own > 0 then
+					totals.holders[#totals.holders + 1] = { key = characterKey, count = own }
+				end
 			end
 		end
 	end
+	table.sort(totals.holders, function(a, b)
+		if a.count ~= b.count then
+			return a.count > b.count
+		end
+		return a.key < b.key
+	end)
 	return totals
 end
 

@@ -36,7 +36,7 @@ local TAB_ORDER = {
 	{ id = "settings", label = "Settings", module = function() return ProfessionExporter.SettingsTab end },
 }
 
-local ADDON_ICON = "Interface\\Icons\\INV_Misc_Book_09"
+local ADDON_ICON = "Interface\\Icons\\INV_Misc_Coin_01"
 
 local function addRule(frame, edge, color)
 	local rule = frame:CreateTexture(nil, "BORDER")
@@ -441,12 +441,15 @@ function ProfessionExporter:RefreshShellStatus()
 	local scanState = state.scanInProgress and ("Scanning " .. tostring(state.currentProfession and state.currentProfession.professionName or "professions") .. "…") or "Idle"
 	local stored = self:TableCount(self.db and self.db.characters or {})
 	ui.mainFrame.statusText:SetText(scanState)
-	ui.mainFrame.statusRight:SetText(string.format(
-		"%d %s stored · Last scan %s",
-		stored,
-		stored == 1 and "character" or "characters",
-		self:FormatScanTimestamp(charData and charData.scanFinishedAt)
-	))
+	local text = string.format("%d %s stored", stored, stored == 1 and "character" or "characters")
+	-- Profession scan time only matters when this character has a profession to scan.
+	if #self:GetPlayerProfessions() > 0 then
+		local scannedAt = charData and charData.scanFinishedAt
+		text = text .. ((scannedAt and scannedAt > 0)
+			and (" · Professions scanned " .. self:FormatScanTimestamp(scannedAt))
+			or " · Professions not scanned yet")
+	end
+	ui.mainFrame.statusRight:SetText(text)
 end
 
 function ProfessionExporter:ApplyThemeToUI()
@@ -620,23 +623,31 @@ function ProfessionExporter:EnsureMinimapButton()
 	end
 
 	local btn = CreateFrame("Button", addonName .. "MinimapButton", Minimap)
-	btn:SetSize(24, 24)
+	-- Standard minimap-button layout (same offsets as LibDBIcon): the tracking-border
+	-- ring sits in the top-left of its texture, so everything anchors TOPLEFT, not CENTER.
+	btn:SetSize(31, 31)
 	btn:SetFrameStrata("MEDIUM")
-	btn:SetFrameLevel(Minimap:GetFrameLevel() + 2)
+	btn:SetFrameLevel(Minimap:GetFrameLevel() + 8)
 	btn:SetHighlightTexture("Interface/Minimap/UI-Minimap-ZoomButton-Highlight", "ADD")
 	btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	btn:RegisterForDrag("LeftButton")
 
+	local background = btn:CreateTexture(nil, "BACKGROUND")
+	background:SetTexture("Interface/Minimap/UI-Minimap-Background")
+	background:SetSize(20, 20)
+	background:SetPoint("TOPLEFT", 7, -5)
+
 	local icon = btn:CreateTexture(nil, "ARTWORK")
-	icon:SetSize(18, 18)
-	icon:SetPoint("CENTER")
-	icon:SetTexture("Interface/Icons/INV_Misc_Book_09")
+	icon:SetSize(17, 17)
+	icon:SetPoint("TOPLEFT", 7, -6)
+	icon:SetTexture(ADDON_ICON)
+	icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
 	btn.icon = icon
 
 	local border = btn:CreateTexture(nil, "OVERLAY")
 	border:SetTexture("Interface/Minimap/MiniMap-TrackingBorder")
-	border:SetSize(52, 52)
-	border:SetPoint("TOPLEFT", -9, 7)
+	border:SetSize(53, 53)
+	border:SetPoint("TOPLEFT")
 
 	btn:SetScript("OnClick", function(_, mouse)
 		if mouse == "RightButton" then
