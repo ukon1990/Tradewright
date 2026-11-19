@@ -1,0 +1,8 @@
+{
+  "source": "src",
+  "exclude": ["tests", "docs", ".agents", ".claude", "*.md", ".*"],
+  "targets": {
+    "forever": "/mnt/sda2/Underholdning/Spill/Battle.net/World of Warcraft/_forever_/Interface/AddOns",
+    "retail": "/home/jonas/dev/hobby/mine-setting-syncs/world-of-warcraft-retail/Interface/AddOns"
+  }
+}

@@ -1,0 +1,26 @@
+## Interface: 120000, 120001
+## AllowLoadGameType: standard
+## Title: AuctionHelper UI
+## Notes: Main interface for AuctionHelper modules
+## Author: Ukon1990
+## Version: 2.0.0
+## Dependencies: AuctionHelper, AuctionHelper_AuctionData, AuctionHelper_Professions, AuctionHelper_Inventory
+## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator
+
+Bootstrap.lua
+src\ui\AuctionHelper_Widgets.lua
+src\ui\AuctionHelper_Table.lua
+src\ui\AuctionHelper_UI.lua
+src\ui\AuctionHelper_InventoryUI.lua
+src\ui\AuctionHelper_CraftsUI.lua
+src\ui\AuctionHelper_ProfessionCraftPanel.lua
+src\ui\AuctionHelper_MailPanel.lua
+src\ui\AuctionHelper_OverviewTab.lua
+src\ui\AuctionHelper_InventoryTab.lua
+src\ui\AuctionHelper_MarketUI.lua
+src\ui\AuctionHelper_MarketTab.lua
+src\ui\AuctionHelper_CraftsTab.lua
+src\ui\AuctionHelper_ExportTab.lua
+src\ui\AuctionHelper_DocsTab.lua
+src\ui\AuctionHelper_SettingsTab.lua
+src\ui\AuctionHelper_UIShell.lua

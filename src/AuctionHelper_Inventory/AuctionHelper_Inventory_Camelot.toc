@@ -1,0 +1,16 @@
+## Interface: 16001, 16002, 16100, 16200
+## AllowLoadGameType: camelot
+## Title: AuctionHelper Inventory
+## Notes: Inventory, warehousing, and historical value storage for AuctionHelper
+## Author: Ukon1990
+## Version: 2.0.0
+## Dependencies: AuctionHelper, AuctionHelper_Professions
+## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator
+## SavedVariables: AuctionHelperInventoryDB
+
+Bootstrap.lua
+src\modules\AuctionHelper_Ledger.lua
+src\modules\AuctionHelper_CraftQueue.lua
+src\modules\AuctionHelper_Inventory.lua
+src\modules\AuctionHelper_InventoryTable.lua
+src\modules\AuctionHelper_ItemAnalytics.lua

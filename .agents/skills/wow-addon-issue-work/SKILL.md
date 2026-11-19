@@ -1,6 +1,6 @@
 ---
 name: wow-addon-issue-work
-description: Implement an AuctionHelper issue from docs/specifications/issues — plan slices, implement, review against focus files, verify with tests and in-game checks.
+description: Implement an AuctionHelper issue from src/AuctionHelper/docs/specifications/issues — plan slices, implement, review against focus files, verify with tests and in-game checks.
 ---
 
 # Issue work (AuctionHelper)
@@ -25,7 +25,7 @@ description: Implement an AuctionHelper issue from docs/specifications/issues �
 ## Verify
 
 ```bash
-cd AuctionHelper && python3 tests/run_tests.py
+npm test   # from repo root
 ```
 
 In-game checklist (as applicable):

@@ -1,0 +1,17 @@
+## Interface: 120000, 120001
+## AllowLoadGameType: standard
+## Title: AuctionHelper
+## Notes: Shared runtime, migration, settings, and compact export services for AuctionHelper modules
+## Author: Ukon1990
+## Version: 2.0.0
+## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator
+## SavedVariables: AuctionHelperDB, AuctionHelperMigrationDB, AuctionHelperLastExport, ProfessionExporterDB, ProfessionExporterLastExport
+
+Bootstrap.lua
+src\core\AuctionHelper.lua
+src\util\AuctionHelper_ForeverLogic.lua
+src\core\AuctionHelper_Data.lua
+src\util\AuctionHelper_Util.lua
+src\ui\AuctionHelper_Theme.lua
+src\modules\AuctionHelper_Docs.lua
+src\core\AuctionHelper_Events.lua

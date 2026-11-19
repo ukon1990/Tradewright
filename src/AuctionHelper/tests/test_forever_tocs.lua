@@ -1,6 +1,7 @@
 -- Run with: lua5.1 tests/test_forever_tocs.lua (from AuctionHelper root)
 local root = arg and arg[0] and arg[0]:match("^(.*)[/\\]tests[/\\]") or "."
 local addonsRoot = root .. "/.."
+local repoRoot = addonsRoot .. "/.."
 
 local failed = 0
 local function check(name, cond, detail)
@@ -38,12 +39,46 @@ for _, m in ipairs(modules) do
 	end
 end
 
+-- Flavor TOCs: the client picks <Addon>_<Flavor>.toc over <Addon>.toc.
+-- Only Interface / AllowLoadGameType may differ; file lists and other headers must match.
+local function readFile(path)
+	local f = io.open(path, "r")
+	if not f then return nil end
+	local s = f:read("*a")
+	f:close()
+	return s
+end
+
+local function stripFlavorHeaders(toc)
+	return (toc:gsub("## Interface:[^\n]*\n", ""):gsub("## AllowLoadGameType:[^\n]*\n", ""))
+end
+
+local flavors = {
+	{ suffix = "_Forever", interface = "16001", gameType = "camelot" },
+	{ suffix = "_Camelot", interface = "16001", gameType = "camelot" },
+	{ suffix = "_Mainline", interface = "120001", gameType = "standard" },
+}
+
+for _, m in ipairs(modules) do
+	local base = readFile(addonsRoot .. "/" .. m[1] .. "/" .. m[2])
+	for _, fl in ipairs(flavors) do
+		local name = m[1] .. fl.suffix .. ".toc"
+		local toc = readFile(addonsRoot .. "/" .. m[1] .. "/" .. name)
+		check(name .. " exists", toc ~= nil)
+		if toc and base then
+			check(name .. " Interface " .. fl.interface, toc:find("## Interface:[^\n]*" .. fl.interface) ~= nil)
+			check(name .. " " .. fl.gameType, toc:find("## AllowLoadGameType: " .. fl.gameType, 1, true) ~= nil)
+			check(name .. " in sync with " .. m[2], stripFlavorHeaders(toc) == stripFlavorHeaders(base))
+		end
+	end
+end
+
 -- AGENTS + skills present
-local agents = io.open(root .. "/AGENTS.md", "r")
+local agents = io.open(repoRoot .. "/AGENTS.md", "r")
 check("AGENTS.md exists", agents ~= nil)
 if agents then agents:close() end
 
-local skill = io.open(root .. "/.agents/skills/wow-addon-issue-work/focus/auction-forever.md", "r")
+local skill = io.open(repoRoot .. "/.agents/skills/wow-addon-issue-work/focus/auction-forever.md", "r")
 check("auction-forever focus exists", skill ~= nil)
 if skill then skill:close() end
 
