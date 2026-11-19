@@ -366,8 +366,8 @@ function ProfessionExporter:DoesAuctionSearchEventMatchItem(scanItemID, eventArg
 	if not scanKeyFields or not self:NormalizeAuctionItemKeyFields(scanKeyFields) then
 		return true
 	end
-	local expected = self:MakeAuctionHouseItemKey(scanItemID, scanKeyFields)
-	return expected and evKey and tostring(expected) == tostring(evKey)
+	-- Item keys are tables: compare what they hold, never the tables themselves.
+	return self:SerializeAuctionItemKeyFields(scanItemID, scanKeyFields) == self:SerializeAuctionItemKeyFields(evId, evKey)
 end
 
 function ProfessionExporter:MakeAuctionHouseItemKey(itemID, keyFields)
@@ -498,18 +498,22 @@ function ProfessionExporter:GetLiveAuctionSearchAggregate(itemID, keyFields)
 	if m <= 0 then
 		return nil
 	end
-	local expectedKey = self:NormalizeAuctionItemKeyFields(keyFields) and self:MakeAuctionHouseItemKey(itemID, keyFields) or nil
+	-- Item keys are tables, so rows are grouped and narrowed by what the key holds. A key whose
+	-- fields are all zero asks for every variant and narrows nothing.
+	local fields = self:NormalizeAuctionItemKeyFields(keyFields)
+	local expectedKey = fields and (fields.itemLevel > 0 or fields.itemSuffix > 0 or fields.battlePetSpeciesID > 0)
+		and self:SerializeAuctionItemKeyFields(itemID, fields) or nil
 	local groups = {}
 	for i = 1, m do
 		local info = C_AuctionHouse.GetItemSearchResultInfo(queryKey, i)
 		if info and info.itemKey then
-			if expectedKey and tostring(info.itemKey) ~= tostring(expectedKey) then
+			local rowKey = self:SerializeAuctionItemKeyFields(itemID, info.itemKey)
+			if expectedKey and rowKey ~= expectedKey then
 				-- Narrow search: ignore rows that do not match the requested ItemKey.
 			else
-				local rowKey = tostring(info.itemKey)
 				local g = groups[rowKey]
 				if not g then
-					g = { itemKey = info.itemKey, totalQuantity = 0, minUnitPrice = nil, maxUnitPrice = nil, listingCount = 0 }
+					g = { key = rowKey, itemKey = info.itemKey, totalQuantity = 0, minUnitPrice = nil, maxUnitPrice = nil, listingCount = 0 }
 					groups[rowKey] = g
 				end
 				local qty = math.max(1, tonumber(info.quantity) or 1)
@@ -542,7 +546,7 @@ function ProfessionExporter:GetLiveAuctionSearchAggregate(itemID, keyFields)
 		return nil
 	end
 	table.sort(variantList, function(a, b)
-		return tostring(a.itemKey) < tostring(b.itemKey)
+		return a.key < b.key
 	end)
 	return {
 		kind = "item",
@@ -5939,17 +5943,45 @@ function ProfessionExporter:ProcessFullAuctionDumpChunk(token)
 	end)
 end
 
+-- A fingerprint of the replicate list the client holds: its length and a few sampled rows.
+-- The client keeps the list from the previous full scan, so "there is a list" does not mean the
+-- server has answered the new request; a changed fingerprint does.
+local function replicateListMark()
+	local total = tonumber(C_AuctionHouse.GetNumReplicateItems()) or 0
+	local parts = { total }
+	for step = 0, total > 0 and 4 or -1 do
+		local _, _, count, _, _, _, _, _, _, buyout, _, _, _, _, _, _, itemID = C_AuctionHouse.GetReplicateItemInfo(math.floor((total - 1) * step / 4))
+		parts[#parts + 1] = string.format("%s/%s/%s", tostring(itemID), tostring(count), tostring(buyout))
+	end
+	return table.concat(parts, ":"), total
+end
+
+--- Polls once a second while a full scan waits for the server. Processing starts only when the
+--- answer to this request is in (the list event fired, or the list changed) and the list has
+--- stopped changing for one poll; a list left over from an earlier scan is never processed.
 function ProfessionExporter:OnFullAuctionDumpTimeout(token)
 	local state = self:GetState()
 	local dump = state.auctionDump
 	if not dump or dump.mode ~= "full" or tonumber(dump.token) ~= tonumber(token) or dump.status ~= "requesting" or dump.running ~= true then
 		return
 	end
-	if self:OnReplicateItemListUpdate() == true then
-		return
+	local mark, total = replicateListMark()
+	if total > 0 and (dump.listUpdated or mark ~= dump.listMarkAtRequest) then
+		if mark == dump.listMarkSettling then
+			dump.total = total
+			dump.done = 0
+			dump.index = 0
+			dump.seenAt = now()
+			dump.aggregate = {}
+			dump.status = "processing"
+			self:RefreshAuctionHousePanel()
+			self:ProcessFullAuctionDumpChunk(token)
+			return
+		end
+		dump.listMarkSettling = mark
 	end
 	local startedAt = tonumber(dump.requestStartedAt) or now()
-	if (now() - startedAt) >= FULL_AH_DUMP_REQUEST_TIMEOUT_SEC then
+	if not dump.listMarkSettling and (now() - startedAt) >= FULL_AH_DUMP_REQUEST_TIMEOUT_SEC then
 		self:FailFullAuctionDump("the server did not answer. It allows one full scan every "
 			.. formatDurationShort(FULL_AH_DUMP_COOLDOWN_SEC) .. ", so try again later")
 		return
@@ -5959,30 +5991,12 @@ function ProfessionExporter:OnFullAuctionDumpTimeout(token)
 	end)
 end
 
+--- REPLICATE_ITEM_LIST_UPDATE: the server answered the full scan request. The poll picks it up.
 function ProfessionExporter:OnReplicateItemListUpdate()
-	local state = self:GetState()
-	local dump = state.auctionDump
-	if not dump or dump.mode ~= "full" or dump.running ~= true then
-		return false
+	local dump = self:GetState().auctionDump
+	if dump and dump.mode == "full" and dump.running == true and dump.status == "requesting" then
+		dump.listUpdated = true
 	end
-	if dump.status ~= "requesting" then
-		return false
-	end
-	local total = C_AuctionHouse and C_AuctionHouse.GetNumReplicateItems and tonumber(C_AuctionHouse.GetNumReplicateItems()) or nil
-	if not total or total <= 0 then
-		return false
-	end
-	dump.total = total
-	dump.done = 0
-	dump.index = 0
-	dump.seenAt = now()
-	dump.aggregate = {}
-	dump.status = "processing"
-	self:RefreshAuctionHousePanel()
-	C_Timer.After(0, function()
-		ProfessionExporter:ProcessFullAuctionDumpChunk(dump.token)
-	end)
-	return true
 end
 
 function ProfessionExporter:TrimFullDumpMarketHistory()
@@ -6326,6 +6340,7 @@ function ProfessionExporter:StartAuctionDump(mode)
 				index = 0,
 				persistDone = 0,
 				persistTotal = 0,
+				listMarkAtRequest = replicateListMark(),
 			}
 			local ok = pcall(C_AuctionHouse.ReplicateItems)
 			if not ok then
@@ -6478,7 +6493,8 @@ end
 --- The full scan keeps one entry per item ID (item scope, key = item ID), and Market and the
 --- Gold dashboard read that entry. A live search lands under other keys, so copy its price,
 --- quantity and auction count there when they changed; otherwise only mark the entry as seen now.
-function ProfessionExporter:SaveLiveSearchToScanEntry(itemID, agg)
+--- `quiet` leaves the view refresh to the caller (a result list saves many items at once).
+function ProfessionExporter:SaveLiveSearchToScanEntry(itemID, agg, quiet)
 	local price = tonumber(agg.minUnitPrice or agg.cheapestUnitPrice)
 	if not price or price <= 0 then
 		return false
@@ -6504,9 +6520,16 @@ function ProfessionExporter:SaveLiveSearchToScanEntry(itemID, agg)
 		source = "results_live_search",
 		seenAt = now(),
 	})
-	-- One changed item: let the dashboard rebuild now instead of waiting out the scan throttle.
-	local state = self:GetState()
-	state.marketInsightsForceRebuild = true
+	if not quiet then
+		self:RefreshViewsAfterLiveSearch()
+	end
+	return true
+end
+
+--- A live search changed saved prices: let the dashboard rebuild now instead of waiting out the
+--- scan throttle.
+function ProfessionExporter:RefreshViewsAfterLiveSearch()
+	self:GetState().marketInsightsForceRebuild = true
 	local dash = self.ui and self.ui.goldDashboard
 	if dash and dash:IsVisible() then
 		dash:Refresh()
@@ -6514,7 +6537,30 @@ function ProfessionExporter:SaveLiveSearchToScanEntry(itemID, agg)
 	if self.RefreshMarketTab then
 		self:RefreshMarketTab()
 	end
-	return true
+end
+
+--- The auction house's own result list (a name search, or browsing a category) carries the lowest
+--- price and the quantity of every item it shows: save those too. An item ID can appear once per
+--- variant, so the lowest price wins and the quantities add up.
+function ProfessionExporter:SaveBrowseResultsToScanEntries()
+	local byItem = {}
+	for _, result in ipairs(C_AuctionHouse.GetBrowseResults and C_AuctionHouse.GetBrowseResults() or {}) do
+		local itemID = normalizeItemID(result.itemKey)
+		local price = tonumber(result.minPrice) or 0
+		if itemID and price > 0 then
+			local agg = byItem[itemID] or { totalQuantity = 0 }
+			byItem[itemID] = agg
+			agg.minUnitPrice = math.min(agg.minUnitPrice or price, price)
+			agg.totalQuantity = agg.totalQuantity + (tonumber(result.totalQuantity) or 0)
+		end
+	end
+	local changed = false
+	for itemID, agg in pairs(byItem) do
+		changed = self:SaveLiveSearchToScanEntry(itemID, agg, true) or changed
+	end
+	if changed then
+		self:RefreshViewsAfterLiveSearch()
+	end
 end
 
 function ProfessionExporter:OnAuctionHouseBrowseResultsUpdated(...)
@@ -6527,6 +6573,7 @@ function ProfessionExporter:OnAuctionHouseBrowseResultsUpdated(...)
 			ProfessionExporter:TrySelectPendingAuctionBrowseResult()
 		end)
 	end
+	self:SaveBrowseResultsToScanEntries()
 	self:RefreshAuctionHousePanel()
 end
 
