@@ -346,6 +346,19 @@ do
 	check("Live search: fills in a missing auction count", FL.LiveSearchDiffers({ p = 1850, q = 40 }, 1850, 40, 3))
 end
 
+-- Table paging
+do
+	local function bounds(...) return table.concat({ FL.PageBounds(...) }, ",") end
+	check("Paging: first page", bounds(7081, 500, 1) == "1,15,1,500")
+	check("Paging: middle page", bounds(7081, 500, 3) == "3,15,1001,1500")
+	check("Paging: last page is short", bounds(7081, 500, 15) == "15,15,7001,7081")
+	check("Paging: page past the end clamps", bounds(7081, 500, 99) == "15,15,7001,7081")
+	check("Paging: page below one clamps", bounds(7081, 500, 0) == "1,15,1,500" and bounds(7081, 500, nil) == "1,15,1,500")
+	check("Paging: exact multiple", bounds(1000, 500, 2) == "2,2,501,1000")
+	check("Paging: fits on one page", bounds(500, 500, 4) == "1,1,1,500" and bounds(0, 500, 1) == "1,1,1,0")
+	check("Paging: no page size", bounds(900, nil, 3) == "1,1,1,900")
+end
+
 -- TOC sniff (Forever load markers)
 local toc = assert(io.open(root .. "/AuctionHelper.toc", "r")):read("*a")
 check("TOC Interface 16001", toc:find("Interface: 16001", 1, true) ~= nil)

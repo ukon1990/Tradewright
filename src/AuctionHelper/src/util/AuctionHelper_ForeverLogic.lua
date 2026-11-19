@@ -737,6 +737,19 @@ function ForeverLogic.BuildSurplusPlan(bagItems, keep, held, sendOthers)
 	return items
 end
 
+--- Paging for a table of `count` rows shown `pageSize` at a time. Clamps `page` into range and
+--- returns page, pageCount, first, last (the row indexes on that page). Without a page size, or
+--- when everything fits on one page, that is 1, 1, 1, count.
+function ForeverLogic.PageBounds(count, pageSize, page)
+	if not pageSize or pageSize <= 0 or count <= pageSize then
+		return 1, 1, 1, count
+	end
+	local pageCount = math.ceil(count / pageSize)
+	page = math.max(1, math.min(math.floor(tonumber(page) or 1), pageCount))
+	local first = (page - 1) * pageSize + 1
+	return page, pageCount, first, math.min(count, first + pageSize - 1)
+end
+
 -- Classic recipe reagent slot from (itemID, quantity).
 function ForeverLogic.MakeClassicReagentSlot(slotIndex, itemID, quantity)
 	itemID = tonumber(itemID)

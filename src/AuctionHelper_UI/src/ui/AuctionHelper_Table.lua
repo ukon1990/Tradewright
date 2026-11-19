@@ -148,6 +148,7 @@ function TableMixin:SetSort(columnId, asc)
 	else
 		self.sortAsc = asc == true
 	end
+	self.page = 1
 	self:Refresh({ resetVerticalScroll = true })
 	if type(self.onSortChanged) == "function" then
 		self.onSortChanged(self.sortKey, self.sortAsc)
@@ -165,6 +166,7 @@ function TableMixin:ToggleSort(columnId)
 		self.sortKey = columnId
 		self.sortAsc = column.defaultSort ~= "desc"
 	end
+	self.page = 1
 	self:Refresh({ resetVerticalScroll = true })
 	if type(self.onSortChanged) == "function" then
 		self.onSortChanged(self.sortKey, self.sortAsc)
@@ -667,13 +669,17 @@ function TableMixin:RefreshRows(opts)
 
 	local count = #self.displayRows
 	self.totalRowCount = count
-	if self.maxRows and count > self.maxRows then
-		local trimmed = {}
-		for index = 1, self.maxRows do
-			trimmed[index] = self.displayRows[index]
+	-- maxRows is the page size. Paging needs the footer for its controls; without one only the
+	-- first page is shown.
+	local first, last
+	self.page, self.pageCount, first, last = ProfessionExporter.ForeverLogic.PageBounds(count, self.maxRows, self.pager and self.page or 1)
+	if self.pageCount > 1 then
+		local pageRows = {}
+		for index = first, last do
+			pageRows[#pageRows + 1] = self.displayRows[index]
 		end
-		self.displayRows = trimmed
-		count = #trimmed
+		self.displayRows = pageRows
+		count = #pageRows
 	end
 
 	local resetScroll = opts.resetVerticalScroll == true
@@ -731,7 +737,13 @@ function TableMixin:UpdateEmptyState()
 	self.emptyFrame.hint:SetText(self.emptyHint or "Change the search or filters.")
 end
 
--- Footer text: `left` is replaced by "Showing N of M" when rows were capped by maxRows.
+--- Shows another page of a table that has more rows than its page size.
+function TableMixin:SetPage(page)
+	self.page = page
+	self:Refresh({ resetVerticalScroll = true })
+end
+
+-- Footer text: `left` is replaced by "Showing A-B of M" when the rows span more than one page.
 function TableMixin:SetFooterText(left, right)
 	if not self.footer then
 		return
@@ -745,12 +757,31 @@ function TableMixin:UpdateFooter()
 	if not self.footer then
 		return
 	end
+	local pe = ProfessionExporter
 	local shown, total = #(self.displayRows or {}), self.totalRowCount or 0
 	local left = self.footerLeftOverride
-	if shown < total then
-		left = string.format("Showing %s of %s", ProfessionExporter:FormatNumberGrouped(shown), ProfessionExporter:FormatNumberGrouped(total))
+	local paged = (self.pageCount or 1) > 1
+	if paged then
+		local first = (self.page - 1) * self.maxRows
+		left = string.format("Showing %s-%s of %s", pe:FormatNumberGrouped(first + 1), pe:FormatNumberGrouped(first + shown), pe:FormatNumberGrouped(total))
 	end
 	self.footer.left:SetText(left or "")
+	local pager = self.pager
+	if not pager then
+		return
+	end
+	-- The pager sits at the right edge while there are pages; the right-hand text makes room for it.
+	pager:SetShown(paged)
+	self.footer.right:ClearAllPoints()
+	if paged then
+		pager.label:SetText(string.format("Page %d of %d", self.page, self.pageCount))
+		pager.prev:SetEnabled(self.page > 1)
+		pager.next:SetEnabled(self.page < self.pageCount)
+		pager:SetWidth(pager.prev:GetWidth() + pager.next:GetWidth() + math.ceil(pager.label:GetStringWidth()) + 16)
+		self.footer.right:SetPoint("RIGHT", pager, "LEFT", -12, 0)
+	else
+		self.footer.right:SetPoint("RIGHT", self.footer, "RIGHT", -pager.gutter, 0)
+	end
 end
 
 function TableMixin:Refresh(opts)
@@ -839,6 +870,25 @@ function ProfessionExporter:CreateReusableTable(parent, options)
 			text:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
 		end
 		widget.footer = footer
+		-- Tables with a page size get Prev / "Page N of M" / Next, shown once there is a second page.
+		if widget.maxRows then
+			local pager = CreateFrame("Frame", nil, footer)
+			pager.gutter = gutter
+			pager:SetPoint("RIGHT", -gutter, 0)
+			pager:SetHeight(footerHeight)
+			pager.next = ProfessionExporter:CreateButton(pager, "Next", function() widget:SetPage(widget.page + 1) end, { small = true })
+			pager.next:SetPoint("RIGHT")
+			pager.label = pager:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+			pager.label:SetPoint("RIGHT", pager.next, "LEFT", -8, 0)
+			pager.label:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+			pager.prev = ProfessionExporter:CreateButton(pager, "Prev", function() widget:SetPage(widget.page - 1) end, { small = true })
+			pager.prev:SetPoint("RIGHT", pager.label, "LEFT", -8, 0)
+			for _, button in ipairs({ pager.prev, pager.next }) do
+				button:SetHeight(footerHeight - 6)
+			end
+			pager:Hide()
+			widget.pager = pager
+		end
 	end
 
 	local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
