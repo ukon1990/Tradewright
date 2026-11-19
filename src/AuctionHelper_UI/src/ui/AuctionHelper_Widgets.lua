@@ -810,6 +810,98 @@ function ProfessionExporter:CreateEmptyState(parent)
 	return empty
 end
 
+-- Item class, subclass and quality for filters, cached per item. Class and subclass come from the
+-- instant item API; quality is only known once the client has the item, so it is retried until then.
+local itemFilterInfoCache = {}
+
+function ProfessionExporter:GetItemFilterInfo(itemID)
+	itemID = tonumber(itemID)
+	if not itemID then
+		return {}
+	end
+	local info = itemFilterInfoCache[itemID]
+	if info and info.quality ~= nil then
+		return info
+	end
+	if not info then
+		local getInstant = C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant
+		local _, classLabel, subclassLabel = nil, nil, nil
+		if getInstant then
+			_, classLabel, subclassLabel = getInstant(itemID)
+		end
+		info = { classLabel = classLabel, subclassLabel = subclassLabel }
+		itemFilterInfoCache[itemID] = info
+	end
+	local getQuality = C_Item and C_Item.GetItemQualityByID
+	local quality = getQuality and getQuality(itemID)
+	if quality == nil then
+		local getInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
+		quality = getInfo and select(3, getInfo(itemID))
+	end
+	info.quality = quality
+	return info
+end
+
+-- Item quality choices for filter dropdowns, coloured like item names.
+function ProfessionExporter:GetQualityFilterOptions()
+	local names = { [0] = "Poor", "Common", "Uncommon", "Rare", "Epic", "Legendary" }
+	local options = {}
+	for quality = 0, 5 do
+		local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
+		local label = names[quality]
+		if color then
+			label = string.format("|cff%02x%02x%02x%s|r", color.r * 255, color.g * 255, color.b * 255, label)
+		end
+		options[#options + 1] = { value = quality, label = label }
+	end
+	return options
+end
+
+-- Class or subclass choices from a list of item IDs: { value = label, label = label }, sorted.
+function ProfessionExporter:BuildItemClassOptions(itemIDs, field, classSelection)
+	local seen, options = {}, {}
+	local filterByClass = classSelection and not self:IsFilterSelectionEmpty(classSelection)
+	for _, itemID in ipairs(itemIDs or {}) do
+		local info = self:GetItemFilterInfo(itemID)
+		local label = info[field]
+		if label and label ~= "" and not seen[label] and (not filterByClass or classSelection[info.classLabel]) then
+			seen[label] = true
+			options[#options + 1] = { value = label, label = label }
+		end
+	end
+	table.sort(options, function(a, b) return a.label < b.label end)
+	return options
+end
+
+-- A checkbox with its label as one frame, sized to fit, so it can sit in a row of controls.
+-- `onChange(checked)` runs on click; read or set the state through group.check.
+function ProfessionExporter:CreateCheckbox(parent, label, onChange)
+	local group = CreateFrame("Frame", nil, parent)
+	group:SetHeight(26)
+	local check = CreateFrame("CheckButton", nil, group, "UICheckButtonTemplate")
+	self:SkinCheckButton(check)
+	check:ClearAllPoints()
+	check:SetPoint("LEFT", -4, 0)
+	local text = check.Text or check.text
+	if not text then
+		text = check:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		check.Text = text
+	end
+	text:ClearAllPoints()
+	text:SetPoint("LEFT", check, "RIGHT", 2, 0)
+	text:SetFontObject("GameFontHighlightSmall")
+	text:SetWordWrap(false)
+	text:SetText(label)
+	check:SetScript("OnClick", function(button)
+		if onChange then
+			onChange(button:GetChecked() == true)
+		end
+	end)
+	group:SetWidth(18 + 2 + math.ceil(text:GetStringWidth()) + 4)
+	group.check = check
+	return group
+end
+
 -- Signed money: "+3g 15s" with a green plus, negative amounts with a red minus, "-" when unknown.
 function ProfessionExporter:FormatSignedMoney(copper)
 	local n = tonumber(copper)
@@ -873,536 +965,3 @@ function ProfessionExporter:HandleItemRowModifiedClick(itemID)
 	return false
 end
 
---- Reusable line chart: sorted points `{ at = unixHourOrTime, value = number, label?, meta? }`.
---- Optional `secondarySeries` (copper, left axis); optional `quantitySeries` (counts, right axis).
---- Tooltip callback: `builder(tip, hit)` where `hit = { kind = "primary"|"secondary"|"quantity", pt = point }`.
-function ProfessionExporter:CreateTimeSeriesGraph(parent, opts)
-	opts = opts or {}
-	local plotH = tonumber(opts.plotHeight) or 118
-	local padL = tonumber(opts.padLeft) or 58
-	local padRBase = tonumber(opts.padRight) or 10
-	local padQtyAxis = 34
-	local padT = tonumber(opts.padTop) or 6
-	local padB = tonumber(opts.padBottom) or 22
-
-	local holder = CreateFrame("Frame", nil, parent)
-	holder:SetHeight(plotH + padT + padB + (opts.showTitle ~= false and 16 or 0))
-
-	local title = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	if opts.showTitle ~= false then
-		title:SetPoint("TOPLEFT", holder, "TOPLEFT", 2, -2)
-		title:SetJustifyH("LEFT")
-	end
-
-	local plot = CreateFrame("Frame", nil, holder)
-	if opts.showTitle ~= false then
-		plot:SetPoint("TOPLEFT", title, "BOTTOMLEFT", -2, -4)
-	else
-		plot:SetPoint("TOPLEFT", holder, "TOPLEFT", 0, 0)
-	end
-	plot:SetPoint("BOTTOMRIGHT", holder, "BOTTOMRIGHT", 0, 0)
-	plot:SetHeight(plotH)
-	plot:EnableMouse(true)
-
-	local theme = ProfessionExporter:GetTheme()
-	local emptyText = plot:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	emptyText:SetPoint("LEFT", plot, "LEFT", 20, 0)
-	emptyText:SetPoint("RIGHT", plot, "RIGHT", -20, 0)
-	emptyText:SetJustifyH("CENTER")
-	emptyText:SetWordWrap(true)
-	emptyText:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
-	local function axisText()
-		local fs = plot:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		fs:SetWordWrap(false)
-		fs:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
-		return fs
-	end
-
-	local innerPlotH = plotH - padT - padB
-	local yLabels = {}
-	for i = 1, 3 do
-		local fs = axisText()
-		fs:SetPoint("TOPRIGHT", plot, "TOPLEFT", padL - 4, -padT - (i - 1) * (innerPlotH / 2))
-		fs:SetJustifyH("RIGHT")
-		fs:SetWidth(padL - 2)
-		yLabels[i] = fs
-	end
-
-	local yLabelsRight = {}
-	for i = 1, 3 do
-		local fs = axisText()
-		fs:SetPoint("TOPRIGHT", plot, "TOPRIGHT", -4, -padT - (i - 1) * (innerPlotH / 2))
-		fs:SetJustifyH("RIGHT")
-		fs:SetWidth(padQtyAxis + padRBase - 4)
-		yLabelsRight[i] = fs
-		fs:Hide()
-	end
-
-	local xLabels = {}
-	do
-		local xl = axisText()
-		xl:SetPoint("BOTTOMLEFT", plot, "BOTTOMLEFT", padL + 2, 2)
-		xl:SetJustifyH("LEFT")
-		xLabels[1] = xl
-		local xr = axisText()
-		xr:SetPoint("BOTTOMRIGHT", plot, "BOTTOMRIGHT", -padRBase - 2, 2)
-		xr:SetJustifyH("RIGHT")
-		xLabels[2] = xr
-	end
-
-	local gridLines = {}
-	local segmentLines = {}
-	local markers = {}
-	local secondarySegmentLines = {}
-	local secondaryMarkers = {}
-	local quantitySegmentLines = {}
-	local quantityMarkers = {}
-
-	local series = {}
-	local secondarySeries = {}
-	local quantitySeries = {}
-	local yFormatter = opts.yFormatter or function(v)
-		return tostring(math.floor(tonumber(v) or 0))
-	end
-	local rightYFormatter = function(v)
-		return ProfessionExporter:FormatNumberGrouped(math.floor(tonumber(v) or 0))
-	end
-	local tooltipBuilder = opts.tooltipBuilder
-	local emptyStateText = opts.emptyText or "No data in this range."
-	local accent = opts.accentColor or ProfessionExporter:GetTheme().accent
-	local secondaryAccent = theme.warning
-	local quantityAccent = theme.success
-	local canUseCreateLine = type(plot.CreateLine) == "function"
-
-	local function hidePool(pool)
-		for _, region in ipairs(pool) do
-			region:Hide()
-		end
-	end
-
-	local function getGridLine(i)
-		local ln = gridLines[i]
-		if not ln and canUseCreateLine then
-			ln = plot:CreateLine()
-			ln:SetThickness(1)
-			gridLines[i] = ln
-		end
-		return ln
-	end
-
-	local function getSegmentLine(pool, i, thickness)
-		local ln = pool[i]
-		if not ln and canUseCreateLine then
-			ln = plot:CreateLine()
-			ln:SetThickness(thickness or 2)
-			pool[i] = ln
-		end
-		return ln
-	end
-
-	local function getMarker(pool, i, size)
-		local t = pool[i]
-		if not t then
-			t = plot:CreateTexture(nil, "ARTWORK")
-			t:SetSize(size or 6, size or 6)
-			pool[i] = t
-		end
-		return t
-	end
-
-	local function tsFmt(at)
-		if not at or at <= 0 then
-			return "—"
-		end
-		return date("%m-%d %H:%M", at)
-	end
-
-	local function expandTimeRange(pts, minT, maxT)
-		for _, p in ipairs(pts or {}) do
-			local t = p.at
-			if t then
-				if not minT or t < minT then
-					minT = t
-				end
-				if not maxT or t > maxT then
-					maxT = t
-				end
-			end
-		end
-		return minT, maxT
-	end
-
-	local function layoutGeometry(hasQty)
-		local w = plot:GetWidth()
-		local h = plot:GetHeight()
-		if w < 40 or h < 40 then
-			return nil
-		end
-		local padR = hasQty and (padRBase + padQtyAxis) or padRBase
-		local innerW = w - padL - padR
-		local innerH = h - padT - padB
-		if innerW < 20 or innerH < 20 then
-			return nil
-		end
-		return w, h, innerW, innerH, padR
-	end
-
-	local function paint()
-		hidePool(gridLines)
-		hidePool(segmentLines)
-		hidePool(markers)
-		hidePool(secondarySegmentLines)
-		hidePool(secondaryMarkers)
-		hidePool(quantitySegmentLines)
-		hidePool(quantityMarkers)
-		emptyText:Hide()
-		for _, fs in ipairs(yLabels) do
-			fs:SetText("")
-		end
-		for _, fs in ipairs(yLabelsRight) do
-			fs:SetText("")
-			fs:Hide()
-		end
-		for _, fs in ipairs(xLabels) do
-			fs:SetText("")
-		end
-
-		local hasQty = quantitySeries and #quantitySeries > 0
-		local plotW, ph, innerW, innerH, padR = layoutGeometry(hasQty)
-		if not plotW or not innerW or not innerH then
-			emptyText:SetText(emptyStateText)
-			emptyText:Show()
-			return
-		end
-
-		if not series or #series == 0 then
-			emptyText:SetText(emptyStateText)
-			emptyText:Show()
-			return
-		end
-
-		local minT, maxT = expandTimeRange(series, nil, nil)
-		minT, maxT = expandTimeRange(secondarySeries, minT, maxT)
-		minT, maxT = expandTimeRange(quantitySeries, minT, maxT)
-		if not minT or not maxT then
-			emptyText:SetText(emptyStateText)
-			emptyText:Show()
-			return
-		end
-		if minT == maxT then
-			minT = minT - 3600
-			maxT = maxT + 3600
-		end
-
-		local minV, maxV = series[1].value, series[1].value
-		for i = 2, #series do
-			local p = series[i]
-			minV = math.min(minV, p.value)
-			maxV = math.max(maxV, p.value)
-		end
-		for _, p in ipairs(secondarySeries or {}) do
-			minV = math.min(minV, p.value)
-			maxV = math.max(maxV, p.value)
-		end
-		if minV == maxV then
-			minV = minV - 1
-			maxV = maxV + 1
-		end
-		if maxV <= minV then
-			maxV = minV + 1
-		end
-
-		local minQ, maxQ = 0, 1
-		if hasQty then
-			minQ = quantitySeries[1].value
-			maxQ = quantitySeries[1].value
-			for i = 2, #quantitySeries do
-				local p = quantitySeries[i]
-				minQ = math.min(minQ, p.value)
-				maxQ = math.max(maxQ, p.value)
-			end
-			if minQ == maxQ then
-				minQ = math.max(0, minQ - 1)
-				maxQ = maxQ + 1
-			end
-			if maxQ <= minQ then
-				maxQ = minQ + 1
-			end
-			for _, fs in ipairs(yLabelsRight) do
-				fs:Show()
-			end
-			yLabelsRight[1]:SetText(rightYFormatter(maxQ))
-			yLabelsRight[2]:SetText(rightYFormatter((maxQ + minQ) / 2))
-			yLabelsRight[3]:SetText(rightYFormatter(minQ))
-		end
-
-		xLabels[2]:ClearAllPoints()
-		xLabels[2]:SetPoint("BOTTOMRIGHT", plot, "BOTTOMRIGHT", -padR - 2, 2)
-
-		local theme = ProfessionExporter:GetTheme()
-		local gridColor = theme.borderSubtle or { r = 0.3, g = 0.32, b = 0.36, a = 0.45 }
-		local gx, gy, ga = gridColor.r or 0.3, gridColor.g or 0.32, gridColor.b or 0.36
-		local gaa = gridColor.a or 0.5
-
-		for g = 1, 3 do
-			local ln = getGridLine(g)
-			if ln then
-				local y = padB + (g - 1) * (innerH / 2)
-				ln:SetColorTexture(gx, gy, ga, gaa)
-				ln:SetStartPoint("BOTTOMLEFT", padL, y)
-				ln:SetEndPoint("BOTTOMLEFT", padL + innerW, y)
-				ln:Show()
-			end
-		end
-
-		yLabels[1]:SetText(yFormatter(maxV))
-		yLabels[2]:SetText(yFormatter((maxV + minV) / 2))
-		yLabels[3]:SetText(yFormatter(minV))
-
-		xLabels[1]:SetText(tsFmt(series[1].at))
-		xLabels[2]:SetText(tsFmt(series[#series].at))
-
-		local function xAt(at)
-			return padL + ((at - minT) / (maxT - minT)) * innerW
-		end
-		local function yAt(val)
-			return padB + ((val - minV) / (maxV - minV)) * innerH
-		end
-		local function yAtQ(val)
-			if not hasQty then
-				return padB
-			end
-			return padB + ((val - minQ) / (maxQ - minQ)) * innerH
-		end
-
-		local hitTargets = {}
-		local function pushHits(pts, kind, yFn)
-			for _, p in ipairs(pts or {}) do
-				hitTargets[#hitTargets + 1] = {
-					kind = kind,
-					pt = p,
-					x = xAt(p.at),
-					y = yFn(p.value),
-				}
-			end
-		end
-		pushHits(series, "primary", yAt)
-		pushHits(secondarySeries, "secondary", yAt)
-		pushHits(quantitySeries, "quantity", yAtQ)
-
-		plot._peGeom = {
-			padL = padL,
-			padR = padR,
-			padT = padT,
-			padB = padB,
-			innerW = innerW,
-			innerH = innerH,
-			minT = minT,
-			maxT = maxT,
-			minV = minV,
-			maxV = maxV,
-			minQ = minQ,
-			maxQ = maxQ,
-			hasQty = hasQty,
-			hitTargets = hitTargets,
-			series = series,
-		}
-
-		local ar, ag, ab = accent.r or 0.35, accent.g or 0.75, accent.b or 0.85
-		local aa = accent.a or 0.95
-
-		for i = 1, #series - 1 do
-			local a, b = series[i], series[i + 1]
-			local x1, y1 = xAt(a.at), yAt(a.value)
-			local x2, y2 = xAt(b.at), yAt(b.value)
-			local ln = getSegmentLine(segmentLines, i, 2)
-			if ln then
-				ln:SetColorTexture(ar, ag, ab, aa)
-				ln:SetStartPoint("BOTTOMLEFT", x1, y1)
-				ln:SetEndPoint("BOTTOMLEFT", x2, y2)
-				ln:Show()
-			end
-		end
-
-		for i = 1, #series do
-			local p = series[i]
-			local mx, my = xAt(p.at), yAt(p.value)
-			local t = getMarker(markers, i, 6)
-			t:SetColorTexture(ar, ag, ab, aa)
-			t:ClearAllPoints()
-			t:SetPoint("CENTER", plot, "BOTTOMLEFT", mx, my)
-			t:Show()
-		end
-
-		local sr, sg, sb = secondaryAccent.r or 0.92, secondaryAccent.g or 0.58, secondaryAccent.b or 0.18
-		local sa = secondaryAccent.a or 0.95
-		for i = 1, #(secondarySeries or {}) - 1 do
-			local a, b = secondarySeries[i], secondarySeries[i + 1]
-			local x1, y1 = xAt(a.at), yAt(a.value)
-			local x2, y2 = xAt(b.at), yAt(b.value)
-			local ln = getSegmentLine(secondarySegmentLines, i, 2)
-			if ln then
-				ln:SetColorTexture(sr, sg, sb, sa)
-				ln:SetStartPoint("BOTTOMLEFT", x1, y1)
-				ln:SetEndPoint("BOTTOMLEFT", x2, y2)
-				ln:Show()
-			end
-		end
-		for i = 1, #(secondarySeries or {}) do
-			local p = secondarySeries[i]
-			local mx, my = xAt(p.at), yAt(p.value)
-			local t = getMarker(secondaryMarkers, i, 5)
-			t:SetColorTexture(sr, sg, sb, sa)
-			t:ClearAllPoints()
-			t:SetPoint("CENTER", plot, "BOTTOMLEFT", mx, my)
-			t:Show()
-		end
-
-		local qr, qg, qb = quantityAccent.r or 0.42, quantityAccent.g or 0.78, quantityAccent.b or 0.5
-		local qa = quantityAccent.a or 0.9
-		for i = 1, #(quantitySeries or {}) - 1 do
-			local a, b = quantitySeries[i], quantitySeries[i + 1]
-			local x1, y1 = xAt(a.at), yAtQ(a.value)
-			local x2, y2 = xAt(b.at), yAtQ(b.value)
-			local ln = getSegmentLine(quantitySegmentLines, i, 1)
-			if ln then
-				ln:SetColorTexture(qr, qg, qb, qa)
-				ln:SetStartPoint("BOTTOMLEFT", x1, y1)
-				ln:SetEndPoint("BOTTOMLEFT", x2, y2)
-				ln:Show()
-			end
-		end
-		for i = 1, #(quantitySeries or {}) do
-			local p = quantitySeries[i]
-			local mx, my = xAt(p.at), yAtQ(p.value)
-			local t = getMarker(quantityMarkers, i, 4)
-			t:SetColorTexture(qr, qg, qb, qa)
-			t:ClearAllPoints()
-			t:SetPoint("CENTER", plot, "BOTTOMLEFT", mx, my)
-			t:Show()
-		end
-	end
-
-	local hoverKey = nil
-	plot:SetScript("OnUpdate", function()
-		if not plot._peGeom or not plot:IsMouseOver() then
-			if hoverKey then
-				GameTooltip:Hide()
-				hoverKey = nil
-			end
-			return
-		end
-		local g = plot._peGeom
-		local mx, my = GetCursorPosition()
-		local scale = plot:GetEffectiveScale()
-		local lx, ly = plot:GetLeft(), plot:GetBottom()
-		if not lx or not ly then
-			return
-		end
-		local px = (mx / scale) - lx
-		local py = (my / scale) - ly
-		local bestIdx, bestDist = nil, 1e9
-		local targets = g.hitTargets or {}
-		for i = 1, #targets do
-			local h = targets[i]
-			local dx = px - h.x
-			local dy = py - h.y
-			local d = dx * dx + dy * dy
-			if d < bestDist then
-				bestDist = d
-				bestIdx = i
-			end
-		end
-		if not bestIdx or bestDist > 30 * 30 then
-			if hoverKey then
-				GameTooltip:Hide()
-				hoverKey = nil
-			end
-			return
-		end
-		local hit = targets[bestIdx]
-		local key = tostring(bestIdx) .. ":" .. tostring(hit.kind) .. ":" .. tostring(hit.pt.at)
-		if hoverKey == key and GameTooltip:IsShown() then
-			return
-		end
-		hoverKey = key
-		GameTooltip:SetOwner(plot, "ANCHOR_CURSOR")
-		if GameTooltip.ClearLines then
-			GameTooltip:ClearLines()
-		elseif GameTooltip_Clear then
-			GameTooltip_Clear(GameTooltip)
-		end
-		if type(tooltipBuilder) == "function" then
-			tooltipBuilder(GameTooltip, hit)
-		else
-			GameTooltip:AddLine(tsFmt(hit.pt.at), 1, 1, 1)
-			GameTooltip:AddLine(yFormatter(hit.pt.value), 0.8, 0.9, 1)
-		end
-		GameTooltip:Show()
-	end)
-
-	plot:SetScript("OnLeave", function()
-		GameTooltip:Hide()
-		hoverKey = nil
-	end)
-
-	holder.plot = plot
-	holder.title = title
-	holder.SetTitle = function(_, text)
-		title:SetText(text or "")
-	end
-	holder.SetEmptyText = function(_, text)
-		emptyStateText = text or emptyStateText
-	end
-	holder.SetSeries = function(_, data)
-		series = type(data) == "table" and data or {}
-	end
-	holder.SetSecondarySeries = function(_, data)
-		secondarySeries = type(data) == "table" and data or {}
-	end
-	holder.SetQuantitySeries = function(_, data)
-		quantitySeries = type(data) == "table" and data or {}
-	end
-	holder.SetYFormatter = function(_, fn)
-		if type(fn) == "function" then
-			yFormatter = fn
-		end
-	end
-	holder.SetRightYFormatter = function(_, fn)
-		if type(fn) == "function" then
-			rightYFormatter = fn
-		end
-	end
-	holder.SetTooltipBuilder = function(_, fn)
-		tooltipBuilder = fn
-	end
-	holder.SetAccentColor = function(_, c)
-		if type(c) == "table" then
-			accent = c
-		end
-	end
-	holder.SetSecondaryAccentColor = function(_, c)
-		if type(c) == "table" then
-			secondaryAccent = c
-		end
-	end
-	holder.SetQuantityAccentColor = function(_, c)
-		if type(c) == "table" then
-			quantityAccent = c
-		end
-	end
-	holder.Refresh = function()
-		paint()
-	end
-
-	holder:SetScript("OnSizeChanged", function()
-		paint()
-	end)
-
-	title:SetText(opts.title or "")
-	holder:SetSeries(opts.series)
-	holder:SetSecondarySeries({})
-	holder:SetQuantitySeries({})
-	holder:Refresh()
-	return holder
-end

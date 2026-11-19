@@ -68,16 +68,95 @@ function ForeverLogic.AggregateClassicAuctionRow(aggregate, itemID, count, buyou
 end
 
 --- Item ID from auction storage keys (`region:itemID` or `region:realm:itemID`).
+--- Storage keys: commodities "<region>:<itemID>"; items "<region>:<realmID>:<itemID>[:<ilvl>:<suffix>:<pet>]".
+--- The item ID sits at a fixed position; keys that do not have one there (such as legacy keys built
+--- from a table's address, "<region>:<realm>:table: 0x…") return nil.
 function ForeverLogic.ParseItemIDFromStorageKey(storageKey)
 	if type(storageKey) ~= "string" or storageKey == "" then
 		return nil
 	end
-	local last = storageKey:match("(%d+)$")
-	local itemID = tonumber(last)
+	local parts = {}
+	for part in (storageKey .. ":"):gmatch("([^:]*):") do
+		parts[#parts + 1] = part
+	end
+	local idPart = #parts == 2 and parts[2] or parts[3]
+	local itemID = idPart and idPart:match("^%d+$") and tonumber(idPart)
 	if itemID and itemID > 0 then
 		return itemID
 	end
 	return nil
+end
+
+--- The item part of an item storage key. A C_AuctionHouse item key table becomes
+--- "<itemID>:<ilvl>:<suffix>:<pet>"; anything else becomes the plain item ID.
+function ForeverLogic.SerializeItemKey(itemKey, itemID)
+	if type(itemKey) == "table" then
+		local id = tonumber(itemKey.itemID) or tonumber(itemID) or 0
+		local ilvl = math.floor(tonumber(itemKey.itemLevel) or 0)
+		local suffix = math.floor(tonumber(itemKey.itemSuffix) or 0)
+		local pet = math.floor(tonumber(itemKey.battlePetSpeciesID) or 0)
+		if ilvl == 0 and suffix == 0 and pet == 0 then
+			return tostring(id)
+		end
+		return string.format("%d:%d:%d:%d", id, ilvl, suffix, pet)
+	end
+	if itemKey ~= nil and tostring(itemKey):match("^%d+[%d:]*$") then
+		return tostring(itemKey)
+	end
+	return tostring(tonumber(itemID) or 0)
+end
+
+--- One-time repair of item snapshot / history entries stored under a table address. The item ID is
+--- recovered from `indexes.byItemID`; `buildKey(itemID)` returns the correct key. Entries that cannot
+--- be traced back to an item are dropped. Returns the number of entries moved.
+function ForeverLogic.RepairAuctionStorageKeys(auction, buildKey)
+	if type(auction) ~= "table" or type(buildKey) ~= "function" then
+		return 0
+	end
+	local snapshot = auction.snapshot and auction.snapshot.items or {}
+	local hourly = auction.history and auction.history.hourly or {}
+	local byItemID = auction.indexes and auction.indexes.byItemID or {}
+	local function isBroken(key)
+		return type(key) == "string" and key:find("table:", 1, true) ~= nil
+	end
+	local moved = 0
+	for itemIDText, keys in pairs(byItemID) do
+		local itemID = tonumber(itemIDText)
+		local brokenKeys = {}
+		if itemID and type(keys) == "table" then
+			for key in pairs(keys) do
+				if isBroken(key) then
+					brokenKeys[#brokenKeys + 1] = key
+				end
+			end
+		end
+		for _, oldKey in ipairs(brokenKeys) do
+			local newKey = buildKey(itemID)
+			local entry = snapshot[oldKey]
+			if entry then
+				local existing = snapshot[newKey]
+				local entryAt = tonumber(entry.t or entry.seenAt) or 0
+				local existingAt = existing and (tonumber(existing.t or existing.seenAt) or 0) or -1
+				if entryAt >= existingAt then
+					snapshot[newKey] = entry
+				end
+				moved = moved + 1
+			end
+			if hourly[oldKey] and not hourly[newKey] then
+				hourly[newKey] = hourly[oldKey]
+			end
+			keys[oldKey] = nil
+			keys[newKey] = true
+		end
+	end
+	for _, root in ipairs({ snapshot, hourly }) do
+		for key in pairs(root) do
+			if isBroken(key) then
+				root[key] = nil
+			end
+		end
+	end
+	return moved
 end
 
 --- Normalize compact (`p/q/n/h/t/s`) or long snapshot entry fields.
@@ -138,6 +217,100 @@ function ForeverLogic.BuildMarketHistorySeries(hourlyByHour)
 		return a.at < b.at
 	end)
 	return points
+end
+
+local DAY = 24 * 3600
+
+--- One pass over `auction.history.hourly[storageKey]`: 7-day and 24-hour averages, range and listed quantity.
+--- Listed quantity per hour is the bucket's summed sample size divided by its observation count.
+function ForeverLogic.SummarizeHourlyHistory(hourlyByHour, now)
+	local out = { hours = 0 }
+	if type(hourlyByHour) ~= "table" then
+		return out
+	end
+	now = tonumber(now) or 0
+	local sum7, sum24, n24, qtySum = 0, 0, 0, 0
+	for hourKey, bucket in pairs(hourlyByHour) do
+		local at = tonumber(hourKey)
+		local avg = type(bucket) == "table" and historyBucketAvg(bucket) or nil
+		if at and avg and avg > 0 and at >= now - 7 * DAY then
+			local count = math.max(1, tonumber(bucket.n or bucket.count) or 1)
+			local qty = (tonumber(bucket.q or bucket.weightedQty) or 0) / count
+			out.hours = out.hours + 1
+			sum7 = sum7 + avg
+			qtySum = qtySum + qty
+			local low = tonumber(bucket.m or bucket.min) or avg
+			local high = tonumber(bucket.x or bucket.max) or avg
+			out.low7d = out.low7d and math.min(out.low7d, low) or low
+			out.high7d = out.high7d and math.max(out.high7d, high) or high
+			if at >= now - DAY then
+				sum24 = sum24 + avg
+				n24 = n24 + 1
+			end
+			if not out.lastAt or at > out.lastAt then
+				out.lastAt = at
+				out.lastPrice = tonumber(bucket.l or bucket.last) or avg
+				out.qtyNow = qty
+			end
+		end
+	end
+	if out.hours > 0 then
+		out.avg7d = sum7 / out.hours
+		out.qtyAvg7d = qtySum / out.hours
+	end
+	if n24 > 0 then
+		out.avg24h = sum24 / n24
+	end
+	return out
+end
+
+--- Deal and mover flags for one item. `ref` is the reference price (external value or own average);
+--- `opts.refExternal` means it does not need own history. Ratios are fractions (0.3 = 30%).
+function ForeverLogic.ClassifyMarketItem(price, summary, ref, opts)
+	opts = opts or {}
+	summary = summary or {}
+	price = tonumber(price)
+	local out = {}
+	local minHours = opts.minHours or 3
+	local enoughHistory = (summary.hours or 0) >= minHours
+	ref = tonumber(ref)
+	if price and price > 0 and ref and ref > 0 and (opts.refExternal or enoughHistory) then
+		out.discount = (ref - price) / ref
+		out.isDeal = out.discount >= (opts.dealThreshold or 0.3)
+		out.gain = ref * (1 - (opts.ahCut or 0.05)) - price
+	end
+	local avg = tonumber(summary.avg7d)
+	if price and price > 0 and avg and avg > 0 and enoughHistory then
+		out.change = (price - avg) / avg
+		local mover = opts.moverThreshold or 0.15
+		out.isRiser = out.change >= mover
+		out.isFaller = out.change <= -mover
+	end
+	local qtyAvg = tonumber(summary.qtyAvg7d)
+	if qtyAvg and qtyAvg > 0 and summary.qtyNow and enoughHistory then
+		out.supplyChange = (summary.qtyNow - qtyAvg) / qtyAvg
+	end
+	return out
+end
+
+--- The `n` rows with the largest (or smallest, when `asc`) numeric `key`; rows without the key are skipped.
+function ForeverLogic.TopN(rows, n, key, asc)
+	local out = {}
+	for _, row in ipairs(rows or {}) do
+		if tonumber(row[key]) then
+			out[#out + 1] = row
+		end
+	end
+	table.sort(out, function(a, b)
+		if asc then
+			return a[key] < b[key]
+		end
+		return a[key] > b[key]
+	end)
+	for index = #out, (n or #out) + 1, -1 do
+		out[index] = nil
+	end
+	return out
 end
 
 local function marketRowMatchesQuery(row, query)
@@ -220,6 +393,44 @@ function ForeverLogic.BuildMarketBrowserRows(commodities, items, options)
 		return compareMarketRows(a, b, sortKey, sortAsc)
 	end)
 	return rows
+end
+
+--- Narrows Market rows. filters: classes, subclasses, qualities (sets keyed by label / quality number;
+--- empty or nil = any), owned (set of item IDs, used when ownedOnly), minPrice / maxPrice (copper).
+--- getInfo(itemID) returns { classLabel, subclassLabel, quality }. A quality filter hides items whose
+--- quality is not known yet.
+function ForeverLogic.FilterMarketRows(rows, filters, getInfo)
+	filters = filters or {}
+	local function any(set)
+		return type(set) ~= "table" or next(set) == nil
+	end
+	local needInfo = not any(filters.classes) or not any(filters.subclasses) or not any(filters.qualities)
+	local minPrice, maxPrice = tonumber(filters.minPrice), tonumber(filters.maxPrice)
+	local out = {}
+	for _, row in ipairs(rows or {}) do
+		local keep = true
+		local price = tonumber(row.price) or 0
+		if minPrice and price < minPrice then
+			keep = false
+		elseif maxPrice and price > maxPrice then
+			keep = false
+		elseif filters.ownedOnly and not (filters.owned and filters.owned[row.itemID]) then
+			keep = false
+		elseif needInfo then
+			local info = getInfo and getInfo(row.itemID) or {}
+			if not any(filters.classes) and not filters.classes[info.classLabel or ""] then
+				keep = false
+			elseif not any(filters.subclasses) and not filters.subclasses[info.subclassLabel or ""] then
+				keep = false
+			elseif not any(filters.qualities) and (info.quality == nil or not filters.qualities[info.quality]) then
+				keep = false
+			end
+		end
+		if keep then
+			out[#out + 1] = row
+		end
+	end
+	return out
 end
 
 --- Resolve bags/bank/warband when warband API may be missing (Forever).

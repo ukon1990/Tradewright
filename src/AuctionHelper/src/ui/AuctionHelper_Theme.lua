@@ -414,6 +414,16 @@ function ProfessionExporter:SkinTree(root)
 	end
 end
 
+-- Retail profession quality tier as an inline icon after an item name. Forever has no quality tiers,
+-- so it draws nothing there.
+function ProfessionExporter:GetRankMarkup(rankIndex)
+	rankIndex = tonumber(rankIndex)
+	if not self.IS_RETAIL or not rankIndex or rankIndex <= 0 then
+		return ""
+	end
+	return string.format(" |A:Professions-Icon-Quality-Tier%d-Small:14:14|a", rankIndex)
+end
+
 function ProfessionExporter:ApplyWindowScale()
 	local ui = self.ui
 	if ui and ui.mainFrame then

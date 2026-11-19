@@ -44,13 +44,8 @@ local function compareTriple(leftA, leftB, leftC, rightA, rightB, rightC)
 	return 0
 end
 
--- Retail profession quality tier as an inline icon after the item name.
 local function rankMarkup(rankIndex)
-	rankIndex = tonumber(rankIndex)
-	if not rankIndex or rankIndex <= 0 then
-		return ""
-	end
-	return string.format(" |A:Professions-Icon-Quality-Tier%d-Small:14:14|a", rankIndex)
+	return ProfessionExporter:GetRankMarkup(rankIndex)
 end
 
 function ProfessionExporter:BuildInventoryFilterState()
@@ -61,6 +56,10 @@ function ProfessionExporter:BuildInventoryFilterState()
 		role = ui.invRoleFilterValues or {},
 		itemType = ui.invTypeFilterValues or {},
 		expansions = self.IS_RETAIL and ui.invExpansionFilterValues or {},
+		qualities = ui.invQualityFilterValues or {},
+		locations = ui.invLocationFilterValues or {},
+		hasPrice = ui.invHasPriceOnly == true,
+		profitable = ui.invProfitableOnly == true,
 	}
 end
 
@@ -100,7 +99,19 @@ function ProfessionExporter:FilterInventoryRows(rows, filters)
 		local matchesType = self:IsFilterSelectionEmpty(itemTypeFilter) or itemTypeFilter[row.itemTypeLabel] == true
 		local expTag = row.expansionTag or "legacy"
 		local matchesExpansion = showAllExpansions or expSel[expTag] == true
-		if matchesText and matchesCharacter and matchesRole and matchesType and matchesExpansion then
+		local matchesExtra = (not filters.hasPrice or (tonumber(row.currentAhCopper) or 0) > 0)
+			and (not filters.profitable or (tonumber(row.profitCopperPerUnit) or 0) > 0)
+		if matchesExtra and not self:IsFilterSelectionEmpty(filters.locations) then
+			matchesExtra = (filters.locations.bags and (tonumber(row.bags) or 0) > 0)
+				or (filters.locations.bank and (tonumber(row.bank) or 0) > 0)
+				or (filters.locations.warband and (tonumber(row.warband) or 0) > 0)
+				or false
+		end
+		if matchesExtra and not self:IsFilterSelectionEmpty(filters.qualities) then
+			local quality = self:GetItemFilterInfo(row.itemID).quality
+			matchesExtra = quality ~= nil and filters.qualities[quality] == true
+		end
+		if matchesText and matchesCharacter and matchesRole and matchesType and matchesExpansion and matchesExtra then
 			out[#out + 1] = row
 		end
 	end
@@ -484,10 +495,7 @@ function ProfessionExporter:HandleInventoryRowEnter(rowFrame, rowData)
 		where = where .. " · " .. self:FormatNumberGrouped(rowData.warband) .. " warband"
 	end
 	self:ShowItemRowTooltip(rowFrame, rowData.itemID, {
-		{ "Owned", where },
-		{ "Auction price", self:FormatCopperFull(rowData.currentAhCopper) },
-		{ "Average craft cost", self:FormatCopperFull(rowData.avgCraftCost) },
-		{ "Price seen", self:FormatScanTimestamp(rowData.currentAhAt) },
+		{ "On the shown characters", self:FormatNumberGrouped(rowData.total or 0) .. " · " .. where },
 	}, "Click for details · Shift-click to link")
 end
 
@@ -502,7 +510,7 @@ function ProfessionExporter:LayoutInventoryPanel(panel)
 	local open = ui.invSelectedItemID ~= nil
 	panel.detailPane:SetShown(open)
 	panel.inventoryTable.frame:ClearAllPoints()
-	panel.inventoryTable.frame:SetPoint("TOPLEFT", panel.toolbar, "BOTTOMLEFT", 0, -GAP)
+	panel.inventoryTable.frame:SetPoint("TOPLEFT", panel.filterRow, "BOTTOMLEFT", 0, -GAP)
 	if open then
 		panel.inventoryTable.frame:SetPoint("BOTTOMRIGHT", panel.detailPane, "BOTTOMLEFT", -GAP, 0)
 	else
@@ -784,6 +792,69 @@ function ProfessionExporter:EnsureInventoryPanel(mainFrame)
 	ui.invSearchBox:SetPoint("LEFT", panel.toolbar, "LEFT", 6, 0)
 	ui.invSearchBox:SetPoint("RIGHT", ui.invCharacterDropdown, "LEFT", -14, 0)
 
+	-- Row 2: quality, where stored, has a price, profitable only, reset.
+	local saved = self:GetSetting("inventory.extraFilters", {}) or {}
+	ui.invQualityFilterValues = ui.invQualityFilterValues or saved.qualities or {}
+	ui.invLocationFilterValues = ui.invLocationFilterValues or saved.locations or {}
+	if ui.invHasPriceOnly == nil then
+		ui.invHasPriceOnly = saved.hasPrice == true
+	end
+	if ui.invProfitableOnly == nil then
+		ui.invProfitableOnly = saved.profitable == true
+	end
+	local function saveAndRefresh()
+		pe:SetSetting("inventory.extraFilters", {
+			qualities = ui.invQualityFilterValues,
+			locations = ui.invLocationFilterValues,
+			hasPrice = ui.invHasPriceOnly,
+			profitable = ui.invProfitableOnly,
+		})
+		pe:RefreshInventoryTab()
+	end
+	panel.filterRow = CreateFrame("Frame", nil, panel)
+	panel.filterRow:SetPoint("TOPLEFT", panel.toolbar, "BOTTOMLEFT", 0, -8)
+	panel.filterRow:SetPoint("TOPRIGHT", panel.toolbar, "BOTTOMRIGHT", 0, -8)
+	panel.filterRow:SetHeight(26)
+	ui.invQualityDropdown = self:CreateMultiSelectDropdown(panel.filterRow, {
+		width = 128, allLabel = "Any quality",
+		getOptions = function() return pe:GetQualityFilterOptions() end,
+		getSelection = function() return ui.invQualityFilterValues end,
+		setSelection = function(selection) ui.invQualityFilterValues = selection end,
+		onChanged = saveAndRefresh,
+	})
+	ui.invQualityDropdown:SetPoint("LEFT")
+	ui.invLocationDropdown = self:CreateMultiSelectDropdown(panel.filterRow, {
+		width = 136, allLabel = "Bags and bank",
+		getOptions = function()
+			local options = { { value = "bags", label = "In bags" }, { value = "bank", label = "In the bank" } }
+			if pe.IS_RETAIL then
+				options[#options + 1] = { value = "warband", label = "In the warband bank" }
+			end
+			return options
+		end,
+		getSelection = function() return ui.invLocationFilterValues end,
+		setSelection = function(selection) ui.invLocationFilterValues = selection end,
+		onChanged = saveAndRefresh,
+	})
+	panel.hasPrice = self:CreateCheckbox(panel.filterRow, "Has a price", function(checked)
+		ui.invHasPriceOnly = checked
+		saveAndRefresh()
+	end)
+	panel.profitable = self:CreateCheckbox(panel.filterRow, "Profitable only", function(checked)
+		ui.invProfitableOnly = checked
+		saveAndRefresh()
+	end)
+	panel.resetFilters = self:CreateButton(panel.filterRow, "Reset filters", function()
+		ui.invCharacterFilterValues, ui.invRoleFilterValues, ui.invTypeFilterValues = {}, {}, {}
+		ui.invExpansionFilterValues, ui.invQualityFilterValues, ui.invLocationFilterValues = {}, {}, {}
+		ui.invHasPriceOnly, ui.invProfitableOnly = false, false
+		ui.invSearchBox:SetText("")
+		ui.invSearchBox:UpdatePlaceholder()
+		pe:SetSetting("inventory.selectedExpansions", {})
+		saveAndRefresh()
+	end, { small = true })
+	self:ChainRight({ ui.invQualityDropdown, ui.invLocationDropdown, panel.hasPrice, panel.profitable, panel.resetFilters }, 12)
+
 	panel.detailPane = self:CreateItemDetailPane(panel, {
 		metricSettingKey = "inventory.detailsGraphMetric",
 		onClose = function()
@@ -792,7 +863,7 @@ function ProfessionExporter:EnsureInventoryPanel(mainFrame)
 			ProfessionExporter:LayoutInventoryPanel(panel)
 		end,
 	})
-	panel.detailPane:SetPoint("TOPRIGHT", panel.toolbar, "BOTTOMRIGHT", 0, -GAP)
+	panel.detailPane:SetPoint("TOPRIGHT", panel.filterRow, "BOTTOMRIGHT", 0, -GAP)
 	panel.detailPane:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
 
 	ui.inventoryTable = self:CreateReusableTable(panel, {
@@ -906,6 +977,10 @@ function ProfessionExporter:RefreshInventoryTab()
 		or string.format("%d of %d characters", selectedCharacterCount, storedCharacterCount)
 
 	ui.inventoryPanel.rangeDropdown:RefreshText()
+	ui.invQualityDropdown:RefreshText()
+	ui.invLocationDropdown:RefreshText()
+	ui.inventoryPanel.hasPrice.check:SetChecked(ui.invHasPriceOnly == true)
+	ui.inventoryPanel.profitable.check:SetChecked(ui.invProfitableOnly == true)
 	ui.inventoryPanel.columnsDropdown:RefreshText()
 
 	ui.inventoryTable:SetColumns(self:BuildInventoryTableColumns())

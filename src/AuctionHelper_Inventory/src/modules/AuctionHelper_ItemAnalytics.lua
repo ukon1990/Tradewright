@@ -1304,6 +1304,18 @@ function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, 
 		graphWidget:SetQuantitySeries(quantitySeries)
 	end
 	graphWidget:SetYFormatter(yFormatter)
-	graphWidget:SetTooltipBuilder(tooltipBuilder)
+	-- The chart's shared tooltip shows every series at the hovered hour; only the labels differ.
+	if graphWidget.SetSeriesLabels then
+		if metric == "quantity" then
+			graphWidget:SetSeriesLabels("Owned", nil, nil, nil)
+		elseif metric == "crafting" then
+			graphWidget:SetSeriesLabels("Craft cost", nil, "Listed", nil)
+		else
+			graphWidget:SetSeriesLabels("Price", "Craft cost", "Listed", "Margin")
+		end
+		graphWidget:SetTooltipBuilder(nil)
+	else
+		graphWidget:SetTooltipBuilder(tooltipBuilder)
+	end
 	graphWidget:Refresh()
 end

@@ -10,3 +10,4 @@
 
 Bootstrap.lua
 src\modules\AuctionHelper_Auction.lua
+src\modules\AuctionHelper_MarketInsights.lua

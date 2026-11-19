@@ -9,12 +9,14 @@
 
 Bootstrap.lua
 src\ui\AuctionHelper_Widgets.lua
+src\ui\AuctionHelper_Chart.lua
 src\ui\AuctionHelper_Table.lua
 src\ui\AuctionHelper_UI.lua
 src\ui\AuctionHelper_InventoryUI.lua
 src\ui\AuctionHelper_CraftsUI.lua
 src\ui\AuctionHelper_ProfessionCraftPanel.lua
 src\ui\AuctionHelper_MailPanel.lua
+src\ui\AuctionHelper_GoldDashboard.lua
 src\ui\AuctionHelper_OverviewTab.lua
 src\ui\AuctionHelper_InventoryTab.lua
 src\ui\AuctionHelper_MarketUI.lua

@@ -1346,6 +1346,16 @@ function ProfessionExporter:InitAuctionDB()
 	auction.rules = auction.rules or {}
 	auction.rules.byItemID = auction.rules.byItemID or {}
 	auction.itemLastScanAt = auction.itemLastScanAt or {}
+	-- Version 2: item entries saved under a table address ("…:table: 0x…") are moved to real item keys.
+	if (tonumber(auction.storageKeyVersion) or 1) < 2 and self.ForeverLogic and self.ForeverLogic.RepairAuctionStorageKeys then
+		local moved = self.ForeverLogic.RepairAuctionStorageKeys(auction, function(itemID)
+			return self:BuildAuctionStorageKey(itemID, "item")
+		end)
+		auction.storageKeyVersion = 2
+		if moved > 0 then
+			self:DebugLog("AH", "repaired auction storage keys", { string.format("moved=%d", moved) })
+		end
+	end
 	return auction
 end
 
@@ -2788,10 +2798,10 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 				return
 			end
 			local pe = ProfessionExporter
-			local pairs = {
-				{ "Owned", pe:FormatNumberGrouped(tonumber(rowData.quantityOwned) or 0) },
-				{ "Live lowest buyout", rowData.nativePrice and rowData.nativePrice > 0 and pe:FormatCopperFull(rowData.nativePrice) or "not scanned" },
-			}
+			local pairs = {}
+			if not (rowData.nativePrice and rowData.nativePrice > 0) then
+				pairs[#pairs + 1] = { "Live price", "not scanned this visit" }
+			end
 			if rowData.fallbackPrice and rowData.fallbackPrice > 0 then
 				pairs[#pairs + 1] = { "Fallback price", pe:FormatCopperFull(rowData.fallbackPrice) .. " · " .. tostring(rowData.fallbackPriceSource or "other addon") }
 			end
@@ -3021,8 +3031,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 				{ "Need", pe:FormatNumberGrouped(rowData.quantityNeeded or 0) },
 				{ "Have here", pe:FormatNumberGrouped(rowData.quantityOnCharacter or rowData.quantityHave or 0) },
 				{ "Buy", pe:FormatNumberGrouped(rowData.quantityToBuy or 0) },
-				{ "Live price", rowData.currentPrice and pe:FormatCopperFull(rowData.currentPrice) or "not scanned" },
-				{ "Cost", rowData.estimatedBuyCost and pe:FormatCopperFull(rowData.estimatedBuyCost) or "-" },
+				{ "Cost to buy", rowData.estimatedBuyCost and pe:FormatCopperFull(rowData.estimatedBuyCost) or "no price yet" },
 			}
 			for _, alloc in ipairs(type(rowData.mailAllocations) == "table" and rowData.mailAllocations or {}) do
 				if (tonumber(alloc.mailQuantity) or 0) > 0 then
@@ -3413,11 +3422,7 @@ function ProfessionExporter:GetAuctionSubclassFilterOptions(rows, classSelection
 end
 
 local function rankMarkup(rankIndex)
-	rankIndex = tonumber(rankIndex)
-	if not rankIndex or rankIndex <= 0 then
-		return ""
-	end
-	return string.format(" |A:Professions-Icon-Quality-Tier%d-Small:14:14|a", rankIndex)
+	return ProfessionExporter:GetRankMarkup(rankIndex)
 end
 
 -- A badge-like word in its own colour, for the Flag column.
@@ -3923,26 +3928,7 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 	local dumpState = refreshState.auctionDump
 	local cooldownRemaining = self:GetFullAuctionDumpCooldownRemaining()
 	local lastFullDumpLabel = self:FormatScanTimestamp(tonumber(refreshState.auctionLastFullDumpAt))
-	local fullDumpStatus = "idle"
-	if dumpState and dumpState.mode == "full" and dumpState.running == true then
-		if dumpState.status == "requesting" then
-			fullDumpStatus = "requesting replicate list"
-		elseif dumpState.persistTotal and dumpState.persistTotal > 0 then
-			fullDumpStatus = string.format(
-				"persisting %s/%s",
-				self:FormatNumberGrouped(math.min(tonumber(dumpState.persistDone) or 0, tonumber(dumpState.persistTotal) or 0)),
-				self:FormatNumberGrouped(tonumber(dumpState.persistTotal) or 0)
-			)
-		else
-			fullDumpStatus = string.format(
-				"processing %s/%s",
-				self:FormatNumberGrouped(math.min(tonumber(dumpState.done) or 0, tonumber(dumpState.total) or 0)),
-				self:FormatNumberGrouped(tonumber(dumpState.total) or 0)
-			)
-		end
-	elseif cooldownRemaining > 0 then
-		fullDumpStatus = "cooldown " .. formatDurationShort(cooldownRemaining)
-	end
+	local fullDumpActive = dumpState and dumpState.mode == "full" and dumpState.running == true
 	local loadingLine = "idle"
 	if refreshState.auctionRefreshRunning then
 		local sm = tostring(refreshState.auctionScanMode or "")
@@ -3962,7 +3948,7 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 	local selScanLabel = selID and self:FormatAuctionScanAge(self:GetItemLastAuctionScanAt(selID)) or "n/a"
 	if panel.footerText then
 		local footer = cooldownRemaining > 0 and ("Full scan ready in " .. formatDurationShort(cooldownRemaining))
-			or (fullDumpStatus ~= "idle" and ("Full scan " .. fullDumpStatus))
+			or (fullDumpActive and "Full scan running")
 			or "Full scan ready"
 		panel.footerText:SetText(string.format("%s · Last full scan %s", footer, lastFullDumpLabel))
 	end
@@ -3982,7 +3968,6 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 		mode = "crafts+account"
 	end
 	local bulk = refreshState.auctionBulk
-	local fullDumpActive = dumpState and dumpState.mode == "full" and dumpState.running == true
 	local scanActive = ((refreshState.auctionRefreshRunning == true) or (refreshState.auctionRoiRunning == true)) and (total <= 0 or done < total)
 		or (total > 0 and done < total)
 	local scanPaused = refreshState.auctionRefreshPaused == true and refreshState.auctionRefreshRunning == true
@@ -4299,7 +4284,7 @@ function ProfessionExporter:BuildAuctionStorageKey(itemID, marketScope, itemKey)
 		return string.format("%s:%d", region, itemID)
 	end
 	local connectedRealmID = self:GetAuctionConnectedRealmID()
-	local keyPart = itemKey and tostring(itemKey) or tostring(itemID)
+	local keyPart = self.ForeverLogic.SerializeItemKey(itemKey, itemID)
 	return string.format("%s:%d:%s", region, connectedRealmID, keyPart)
 end
 
@@ -4316,6 +4301,8 @@ function ProfessionExporter:RecordAuctionObservation(observation)
 		return false
 	end
 	local auction = self:InitAuctionDB()
+	local state = self:GetState()
+	state.auctionDataRevision = (state.auctionDataRevision or 0) + 1
 	local itemID = normalizeItemID(observation.itemID)
 	if not itemID then
 		return false
@@ -4463,6 +4450,12 @@ function ProfessionExporter:UpdateAuctionHistoryFromObservation(storageKey, entr
 end
 
 function ProfessionExporter:TrimAuctionHistory()
+	-- Called per observation; walking all history each time made full dumps quadratic.
+	local state = self:GetState()
+	if state.auctionHistoryTrimmedAt and now() - state.auctionHistoryTrimmedAt < 600 then
+		return
+	end
+	state.auctionHistoryTrimmedAt = now()
 	local auction = self:InitAuctionDB()
 	local settings = self.db and self.db.settings and self.db.settings.auction or nil
 	local retentionDays = tonumber(settings and settings.historyRetentionDays) or 14

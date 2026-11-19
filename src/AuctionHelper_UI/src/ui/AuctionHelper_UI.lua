@@ -58,16 +58,75 @@ function ProfessionExporter:FormatScanTimestamp(ts)
 	return date("%Y-%m-%d %H:%M", ts)
 end
 
-function ProfessionExporter:GetItemDisplayName(itemID)
+-- Item names the client has not loaded yet come back empty. Ask the client for them once, show
+-- "#id" meanwhile, and redraw the visible rows when the names arrive.
+local itemNameCache = {}
+local itemNameRequested = {}
+local itemNameRefreshPending = false
+
+-- `noRequest`: return "#id" for unknown items without asking the client (bulk list building).
+function ProfessionExporter:GetItemDisplayName(itemID, noRequest)
 	if not itemID then
 		return "?"
 	end
-	local desc = self:ResolveItemDescriptor(itemID)
+	local id = tonumber(itemID) or itemID
+	local cached = itemNameCache[id]
+	if cached then
+		return cached
+	end
+	local desc = self:ResolveItemDescriptor(id)
 	if desc and desc.name and desc.name ~= "" then
+		itemNameCache[id] = desc.name
 		return desc.name
+	end
+	if not noRequest and type(id) == "number" and not itemNameRequested[id] and C_Item and C_Item.RequestLoadItemDataByID then
+		itemNameRequested[id] = true
+		pcall(C_Item.RequestLoadItemDataByID, id)
 	end
 	return "#" .. tostring(itemID)
 end
+
+-- Re-renders the rows of every visible item table without rebuilding their data.
+function ProfessionExporter:RefreshVisibleItemRows()
+	local ui = self.ui or {}
+	local tables = { ui.inventoryTable, ui.marketTable, ui.craftsTable }
+	local auctionPanel = ui.auctionPanel
+	if auctionPanel then
+		tables[#tables + 1] = auctionPanel.table
+		tables[#tables + 1] = auctionPanel.cartTable
+	end
+	local professionPanel = self._professionCraftPanel
+	if professionPanel then
+		tables[#tables + 1] = professionPanel.reagentTable
+		tables[#tables + 1] = professionPanel.infoHost and professionPanel.infoHost.materials
+	end
+	for _, tableWidget in ipairs(tables) do
+		if tableWidget and tableWidget.frame and tableWidget.frame:IsVisible() then
+			tableWidget:RefreshRows()
+		end
+	end
+	if ui.activeMainTab == "inventory" and ui.invSelectedItemID and ui.inventoryPanel and ui.inventoryPanel:IsVisible() then
+		self:RenderInventoryDetails(ui.invSelectedItemID)
+	end
+end
+
+local itemNameLoader = CreateFrame("Frame")
+itemNameLoader:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+itemNameLoader:SetScript("OnEvent", function(_, _, itemID)
+	itemID = tonumber(itemID)
+	if not itemID or not itemNameRequested[itemID] then
+		return
+	end
+	itemNameRequested[itemID] = nil
+	if itemNameRefreshPending then
+		return
+	end
+	itemNameRefreshPending = true
+	C_Timer.After(0.3, function()
+		itemNameRefreshPending = false
+		ProfessionExporter:RefreshVisibleItemRows()
+	end)
+end)
 
 function ProfessionExporter:NotifyDashboardUpdate(skipRebuild)
 	local ui = self.ui

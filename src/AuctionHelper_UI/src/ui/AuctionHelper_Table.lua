@@ -181,43 +181,54 @@ function TableMixin:GetSortValue(column, rowData)
 	return rowData and rowData[column.id]
 end
 
-function TableMixin:CompareRows(left, right)
-	local column = self:GetColumn(self.sortKey)
-	local cmp = 0
-	if column then
-		if type(column.compare) == "function" then
-			cmp = column.compare(left, right, self.context or {}, self) or 0
-		else
-			cmp = compareValues(self:GetSortValue(column, left), self:GetSortValue(column, right))
-		end
-	end
-
-	if cmp == 0 then
-		cmp = compareValues(left and left._rowIdentity, right and right._rowIdentity)
-	end
-
-	if self.sortAsc then
-		return cmp < 0
-	end
-	return cmp > 0
-end
-
+-- Sorts once per change of rows or sort column: each row's sort key is computed a single time
+-- (not inside the comparator), and the result is reused until SetRows or a sort change.
 function TableMixin:GetSortedRows()
+	if self._sorted and self._sortedFrom == self.rows and self._sortedKey == self.sortKey and self._sortedAsc == self.sortAsc then
+		return self._sorted
+	end
 	local rows = shallowCopy(self.rows)
-	for _, row in ipairs(rows) do
-		if row._rowIdentity == nil then
-			if row.aggregatedInventory then
-				row._rowIdentity = tostring(row.itemID or "")
-			else
-				row._rowIdentity = string.format("%s:%s", tostring(row.characterKey or ""), tostring(row.itemID or ""))
+	local column = self.sortKey and self:GetColumn(self.sortKey)
+	if column then
+		local keys, ids = {}, {}
+		for _, row in ipairs(rows) do
+			if row._rowIdentity == nil then
+				if row.aggregatedInventory then
+					row._rowIdentity = tostring(row.itemID or "")
+				else
+					row._rowIdentity = string.format("%s:%s", tostring(row.characterKey or ""), tostring(row.itemID or ""))
+				end
+			end
+			ids[row] = tostring(row._rowIdentity)
+			if not column.compare then
+				local value = self:GetSortValue(column, row)
+				keys[row] = type(value) == "number" and value or normalizeText(value)
 			end
 		end
-	end
-	if self.sortKey then
+		local asc = self.sortAsc
+		local context = self.context or {}
 		table.sort(rows, function(left, right)
-			return self:CompareRows(left, right)
+			local cmp
+			if column.compare then
+				cmp = column.compare(left, right, context, self) or 0
+			else
+				local a, b = keys[left], keys[right]
+				if type(a) ~= type(b) then
+					a, b = tonumber(a) or 0, tonumber(b) or 0
+				end
+				cmp = a < b and -1 or (a > b and 1 or 0)
+			end
+			if cmp == 0 then
+				local a, b = ids[left], ids[right]
+				return a < b
+			end
+			if asc then
+				return cmp < 0
+			end
+			return cmp > 0
 		end)
 	end
+	self._sorted, self._sortedFrom, self._sortedKey, self._sortedAsc = rows, self.rows, self.sortKey, self.sortAsc
 	return rows
 end
 
@@ -827,7 +838,13 @@ function ProfessionExporter:CreateReusableTable(parent, options)
 	end
 
 	local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-	scrollFrame:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, 0)
+	-- SetHeight(0) means "no height" in WoW, so a headerless table anchors to the frame instead.
+	if widget.headerHeight > 0 then
+		scrollFrame:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, 0)
+	else
+		header:Hide()
+		scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+	end
 	scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -(gutter + 1), footerHeight + 1)
 	widget.scrollFrame = scrollFrame
 	ProfessionExporter:SkinTree(frame)

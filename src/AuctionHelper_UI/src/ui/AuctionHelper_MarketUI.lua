@@ -37,7 +37,8 @@ function ProfessionExporter:BuildMarketTableColumns()
 		self:CreateItemColumn({
 			label = "Item", defaultSort = "asc",
 			getItemID = function(row) return row.itemID end,
-			getName = function(row) return row.name end,
+			getName = function(row) return pe:GetItemDisplayName(row.itemID) end,
+			sortValue = function(row) return row.name or "" end,
 		}),
 		money("price", "Lowest", "price"),
 		money("marketHigh", "Highest", "marketHigh", "price"),
@@ -73,26 +74,91 @@ function ProfessionExporter:EnsureMarketPanel(container)
 	panel:SetAllPoints()
 	ui.marketPanel = panel
 
-	-- Toolbar: search, a hint, and when the last full scan ran.
+	local filters = self:GetMarketFilters()
+	local function changed()
+		ProfessionExporter:SaveMarketFilters()
+		ProfessionExporter:RefreshMarketTab()
+	end
+	local function setFilter(key)
+		return function(selection)
+			filters[key] = selection
+		end
+	end
+
+	-- Row 1: search, item class, subclass, quality.
 	panel.toolbar = CreateFrame("Frame", nil, panel)
 	panel.toolbar:SetPoint("TOPLEFT")
 	panel.toolbar:SetPoint("TOPRIGHT")
 	panel.toolbar:SetHeight(26)
+	panel.qualityDropdown = self:CreateMultiSelectDropdown(panel.toolbar, {
+		width = 128, allLabel = "Any quality",
+		getOptions = function() return pe:GetQualityFilterOptions() end,
+		getSelection = function() return filters.qualities end,
+		setSelection = setFilter("qualities"), onChanged = changed,
+	})
+	panel.qualityDropdown:SetPoint("RIGHT")
+	panel.subclassDropdown = self:CreateMultiSelectDropdown(panel.toolbar, {
+		width = 150, allLabel = "All subclasses",
+		getSelection = function() return filters.subclasses end,
+		setSelection = setFilter("subclasses"), onChanged = changed,
+	})
+	panel.classDropdown = self:CreateMultiSelectDropdown(panel.toolbar, {
+		width = 150, allLabel = "All classes",
+		getSelection = function() return filters.classes end,
+		setSelection = function(selection)
+			filters.classes = selection
+			filters.subclasses = {}
+		end,
+		onChanged = changed,
+	})
+	self:ChainLeft({ panel.qualityDropdown, panel.subclassDropdown, panel.classDropdown }, 8)
 	ui.marketSearchBox = self:CreateSearchBox(panel.toolbar, "Search the last scan", function()
 		ProfessionExporter:RefreshMarketTab()
 	end)
 	ui.marketSearchBox:SetPoint("LEFT", 6, 0)
-	ui.marketSearchBox:SetWidth(254)
-	panel.scanBadge = self:CreateBadge(panel.toolbar)
+	ui.marketSearchBox:SetPoint("RIGHT", panel.classDropdown, "LEFT", -14, 0)
+
+	-- Row 2: owned only, price range in gold, reset; when the last full scan ran on the right.
+	panel.filterRow = CreateFrame("Frame", nil, panel)
+	panel.filterRow:SetPoint("TOPLEFT", panel.toolbar, "BOTTOMLEFT", 0, -8)
+	panel.filterRow:SetPoint("TOPRIGHT", panel.toolbar, "BOTTOMRIGHT", 0, -8)
+	panel.filterRow:SetHeight(26)
+	panel.ownedOnly = self:CreateCheckbox(panel.filterRow, "Only items I own", function(checked)
+		filters.ownedOnly = checked
+		changed()
+	end)
+	panel.ownedOnly:SetPoint("LEFT")
+	panel.priceLabel = self:CreateText(panel.filterRow, "GameFontHighlightSmall", "textMuted")
+	panel.priceLabel:SetPoint("LEFT", panel.ownedOnly, "RIGHT", 16, 0)
+	panel.priceLabel:SetText("Lowest price")
+	local function priceBox(placeholder, key)
+		local box = pe:CreateSearchBox(panel.filterRow, placeholder, function(text)
+			filters[key] = tonumber(text)
+			changed()
+		end, 0.4)
+		box:SetNumeric(true)
+		box:SetMaxLetters(7)
+		box:SetWidth(64)
+		box:SetJustifyH("RIGHT")
+		return box
+	end
+	panel.minGold = priceBox("Min g", "minGold")
+	panel.minGold:SetPoint("LEFT", panel.priceLabel, "RIGHT", 12, 0)
+	panel.priceDash = self:CreateText(panel.filterRow, "GameFontHighlightSmall", "textMuted")
+	panel.priceDash:SetPoint("LEFT", panel.minGold, "RIGHT", 10, 0)
+	panel.priceDash:SetText("to")
+	panel.maxGold = priceBox("Max g", "maxGold")
+	panel.maxGold:SetPoint("LEFT", panel.priceDash, "RIGHT", 12, 0)
+	panel.resetFilters = self:CreateButton(panel.filterRow, "Reset filters", function()
+		pe:ResetMarketFilters()
+	end, { small = true })
+	panel.resetFilters:SetPoint("LEFT", panel.maxGold, "RIGHT", 14, 0)
+	panel.scanBadge = self:CreateBadge(panel.filterRow)
 	panel.scanBadge:SetPoint("RIGHT")
-	panel.hint = self:CreateText(panel.toolbar, "GameFontHighlightSmall", "textMuted")
-	panel.hint:SetPoint("LEFT", ui.marketSearchBox, "RIGHT", 14, 0)
-	panel.hint:SetPoint("RIGHT", panel.scanBadge, "LEFT", -12, 0)
-	panel.hint:SetText("Works away from the auction house")
 
 	-- Detail pane, always shown: empty state until a row is picked.
 	panel.detailCard = self:CreateInset(panel)
-	panel.detailCard:SetPoint("TOPRIGHT", panel.toolbar, "BOTTOMRIGHT", 0, -GAP)
+	panel.detailCard:SetPoint("TOPRIGHT", panel.filterRow, "BOTTOMRIGHT", 0, -GAP)
 	panel.detailCard:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
 	panel.detailCard:SetWidth(DETAIL_WIDTH)
 	panel.detailEmpty = self:CreateEmptyState(panel.detailCard)
@@ -153,10 +219,8 @@ function ProfessionExporter:EnsureMarketPanel(container)
 		end,
 		onRowEnter = function(rowFrame, rowData)
 			ProfessionExporter:ShowItemRowTooltip(rowFrame, rowData and rowData.itemID, {
-				{ "Lowest", ProfessionExporter:FormatCopperShort(rowData and rowData.price) },
-				{ "Highest", ProfessionExporter:FormatCopperShort(rowData and (rowData.marketHigh or rowData.price)) },
-				{ "Quantity", ProfessionExporter:FormatNumberGrouped(rowData and rowData.sampleSize or 0) },
-			}, "Click for history")
+				{ "Highest listing", ProfessionExporter:FormatCopperShort(rowData and (rowData.marketHigh or rowData.price)) },
+			}, "Click for history · Shift-click to link")
 		end,
 		onRowLeave = function()
 			GameTooltip:Hide()
@@ -172,7 +236,7 @@ function ProfessionExporter:EnsureMarketPanel(container)
 			ProfessionExporter:LayoutMarketPanel(panel)
 		end,
 	})
-	ui.marketTable.frame:SetPoint("TOPLEFT", panel.toolbar, "BOTTOMLEFT", 0, -GAP)
+	ui.marketTable.frame:SetPoint("TOPLEFT", panel.filterRow, "BOTTOMLEFT", 0, -GAP)
 	ui.marketTable.frame:SetPoint("BOTTOMRIGHT", panel.detailCard, "BOTTOMLEFT", -GAP, 0)
 	panel.marketTable = ui.marketTable
 	ui.marketTable:SetColumns(self:BuildMarketTableColumns())
@@ -182,6 +246,51 @@ function ProfessionExporter:EnsureMarketPanel(container)
 	end)
 	self:LayoutMarketPanel(panel)
 	return panel
+end
+
+-- Market filter state, kept in settings so it survives a reload.
+function ProfessionExporter:GetMarketFilters()
+	local ui = self.ui
+	if not ui.marketFilters then
+		local saved = self:GetSetting("market.filters", {}) or {}
+		ui.marketFilters = {
+			classes = saved.classes or {},
+			subclasses = saved.subclasses or {},
+			qualities = saved.qualities or {},
+			ownedOnly = saved.ownedOnly == true,
+			minGold = tonumber(saved.minGold),
+			maxGold = tonumber(saved.maxGold),
+		}
+	end
+	return ui.marketFilters
+end
+
+function ProfessionExporter:SaveMarketFilters()
+	self:SetSetting("market.filters", self:GetMarketFilters())
+end
+
+function ProfessionExporter:ResetMarketFilters()
+	local panel = self.ui.marketPanel
+	self.ui.marketFilters = { classes = {}, subclasses = {}, qualities = {}, ownedOnly = false }
+	self:SaveMarketFilters()
+	if panel then
+		panel.minGold:SetText("")
+		panel.maxGold:SetText("")
+		panel.minGold:UpdatePlaceholder()
+		panel.maxGold:UpdatePlaceholder()
+	end
+	self:RefreshMarketTab()
+end
+
+-- Item IDs any stored character has in bags, bank or warband bank.
+function ProfessionExporter:GetOwnedItemSet()
+	local owned = {}
+	for _, row in ipairs(self:BuildInventoryRowsAggregatedByItem(self.db, {}, "") or {}) do
+		if (tonumber(row.total) or 0) > 0 and row.itemID then
+			owned[tonumber(row.itemID)] = true
+		end
+	end
+	return owned
 end
 
 function ProfessionExporter:CollectMarketBrowserRows()
@@ -207,9 +316,15 @@ function ProfessionExporter:CollectMarketBrowserRows()
 		sortKey = sortKey,
 		sortAsc = sortAsc,
 		resolveName = function(itemID)
-			return ProfessionExporter:GetItemDisplayName(itemID)
+			return ProfessionExporter:GetItemDisplayName(itemID, true)
 		end,
 	})
+end
+
+-- Switches to the Market tab with this listing selected (shown when the current filters include it).
+function ProfessionExporter:OpenMarketItem(storageKey)
+	self.ui.marketSelectedStorageKey = storageKey
+	self:ShowDashboardTab("market")
 end
 
 function ProfessionExporter:RenderMarketDetails(rowData)
@@ -240,7 +355,7 @@ function ProfessionExporter:RenderMarketDetails(rowData)
 	local primary, secondary, quantity, recent = {}, {}, {}, {}
 	for i = math.max(1, #points - 47), #points do
 		local p = points[i]
-		primary[#primary + 1] = { at = p.at, value = p.last or p.avg or p.min or 0 }
+		primary[#primary + 1] = { at = p.at, value = p.last or p.avg or p.min or 0, meta = { min = p.min, max = p.max } }
 		if p.min then
 			secondary[#secondary + 1] = { at = p.at, value = p.min }
 		end
@@ -257,13 +372,8 @@ function ProfessionExporter:RenderMarketDetails(rowData)
 	graph:SetSeries(primary)
 	graph:SetSecondarySeries(secondary)
 	graph:SetQuantitySeries(quantity)
-	graph:SetTooltipBuilder(function(tip, hit)
-		local pt = hit and hit.pt
-		if pt then
-			tip:AddLine(ProfessionExporter:FormatScanTimestamp(pt.at), 1, 1, 1)
-			tip:AddLine(ProfessionExporter:FormatCopperFull(pt.value))
-		end
-	end)
+	graph:SetSeriesLabels("Price", "Lowest", "Listed", nil)
+	graph:SetTooltipBuilder(nil)
 	graph:Refresh()
 	self:LayoutMarketPanel(panel)
 end
@@ -278,7 +388,38 @@ function ProfessionExporter:RefreshMarketTab()
 		return
 	end
 
-	local rows = self:CollectMarketBrowserRows()
+	local allRows = self:CollectMarketBrowserRows()
+	local filters = self:GetMarketFilters()
+	local panel = ui.marketPanel
+	local itemIDs = {}
+	for index, row in ipairs(allRows) do
+		itemIDs[index] = row.itemID
+	end
+	local classOptions = self:BuildItemClassOptions(itemIDs, "classLabel")
+	filters.classes = self:NormalizeFilterSelection(filters.classes, classOptions)
+	local subclassOptions = self:BuildItemClassOptions(itemIDs, "subclassLabel", filters.classes)
+	filters.subclasses = self:NormalizeFilterSelection(filters.subclasses, subclassOptions)
+	panel.classDropdown:SetOptions(classOptions)
+	panel.subclassDropdown:SetOptions(subclassOptions)
+	panel.qualityDropdown:RefreshText()
+	panel.ownedOnly.check:SetChecked(filters.ownedOnly)
+	if filters.minGold and panel.minGold:GetText() == "" and not panel.minGold:HasFocus() then
+		panel.minGold:SetText(tostring(filters.minGold))
+	end
+	if filters.maxGold and panel.maxGold:GetText() == "" and not panel.maxGold:HasFocus() then
+		panel.maxGold:SetText(tostring(filters.maxGold))
+	end
+	local rows = self.ForeverLogic.FilterMarketRows(allRows, {
+		classes = filters.classes,
+		subclasses = filters.subclasses,
+		qualities = filters.qualities,
+		ownedOnly = filters.ownedOnly,
+		owned = filters.ownedOnly and self:GetOwnedItemSet() or nil,
+		minPrice = filters.minGold and filters.minGold * 10000 or nil,
+		maxPrice = filters.maxGold and filters.maxGold * 10000 or nil,
+	}, function(itemID)
+		return ProfessionExporter:GetItemFilterInfo(itemID)
+	end)
 	ui.marketWorkingRows = rows
 	if ui.marketTable then
 		ui.marketTable:SetRows(rows)
@@ -286,14 +427,19 @@ function ProfessionExporter:RefreshMarketTab()
 
 	local state = (type(self.GetState) == "function" and self:GetState()) or {}
 	local lastDump = tonumber(state.auctionLastFullDumpAt)
-	local panel = ui.marketPanel
 	if lastDump and lastDump > 0 then
 		panel.scanBadge:SetBadge("Full scan " .. self:FormatScanTimestamp(lastDump), "accent")
 	else
 		panel.scanBadge:SetBadge("No full scan yet", "warning")
 	end
 	ui.marketTable:Refresh()
-	ui.marketTable:SetFooterText(string.format("%s items", self:FormatNumberGrouped(#rows)), "Search to narrow the list")
+	if #allRows > 0 then
+		ui.marketTable:SetEmptyText("Nothing matches", "Change the search or press Reset filters.")
+	else
+		ui.marketTable:SetEmptyText("No prices yet", "Open the auction house and run a full scan.")
+	end
+	ui.marketTable:SetFooterText(string.format("%s of %s items", self:FormatNumberGrouped(#rows), self:FormatNumberGrouped(#allRows)),
+		"Works away from the auction house")
 
 	local selectedKey = ui.marketSelectedStorageKey
 	local selected = nil

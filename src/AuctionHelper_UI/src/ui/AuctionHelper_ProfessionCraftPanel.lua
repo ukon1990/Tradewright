@@ -575,11 +575,7 @@ local PAD = 12
 local TALL_ROW = 36
 
 local function rankMarkup(rankIndex)
-	rankIndex = tonumber(rankIndex)
-	if not rankIndex or rankIndex <= 0 then
-		return ""
-	end
-	return string.format(" |A:Professions-Icon-Quality-Tier%d-Small:14:14|a", rankIndex)
+	return ProfessionExporter:GetRankMarkup(rankIndex)
 end
 
 local function queueOpenRecipe(amount)

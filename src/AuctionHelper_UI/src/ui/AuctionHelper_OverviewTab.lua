@@ -83,7 +83,43 @@ function OverviewTab:Create(container, uiState)
 	panel:SetAllPoints()
 	uiState.overviewPanel = panel
 
-	panel.statsRow = CreateFrame("Frame", nil, panel)
+	-- Gold | Characters switch. Gold is the money dashboard; Characters is per-character detail.
+	panel.viewBar = CreateFrame("Frame", nil, panel)
+	panel.viewBar:SetPoint("TOPLEFT")
+	panel.viewBar:SetPoint("TOPRIGHT")
+	panel.viewBar:SetHeight(22)
+	panel.viewButtons = {}
+	local previous
+	for _, view in ipairs({ { "gold", "Gold" }, { "characters", "Characters" } }) do
+		local button = pe:CreateButton(panel.viewBar, view[2], function()
+			pe:SetSetting("overview.view", view[1])
+			OverviewTab:Refresh()
+		end, { small = true })
+		button.view = view[1]
+		if previous then
+			button:SetPoint("LEFT", previous, "RIGHT", -1, 0)
+		else
+			button:SetPoint("LEFT")
+		end
+		previous = button
+		panel.viewButtons[#panel.viewButtons + 1] = button
+	end
+	panel.viewNote = pe:CreateText(panel.viewBar, "GameFontHighlightSmall", "textMuted", "RIGHT")
+	panel.viewNote:SetPoint("RIGHT")
+	panel.viewNote:SetPoint("LEFT", previous, "RIGHT", 12, 0)
+
+	local function viewHost()
+		local host = CreateFrame("Frame", nil, panel)
+		host:SetPoint("TOPLEFT", panel.viewBar, "BOTTOMLEFT", 0, -GAP)
+		host:SetPoint("BOTTOMRIGHT")
+		return host
+	end
+	panel.goldView = viewHost()
+	panel.goldDashboard = pe:CreateGoldDashboard(panel.goldView)
+	panel.charactersView = viewHost()
+	local host = panel.charactersView
+
+	panel.statsRow = CreateFrame("Frame", nil, host)
 	panel.statsRow:SetPoint("TOPLEFT")
 	panel.statsRow:SetPoint("TOPRIGHT")
 	panel.statsRow:SetHeight(58)
@@ -92,7 +128,7 @@ function OverviewTab:Create(container, uiState)
 		panel.stats[index] = pe:CreateStat(panel.statsRow)
 	end
 
-	panel.toolbar = CreateFrame("Frame", nil, panel)
+	panel.toolbar = CreateFrame("Frame", nil, host)
 	panel.toolbar:SetPoint("TOPLEFT", panel.statsRow, "BOTTOMLEFT", 0, -GAP)
 	panel.toolbar:SetPoint("TOPRIGHT", panel.statsRow, "BOTTOMRIGHT", 0, -GAP)
 	panel.toolbar:SetHeight(26)
@@ -106,9 +142,9 @@ function OverviewTab:Create(container, uiState)
 	pe:ChainLeft({ panel.exportAccountButton, panel.exportCharacterButton })
 
 	-- Left: character list.
-	panel.sidebar = CreateFrame("Frame", nil, panel)
+	panel.sidebar = CreateFrame("Frame", nil, host)
 	panel.sidebar:SetPoint("TOPLEFT", panel.toolbar, "BOTTOMLEFT", 0, -GAP)
-	panel.sidebar:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 0)
+	panel.sidebar:SetPoint("BOTTOMLEFT", host, "BOTTOMLEFT", 0, 0)
 	panel.sidebar:SetWidth(SIDEBAR_WIDTH)
 	panel.sidebarTitle = pe:CreateHeading(panel.sidebar, "Characters")
 	panel.sidebarTitle:SetPoint("TOPLEFT")
@@ -123,9 +159,9 @@ function OverviewTab:Create(container, uiState)
 	panel.characterList.frame:SetPoint("BOTTOMRIGHT", panel.sidebar, "BOTTOMRIGHT", 0, 0)
 
 	-- Right: selected character or account.
-	panel.detail = CreateFrame("Frame", nil, panel)
+	panel.detail = CreateFrame("Frame", nil, host)
 	panel.detail:SetPoint("TOPLEFT", panel.sidebar, "TOPRIGHT", GAP, 0)
-	panel.detail:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
+	panel.detail:SetPoint("BOTTOMRIGHT", host, "BOTTOMRIGHT", 0, 0)
 
 	panel.detailTitle = pe:CreateText(panel.detail, "GameFontHighlight")
 	panel.detailTitle:SetPoint("TOPLEFT")
@@ -187,7 +223,8 @@ function OverviewTab:RefreshStats(panel, selectedKey, selectedData, keys)
 	local pe = ProfessionExporter
 	local agg = pe.db.aggregate or {}
 	local state = pe:GetState()
-	local gold = pe:GetCurrentGoldSummaryForOverview(selectedKey)
+	local accountGold = pe:GetCurrentGoldSummaryForOverview(ACCT_KEY)
+	local gold = selectedKey ~= ACCT_KEY and pe:GetCurrentGoldSummaryForOverview(selectedKey) or nil
 	local inv = sumInventory(pe, selectedKey, selectedData)
 	local professionCount = 0
 	if selectedKey == ACCT_KEY then
@@ -199,8 +236,12 @@ function OverviewTab:RefreshStats(panel, selectedKey, selectedData, keys)
 	end
 
 	panel.stats[1]:SetValues("Characters scanned", tostring(#keys), "Last rebuilt " .. pe:FormatScanTimestamp(agg.updatedAt))
-	panel.stats[2]:SetValues(selectedKey == ACCT_KEY and "Gold, all characters" or "Gold, this character",
-		gold ~= nil and pe:FormatCopperShort(gold) or "-", gold == nil and "No gold recorded yet" or nil)
+	local goldDetail = string.format("Across %d %s", #keys, #keys == 1 and "character" or "characters")
+	if gold ~= nil then
+		local name = selectedData and selectedData.meta and selectedData.meta.name or "This character"
+		goldDetail = name .. " has " .. pe:FormatCopperShort(gold)
+	end
+	panel.stats[2]:SetValues("Gold, all characters", accountGold and accountGold > 0 and pe:FormatCopperShort(accountGold) or "-", goldDetail)
 	panel.stats[3]:SetValues("Item types tracked", pe:FormatNumberGrouped(inv.tracked),
 		string.format("%s in stock, %s items", pe:FormatNumberGrouped(inv.inStock), pe:FormatNumberGrouped(inv.quantity)))
 	if state.scanInProgress then
@@ -325,6 +366,19 @@ function OverviewTab:Refresh()
 	if not panel then
 		return
 	end
+
+	local view = pe:GetSetting("overview.view", "gold") == "characters" and "characters" or "gold"
+	for _, button in ipairs(panel.viewButtons) do
+		pe:StyleShellButton(button, button.view == view)
+	end
+	panel.goldView:SetShown(view == "gold")
+	panel.charactersView:SetShown(view == "characters")
+	if view == "gold" then
+		panel.viewNote:SetText("Usual prices come from " .. (pe:GetSetting("gold.reference", "best") == "own" and "your scans" or "TSM when installed, else your scans") .. " · hover a row for details")
+		panel.goldDashboard:Refresh()
+		return
+	end
+	panel.viewNote:SetText("")
 
 	local selectedKey, selectedData, currentKey, keys = getCurrentSelection(pe)
 	local isCurrent = selectedKey ~= ACCT_KEY and selectedKey == currentKey

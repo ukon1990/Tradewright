@@ -23,11 +23,7 @@ local DETAIL_WIDTH = 300
 local TALL_ROW = 36
 
 local function rankMarkup(rankIndex)
-	rankIndex = tonumber(rankIndex)
-	if not rankIndex or rankIndex <= 0 then
-		return ""
-	end
-	return string.format(" |A:Professions-Icon-Quality-Tier%d-Small:14:14|a", rankIndex)
+	return ProfessionExporter:GetRankMarkup(rankIndex)
 end
 
 local function colorize(pe, colorKey, text)
@@ -802,5 +798,22 @@ function ProfessionExporter:RefreshCraftsTabIfVisible()
 	local ui = self.ui
 	if ui and ui.activeMainTab == "crafts" then
 		self:RefreshCraftsTab()
+	elseif ui and ui.activeMainTab == "overview" and ui.goldDashboard and ui.goldDashboard:IsVisible() then
+		ui.goldDashboard:RefreshCrafts()
 	end
+end
+
+-- Name and muted second line for a craft opportunity row, as the Crafts table shows them.
+function ProfessionExporter:GetCraftRowLabels(row)
+	return craftRowName(self, row), craftRowDetail(self, row)
+end
+
+-- Switches to the Crafts tab with `row` selected and its details open.
+function ProfessionExporter:OpenCraftRow(row)
+	local ui = self.ui
+	ui.craftsSelectedRowKey = row and row.rowKey
+	ui.craftsItemDetailOnlyItemID = nil
+	ui.craftsDetailView = "details"
+	self:ShowDashboardTab("crafts")
+	self:RenderCraftsDetails(row)
 end

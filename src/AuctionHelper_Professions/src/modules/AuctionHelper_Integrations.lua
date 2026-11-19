@@ -289,97 +289,193 @@ local function addPair(tooltip, label, value)
 	tooltip:AddDoubleLine(label, value, TIP_LABEL[1], TIP_LABEL[2], TIP_LABEL[3], TIP_VALUE[1], TIP_VALUE[2], TIP_VALUE[3])
 end
 
-local function seenLabel(self, ts)
-	if self.FormatScanTimestamp then
-		return self:FormatScanTimestamp(ts)
-	end
-	return formatTooltipTimestamp(ts) or "-"
+local TIP_SUCCESS = { 0.40, 0.73, 0.42 }
+local TIP_DANGER = { 0.89, 0.39, 0.38 }
+local TIP_WARNING = { 0.95, 0.65, 0.30 }
+local TIP_INFO = { 0.39, 0.71, 0.96 }
+
+local function addToned(tooltip, label, value, tone)
+	tone = tone or TIP_VALUE
+	tooltip:AddDoubleLine(label, value, TIP_LABEL[1], TIP_LABEL[2], TIP_LABEL[3], tone[1], tone[2], tone[3])
 end
 
+local function ageText(seconds)
+	seconds = math.max(0, tonumber(seconds) or 0)
+	if seconds < 3600 then
+		return string.format("%d min ago", math.max(1, math.floor(seconds / 60)))
+	end
+	if seconds < 2 * 86400 then
+		return string.format("%d h ago", math.floor(seconds / 3600))
+	end
+	return string.format("%d days ago", math.floor(seconds / 86400))
+end
+
+local function percentText(value)
+	return string.format("%s%.0f%%", value >= 0 and "+" or "", value)
+end
+
+--- What a gold maker needs about an item, from every source the addon has. All fields may be nil.
+function ProfessionExporter:BuildItemGoldSummary(itemID)
+	itemID = tonumber(itemID)
+	if not itemID then
+		return nil
+	end
+	local summary = self.GetItemEconomySummary and self:GetItemEconomySummary(itemID, {}) or {}
+	local cachedPrice, _, cachedSeenAt
+	if self.GetFreshAddonCachedPrice then
+		cachedPrice, _, cachedSeenAt = self:GetFreshAddonCachedPrice(itemID)
+	end
+	local nativePrice, _, nativeSeenAt
+	if self.GetNativeAhPrice then
+		nativePrice, _, nativeSeenAt = self:GetNativeAhPrice(itemID)
+	end
+	local out = {}
+	if cachedPrice and cachedPrice > 0 then
+		out.price, out.priceAt = cachedPrice, tonumber(cachedSeenAt)
+	elseif nativePrice and nativePrice > 0 then
+		out.price, out.priceAt = nativePrice, tonumber(nativeSeenAt)
+	elseif tonumber(summary.lastPrice) and summary.lastPrice > 0 then
+		out.price, out.priceAt = summary.lastPrice, tonumber(summary.lastSeenAt)
+	end
+	if not out.price and self.GetMarketEstimateCopper then
+		out.estimate = self:GetMarketEstimateCopper(itemID, nil, nil)
+	end
+	local freshness = (tonumber(self:GetSetting("auction.priceFreshnessMinutes", 15)) or 15) * 60
+	out.priceAge = out.priceAt and (time() - out.priceAt) or nil
+	out.priceStale = out.priceAge ~= nil and out.priceAge > math.max(freshness, 6 * 3600)
+
+	local snap = summary.snapshot or {}
+	out.listed = tonumber(snap.sampleSize)
+	out.listings = tonumber(snap.listingCount)
+
+	if self.GetItemHistorySeries then
+		local points = self:GetItemHistorySeries(itemID, "market", "7d")
+		local total, count = 0, 0
+		for _, p in ipairs(points) do
+			local v = tonumber(p.avg or p.last)
+			if v and v > 0 then
+				total, count = total + v, count + 1
+				local low, high = tonumber(p.min) or v, tonumber(p.max) or v
+				out.low = out.low and math.min(out.low, low) or low
+				out.high = out.high and math.max(out.high, high) or high
+			end
+		end
+		if count >= 2 then
+			out.average = total / count
+			if out.price then
+				out.trend = (out.price - out.average) / out.average * 100
+			end
+		end
+	end
+
+	local craft = self.GetItemHistoryStats and self:GetItemHistoryStats(itemID, "crafting", "30d") or {}
+	out.craftCost = tonumber(craft.average) or tonumber(craft.latest)
+	local unitPrice = out.price or out.estimate
+	if out.craftCost and out.craftCost > 0 and unitPrice then
+		local cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05
+		out.profit = unitPrice * (1 - cut) - out.craftCost
+		out.margin = out.profit / out.craftCost * 100
+	end
+
+	if self.IsTSMLoaded and self:IsTSMLoaded() then
+		local srString = self:GetSetting("integrations.economyTSMSaleRateString", "DBRegionSaleRate")
+		out.saleRate = self:GetTSMCustomPriceCopper(srString, itemID)
+	end
+	out.avgSale = tonumber(summary.avgSale)
+	out.avgBuy = tonumber(summary.avgBuy)
+
+	if self.GetItemCountByLocation then
+		out.bags, out.bank, out.warband, out.owned = self:GetItemCountByLocation(itemID)
+	end
+	return out
+end
+
+-- The AuctionHelper block on item tooltips: price and how fresh it is, how it compares to the past
+-- week, how much is listed, craft profit, what you own, and a one-line verdict. Shift adds detail.
 function ProfessionExporter:AppendPricingToItemTooltip(tooltip, itemID)
 	itemID = tonumber(itemID)
 	if not tooltip or not itemID or itemID <= 0 or tooltipHasProfessionExporterSection(tooltip) then
 		return false
 	end
-
-	local summary = self.GetItemEconomySummary and self:GetItemEconomySummary(itemID, {}) or nil
-	local nativePrice, _, nativeSeenAt
-	if self.GetNativeAhPrice then
-		nativePrice, _, nativeSeenAt = self:GetNativeAhPrice(itemID)
-	end
-	local cachedPrice, cachedSeenAt
-	if self.GetFreshAddonCachedPrice then
-		cachedPrice, _, cachedSeenAt = self:GetFreshAddonCachedPrice(itemID)
-	end
-	local marketEstimate
-	if self.GetMarketEstimateCopper then
-		marketEstimate = self:GetMarketEstimateCopper(itemID, nil, nil)
-	end
-	local craftStats = self.GetItemHistoryStats and self:GetItemHistoryStats(itemID, "crafting", "30d") or {}
-	local lastObservedPrice = summary and tonumber(summary.lastPrice) or nil
-	local lastObservedAt = summary and tonumber(summary.lastSeenAt) or nil
-	local avgSale = summary and tonumber(summary.avgSale) or nil
-	local avgBuy = summary and tonumber(summary.avgBuy) or nil
-	local craftAvg = craftStats and tonumber(craftStats.average) or nil
-	local craftLatest = craftStats and tonumber(craftStats.latest) or nil
-	local bags, bank, warband, totalOwned = 0, 0, 0, 0
-	if self.GetItemCountByLocation then
-		bags, bank, warband, totalOwned = self:GetItemCountByLocation(itemID)
-	end
-
-	local price = (cachedPrice and cachedPrice > 0 and cachedPrice) or (lastObservedPrice and lastObservedPrice > 0 and lastObservedPrice) or nil
-	local priceAt = (cachedPrice and cachedPrice > 0) and cachedSeenAt or lastObservedAt
-	local hasAnyData = price or (nativePrice and nativePrice > 0) or (marketEstimate and marketEstimate > 0)
-		or (avgSale and avgSale > 0) or (avgBuy and avgBuy > 0) or (craftAvg and craftAvg > 0) or (craftLatest and craftLatest > 0)
-	if not hasAnyData then
+	local g = self:BuildItemGoldSummary(itemID)
+	if not g or not (g.price or g.estimate or g.craftCost or g.avgSale) then
 		return false
 	end
-
+	local shift = IsShiftKeyDown and IsShiftKeyDown()
 	tooltip:AddLine(" ")
 	tooltip:AddLine("AuctionHelper", 1, 0.82, 0)
-	if price then
-		addPair(tooltip, "Auction price", self:FormatCopperFull(price))
-		addPair(tooltip, "Seen", seenLabel(self, priceAt))
+
+	if g.price then
+		addPair(tooltip, "Auction price", self:FormatCopperFull(g.price))
+		if g.priceAge then
+			addToned(tooltip, "Seen", ageText(g.priceAge), g.priceStale and TIP_WARNING or nil)
+		end
+	elseif g.estimate then
+		addPair(tooltip, "Estimate", self:FormatCopperFull(g.estimate))
 	end
-	if nativePrice and nativePrice > 0 and nativePrice ~= price and tonumber(nativeSeenAt) ~= tonumber(priceAt) then
-		addPair(tooltip, "Live price", self:FormatCopperFull(nativePrice))
+	if g.average then
+		local tone = g.trend and (g.trend >= 10 and TIP_SUCCESS or g.trend <= -10 and TIP_INFO) or nil
+		addToned(tooltip, "7-day average", self:FormatCopperShort(g.average) .. (g.trend and ("  " .. percentText(g.trend)) or ""), tone)
+		if g.low and g.high and g.high > g.low then
+			addPair(tooltip, "7-day range", self:FormatCopperShort(g.low) .. " – " .. self:FormatCopperShort(g.high))
+		end
 	end
-	if marketEstimate and marketEstimate > 0 and marketEstimate ~= price then
-		addPair(tooltip, "Estimate", self:FormatCopperFull(marketEstimate))
+	if g.listed and g.listed > 0 then
+		local listed = self:FormatNumberGrouped(g.listed)
+		if g.listings and g.listings > 0 then
+			listed = listed .. " in " .. self:FormatNumberGrouped(g.listings) .. " auctions"
+		end
+		addPair(tooltip, "Listed", listed)
 	end
-	if avgSale and avgSale > 0 then
-		addPair(tooltip, "Average sale", self:FormatCopperFull(avgSale))
+	if g.saleRate then
+		addPair(tooltip, "Sale rate", self:FormatSaleRateDisplay(g.saleRate))
 	end
-	if avgBuy and avgBuy > 0 then
-		addPair(tooltip, "Average buy", self:FormatCopperFull(avgBuy))
+	if g.craftCost then
+		addPair(tooltip, "Craft cost", self:FormatCopperFull(g.craftCost))
+		if g.profit then
+			addToned(tooltip, "Profit after cut", (g.profit >= 0 and "+" or "") .. self:FormatCopperFull(g.profit) .. string.format("  %s", percentText(g.margin)),
+				g.profit >= 0 and TIP_SUCCESS or TIP_DANGER)
+		end
 	end
-	if craftAvg and craftAvg > 0 then
-		addPair(tooltip, "Craft cost, 30 days", self:FormatCopperFull(craftAvg))
-	elseif craftLatest and craftLatest > 0 then
-		addPair(tooltip, "Craft cost, latest", self:FormatCopperFull(craftLatest))
+	local owned = tonumber(g.owned) or 0
+	local unit = g.price or g.estimate
+	if owned > 0 then
+		addPair(tooltip, "You own", self:FormatNumberGrouped(owned) .. (unit and ("  ·  worth " .. self:FormatCopperShort(unit * owned)) or ""))
 	end
 
-	totalOwned = tonumber(totalOwned) or 0
-	if totalOwned > 0 then
-		if IsShiftKeyDown and IsShiftKeyDown() then
-			local where = string.format("%s bags · %s bank", self:FormatNumberGrouped(bags), self:FormatNumberGrouped(bank))
-			if (tonumber(warband) or 0) > 0 then
-				where = where .. " · " .. self:FormatNumberGrouped(warband) .. " warband"
+	-- One-line verdict, most useful first.
+	local verdict, tone
+	if g.priceStale then
+		verdict, tone = "Price is old. Scan at the auction house to refresh it.", TIP_WARNING
+	elseif g.trend and g.trend <= -15 then
+		verdict, tone = "Well below its usual price: a good time to buy.", TIP_INFO
+	elseif g.trend and g.trend >= 15 then
+		verdict, tone = "Well above its usual price: a good time to sell.", TIP_SUCCESS
+	elseif g.profit and g.margin and g.margin >= 10 then
+		verdict, tone = "Crafting it is profitable.", TIP_SUCCESS
+	elseif g.profit and g.profit < 0 then
+		verdict, tone = "Costs more to craft than it sells for.", TIP_DANGER
+	end
+	if verdict then
+		tooltip:AddLine(verdict, tone[1], tone[2], tone[3], true)
+	end
+
+	if shift then
+		if owned > 0 then
+			local where = string.format("%s bags · %s bank", self:FormatNumberGrouped(g.bags or 0), self:FormatNumberGrouped(g.bank or 0))
+			if (tonumber(g.warband) or 0) > 0 then
+				where = where .. " · " .. self:FormatNumberGrouped(g.warband) .. " warband"
 			end
-			addPair(tooltip, "Owned", where)
-			local unit = price or nativePrice or marketEstimate
-			if unit and unit > 0 then
-				addPair(tooltip, "Worth, x" .. self:FormatNumberGrouped(totalOwned), self:FormatCopperFull(unit * totalOwned))
-			end
-			if avgSale and avgSale > 0 then
-				addPair(tooltip, "Average sale, all", self:FormatCopperFull(avgSale * totalOwned))
-			end
-			if (craftAvg or craftLatest) then
-				addPair(tooltip, "Craft cost, all", self:FormatCopperFull((craftAvg or craftLatest) * totalOwned))
-			end
-		else
-			tooltip:AddLine("Hold Shift for totals", TIP_LABEL[1], TIP_LABEL[2], TIP_LABEL[3])
+			addPair(tooltip, "Where", where)
 		end
+		if g.avgSale and g.avgSale > 0 then
+			addPair(tooltip, "Your average sale", self:FormatCopperFull(g.avgSale))
+		end
+		if g.avgBuy and g.avgBuy > 0 then
+			addPair(tooltip, "Your average buy", self:FormatCopperFull(g.avgBuy))
+		end
+	elseif owned > 0 or g.avgSale or g.avgBuy then
+		tooltip:AddLine("Shift: where you keep it and your own sales", TIP_LABEL[1], TIP_LABEL[2], TIP_LABEL[3])
 	end
 	return true
 end

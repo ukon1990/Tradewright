@@ -78,6 +78,21 @@ local function buildSections(pe)
 			end },
 		} },
 	}
+	local function percentOptions(values)
+		local options = {}
+		for _, value in ipairs(values) do
+			options[#options + 1] = { value = value, label = string.format("%d%%", value * 100) }
+		end
+		return options
+	end
+	table.insert(sections, 3, { column = 1, title = "Gold dashboard", items = {
+		{ kind = "select", label = "Deal when below usual price by", path = "gold.dealThreshold", default = 0.3,
+			options = percentOptions({ 0.2, 0.3, 0.4, 0.5 }) },
+		{ kind = "select", label = "Mover when price changed by", path = "gold.moverThreshold", default = 0.15,
+			options = percentOptions({ 0.1, 0.15, 0.25 }) },
+		{ kind = "select", label = "Usual price", path = "gold.reference", default = "best",
+			options = { { value = "best", label = "TSM, else my scans" }, { value = "own", label = "My scans only" } } },
+	} })
 	if pe.IS_RETAIL then
 		sections[#sections + 1] = { column = 2, title = "Crafting orders", items = {
 			{ kind = "check", label = "Hide unlearned recipes in the orders list", path = "craftingOrders.hideUnlearned", default = false,
