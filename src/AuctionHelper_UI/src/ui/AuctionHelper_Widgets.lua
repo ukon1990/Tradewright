@@ -68,76 +68,117 @@ function ProfessionExporter:NormalizeFilterSelection(selection, options)
 	return normalized
 end
 
+local DROPDOWN_HEIGHT = 26
+local DROPDOWN_LABEL_GAP = 18
+
+-- A flat 26px dropdown button with an optional label above it. The Blizzard menu frame is only used to
+-- show the option list, anchored under the button. Holder height: 26, or 44 with a label.
+local function createDropdownShell(parent, config)
+	local holder = CreateFrame("Frame", nil, parent)
+	local hasLabel = config.label ~= false and config.label ~= nil
+	holder.width = config.width or 210
+	holder:SetSize(holder.width, DROPDOWN_HEIGHT + (hasLabel and DROPDOWN_LABEL_GAP or 0))
+
+	if hasLabel then
+		local title = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		title:SetPoint("TOPLEFT", 0, 0)
+		title:SetPoint("TOPRIGHT", 0, 0)
+		title:SetJustifyH("LEFT")
+		title:SetWordWrap(false)
+		local muted = ProfessionExporter:GetTheme().textMuted
+		title:SetTextColor(muted.r, muted.g, muted.b)
+		title:SetText(config.label)
+		holder.title = title
+	end
+
+	local button = CreateFrame("Button", nil, holder)
+	button:SetPoint("BOTTOMLEFT", 0, 0)
+	button:SetPoint("BOTTOMRIGHT", 0, 0)
+	button:SetHeight(DROPDOWN_HEIGHT)
+	local theme = ProfessionExporter:GetTheme()
+	ProfessionExporter:AddSurface(button, theme.surface2, theme.borderControl)
+	button:SetHighlightTexture("Interface\\Buttons\\WHITE8X8")
+	button:GetHighlightTexture():SetVertexColor(theme.gold.r, theme.gold.g, theme.gold.b, 0.09)
+	local text = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	text:SetPoint("LEFT", 8, 0)
+	text:SetPoint("RIGHT", -22, 0)
+	text:SetJustifyH("LEFT")
+	text:SetWordWrap(false)
+	local caret = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	caret:SetPoint("RIGHT", -8, 0)
+	caret:SetText("v")
+	caret:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	holder.button = button
+	holder.text = text
+
+	local menu = CreateFrame("Frame", nil, holder, "UIDropDownMenuTemplate")
+	menu:Hide()
+	holder.dropdown = menu
+	button:SetScript("OnClick", function()
+		ToggleDropDownMenu(1, nil, menu, button, 0, 0)
+	end)
+
+	function holder:SetDisplayText(label)
+		self.text:SetText(label or "")
+	end
+	if config.tooltip then
+		button:SetScript("OnEnter", function()
+			GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
+			GameTooltip:SetText(config.tooltip, 1, 1, 1, 1, true)
+			GameTooltip:Show()
+		end)
+		button:SetScript("OnLeave", GameTooltip_Hide)
+	end
+	return holder, menu
+end
+
+local function resolveOptions(holder)
+	if holder.currentOptions then
+		return holder.currentOptions
+	end
+	if type(holder.getOptions) == "function" then
+		return holder.getOptions() or {}
+	end
+	return holder.options or {}
+end
+
 function ProfessionExporter:CreateMultiSelectDropdown(parent, config)
 	config = config or {}
-
-	local holder = CreateFrame("Frame", nil, parent)
-	holder:SetSize((config.width or 210) + 32, 52)
-
-	local title = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	title:SetPoint("TOPLEFT", holder, "TOPLEFT", 0, 0)
-	title:SetText(config.label or "Filter")
-	holder.title = title
-
-	local dropdown = CreateFrame("Frame", nil, holder, "UIDropDownMenuTemplate")
-	dropdown:SetPoint("TOPLEFT", holder, "TOPLEFT", -16, -12)
-	holder.dropdown = dropdown
-	holder.width = config.width or 210
+	local holder, menu = createDropdownShell(parent, config)
 	holder.allLabel = config.allLabel or "All"
 	holder.options = config.options or {}
-	holder.currentOptions = nil
 	holder.getOptions = config.getOptions
 	holder.getSelection = config.getSelection
 	holder.setSelection = config.setSelection
 	holder.onChanged = config.onChanged
 
-	local function getOptions()
-		if holder.currentOptions then
-			return holder.currentOptions
-		end
-		if type(holder.getOptions) == "function" then
-			return holder.getOptions() or {}
-		end
-		return holder.options or {}
-	end
-
 	local function getSelection()
-		if type(holder.getSelection) == "function" then
-			return holder.getSelection() or {}
-		end
-		return {}
+		return type(holder.getSelection) == "function" and holder.getSelection() or {}
 	end
 
-	local function setSelection(selection)
+	local function applySelection(selection)
 		selection = copySelection(selection)
 		if type(holder.setSelection) == "function" then
 			holder.setSelection(selection)
 		end
-		return selection
+		holder:RefreshText()
+		if type(holder.onChanged) == "function" then
+			holder.onChanged(selection)
+		end
 	end
 
-	local function updateText()
-		UIDropDownMenu_SetWidth(dropdown, holder.width)
-		UIDropDownMenu_SetText(
-			dropdown,
-			ProfessionExporter:GetFilterSelectionSummary(getOptions(), getSelection(), holder.allLabel)
-		)
+	function holder:RefreshText()
+		self:SetDisplayText(ProfessionExporter:GetFilterSelectionSummary(resolveOptions(self), getSelection(), self.allLabel))
+	end
+	function holder:SetOptions(options)
+		self.currentOptions = options or {}
+		self:RefreshText()
 	end
 
-	holder.SetOptions = function(_, options)
-		holder.currentOptions = options or {}
-		updateText()
-	end
-
-	holder.RefreshText = updateText
-
-	UIDropDownMenu_SetWidth(dropdown, holder.width)
-	UIDropDownMenu_JustifyText(dropdown, "LEFT")
-	UIDropDownMenu_Initialize(dropdown, function(_, level)
+	UIDropDownMenu_Initialize(menu, function(_, level)
 		if level ~= 1 then
 			return
 		end
-
 		local allInfo = UIDropDownMenu_CreateInfo()
 		allInfo.text = holder.allLabel
 		allInfo.isNotRadio = true
@@ -146,15 +187,11 @@ function ProfessionExporter:CreateMultiSelectDropdown(parent, config)
 			return ProfessionExporter:IsFilterSelectionEmpty(getSelection())
 		end
 		allInfo.func = function()
-			setSelection({})
-			updateText()
-			if type(holder.onChanged) == "function" then
-				holder.onChanged({})
-			end
+			applySelection({})
 		end
 		UIDropDownMenu_AddButton(allInfo, level)
 
-		for _, option in ipairs(getOptions()) do
+		for _, option in ipairs(resolveOptions(holder)) do
 			if option.value ~= "all" then
 				local info = UIDropDownMenu_CreateInfo()
 				info.text = option.label
@@ -165,94 +202,53 @@ function ProfessionExporter:CreateMultiSelectDropdown(parent, config)
 				end
 				info.func = function()
 					local nextSelection = copySelection(getSelection())
-					if nextSelection[option.value] then
-						nextSelection[option.value] = nil
-					else
-						nextSelection[option.value] = true
-					end
-					setSelection(nextSelection)
-					updateText()
-					if type(holder.onChanged) == "function" then
-						holder.onChanged(nextSelection)
-					end
+					nextSelection[option.value] = not nextSelection[option.value] or nil
+					applySelection(nextSelection)
 				end
 				UIDropDownMenu_AddButton(info, level)
 			end
 		end
 	end, "MENU")
 
-	updateText()
+	holder:RefreshText()
 	return holder
 end
 
 function ProfessionExporter:CreateSingleSelectDropdown(parent, config)
 	config = config or {}
-
-	local holder = CreateFrame("Frame", nil, parent)
-	holder:SetSize((config.width or 210) + 32, 52)
-
-	local title = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	title:SetPoint("TOPLEFT", holder, "TOPLEFT", 0, 0)
-	title:SetText(config.label or "Select")
-	holder.title = title
-
-	local dropdown = CreateFrame("Frame", nil, holder, "UIDropDownMenuTemplate")
-	dropdown:SetPoint("TOPLEFT", holder, "TOPLEFT", -16, -12)
-	holder.dropdown = dropdown
-	holder.width = config.width or 210
+	local holder, menu = createDropdownShell(parent, config)
 	holder.options = config.options or {}
-	holder.currentOptions = nil
 	holder.getOptions = config.getOptions
 	holder.getValue = config.getValue
 	holder.setValue = config.setValue
 	holder.onChanged = config.onChanged
 
-	local function getOptions()
-		if holder.currentOptions then
-			return holder.currentOptions
-		end
-		if type(holder.getOptions) == "function" then
-			return holder.getOptions() or {}
-		end
-		return holder.options or {}
-	end
-
 	local function getValue()
-		if type(holder.getValue) == "function" then
-			return holder.getValue()
-		end
-		return nil
+		return type(holder.getValue) == "function" and holder.getValue() or nil
 	end
 
-	local function updateText()
+	function holder:RefreshText()
 		local current = getValue()
 		local label = config.placeholder or "Select"
-		for _, option in ipairs(getOptions()) do
+		for _, option in ipairs(resolveOptions(self)) do
 			if option.value == current then
 				label = option.label
 				break
 			end
 		end
-		UIDropDownMenu_SetWidth(dropdown, holder.width)
-		UIDropDownMenu_SetText(dropdown, label)
+		self:SetDisplayText(label)
+	end
+	function holder:SetOptions(options)
+		self.currentOptions = options or {}
+		self:RefreshText()
 	end
 
-	holder.SetOptions = function(_, options)
-		holder.currentOptions = options or {}
-		updateText()
-	end
-
-	holder.RefreshText = updateText
-
-	UIDropDownMenu_SetWidth(dropdown, holder.width)
-	UIDropDownMenu_JustifyText(dropdown, "LEFT")
-	UIDropDownMenu_Initialize(dropdown, function(_, level)
+	UIDropDownMenu_Initialize(menu, function(_, level)
 		if level ~= 1 then
 			return
 		end
-
 		local current = getValue()
-		for _, option in ipairs(getOptions()) do
+		for _, option in ipairs(resolveOptions(holder)) do
 			local info = UIDropDownMenu_CreateInfo()
 			info.text = option.label
 			info.checked = current == option.value
@@ -260,7 +256,7 @@ function ProfessionExporter:CreateSingleSelectDropdown(parent, config)
 				if type(holder.setValue) == "function" then
 					holder.setValue(option.value)
 				end
-				updateText()
+				holder:RefreshText()
 				if type(holder.onChanged) == "function" then
 					holder.onChanged(option.value)
 				end
@@ -269,37 +265,21 @@ function ProfessionExporter:CreateSingleSelectDropdown(parent, config)
 		end
 	end, "MENU")
 
-	updateText()
+	holder:RefreshText()
 	return holder
 end
 
 function ProfessionExporter:CreateMenuDropdown(parent, config)
 	config = config or {}
-
-	local holder = CreateFrame("Frame", nil, parent)
-	holder:SetSize((config.width or 210) + 32, 52)
-
-	local title = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	title:SetPoint("TOPLEFT", holder, "TOPLEFT", 0, 0)
-	title:SetText(config.label or "Menu")
-	holder.title = title
-
-	local dropdown = CreateFrame("Frame", nil, holder, "UIDropDownMenuTemplate")
-	dropdown:SetPoint("TOPLEFT", holder, "TOPLEFT", -16, -12)
-	holder.dropdown = dropdown
-	holder.width = config.width or 210
+	local holder, menu = createDropdownShell(parent, config)
 	holder.getText = config.getText
 	holder.initializeMenu = config.initializeMenu
 
-	holder.RefreshText = function()
-		local label = type(holder.getText) == "function" and holder.getText() or (config.placeholder or "Menu")
-		UIDropDownMenu_SetWidth(dropdown, holder.width)
-		UIDropDownMenu_SetText(dropdown, label)
+	function holder:RefreshText()
+		self:SetDisplayText(type(self.getText) == "function" and self.getText() or (config.placeholder or "Menu"))
 	end
 
-	UIDropDownMenu_SetWidth(dropdown, holder.width)
-	UIDropDownMenu_JustifyText(dropdown, "LEFT")
-	UIDropDownMenu_Initialize(dropdown, function(_, level)
+	UIDropDownMenu_Initialize(menu, function(_, level)
 		if type(holder.initializeMenu) == "function" then
 			holder.initializeMenu(level, holder)
 		end
@@ -328,6 +308,8 @@ function ProfessionExporter:CreateMutedText(parent, width)
 	label:SetWidth(width or 200)
 	label:SetJustifyH("LEFT")
 	label:SetWordWrap(true)
+	local muted = self:GetTheme().textMuted
+	label:SetTextColor(muted.r, muted.g, muted.b)
 	return label
 end
 
@@ -336,11 +318,559 @@ function ProfessionExporter:CreateStatusBadge(parent, text, colorKey)
 	badge:SetSize(120, 20)
 	local theme = self:GetTheme()
 	local border = theme[colorKey or "accent"] or theme.accent
-	self:ApplyBackdrop(badge, theme.surface3, border, { left = 2, right = 2, top = 2, bottom = 2 })
+	self:ApplyBackdrop(badge, theme.surface3, border)
 	badge.text = badge:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	badge.text:SetPoint("CENTER")
 	badge.text:SetText(text or "")
 	return badge
+end
+
+local function setColor(fontString, color)
+	fontString:SetTextColor(color.r, color.g, color.b)
+end
+
+local function newText(parent, font, color, justify)
+	local text = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlightSmall")
+	text:SetJustifyH(justify or "LEFT")
+	text:SetWordWrap(false)
+	setColor(text, color or ProfessionExporter:GetTheme().textPrimary)
+	return text
+end
+
+-- A single-line text that truncates with an ellipsis. Anchor it with two points.
+function ProfessionExporter:CreateText(parent, font, colorKey, justify)
+	return newText(parent, font, self:GetTheme()[colorKey or "textPrimary"], justify)
+end
+
+-- A 26px flat button sized to its label (or `opts.width`); `opts.small` is 22px, `opts.primary` gold.
+function ProfessionExporter:CreateButton(parent, label, onClick, opts)
+	opts = opts or {}
+	local sizes = self:GetTheme().size
+	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+	button:SetText(label or "")
+	self:SkinButton(button)
+	local height = opts.small and sizes.controlSmall or sizes.control
+	local padding = opts.small and 16 or 24
+	button:SetSize(opts.width or (math.ceil(button:GetFontString():GetStringWidth()) + padding), height)
+	if opts.primary then
+		self:SetButtonPrimary(button, true)
+	end
+	if onClick then
+		button:SetScript("OnClick", onClick)
+	end
+	if opts.tooltip then
+		-- HookScript keeps the skin's hover colour handlers.
+		button:HookScript("OnEnter", function(self)
+			local muted = ProfessionExporter:GetTheme().textMuted
+			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+			GameTooltip:SetText(self:GetText() or label or "", 1, 1, 1)
+			GameTooltip:AddLine(opts.tooltip, muted.r, muted.g, muted.b, true)
+			GameTooltip:Show()
+		end)
+		button:HookScript("OnLeave", GameTooltip_Hide)
+	end
+	return button
+end
+
+-- Re-fits a button created by CreateButton after its label changes.
+function ProfessionExporter:SetButtonLabel(button, label, small)
+	button:SetText(label or "")
+	button:SetWidth(math.ceil(button:GetFontString():GetStringWidth()) + (small and 16 or 24))
+end
+
+-- Lays frames out left to right from `first`'s current anchor, `gap` apart, vertically centred.
+function ProfessionExporter:ChainRight(frames, gap)
+	for index = 2, #frames do
+		frames[index]:ClearAllPoints()
+		frames[index]:SetPoint("LEFT", frames[index - 1], "RIGHT", gap or 8, 0)
+	end
+end
+
+-- Right to left: frames[1] is the rightmost and keeps its anchor.
+function ProfessionExporter:ChainLeft(frames, gap)
+	for index = 2, #frames do
+		frames[index]:ClearAllPoints()
+		frames[index]:SetPoint("RIGHT", frames[index - 1], "LEFT", -(gap or 8), 0)
+	end
+end
+
+-- Section heading: gold text followed by a 1px rule to the right edge. 18px tall.
+function ProfessionExporter:CreateHeading(parent, label)
+	local theme = self:GetTheme()
+	local heading = CreateFrame("Frame", nil, parent)
+	heading:SetHeight(18)
+	heading.text = newText(heading, "GameFontNormal", theme.gold)
+	heading.text:SetPoint("LEFT", 0, 0)
+	heading.text:SetText(label or "")
+	heading.rule = heading:CreateTexture(nil, "BORDER")
+	heading.rule:SetHeight(1)
+	heading.rule:SetPoint("LEFT", heading.text, "RIGHT", 8, 0)
+	heading.rule:SetPoint("RIGHT", heading, "RIGHT", 0, 0)
+	heading.rule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	function heading:SetText(text)
+		self.text:SetText(text or "")
+	end
+	return heading
+end
+
+-- A raised group: surface2 fill with a subtle outline. Content is placed by the caller with 10px padding.
+function ProfessionExporter:CreateInset(parent)
+	local inset = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+	self:StylePanel(inset, "surface2")
+	return inset
+end
+
+-- Summary tile: muted label, one large value, one muted note. 58px tall; width from anchors.
+function ProfessionExporter:CreateStat(parent)
+	local theme = self:GetTheme()
+	local stat = self:CreateInset(parent)
+	stat:SetHeight(58)
+	stat.label = newText(stat, "GameFontHighlightSmall", theme.textMuted)
+	stat.label:SetPoint("TOPLEFT", 10, -8)
+	stat.label:SetPoint("TOPRIGHT", -10, -8)
+	stat.value = newText(stat, "NumberFontNormalLarge", theme.textPrimary)
+	stat.value:SetPoint("TOPLEFT", stat.label, "BOTTOMLEFT", 0, -4)
+	stat.value:SetPoint("TOPRIGHT", stat.label, "BOTTOMRIGHT", 0, -4)
+	stat.note = newText(stat, "GameFontHighlightSmall", theme.textMuted)
+	stat.note:SetPoint("BOTTOMLEFT", 10, 8)
+	stat.note:SetPoint("BOTTOMRIGHT", -10, 8)
+	function stat:SetValues(label, value, note, colorKey)
+		self.label:SetText(label or "")
+		self.value:SetText(value or "-")
+		setColor(self.value, theme[colorKey or "textPrimary"] or theme.textPrimary)
+		self.note:SetText(note or "")
+	end
+	return stat
+end
+
+-- Places `frames` side by side across `parent`'s width, `gap` apart, sharing the width equally.
+function ProfessionExporter:LayoutEvenRow(parent, frames, top, gap)
+	gap = gap or 12
+	local count = #frames
+	if count == 0 then
+		return
+	end
+	local width = (parent:GetWidth() - gap * (count - 1)) / count
+	for index, frame in ipairs(frames) do
+		frame:ClearAllPoints()
+		frame:SetPoint("TOPLEFT", parent, "TOPLEFT", (index - 1) * (width + gap), -(top or 0))
+		frame:SetWidth(math.max(40, width))
+	end
+end
+
+-- Muted placeholder text shown while an edit box is empty and not focused. Keeps existing scripts.
+function ProfessionExporter:AddSearchPlaceholder(box, placeholder)
+	self:SkinEditBox(box)
+	if not box.placeholder then
+		box.placeholder = newText(box, "GameFontHighlightSmall", self:GetTheme().textMuted)
+		box.placeholder:SetPoint("LEFT", 0, 0)
+		box.placeholder:SetPoint("RIGHT", 0, 0)
+		local function update()
+			box.placeholder:SetShown((box:GetText() or "") == "" and not box:HasFocus())
+		end
+		box:HookScript("OnEditFocusGained", update)
+		box:HookScript("OnEditFocusLost", update)
+		box:HookScript("OnTextChanged", update)
+		box.UpdatePlaceholder = update
+	end
+	box.placeholder:SetText(placeholder or "Search")
+	box:UpdatePlaceholder()
+	return box
+end
+
+-- An edit box with placeholder text, skinned 26px tall. `onChanged(text)` fires after `delay` seconds.
+function ProfessionExporter:CreateSearchBox(parent, placeholder, onChanged, delay)
+	local box = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+	box:SetAutoFocus(false)
+	box:SetMaxLetters(64)
+	box:SetHeight(self:GetTheme().size.control - 4)
+	box:SetScript("OnEscapePressed", function(self)
+		self:ClearFocus()
+	end)
+	box:SetScript("OnEnterPressed", function(self)
+		self:ClearFocus()
+	end)
+	local pending = 0
+	box:SetScript("OnTextChanged", function(self, userInput)
+		if not userInput or type(onChanged) ~= "function" then
+			return
+		end
+		pending = pending + 1
+		local token = pending
+		C_Timer.After(delay or 0.2, function()
+			if token == pending then
+				onChanged(self:GetText() or "")
+			end
+		end)
+	end)
+	self:AddSearchPlaceholder(box, placeholder)
+	return box
+end
+
+-- Restyles a StatusBar: flat gold fill on a dark track with a 1px outline, 14px tall.
+function ProfessionExporter:StyleProgressBar(bar)
+	local theme = self:GetTheme()
+	bar:SetHeight(14)
+	bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+	bar:SetStatusBarColor(theme.tick.r, theme.tick.g, theme.tick.b, 1)
+	bar:SetMinMaxValues(0, 1)
+	if not bar.ahTrack then
+		bar.ahTrack = bar:CreateTexture(nil, "BACKGROUND")
+		bar.ahTrack:SetAllPoints()
+		bar.ahTrack:SetColorTexture(theme.surface3.r, theme.surface3.g, theme.surface3.b, 1)
+		self:AddSurface(bar, { r = 0, g = 0, b = 0, a = 0 }, theme.borderStrong, 1, 1)
+	end
+	return bar
+end
+
+-- Label/value pairs, label muted on the left and value on the right, 16px rows. Returns its height.
+function ProfessionExporter:CreateKeyValueList(parent)
+	local theme = self:GetTheme()
+	local list = CreateFrame("Frame", nil, parent)
+	list.rows = {}
+	function list:SetRows(rows)
+		for index, row in ipairs(rows or {}) do
+			local line = self.rows[index]
+			if not line then
+				line = {}
+				line.value = newText(self, "GameFontHighlightSmall", theme.textPrimary, "RIGHT")
+				line.value:SetPoint("TOPRIGHT", self, "TOPRIGHT", 0, -((index - 1) * 16))
+				line.label = newText(self, "GameFontHighlightSmall", theme.textMuted)
+				line.label:SetPoint("TOPLEFT", self, "TOPLEFT", 0, -((index - 1) * 16))
+				line.label:SetPoint("RIGHT", line.value, "LEFT", -12, 0)
+				self.rows[index] = line
+			end
+			line.label:SetText(row[1] or "")
+			line.value:SetText(row[2] or "")
+			setColor(line.value, theme[row[3] or "textPrimary"] or theme.textPrimary)
+			line.label:Show()
+			line.value:Show()
+		end
+		for index = #(rows or {}) + 1, #self.rows do
+			self.rows[index].label:Hide()
+			self.rows[index].value:Hide()
+		end
+		local height = math.max(1, #(rows or {}) * 16)
+		self:SetHeight(height)
+		return height
+	end
+	return list
+end
+
+-- A selectable one-column list (character list, docs topics) built on the shared table.
+-- items: { { key, label } }; `onSelect(key)`; `getSelected()` returns the selected key.
+function ProfessionExporter:CreateSelectList(parent, onSelect, getSelected)
+	local list = self:CreateReusableTable(parent, {
+		headerHeight = 0,
+		autoFitToScroll = true,
+		isRowSelected = function(row)
+			return row and row.key == getSelected()
+		end,
+		onRowClick = function(_, row)
+			if row then
+				onSelect(row.key)
+			end
+		end,
+	})
+	list.header:Hide()
+	list:SetColumns({ { id = "label", label = "", width = 100, flex = 1, minWidth = 40 } })
+	function list:SetItems(items)
+		self:SetRows(items or {})
+		self:Refresh()
+	end
+	return list
+end
+
+-- Lays `buttons` out left to right inside `width`, wrapping to new rows. Returns the total height.
+function ProfessionExporter:FlowButtons(container, buttons, width, gap, top)
+	gap = gap or 8
+	local x, y, rowHeight = 0, -(top or 0), 0
+	for _, button in ipairs(buttons) do
+		local w, h = button:GetWidth(), button:GetHeight()
+		if x > 0 and x + w > width then
+			x = 0
+			y = y - rowHeight - gap
+			rowHeight = 0
+		end
+		button:ClearAllPoints()
+		button:SetPoint("TOPLEFT", container, "TOPLEFT", x, y)
+		x = x + w + gap
+		rowHeight = math.max(rowHeight, h)
+	end
+	return -y + rowHeight
+end
+
+-- Wrapping muted text for explanations. Anchor with two points; read height with GetStringHeight.
+function ProfessionExporter:CreateParagraph(parent, colorKey)
+	local text = self:CreateText(parent, "GameFontHighlightSmall", colorKey or "textMuted")
+	text:SetWordWrap(true)
+	text:SetNonSpaceWrap(true)
+	return text
+end
+
+-- Professions of one character as table rows, sorted by name.
+function ProfessionExporter:BuildProfessionRows(charData)
+	local rows = {}
+	for _, profession in pairs(charData and charData.professions or {}) do
+		rows[#rows + 1] = {
+			_rowIdentity = tostring(profession.skillLineID or ""),
+			name = tostring(profession.professionName or "?"),
+			skill = tonumber(profession.skillLevel) or 0,
+			maxSkill = tonumber(profession.maxSkillLevel) or 0,
+			recipes = tonumber(profession.recipeCount) or 0,
+			skillLineID = tostring(profession.skillLineID or ""),
+		}
+	end
+	table.sort(rows, function(left, right)
+		return left.name < right.name
+	end)
+	return rows
+end
+
+-- Profession, Skill, Recipes and (unless `withoutExport`) All / Recipes / Talents export buttons.
+function ProfessionExporter:CreateProfessionColumns(withoutExport)
+	local pe = self
+	local columns = {
+		{ id = "name", label = "Profession", width = 120, flex = 1, minWidth = 100,
+			getText = function(row) return row.name end },
+		{ id = "skill", label = "Skill", width = 64, justifyH = "RIGHT",
+			getText = function(row) return string.format("%d/%d", row.skill, row.maxSkill) end },
+		{ id = "recipes", label = "Recipes", width = 64, justifyH = "RIGHT",
+			getText = function(row) return pe:FormatNumberGrouped(row.recipes) end },
+	}
+	if withoutExport then
+		return columns
+	end
+	columns[#columns + 1] = { id = "export", label = "Export", width = 196,
+		createCell = function(rowFrame)
+			local cell = CreateFrame("Frame", nil, rowFrame)
+			cell:SetHeight(22)
+			cell.all = pe:CreateButton(cell, "All", nil, { small = true })
+			cell.all:SetPoint("LEFT", 5, 0)
+			cell.recipes = pe:CreateButton(cell, "Recipes", nil, { small = true })
+			cell.talents = pe:CreateButton(cell, "Talents", nil, { small = true })
+			pe:ChainRight({ cell.all, cell.recipes, cell.talents }, 4)
+			return cell
+		end,
+		updateCell = function(cell, row)
+			cell.all:SetScript("OnClick", function() pe:Export("profession", row.skillLineID) end)
+			cell.recipes:SetScript("OnClick", function() pe:Export("profession_recipes", row.skillLineID) end)
+			cell.talents:SetScript("OnClick", function() pe:Export("profession_talents", row.skillLineID) end)
+		end }
+	return columns
+end
+
+local DEFAULT_ITEM_ICON = 134400
+
+-- Quality colour of an item (white when unknown) and its icon.
+function ProfessionExporter:GetItemLook(itemID)
+	local desc = itemID and self:ResolveItemDescriptor(tonumber(itemID) or itemID) or nil
+	local quality = desc and desc.quality
+	local color = quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
+	return desc and desc.icon or DEFAULT_ITEM_ICON, color or { r = 1, g = 1, b = 1 }
+end
+
+-- An 18px item icon outlined in its quality colour. `size` overrides (32 for detail headers).
+function ProfessionExporter:CreateItemIcon(parent, size)
+	local holder = CreateFrame("Frame", nil, parent)
+	holder:SetSize(size or 18, size or 18)
+	holder.border = holder:CreateTexture(nil, "BORDER")
+	holder.border:SetAllPoints()
+	holder.icon = holder:CreateTexture(nil, "ARTWORK")
+	holder.icon:SetPoint("TOPLEFT", 1, -1)
+	holder.icon:SetPoint("BOTTOMRIGHT", -1, 1)
+	holder.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	function holder:SetItem(itemID, iconOverride)
+		local icon, color = ProfessionExporter:GetItemLook(itemID)
+		self.icon:SetTexture(iconOverride or icon)
+		self.border:SetColorTexture(color.r, color.g, color.b, 0.9)
+	end
+	return holder
+end
+
+-- Table column: item icon + quality-coloured name, with an optional muted second line
+-- (`getDetail(row)`) when the table uses tall rows. `getItemID`, `getName` read the row.
+function ProfessionExporter:CreateItemColumn(spec)
+	local pe = self
+	local column = {
+		id = spec.id or "name",
+		label = spec.label or "Item",
+		width = spec.width or 200,
+		minWidth = spec.minWidth or 140,
+		flex = spec.flex or 1,
+		sortable = spec.sortable ~= false,
+		defaultSort = spec.defaultSort,
+		sortValue = spec.sortValue or function(row) return spec.getName(row) or "" end,
+		tooltipTitle = spec.tooltipTitle,
+		tooltipText = spec.tooltipText,
+	}
+	column.createCell = function(rowFrame)
+		local cell = CreateFrame("Frame", nil, rowFrame)
+		cell:SetHeight(rowFrame:GetHeight())
+		cell.icon = pe:CreateItemIcon(cell)
+		cell.icon:SetPoint("LEFT", 5, 0)
+		cell.name = pe:CreateText(cell, "GameFontHighlightSmall")
+		cell.detail = pe:CreateText(cell, "GameFontHighlightSmall", "textMuted")
+		cell.name:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
+		cell.detail:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
+		return cell
+	end
+	column.updateCell = function(cell, row)
+		local itemID = spec.getItemID(row)
+		local _, color = pe:GetItemLook(itemID)
+		cell.icon:SetItem(itemID, spec.getIcon and spec.getIcon(row) or nil)
+		cell.name:SetText(spec.getName(row) or ("#" .. tostring(itemID or "?")))
+		cell.name:SetTextColor(color.r, color.g, color.b)
+		local detail = spec.getDetail and spec.getDetail(row) or nil
+		cell.name:ClearAllPoints()
+		cell.name:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
+		if detail and detail ~= "" and cell:GetHeight() >= 30 then
+			cell.name:SetPoint("BOTTOMLEFT", cell.icon, "RIGHT", 6, 1)
+			cell.detail:ClearAllPoints()
+			cell.detail:SetPoint("TOPLEFT", cell.icon, "RIGHT", 6, -1)
+			cell.detail:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
+			cell.detail:SetText(detail)
+			cell.detail:Show()
+		else
+			cell.name:SetPoint("LEFT", cell.icon, "RIGHT", 6, 0)
+			cell.detail:Hide()
+		end
+	end
+	return column
+end
+
+-- Uppercase status word with a 1px outline in its colour. `colorKey`: success, danger, warning, accent, gold.
+function ProfessionExporter:CreateBadge(parent)
+	local badge = CreateFrame("Frame", nil, parent)
+	badge:SetHeight(16)
+	badge.text = self:CreateText(badge, "GameFontNormalSmall")
+	badge.text:SetPoint("CENTER", 0, 0)
+	badge.surface = self:AddSurface(badge, { r = 0, g = 0, b = 0, a = 0 }, self:GetTheme().textMuted)
+	function badge:SetBadge(text, colorKey)
+		local theme = ProfessionExporter:GetTheme()
+		local color = theme[colorKey or "textMuted"] or theme.textMuted
+		self.text:SetText(string.upper(text or ""))
+		self.text:SetTextColor(color.r, color.g, color.b)
+		self.surface:SetColors(nil, color)
+		self:SetWidth(math.ceil(self.text:GetStringWidth()) + 12)
+		self:SetShown(text ~= nil and text ~= "")
+	end
+	return badge
+end
+
+-- Detail pane header: 32px item icon, name, muted second line, optional close button.
+function ProfessionExporter:CreateDetailHeader(parent, onClose)
+	local header = CreateFrame("Frame", nil, parent)
+	header:SetHeight(32)
+	header.icon = self:CreateItemIcon(header, 32)
+	header.icon:SetPoint("LEFT")
+	local right = header
+	if onClose then
+		header.close = CreateFrame("Button", nil, header, "UIPanelCloseButton")
+		header.close:ClearAllPoints()
+		header.close:SetPoint("TOPRIGHT", 0, 0)
+		self:SkinCloseButton(header.close)
+		header.close:SetScript("OnClick", onClose)
+		right = header.close
+	end
+	header.badge = self:CreateBadge(header)
+	header.badge:SetPoint("TOPRIGHT", right, right == header and "TOPRIGHT" or "TOPLEFT", right == header and 0 or -6, -2)
+	header.badge:Hide()
+	header.title = self:CreateText(header, "GameFontHighlight")
+	header.title:SetPoint("TOPLEFT", header.icon, "TOPRIGHT", 8, -1)
+	header.title:SetPoint("RIGHT", header, "RIGHT", -60, 0)
+	header.subtitle = self:CreateText(header, "GameFontHighlightSmall", "textMuted")
+	header.subtitle:SetPoint("BOTTOMLEFT", header.icon, "BOTTOMRIGHT", 8, 1)
+	header.subtitle:SetPoint("RIGHT", header, "RIGHT", 0, 0)
+	function header:SetItem(itemID, title, subtitle, iconOverride)
+		local _, color = ProfessionExporter:GetItemLook(itemID)
+		self.icon:SetItem(itemID, iconOverride)
+		self.icon:Show()
+		self.title:SetText(title or "")
+		self.title:SetTextColor(color.r, color.g, color.b)
+		self.subtitle:SetText(subtitle or "")
+	end
+	return header
+end
+
+-- Centered "nothing here" message: title plus a muted sentence. Fill the area it covers.
+function ProfessionExporter:CreateEmptyState(parent)
+	local empty = CreateFrame("Frame", nil, parent)
+	empty.title = self:CreateText(empty, "GameFontHighlight", "textPrimary", "CENTER")
+	empty.title:SetPoint("BOTTOMLEFT", empty, "LEFT", 16, 4)
+	empty.title:SetPoint("BOTTOMRIGHT", empty, "RIGHT", -16, 4)
+	empty.hint = self:CreateParagraph(empty)
+	empty.hint:SetJustifyH("CENTER")
+	empty.hint:SetPoint("TOPLEFT", empty, "LEFT", 16, -4)
+	empty.hint:SetPoint("TOPRIGHT", empty, "RIGHT", -16, -4)
+	function empty:SetMessage(title, hint)
+		self.title:SetText(title or "")
+		self.hint:SetText(hint or "")
+	end
+	return empty
+end
+
+-- Signed money: "+3g 15s" with a green plus, negative amounts with a red minus, "-" when unknown.
+function ProfessionExporter:FormatSignedMoney(copper)
+	local n = tonumber(copper)
+	if not n then
+		return "-"
+	end
+	if n < 0 then
+		return self:FormatCopperShort(n)
+	end
+	local c = self:GetTheme().success
+	return string.format("|cff%02x%02x%02x+|r", c.r * 255, c.g * 255, c.b * 255) .. self:FormatCopperShort(n)
+end
+
+-- "today 14:32" style time for table cells: time only for today, else month and day.
+function ProfessionExporter:FormatShortTime(ts)
+	ts = tonumber(ts)
+	if not ts or ts <= 0 then
+		return "-"
+	end
+	if date("%Y-%m-%d", ts) == date("%Y-%m-%d") then
+		return date("%H:%M", ts)
+	end
+	return date("%b %d", ts)
+end
+
+-- Item tooltip for a table row: anchored to the row's right edge, the game's item tooltip, then
+-- AuctionHelper's label/value pairs and a muted hint. `pairs`: { { label, value }, ... }.
+function ProfessionExporter:ShowItemRowTooltip(owner, itemID, pairs, hint)
+	if not owner then
+		return
+	end
+	local theme = self:GetTheme()
+	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+	if itemID and GameTooltip.SetItemByID then
+		GameTooltip:SetItemByID(itemID)
+	end
+	if pairs and #pairs > 0 then
+		GameTooltip:AddLine(" ")
+		for _, pair in ipairs(pairs) do
+			GameTooltip:AddDoubleLine(pair[1], pair[2] or "-", theme.textMuted.r, theme.textMuted.g, theme.textMuted.b,
+				theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b)
+		end
+	end
+	if hint then
+		GameTooltip:AddLine(hint, theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, true)
+	end
+	GameTooltip:Show()
+end
+
+-- Shift-click links the item in chat. Returns true when the click was used.
+function ProfessionExporter:HandleItemRowModifiedClick(itemID)
+	if not itemID or not IsModifiedClick or not IsModifiedClick("CHATLINK") then
+		return false
+	end
+	local desc = self:ResolveItemDescriptor(tonumber(itemID) or itemID)
+	local link = desc and desc.link
+	if link and ChatEdit_InsertLink then
+		ChatEdit_InsertLink(link)
+		return true
+	end
+	return false
 end
 
 --- Reusable line chart: sorted points `{ at = unixHourOrTime, value = number, label?, meta? }`.
@@ -349,7 +879,7 @@ end
 function ProfessionExporter:CreateTimeSeriesGraph(parent, opts)
 	opts = opts or {}
 	local plotH = tonumber(opts.plotHeight) or 118
-	local padL = tonumber(opts.padLeft) or 46
+	local padL = tonumber(opts.padLeft) or 58
 	local padRBase = tonumber(opts.padRight) or 10
 	local padQtyAxis = 34
 	local padT = tonumber(opts.padTop) or 6
@@ -374,16 +904,24 @@ function ProfessionExporter:CreateTimeSeriesGraph(parent, opts)
 	plot:SetHeight(plotH)
 	plot:EnableMouse(true)
 
+	local theme = ProfessionExporter:GetTheme()
 	local emptyText = plot:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	emptyText:SetPoint("CENTER", plot, "CENTER", 0, 0)
-	emptyText:SetWidth(plot:GetWidth() > 0 and plot:GetWidth() - 20 or 200)
+	emptyText:SetPoint("LEFT", plot, "LEFT", 20, 0)
+	emptyText:SetPoint("RIGHT", plot, "RIGHT", -20, 0)
 	emptyText:SetJustifyH("CENTER")
 	emptyText:SetWordWrap(true)
+	emptyText:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	local function axisText()
+		local fs = plot:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		fs:SetWordWrap(false)
+		fs:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+		return fs
+	end
 
 	local innerPlotH = plotH - padT - padB
 	local yLabels = {}
 	for i = 1, 3 do
-		local fs = plot:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		local fs = axisText()
 		fs:SetPoint("TOPRIGHT", plot, "TOPLEFT", padL - 4, -padT - (i - 1) * (innerPlotH / 2))
 		fs:SetJustifyH("RIGHT")
 		fs:SetWidth(padL - 2)
@@ -392,7 +930,7 @@ function ProfessionExporter:CreateTimeSeriesGraph(parent, opts)
 
 	local yLabelsRight = {}
 	for i = 1, 3 do
-		local fs = plot:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		local fs = axisText()
 		fs:SetPoint("TOPRIGHT", plot, "TOPRIGHT", -4, -padT - (i - 1) * (innerPlotH / 2))
 		fs:SetJustifyH("RIGHT")
 		fs:SetWidth(padQtyAxis + padRBase - 4)
@@ -402,11 +940,11 @@ function ProfessionExporter:CreateTimeSeriesGraph(parent, opts)
 
 	local xLabels = {}
 	do
-		local xl = plot:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		local xl = axisText()
 		xl:SetPoint("BOTTOMLEFT", plot, "BOTTOMLEFT", padL + 2, 2)
 		xl:SetJustifyH("LEFT")
 		xLabels[1] = xl
-		local xr = plot:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+		local xr = axisText()
 		xr:SetPoint("BOTTOMRIGHT", plot, "BOTTOMRIGHT", -padRBase - 2, 2)
 		xr:SetJustifyH("RIGHT")
 		xLabels[2] = xr
@@ -431,9 +969,9 @@ function ProfessionExporter:CreateTimeSeriesGraph(parent, opts)
 	end
 	local tooltipBuilder = opts.tooltipBuilder
 	local emptyStateText = opts.emptyText or "No data in this range."
-	local accent = opts.accentColor or { r = 0.35, g = 0.75, b = 0.85, a = 0.95 }
-	local secondaryAccent = { r = 0.92, g = 0.58, b = 0.18, a = 0.95 }
-	local quantityAccent = { r = 0.42, g = 0.78, b = 0.5, a = 0.9 }
+	local accent = opts.accentColor or ProfessionExporter:GetTheme().accent
+	local secondaryAccent = theme.warning
+	local quantityAccent = theme.success
 	local canUseCreateLine = type(plot.CreateLine) == "function"
 
 	local function hidePool(pool)
@@ -867,142 +1405,4 @@ function ProfessionExporter:CreateTimeSeriesGraph(parent, opts)
 	holder:SetQuantitySeries({})
 	holder:Refresh()
 	return holder
-end
-
-local DETAIL_PANE_LAYOUT = {
-	splitterWidth = 6,
-	gapAfterSplitter = 6,
-	minDetailWidth = 260,
-	minTableWidth = 420,
-}
-
-function ProfessionExporter:GetDetailPaneLayoutConstants()
-	return DETAIL_PANE_LAYOUT
-end
-
-function ProfessionExporter:ClampDetailsWidthForPanel(panel, detailsWidth)
-	local c = DETAIL_PANE_LAYOUT
-	if not panel or not panel.GetWidth then
-		return math.max(c.minDetailWidth, tonumber(detailsWidth) or c.minDetailWidth)
-	end
-	local innerW = math.max(840, panel:GetWidth() - 20)
-	local maxDetail = innerW - c.minTableWidth - c.splitterWidth - c.gapAfterSplitter
-	if maxDetail < c.minDetailWidth then
-		maxDetail = c.minDetailWidth
-	end
-	detailsWidth = tonumber(detailsWidth) or c.minDetailWidth
-	return math.max(c.minDetailWidth, math.min(maxDetail, detailsWidth))
-end
-
-function ProfessionExporter:CreateDetailPaneSplitter(panel, config)
-	config = config or {}
-	local settingsKey = config.settingsKey
-	local onLayout = config.onLayout
-	local f = CreateFrame("Frame", nil, panel)
-	f:SetWidth(DETAIL_PANE_LAYOUT.splitterWidth)
-	f:EnableMouse(true)
-
-	local tex = f:CreateTexture(nil, "ARTWORK")
-	tex:SetAllPoints()
-	tex:SetColorTexture(0.35, 0.38, 0.45, 0.28)
-
-	f:SetScript("OnEnter", function(self)
-		tex:SetColorTexture(0.52, 0.58, 0.68, 0.65)
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:SetText("Resize details", 1, 1, 1)
-		GameTooltip:AddLine("Drag horizontally.", 0.8, 0.85, 0.9, true)
-		GameTooltip:Show()
-	end)
-	f:SetScript("OnLeave", function()
-		tex:SetColorTexture(0.35, 0.38, 0.45, 0.28)
-		GameTooltip:Hide()
-	end)
-
-	f:SetScript("OnMouseDown", function(self, button)
-		if button ~= "LeftButton" or not settingsKey then
-			return
-		end
-		self.dragging = true
-		self.dragStartX = select(1, GetCursorPosition()) / UIParent:GetEffectiveScale()
-		self.dragStartW = tonumber(ProfessionExporter:GetSetting(settingsKey, DETAIL_PANE_LAYOUT.minDetailWidth)) or 340
-		self:SetScript("OnUpdate", function(sf)
-			if not sf.dragging then
-				sf:SetScript("OnUpdate", nil)
-				return
-			end
-			if not IsMouseButtonDown("LeftButton") then
-				sf.dragging = false
-				sf:SetScript("OnUpdate", nil)
-				return
-			end
-			local x = select(1, GetCursorPosition()) / UIParent:GetEffectiveScale()
-			-- Splitter sits on the table/detail boundary: drag left widens the detail pane, drag right narrows it.
-			local newW = sf.dragStartW - (x - sf.dragStartX)
-			newW = ProfessionExporter:ClampDetailsWidthForPanel(panel, newW)
-			local cur = tonumber(ProfessionExporter:GetSetting(settingsKey)) or newW
-			if math.abs(cur - newW) >= 0.5 then
-				ProfessionExporter:SetSetting(settingsKey, math.floor(newW + 0.5))
-				if type(onLayout) == "function" then
-					onLayout()
-				end
-			end
-		end)
-	end)
-
-	f:SetScript("OnMouseUp", function(self)
-		self.dragging = false
-	end)
-
-	return f
-end
-
---- Sizes detail title/meta/body/graph to match `detailsWidth` (scroll inner + word wrap).
-function ProfessionExporter:ApplyDetailPaneContentWidths(panel, detailsWidth, options)
-	options = options or {}
-	if not panel or not detailsWidth or detailsWidth <= 0 then
-		return
-	end
-	local padL = options.padLeft or 6
-	local scrollR = options.scrollRightPad or 28
-	local titleRight = options.titleRightReserve or 36
-	local iconCol = options.iconColumnWide or 76
-	local contentW = math.max(100, detailsWidth - padL - scrollR)
-	local bodyTrim = options.bodyInnerPad or 4
-
-	if panel.detailContent then
-		panel.detailContent:SetWidth(contentW)
-	end
-	if panel.detailBody then
-		panel.detailBody:SetWidth(math.max(72, contentW - bodyTrim))
-	end
-	if panel.detailMeta then
-		panel.detailMeta:SetWidth(contentW)
-	end
-	if panel.detailHeader and panel.detailTitle then
-		local closeR = options.closeButtonReserve or 34
-		local iconGap = 38
-		local rankR = options.rankBadgeReserve or 22
-		local headerInner = detailsWidth - padL - closeR
-		panel.detailTitle:SetWidth(math.max(40, headerInner - iconGap - rankR))
-	elseif panel.detailTitle then
-		panel.detailTitle:SetWidth(math.max(48, detailsWidth - iconCol - titleRight))
-	end
-	if panel.detailGraphBlock then
-		panel.detailGraphBlock:SetWidth(math.max(160, detailsWidth - padL * 2))
-	end
-	if panel.craftsDetailGraphBlock then
-		panel.craftsDetailGraphBlock:SetWidth(math.max(160, detailsWidth - padL * 2))
-	end
-end
-
---- One row for icon + name; height follows wrapped title. Call after title text is set (or from layout with stale text).
-function ProfessionExporter:LayoutDetailPaneHeaderRow(panel)
-	if not panel or not panel.detailHeader or not panel.detailTitle then
-		return
-	end
-	local th = panel.detailTitle:GetStringHeight()
-	if not th or th < 4 then
-		th = 18
-	end
-	panel.detailHeader:SetHeight(math.max(32, math.floor(th + 10)))
 end

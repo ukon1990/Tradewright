@@ -217,6 +217,38 @@ function ProfessionExporter:StartMailSendForCharacter(characterKey)
 	return self:StartMailSendQueue(filtered)
 end
 
+local MAIL_PAD = 12
+local MAIL_ROW = 48
+
+-- One destination: character and item count, the first items, and a Send button.
+local function createMailRow(pe, parent)
+	local row = pe:CreateInset(parent)
+	row:SetHeight(MAIL_ROW - 6)
+	row.send = pe:CreateButton(row, "Send", nil, { small = true })
+	row.send:SetPoint("RIGHT", -8, 0)
+	row.name = pe:CreateText(row, "GameFontHighlightSmall")
+	row.name:SetPoint("TOPLEFT", 10, -8)
+	row.name:SetPoint("RIGHT", row.send, "LEFT", -10, 0)
+	row.items = pe:CreateText(row, "GameFontHighlightSmall", "textMuted")
+	row.items:SetPoint("BOTTOMLEFT", 10, 8)
+	row.items:SetPoint("RIGHT", row.send, "LEFT", -10, 0)
+	row:EnableMouse(true)
+	row:SetScript("OnEnter", function(self)
+		if not self.dest then
+			return
+		end
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetText(characterLabel(pe, self.dest.characterKey), 1, 1, 1)
+		local muted = pe:GetTheme().textMuted
+		for _, it in ipairs(self.dest.items or {}) do
+			GameTooltip:AddDoubleLine(it.name or "?", pe:FormatNumberGrouped(it.quantity or 0), muted.r, muted.g, muted.b, 1, 1, 1)
+		end
+		GameTooltip:Show()
+	end)
+	row:SetScript("OnLeave", GameTooltip_Hide)
+	return row
+end
+
 function ProfessionExporter:EnsureMailPanel()
 	self.ui = self.ui or {}
 	if self.ui.mailPanel and self.ui.mailPanel:IsObjectType("Frame") then
@@ -226,105 +258,112 @@ function ProfessionExporter:EnsureMailPanel()
 	if not mail then
 		return nil
 	end
+	local pe = self
+	local theme = self:GetTheme()
 	local panel = CreateFrame("Frame", addonName .. "MailPanel", mail, "BackdropTemplate")
-	panel:SetSize(320, 420)
+	panel:SetWidth(320)
 	panel:SetPoint("TOPLEFT", mail, "TOPRIGHT", 8, -20)
 	panel:SetPoint("BOTTOMLEFT", mail, "BOTTOMRIGHT", 8, 16)
-	self:StylePanel(panel, "surface2")
+	self:StyleWindow(panel)
+	panel:SetClampedToScreen(true)
 	panel:Hide()
 
-	local collapseTab = CreateFrame("Button", addonName .. "MailPanelTab", mail)
-	collapseTab:SetSize(18, 64)
-	collapseTab:SetPoint("TOPRIGHT", panel, "TOPLEFT", 0, -40)
-	local tabText = collapseTab:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	tabText:SetPoint("CENTER")
-	tabText:SetText("<")
-	panel.collapseTab = collapseTab
-	panel.collapseTabText = tabText
+	-- Header: title and the collapse button.
+	local collapse = CreateFrame("Button", nil, panel, "UIPanelCloseButton")
+	collapse:ClearAllPoints()
+	collapse:SetPoint("RIGHT", panel, "TOPRIGHT", -6, -(theme.size.header / 2))
+	self:SkinCloseButton(collapse)
+	collapse:SetScript("OnEnter", function(button)
+		GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
+		GameTooltip:SetText("Collapse the mail panel", 1, 1, 1)
+		GameTooltip:Show()
+	end)
+	collapse:SetScript("OnLeave", GameTooltip_Hide)
+	panel.toggleBtn = collapse
+	local title = self:CreateText(panel, "GameFontNormalLarge", "gold")
+	title:SetPoint("LEFT", panel, "TOPLEFT", MAIL_PAD, -(theme.size.header / 2) - 1)
+	title:SetPoint("RIGHT", collapse, "LEFT", -12, 0)
+	title:SetText("AuctionHelper mail")
+	local headerRule = panel:CreateTexture(nil, "BORDER")
+	headerRule:SetPoint("TOPLEFT", 1, -theme.size.header)
+	headerRule:SetPoint("TOPRIGHT", -1, -theme.size.header)
+	headerRule:SetHeight(1)
+	headerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
 
-	local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	title:SetPoint("TOPLEFT", 10, -10)
-	title:SetText("AuctionHelper Mail")
+	-- Shown in place of the panel when it is collapsed: one small button at the mailbox edge.
+	local expand = self:CreateButton(mail, "AuctionHelper", nil, { small = true })
+	expand:SetPoint("TOPLEFT", mail, "TOPRIGHT", 8, -20)
+	expand:Hide()
+	panel.collapseTab = expand
 
-	local toggle = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	toggle:SetSize(72, 20)
-	toggle:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -8)
-	toggle:SetText("Collapse")
-	panel.toggleBtn = toggle
+	-- Footer: how much is ready.
+	panel.footer = CreateFrame("Frame", nil, panel)
+	panel.footer:SetPoint("BOTTOMLEFT", 1, 1)
+	panel.footer:SetPoint("BOTTOMRIGHT", -1, 1)
+	panel.footer:SetHeight(theme.size.footer)
+	local footerRule = panel.footer:CreateTexture(nil, "BORDER")
+	footerRule:SetPoint("TOPLEFT")
+	footerRule:SetPoint("TOPRIGHT")
+	footerRule:SetHeight(1)
+	footerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	panel.footerText = self:CreateText(panel.footer, "GameFontHighlightSmall", "textMuted")
+	panel.footerText:SetPoint("LEFT", MAIL_PAD, 0)
+	panel.footerText:SetPoint("RIGHT", -MAIL_PAD, 0)
 
-	local summary = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	summary:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
-	summary:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -6)
-	summary:SetJustifyH("LEFT")
-	summary:SetWordWrap(true)
-	panel.summary = summary
+	-- Actions above the footer: Send all and Cancel; progress above them while sending.
+	local actions = CreateFrame("Frame", nil, panel)
+	actions:SetPoint("BOTTOMLEFT", panel.footer, "TOPLEFT", MAIL_PAD - 1, MAIL_PAD)
+	actions:SetPoint("BOTTOMRIGHT", panel.footer, "TOPRIGHT", -(MAIL_PAD - 1), MAIL_PAD)
+	actions:SetHeight(26)
+	panel.cancelBtn = self:CreateButton(actions, "Cancel", function() pe:CancelMailSendQueue() end)
+	panel.cancelBtn:SetPoint("RIGHT")
+	panel.sendAllBtn = self:CreateButton(actions, "Send all", function() pe:StartMailSendAll() end, { primary = true })
+	panel.sendAllBtn:SetPoint("LEFT")
+	panel.sendAllBtn:SetPoint("RIGHT", panel.cancelBtn, "LEFT", -8, 0)
+	panel.progressRow = CreateFrame("Frame", nil, panel)
+	panel.progressRow:SetPoint("BOTTOMLEFT", actions, "TOPLEFT", 0, 8)
+	panel.progressRow:SetPoint("BOTTOMRIGHT", actions, "TOPRIGHT", 0, 8)
+	panel.progressRow:SetHeight(18)
+	panel.progressText = self:CreateText(panel.progressRow, "GameFontHighlightSmall")
+	panel.progressText:SetPoint("LEFT")
+	panel.progressText:SetWidth(110)
+	panel.progressBar = CreateFrame("StatusBar", nil, panel.progressRow)
+	panel.progressBar:SetPoint("LEFT", panel.progressText, "RIGHT", 8, 0)
+	panel.progressBar:SetPoint("RIGHT")
+	self:StyleProgressBar(panel.progressBar)
 
+	-- Body: one sentence, then the destination list.
+	panel.summary = self:CreateParagraph(panel)
+	panel.summary:SetPoint("TOPLEFT", panel, "TOPLEFT", MAIL_PAD, -(theme.size.header + 1 + MAIL_PAD))
+	panel.summary:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -MAIL_PAD, -(theme.size.header + 1 + MAIL_PAD))
+	panel.summary:SetText("Reagents in your bags that your queue needs on other characters.")
 	local scroll = CreateFrame("ScrollFrame", addonName .. "MailPanelScroll", panel, "UIPanelScrollFrameTemplate")
-	scroll:SetPoint("TOPLEFT", summary, "BOTTOMLEFT", -4, -8)
-	scroll:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -28, 56)
+	scroll:SetPoint("TOPLEFT", panel.summary, "BOTTOMLEFT", 0, -10)
+	scroll:SetPoint("BOTTOMRIGHT", panel.progressRow, "TOPRIGHT", -14, 10)
 	panel.scroll = scroll
 	panel.content = CreateFrame("Frame", nil, scroll)
-	panel.content:SetWidth(270)
-	panel.content:SetHeight(200)
+	panel.content:SetSize(260, 200)
 	scroll:SetScrollChild(panel.content)
+	scroll:SetScript("OnSizeChanged", function(frame, width)
+		panel.content:SetWidth(width)
+	end)
+	panel.empty = self:CreateEmptyState(panel)
+	panel.empty:SetPoint("TOPLEFT", scroll, "TOPLEFT")
+	panel.empty:SetPoint("BOTTOMRIGHT", scroll, "BOTTOMRIGHT", 14, 0)
+	panel.empty:SetMessage("Nothing to mail", "Your bags hold nothing the queue needs on another character.")
 	panel.rows = {}
-
-	local sendAll = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	sendAll:SetSize(88, 22)
-	sendAll:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 34)
-	sendAll:SetText("Send all")
-	panel.sendAllBtn = sendAll
-	sendAll:SetScript("OnClick", function()
-		ProfessionExporter:StartMailSendAll()
-	end)
-
-	local cancel = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	cancel:SetSize(72, 22)
-	cancel:SetPoint("LEFT", sendAll, "RIGHT", 6, 0)
-	cancel:SetText("Cancel")
-	panel.cancelBtn = cancel
-	cancel:SetScript("OnClick", function()
-		ProfessionExporter:CancelMailSendQueue()
-	end)
-
-	panel.progressText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	panel.progressText:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 22)
-	panel.progressText:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 22)
-	panel.progressText:SetJustifyH("LEFT")
-
-	panel.progressBar = CreateFrame("StatusBar", nil, panel)
-	panel.progressBar:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 8)
-	panel.progressBar:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 8)
-	panel.progressBar:SetHeight(12)
-	panel.progressBar:SetStatusBarTexture("Interface/TARGETINGFRAME/UI-StatusBar")
-	panel.progressBar:SetMinMaxValues(0, 1)
-	panel.progressBar:SetValue(0)
-	local bg = panel.progressBar:CreateTexture(nil, "BACKGROUND")
-	bg:SetAllPoints()
-	bg:SetColorTexture(0.1, 0.1, 0.12, 0.8)
-	panel.progressBar.bg = bg
+	self:SkinTree(panel)
 
 	local function applyExpanded(expanded)
 		expanded = expanded ~= false
-		ProfessionExporter:SetSetting("mail.sidePanelExpanded", expanded)
+		pe:SetSetting("mail.sidePanelExpanded", expanded)
 		panel:SetShown(expanded)
-		if panel.collapseTab then
-			panel.collapseTab:Show()
-		end
-		if panel.collapseTabText then
-			panel.collapseTabText:SetText(expanded and "<" or ">")
-		end
-		if panel.toggleBtn then
-			panel.toggleBtn:SetText(expanded and "Collapse" or "")
-		end
+		expand:SetShown(not expanded)
 	end
-
-	toggle:SetScript("OnClick", function()
-		applyExpanded(false)
-	end)
-	collapseTab:SetScript("OnClick", function()
-		local expanded = ProfessionExporter:GetSetting("mail.sidePanelExpanded", true)
-		applyExpanded(not expanded)
+	collapse:SetScript("OnClick", function() applyExpanded(false) end)
+	expand:SetScript("OnClick", function()
+		applyExpanded(true)
+		pe:RefreshMailPanel()
 	end)
 
 	panel.applyExpanded = applyExpanded
@@ -337,97 +376,63 @@ function ProfessionExporter:RefreshMailPanel()
 	if not panel then
 		return
 	end
-	local expanded = self:GetSetting("mail.sidePanelExpanded", true)
-	if panel.applyExpanded then
-		panel.applyExpanded(expanded)
-	end
 	if not _G.MailFrame or not MailFrame:IsShown() then
 		panel:Hide()
+		panel.collapseTab:Hide()
 		return
 	end
-	if expanded then
-		panel:Show()
-	end
+	local expanded = self:GetSetting("mail.sidePanelExpanded", true)
+	panel.applyExpanded(expanded)
 
 	local plan = self.BuildShoppingMailSendPlan and self:BuildShoppingMailSendPlan() or {}
-	local destCount = #plan
 	local itemCount = 0
-	for _, dest in ipairs(plan) do
+	for index, dest in ipairs(plan) do
 		itemCount = itemCount + (tonumber(dest.totalQuantity) or 0)
-	end
-	panel.summary:SetText(string.format(
-		"%d destination(s)  |  %s items ready to mail from your bags",
-		destCount,
-		self:FormatNumberGrouped(itemCount)
-	))
-
-	for _, row in ipairs(panel.rows or {}) do
-		row:Hide()
-		row:SetParent(nil)
-	end
-	wipe(panel.rows)
-
-	local y = 0
-	for i, dest in ipairs(plan) do
-		local row = CreateFrame("Frame", nil, panel.content)
-		row:SetSize(260, 52)
-		row:SetPoint("TOPLEFT", 0, -y)
-		y = y + 56
-
-		local label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		label:SetPoint("TOPLEFT", 4, -2)
-		label:SetJustifyH("LEFT")
-		label:SetText(string.format("%s  (%s items)", characterLabel(self, dest.characterKey), self:FormatNumberGrouped(dest.totalQuantity or 0)))
-
-		local detail = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		detail:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -2)
-		detail:SetPoint("TOPRIGHT", row, "TOPRIGHT", -4, 0)
-		detail:SetJustifyH("LEFT")
-		detail:SetWordWrap(true)
+		local row = panel.rows[index]
+		if not row then
+			row = createMailRow(self, panel.content)
+			panel.rows[index] = row
+		end
+		row:ClearAllPoints()
+		row:SetPoint("TOPLEFT", panel.content, "TOPLEFT", 0, -((index - 1) * MAIL_ROW))
+		row:SetPoint("TOPRIGHT", panel.content, "TOPRIGHT", 0, -((index - 1) * MAIL_ROW))
+		row.dest = dest
+		local muted = self:GetTheme().textMuted
+		row.name:SetText(string.format("%s |cff%02x%02x%02x· %s items|r", characterLabel(self, dest.characterKey),
+			muted.r * 255, muted.g * 255, muted.b * 255, self:FormatNumberGrouped(dest.totalQuantity or 0)))
 		local parts = {}
 		for j = 1, math.min(3, #(dest.items or {})) do
 			local it = dest.items[j]
 			parts[#parts + 1] = string.format("%s x%s", it.name or "?", self:FormatNumberGrouped(it.quantity or 0))
 		end
 		if #(dest.items or {}) > 3 then
-			parts[#parts + 1] = string.format("+%d more", #dest.items - 3)
+			parts[#parts + 1] = string.format("and %d more", #dest.items - 3)
 		end
-		detail:SetText(table.concat(parts, ", "))
-
-		local sendBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-		sendBtn:SetSize(56, 18)
-		sendBtn:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -4, 2)
-		sendBtn:SetText("Send")
+		row.items:SetText(table.concat(parts, ", "))
 		local ck = dest.characterKey
-		sendBtn:SetScript("OnClick", function()
+		row.send:SetScript("OnClick", function()
 			ProfessionExporter:StartMailSendForCharacter(ck)
 		end)
-		panel.rows[#panel.rows + 1] = row
+		row:Show()
 	end
-	panel.content:SetHeight(math.max(80, y + 8))
+	for index = #plan + 1, #panel.rows do
+		panel.rows[index]:Hide()
+	end
+	panel.content:SetHeight(math.max(MAIL_ROW, #plan * MAIL_ROW))
+	panel.empty:SetShown(#plan == 0)
+	panel.footerText:SetText(#plan == 0 and "No mail pending" or string.format("%d %s · %s items ready",
+		#plan, #plan == 1 and "character" or "characters", self:FormatNumberGrouped(itemCount)))
 
 	local st = self:EnsureMailSendQueueState()
-	if st.running and st.total and st.total > 0 then
-		local done = math.max(0, (st.index or 1) - 1)
-		if st.index > st.total then
-			done = st.total
-		end
+	local sending = st.running and st.total and st.total > 0
+	panel.progressRow:SetShown(sending and true or false)
+	if sending then
+		local done = math.min(st.total, math.max(0, (st.index or 1) - 1))
 		panel.progressBar:SetMinMaxValues(0, st.total)
 		panel.progressBar:SetValue(done)
-		local current = st.parcels and st.parcels[st.index]
-		panel.progressText:SetText(string.format(
-			"Sending %d/%d%s",
-			done,
-			st.total,
-			current and (" — " .. tostring(current.mailName)) or ""
-		))
-		panel.sendAllBtn:Disable()
-	else
-		panel.progressBar:SetMinMaxValues(0, 1)
-		panel.progressBar:SetValue(0)
-		panel.progressText:SetText(destCount > 0 and "Ready to send purchased materials." or "No mail pending.")
-		panel.sendAllBtn:SetEnabled(destCount > 0)
+		panel.progressText:SetText(string.format("Sending %d of %d", done, st.total))
 	end
+	panel.sendAllBtn:SetEnabled(#plan > 0 and not sending)
 	panel.cancelBtn:SetEnabled(st.running == true)
 end
 

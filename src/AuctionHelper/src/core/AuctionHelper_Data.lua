@@ -3,11 +3,7 @@ local addonName, ProfessionExporter = ...
 local LEGACY_SETTING_PATHS_BY_ROOT = {
 	lastActiveTab = "general.lastActiveTab",
 	showMinimapButton = "general.showMinimapButton",
-	themePreset = "appearance.themePreset",
 	windowScale = "appearance.windowScale",
-	accentColor = "appearance.accentColor",
-	surfaceTint = "appearance.surfaceTint",
-	reducedOrnament = "appearance.reducedOrnament",
 	captureSpecializationTree = "capture.captureSpecializationTree",
 	specBreakdownPerRecipe = "capture.specBreakdownPerRecipe",
 	includeRecipeOutputItemData = "capture.includeRecipeOutputItemData",
@@ -212,11 +208,7 @@ function ProfessionExporter:InitDB()
 
 	seedNestedSetting(st, "lastActiveTab", general, "lastActiveTab", "overview")
 	seedNestedSetting(st, "showMinimapButton", general, "showMinimapButton", true)
-	seedNestedSetting(st, "themePreset", appearance, "themePreset", "slate")
 	seedNestedSetting(st, "windowScale", appearance, "windowScale", 1)
-	seedNestedSetting(st, "accentColor", appearance, "accentColor", { r = 0.24, g = 0.66, b = 0.74 })
-	seedNestedSetting(st, "surfaceTint", appearance, "surfaceTint", { r = 0.10, g = 0.12, b = 0.16 })
-	seedNestedSetting(st, "reducedOrnament", appearance, "reducedOrnament", false)
 	seedNestedSetting(st, "captureSpecializationTree", capture, "captureSpecializationTree", true)
 	seedNestedSetting(st, "includeRecipeOutputItemData", capture, "includeRecipeOutputItemData", false)
 	seedNestedSetting(st, "inventorySnapshotBatchSize", capture, "inventorySnapshotBatchSize", 0)
@@ -2246,21 +2238,15 @@ function ProfessionExporter:SaveExportToSavedVariables(payload, meta)
 	return true
 end
 
-function ProfessionExporter:CopyBoxBuildFooterText(opts, pagingEnvelope)
-	if not opts then
-		opts = {}
-	end
-	local parts = {}
-	if pagingEnvelope then
-		table.insert(parts, "|cffffffffPaged export:|r concatenate the payload fragments from page 1 through N in order. Each page starts with an AuctionHelper paging header.")
+function ProfessionExporter:CopyBoxBuildFooterText(opts)
+	opts = opts or {}
+	if opts.unsavedHint and opts.unsavedHint ~= "" then
+		return opts.unsavedHint
 	end
 	if opts.savedToVariables then
-		table.insert(parts, "|cffffffffSavedVariables:|r full compressed payload queued — |cffffffff/reload|r or log out, then read |cffffffffWTF/Account/<account>/SavedVariables/AuctionHelper.lua|r (|cffffffffAuctionHelperLastExport.payload|r).")
+		return "Also saved for /reload: SavedVariables/AuctionHelper.lua, AuctionHelperLastExport"
 	end
-	if opts.unsavedHint and opts.unsavedHint ~= "" then
-		table.insert(parts, opts.unsavedHint)
-	end
-	return table.concat(parts, "\n")
+	return ""
 end
 
 function ProfessionExporter:BuildCopyBoxPagedWrapperJson(pageIndex, pageCount, payloadFragment)
@@ -2373,23 +2359,17 @@ function ProfessionExporter:EncodeCopyBoxWrappedPage(fullJson, seg, pageIndex, t
 end
 
 function ProfessionExporter:LayoutCopyFrameScroll(copyFrame, useEnvelopePaging)
-	local scroll = copyFrame.scrollFrame
-	local hint = copyFrame.pageHintStr
-	if not scroll or not hint then
+	if not copyFrame or not copyFrame.pageHintStr then
 		return
 	end
-	scroll:ClearAllPoints()
+	local intro = "The text is selected. Press Ctrl+C, then paste it where you need it."
 	if useEnvelopePaging then
-		hint:Show()
-		scroll:SetPoint("TOPLEFT", hint, "BOTTOMLEFT", -2, -8)
-		scroll:SetPoint("BOTTOMLEFT", copyFrame, "BOTTOMLEFT", 16, 92)
-		scroll:SetPoint("BOTTOMRIGHT", copyFrame, "BOTTOMRIGHT", -32, 92)
-	else
-		hint:Hide()
-		scroll:SetPoint("TOPLEFT", copyFrame, "TOPLEFT", 16, -46)
-		scroll:SetPoint("BOTTOMLEFT", copyFrame, "BOTTOMLEFT", 16, 92)
-		scroll:SetPoint("BOTTOMRIGHT", copyFrame, "BOTTOMRIGHT", -32, 92)
+		intro = intro .. " This package has several pages: copy each page and join them in order."
 	end
+	copyFrame.pageHintStr:SetText(intro)
+	local pages = copyFrame._numPages or 1
+	copyFrame.metaStr:SetText(string.format("%s bytes%s", self.FormatNumberGrouped and self:FormatNumberGrouped(copyFrame._fullLen or 0) or tostring(copyFrame._fullLen or 0),
+		useEnvelopePaging and pages > 1 and string.format(" · %d pages", pages) or ""))
 end
 
 function ProfessionExporter:CopyBoxApplyCurrentPage()
@@ -2427,9 +2407,9 @@ function ProfessionExporter:CopyBoxApplyCurrentPage()
 	cf.editBox:SetText(body)
 	if cf.pageLabel then
 		if cf._pagingMode == "envelope" and numPages > 1 then
-			cf.pageLabel:SetText(string.format("Page %d / %d  (AuctionHelper package)", p, numPages))
+			cf.pageLabel:SetText(string.format("Page %d of %d", p, numPages))
 		else
-			cf.pageLabel:SetText("Page 1 / 1")
+			cf.pageLabel:SetText("Page 1 of 1")
 		end
 	end
 	if cf.btnPrev then
@@ -2455,6 +2435,134 @@ function ProfessionExporter:CopyBoxGoPage(delta)
 	self:CopyBoxApplyCurrentPage()
 end
 
+local function themedText(parent, font, colorKey, justify)
+	local text = parent:CreateFontString(nil, "OVERLAY", font)
+	local color = ProfessionExporter:GetTheme()[colorKey or "textPrimary"]
+	text:SetTextColor(color.r, color.g, color.b)
+	text:SetJustifyH(justify or "LEFT")
+	text:SetWordWrap(false)
+	return text
+end
+
+local function themedButton(parent, label, onClick, primary)
+	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+	button:SetText(label)
+	ProfessionExporter:SkinButton(button)
+	button:SetSize(math.ceil(button:GetFontString():GetStringWidth()) + 24, ProfessionExporter:GetTheme().size.control)
+	if primary then
+		ProfessionExporter:SetButtonPrimary(button, true)
+	end
+	button:SetScript("OnClick", onClick)
+	return button
+end
+
+-- The export window: header, one-line instructions, the selectable package text, page controls and
+-- a footer saying where else the package was saved. Uses only core theme helpers.
+function ProfessionExporter:CreateCopyFrame()
+	local theme = self:GetTheme()
+	local pad = theme.spacing.md
+	local f = CreateFrame("Frame", addonName .. "CopyFrame", UIParent, "BackdropTemplate")
+	f:SetPoint("CENTER")
+	f:SetSize(720, 560)
+	f:SetFrameStrata("DIALOG")
+	f:SetFrameLevel(200)
+	self:StyleWindow(f)
+	f:SetMovable(true)
+	f:SetClampedToScreen(true)
+	f:EnableMouse(true)
+	f:RegisterForDrag("LeftButton")
+	f:SetScript("OnDragStart", f.StartMoving)
+	f:SetScript("OnDragStop", f.StopMovingOrSizing)
+	tinsert(UISpecialFrames, f:GetName())
+
+	local headerY = -(theme.size.header / 2)
+	local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+	close:ClearAllPoints()
+	close:SetPoint("RIGHT", f, "TOPRIGHT", -6, headerY)
+	self:SkinCloseButton(close)
+	close:SetScript("OnClick", function() f:Hide() end)
+	f.closeXButton = close
+	f.metaStr = themedText(f, "GameFontHighlightSmall", "textMuted", "RIGHT")
+	f.metaStr:SetPoint("RIGHT", close, "LEFT", -10, 0)
+	f.copyTitle = themedText(f, "GameFontNormalLarge", "gold")
+	f.copyTitle:SetPoint("LEFT", f, "TOPLEFT", pad, headerY - 1)
+	f.copyTitle:SetPoint("RIGHT", f.metaStr, "LEFT", -12, 0)
+	f.copyTitle:SetText("Export")
+	local rule = f:CreateTexture(nil, "BORDER")
+	rule:SetPoint("TOPLEFT", 1, -theme.size.header)
+	rule:SetPoint("TOPRIGHT", -1, -theme.size.header)
+	rule:SetHeight(1)
+	rule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+
+	local footer = CreateFrame("Frame", nil, f)
+	footer:SetPoint("BOTTOMLEFT", 1, 1)
+	footer:SetPoint("BOTTOMRIGHT", -1, 1)
+	footer:SetHeight(theme.size.footer)
+	local footerRule = footer:CreateTexture(nil, "BORDER")
+	footerRule:SetPoint("TOPLEFT")
+	footerRule:SetPoint("TOPRIGHT")
+	footerRule:SetHeight(1)
+	footerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	f.footerStr = themedText(footer, "GameFontHighlightSmall", "textMuted")
+	f.footerStr:SetPoint("LEFT", pad, 0)
+	f.footerStr:SetPoint("RIGHT", -pad, 0)
+
+	f.pageHintStr = themedText(f, "GameFontHighlightSmall", "textMuted")
+	f.pageHintStr:SetWordWrap(true)
+	f.pageHintStr:SetPoint("TOPLEFT", f, "TOPLEFT", pad, -(theme.size.header + 1 + pad))
+	f.pageHintStr:SetPoint("TOPRIGHT", f, "TOPRIGHT", -pad, -(theme.size.header + 1 + pad))
+
+	local actions = CreateFrame("Frame", nil, f)
+	actions:SetPoint("BOTTOMLEFT", footer, "TOPLEFT", pad - 1, pad)
+	actions:SetPoint("BOTTOMRIGHT", footer, "TOPRIGHT", -(pad - 1), pad)
+	actions:SetHeight(theme.size.control)
+	local done = themedButton(actions, "Close", function() f:Hide() end, true)
+	done:SetPoint("RIGHT")
+	local selectAll = themedButton(actions, "Select all", function()
+		f.editBox:SetFocus()
+		f.editBox:HighlightText()
+	end)
+	selectAll:SetPoint("RIGHT", done, "LEFT", -8, 0)
+	f.pageBar = CreateFrame("Frame", nil, actions)
+	f.pageBar:SetPoint("TOPLEFT")
+	f.pageBar:SetPoint("BOTTOMLEFT")
+	f.pageBar:SetWidth(260)
+	f.btnPrev = themedButton(f.pageBar, "Previous", function() ProfessionExporter:CopyBoxGoPage(-1) end)
+	f.btnPrev:SetPoint("LEFT")
+	f.pageLabel = themedText(f.pageBar, "GameFontHighlightSmall", "textMuted", "CENTER")
+	f.pageLabel:SetPoint("LEFT", f.btnPrev, "RIGHT", 8, 0)
+	f.pageLabel:SetWidth(76)
+	f.btnNext = themedButton(f.pageBar, "Next", function() ProfessionExporter:CopyBoxGoPage(1) end)
+	f.btnNext:SetPoint("LEFT", f.pageLabel, "RIGHT", 8, 0)
+
+	-- The package text sits in a raised, clipped box; the edit box follows the scroll width.
+	local box = CreateFrame("Frame", nil, f, "BackdropTemplate")
+	box:SetPoint("TOPLEFT", f.pageHintStr, "BOTTOMLEFT", 0, -10)
+	box:SetPoint("BOTTOMRIGHT", actions, "TOPRIGHT", 0, pad)
+	self:ApplyBackdrop(box, theme.surface2, theme.borderControl)
+	if box.SetClipsChildren then
+		box:SetClipsChildren(true)
+	end
+	local scrollFrame = CreateFrame("ScrollFrame", addonName .. "CopyScrollFrame", box, "UIPanelScrollFrameTemplate")
+	scrollFrame:SetPoint("TOPLEFT", 8, -8)
+	scrollFrame:SetPoint("BOTTOMRIGHT", -18, 8)
+	local editBox = CreateFrame("EditBox", addonName .. "CopyEditBox", scrollFrame)
+	editBox:SetMultiLine(true)
+	editBox:SetAutoFocus(true)
+	editBox:SetFontObject(ChatFontNormal)
+	editBox:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	editBox:SetWidth(600)
+	editBox:SetScript("OnEscapePressed", function() f:Hide() end)
+	scrollFrame:SetScrollChild(editBox)
+	scrollFrame:SetScript("OnSizeChanged", function(_, width)
+		editBox:SetWidth(math.max(100, width))
+	end)
+	f.scrollFrame = scrollFrame
+	f.editBox = editBox
+	self:SkinTree(f)
+	return f
+end
+
 --- opts: fullByteLength, savedToVariables, unsavedHint
 function ProfessionExporter:ShowCopyBox(text, opts)
 	opts = opts or {}
@@ -2478,115 +2586,15 @@ function ProfessionExporter:ShowCopyBox(text, opts)
 		pagingMode = "envelope"
 		numPages = 1
 		segments = nil
-		footerText = self:CopyBoxBuildFooterText(opts, true)
+		footerText = self:CopyBoxBuildFooterText(opts)
 	else
 		numPages = 1
 		pagingMode = "raw"
-		footerText = self:CopyBoxBuildFooterText(opts, false)
+		footerText = self:CopyBoxBuildFooterText(opts)
 	end
 
 	if not copyFrame then
-		--- BackdropTemplate only: DialogBoxFrame also spawns default OK/Cancel that overlapped our Close.
-		copyFrame = CreateFrame("Frame", addonName .. "CopyFrame", UIParent, "BackdropTemplate")
-		copyFrame:SetPoint("CENTER")
-		copyFrame:SetSize(720, 560)
-		copyFrame:SetFrameStrata("DIALOG")
-		copyFrame:SetFrameLevel(200)
-		copyFrame:SetBackdrop({
-			bgFile = "Interface/ChatFrame/ChatFrameBackground",
-			edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-			tile = true,
-			tileSize = 8,
-			edgeSize = 16,
-			insets = { left = 4, right = 4, top = 4, bottom = 4 },
-		})
-		copyFrame:SetBackdropColor(0.06, 0.06, 0.09, 0.98)
-		copyFrame:SetBackdropBorderColor(0.4, 0.4, 0.45, 1)
-		copyFrame:SetMovable(true)
-		copyFrame:SetClampedToScreen(true)
-		copyFrame:EnableMouse(true)
-		copyFrame:RegisterForDrag("LeftButton")
-		copyFrame:SetScript("OnDragStart", copyFrame.StartMoving)
-		copyFrame:SetScript("OnDragStop", copyFrame.StopMovingOrSizing)
-
-		local copyTitle = copyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-		copyTitle:SetPoint("TOP", 0, -14)
-		copyTitle:SetText("Export Package")
-		copyFrame.copyTitle = copyTitle
-
-		local closeX = CreateFrame("Button", nil, copyFrame, "UIPanelCloseButton")
-		closeX:SetPoint("TOPRIGHT", -8, -8)
-		closeX:SetScript("OnClick", function()
-			copyFrame:Hide()
-		end)
-		copyFrame.closeXButton = closeX
-
-		local pageHintStr = copyFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		pageHintStr:SetPoint("TOPLEFT", copyFrame, "TOPLEFT", 16, -42)
-		pageHintStr:SetPoint("TOPRIGHT", copyFrame, "TOPRIGHT", -40, -42)
-		pageHintStr:SetJustifyH("LEFT")
-		pageHintStr:SetWordWrap(true)
-		copyFrame.pageHintStr = pageHintStr
-
-		local footerStr = copyFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		footerStr:SetPoint("BOTTOMLEFT", 18, 34)
-		footerStr:SetPoint("BOTTOMRIGHT", -18, 34)
-		footerStr:SetJustifyH("LEFT")
-		footerStr:SetJustifyV("BOTTOM")
-		footerStr:SetWordWrap(true)
-		copyFrame.footerStr = footerStr
-
-		local pageBar = CreateFrame("Frame", nil, copyFrame)
-		pageBar:SetHeight(26)
-		pageBar:SetPoint("BOTTOMLEFT", 14, 60)
-		pageBar:SetPoint("BOTTOMRIGHT", -14, 60)
-		copyFrame.pageBar = pageBar
-
-		local btnPrev = CreateFrame("Button", nil, pageBar, "UIPanelButtonTemplate")
-		btnPrev:SetSize(72, 22)
-		btnPrev:SetPoint("LEFT", 0, 0)
-		btnPrev:SetText("Prev")
-		btnPrev:SetScript("OnClick", function()
-			ProfessionExporter:CopyBoxGoPage(-1)
-		end)
-		copyFrame.btnPrev = btnPrev
-
-		local pageLabel = pageBar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-		pageLabel:SetPoint("CENTER", pageBar, "CENTER", 0, 0)
-		pageLabel:SetText("Page 1 / 1")
-		copyFrame.pageLabel = pageLabel
-
-		local btnNext = CreateFrame("Button", nil, pageBar, "UIPanelButtonTemplate")
-		btnNext:SetSize(72, 22)
-		btnNext:SetPoint("RIGHT", 0, 0)
-		btnNext:SetText("Next")
-		btnNext:SetScript("OnClick", function()
-			ProfessionExporter:CopyBoxGoPage(1)
-		end)
-		copyFrame.btnNext = btnNext
-
-		local scrollFrame = CreateFrame("ScrollFrame", addonName .. "CopyScrollFrame", copyFrame, "UIPanelScrollFrameTemplate")
-		local editBox = CreateFrame("EditBox", addonName .. "CopyEditBox", scrollFrame)
-		editBox:SetMultiLine(true)
-		editBox:SetAutoFocus(true)
-		editBox:SetFontObject(ChatFontNormal)
-		editBox:SetWidth(630)
-		editBox:SetScript("OnEscapePressed", function()
-			copyFrame:Hide()
-		end)
-
-		scrollFrame:SetScrollChild(editBox)
-
-		local closeButton = CreateFrame("Button", nil, copyFrame, "UIPanelButtonTemplate")
-		closeButton:SetPoint("BOTTOM", 0, 8)
-		closeButton:SetSize(120, 22)
-		closeButton:SetText(CLOSE)
-		closeButton:SetScript("OnClick", function()
-			copyFrame:Hide()
-		end)
-
-		copyFrame.scrollFrame = scrollFrame
-		copyFrame.editBox = editBox
+		copyFrame = self:CreateCopyFrame()
 		state.copyFrame = copyFrame
 	end
 
@@ -2599,13 +2607,6 @@ function ProfessionExporter:ShowCopyBox(text, opts)
 	copyFrame._opts = opts
 	copyFrame._pagingSegmentsPending = useEnvelope and true or false
 
-	if useEnvelope then
-		copyFrame.pageHintStr:SetText(
-			"The payload is a compressed AuctionHelper package. If there are multiple pages, join page payload fragments in order."
-		)
-	else
-		copyFrame.pageHintStr:SetText("")
-	end
 	self:LayoutCopyFrameScroll(copyFrame, useEnvelope)
 
 	if footerText ~= "" then
@@ -2617,6 +2618,7 @@ function ProfessionExporter:ShowCopyBox(text, opts)
 	end
 
 	copyFrame:Show()
+	ProfessionExporter:SkinTree(copyFrame)
 	self:CopyBoxApplyCurrentPage()
 
 	if useEnvelope then
@@ -2632,7 +2634,6 @@ function ProfessionExporter:ShowCopyBox(text, opts)
 				copyFrame._segments = nil
 				copyFrame._numPages = 1
 				self:LayoutCopyFrameScroll(copyFrame, false)
-				copyFrame.pageHintStr:SetText("")
 				copyFrame.editBox:SetText(
 					"Paging failed: "
 						.. tostring(err or "unknown error")
@@ -2650,7 +2651,6 @@ function ProfessionExporter:ShowCopyBox(text, opts)
 				copyFrame._segments = nil
 				copyFrame._numPages = 1
 				self:LayoutCopyFrameScroll(copyFrame, false)
-				copyFrame.pageHintStr:SetText("")
 			else
 				copyFrame._pagingMode = "envelope"
 				copyFrame._segments = computedSegments
@@ -2658,7 +2658,7 @@ function ProfessionExporter:ShowCopyBox(text, opts)
 				self:LayoutCopyFrameScroll(copyFrame, true)
 			end
 			copyFrame._pageIndex = 1
-			local ft = self:CopyBoxBuildFooterText(copyFrame._opts or {}, useEnv)
+			local ft = self:CopyBoxBuildFooterText(copyFrame._opts or {})
 			if ft ~= "" then
 				copyFrame.footerStr:SetText(ft)
 				copyFrame.footerStr:Show()
@@ -2706,7 +2706,7 @@ function ProfessionExporter:Export(scope, identifier)
 
 	local meta = exportData.meta or {}
 	st.exportJsonBusy = true
-	self:SetExportProgressPhase("Packing compressed export…", true)
+	self:SetExportProgressPhase("Packing the export", true)
 	self:UpdateExportProgressSteps(1)
 	debugprofilestart()
 	local payload, encodeErr = self:BuildCompactExportPayload(exportData)

@@ -2,10 +2,7 @@ local addonName, ProfessionExporter = ...
 
 local CALLER_ID = "AuctionHelper"
 local MONEY_COLORS = {
-	gold = "ffffd100",
-	silver = "ffe6e8fa",
-	copper = "ffc8602c",
-	negative = "ffff6b6b",
+	negative = "ffe36361",
 }
 
 local function colorText(hex, text)
@@ -21,7 +18,7 @@ local function groupDigits(numberText)
 	end
 	local out = text
 	while true do
-		local nextText, count = string.gsub(out, "^(%d+)(%d%d%d)", "%1 %2")
+		local nextText, count = string.gsub(out, "^(%d+)(%d%d%d)", "%1,%2")
 		out = nextText
 		if count == 0 then
 			break
@@ -205,41 +202,54 @@ function ProfessionExporter:FormatNumberGrouped(value)
 	return text
 end
 
-function ProfessionExporter:FormatCopperFull(copper)
-	if copper == nil or copper ~= copper then
-		return "-"
-	end
+local COIN_ICONS = {
+	gold = "|TInterface\\MoneyFrame\\UI-GoldIcon:0:0:1:0|t",
+	silver = "|TInterface\\MoneyFrame\\UI-SilverIcon:0:0:1:0|t",
+	copper = "|TInterface\\MoneyFrame\\UI-CopperIcon:0:0:1:0|t",
+}
+
+-- "12[g] 40[s]": a number then its coin icon, zero parts dropped. `short` drops copper from 100g and
+-- silver from 10,000g so a price fits an 86px column. Negative amounts lead with a red minus.
+local function formatCoins(self, copper, short)
 	local n = tonumber(copper)
-	if not n then
+	if copper == nil or copper ~= copper or not n then
 		return "-"
 	end
-	local sign = n < 0 and "-" or ""
 	local total = math.floor(math.abs(n) + 0.5)
 	local gold = math.floor(total / 10000)
 	local silver = math.floor((total % 10000) / 100)
 	local bronze = total % 100
+	if short then
+		if gold >= 100 then
+			bronze = 0
+		end
+		if gold >= 10000 then
+			silver = 0
+		end
+	end
 	local parts = {}
-
 	if gold > 0 then
-		parts[#parts + 1] = colorText(MONEY_COLORS.gold, self:FormatNumberGrouped(gold) .. "g")
+		parts[#parts + 1] = self:FormatNumberGrouped(gold) .. COIN_ICONS.gold
 	end
-	if silver > 0 or gold > 0 then
-		parts[#parts + 1] = colorText(MONEY_COLORS.silver, tostring(silver) .. "s")
+	if silver > 0 then
+		parts[#parts + 1] = tostring(silver) .. COIN_ICONS.silver
 	end
-	parts[#parts + 1] = colorText(MONEY_COLORS.copper, tostring(bronze) .. "c")
-
+	if bronze > 0 or #parts == 0 then
+		parts[#parts + 1] = tostring(bronze) .. COIN_ICONS.copper
+	end
 	local text = table.concat(parts, " ")
-	if sign ~= "" then
-		return colorText(MONEY_COLORS.negative, sign) .. text
+	if n < 0 and total > 0 then
+		return colorText(MONEY_COLORS.negative, "-") .. text
 	end
 	return text
 end
 
+function ProfessionExporter:FormatCopperFull(copper)
+	return formatCoins(self, copper, false)
+end
+
 function ProfessionExporter:FormatCopperShort(copper)
-	if copper == nil or copper ~= copper then
-		return "-"
-	end
-	return self:FormatCopperFull(copper)
+	return formatCoins(self, copper, true)
 end
 
 local function formatTooltipTimestamp(ts)
@@ -271,17 +281,19 @@ local function tooltipHasProfessionExporterSection(tooltip)
 	return false
 end
 
-local function appendShiftTooltipTotalLine(self, tooltip, label, unitPrice, quantity, colorR, colorG, colorB)
-	unitPrice = tonumber(unitPrice)
-	quantity = math.max(0, tonumber(quantity) or 0)
-	if not tooltip or not unitPrice or unitPrice <= 0 or quantity <= 0 then
-		return
+-- Tooltip colours: labels muted on the left, values white on the right, the addon name in gold.
+local TIP_LABEL = { 0.60, 0.63, 0.67 }
+local TIP_VALUE = { 0.95, 0.94, 0.92 }
+
+local function addPair(tooltip, label, value)
+	tooltip:AddDoubleLine(label, value, TIP_LABEL[1], TIP_LABEL[2], TIP_LABEL[3], TIP_VALUE[1], TIP_VALUE[2], TIP_VALUE[3])
+end
+
+local function seenLabel(self, ts)
+	if self.FormatScanTimestamp then
+		return self:FormatScanTimestamp(ts)
 	end
-	tooltip:AddLine(
-		string.format("%s x%s: %s", label, self:FormatNumberGrouped(quantity), self:FormatCopperShort(unitPrice * quantity)),
-		colorR or 0.78, colorG or 0.86, colorB or 0.96,
-		true
-	)
+	return formatTooltipTimestamp(ts) or "-"
 end
 
 function ProfessionExporter:AppendPricingToItemTooltip(tooltip, itemID)
@@ -291,17 +303,17 @@ function ProfessionExporter:AppendPricingToItemTooltip(tooltip, itemID)
 	end
 
 	local summary = self.GetItemEconomySummary and self:GetItemEconomySummary(itemID, {}) or nil
-	local nativePrice, nativeSource, nativeSeenAt = nil, nil, nil
+	local nativePrice, _, nativeSeenAt
 	if self.GetNativeAhPrice then
-		nativePrice, nativeSource, nativeSeenAt = self:GetNativeAhPrice(itemID)
+		nativePrice, _, nativeSeenAt = self:GetNativeAhPrice(itemID)
 	end
-	local cachedPrice, cachedSource, cachedSeenAt = nil, nil, nil
+	local cachedPrice, cachedSeenAt
 	if self.GetFreshAddonCachedPrice then
-		cachedPrice, cachedSource, cachedSeenAt = self:GetFreshAddonCachedPrice(itemID)
+		cachedPrice, _, cachedSeenAt = self:GetFreshAddonCachedPrice(itemID)
 	end
-	local marketEstimate, marketSource = nil, nil
+	local marketEstimate
 	if self.GetMarketEstimateCopper then
-		marketEstimate, marketSource = self:GetMarketEstimateCopper(itemID, nil, nil)
+		marketEstimate = self:GetMarketEstimateCopper(itemID, nil, nil)
 	end
 	local craftStats = self.GetItemHistoryStats and self:GetItemHistoryStats(itemID, "crafting", "30d") or {}
 	local lastObservedPrice = summary and tonumber(summary.lastPrice) or nil
@@ -315,81 +327,59 @@ function ProfessionExporter:AppendPricingToItemTooltip(tooltip, itemID)
 		bags, bank, warband, totalOwned = self:GetItemCountByLocation(itemID)
 	end
 
-	local hasAnyData = (cachedPrice and cachedPrice > 0)
-		or (nativePrice and nativePrice > 0)
-		or (lastObservedPrice and lastObservedPrice > 0)
-		or (marketEstimate and marketEstimate > 0)
-		or (avgSale and avgSale > 0)
-		or (avgBuy and avgBuy > 0)
-		or (craftAvg and craftAvg > 0)
-		or (craftLatest and craftLatest > 0)
+	local price = (cachedPrice and cachedPrice > 0 and cachedPrice) or (lastObservedPrice and lastObservedPrice > 0 and lastObservedPrice) or nil
+	local priceAt = (cachedPrice and cachedPrice > 0) and cachedSeenAt or lastObservedAt
+	local hasAnyData = price or (nativePrice and nativePrice > 0) or (marketEstimate and marketEstimate > 0)
+		or (avgSale and avgSale > 0) or (avgBuy and avgBuy > 0) or (craftAvg and craftAvg > 0) or (craftLatest and craftLatest > 0)
 	if not hasAnyData then
 		return false
 	end
 
 	tooltip:AddLine(" ")
-	tooltip:AddLine("AuctionHelper", 0.30, 1.00, 0.60)
-
-	if cachedPrice and cachedPrice > 0 then
-		local line = string.format("AH: %s", self:FormatCopperShort(cachedPrice))
-		if cachedSource and cachedSource ~= "" then
-			line = string.format("%s (%s)", line, tostring(cachedSource))
-		end
-		tooltip:AddLine(line, 0.82, 0.88, 0.96, true)
-		local seenLabel = formatTooltipTimestamp(cachedSeenAt)
-		if seenLabel then
-			tooltip:AddLine("Seen: " .. seenLabel, 0.68, 0.74, 0.82, true)
-		end
-	elseif lastObservedPrice and lastObservedPrice > 0 then
-		local source = summary and summary.snapshot and summary.snapshot.source or "snapshot"
-		tooltip:AddLine(
-			string.format("Last observed: %s (%s)", self:FormatCopperShort(lastObservedPrice), tostring(source or "snapshot")),
-			0.82, 0.88, 0.96, true
-		)
-		local seenLabel = formatTooltipTimestamp(lastObservedAt)
-		if seenLabel then
-			tooltip:AddLine("Seen: " .. seenLabel, 0.68, 0.74, 0.82, true)
-		end
+	tooltip:AddLine("AuctionHelper", 1, 0.82, 0)
+	if price then
+		addPair(tooltip, "Auction price", self:FormatCopperFull(price))
+		addPair(tooltip, "Seen", seenLabel(self, priceAt))
 	end
-
-	if nativePrice and nativePrice > 0 and (not cachedPrice or tonumber(nativeSeenAt) ~= tonumber(cachedSeenAt)) then
-		local line = string.format("Native AH: %s", self:FormatCopperShort(nativePrice))
-		if nativeSource and nativeSource ~= "" then
-			line = string.format("%s (%s)", line, tostring(nativeSource))
-		end
-		tooltip:AddLine(line, 0.75, 0.90, 0.78, true)
+	if nativePrice and nativePrice > 0 and nativePrice ~= price and tonumber(nativeSeenAt) ~= tonumber(priceAt) then
+		addPair(tooltip, "Live price", self:FormatCopperFull(nativePrice))
 	end
-
-	if marketEstimate and marketEstimate > 0 and (not cachedPrice or tonumber(marketEstimate) ~= tonumber(cachedPrice)) then
-		tooltip:AddLine(
-			string.format("Estimate: %s (%s)", self:FormatCopperShort(marketEstimate), tostring(marketSource or "market")),
-			0.82, 0.88, 0.96, true
-		)
+	if marketEstimate and marketEstimate > 0 and marketEstimate ~= price then
+		addPair(tooltip, "Estimate", self:FormatCopperFull(marketEstimate))
 	end
 	if avgSale and avgSale > 0 then
-		tooltip:AddLine("Avg sale: " .. self:FormatCopperShort(avgSale), 0.82, 0.88, 0.96, true)
+		addPair(tooltip, "Average sale", self:FormatCopperFull(avgSale))
 	end
 	if avgBuy and avgBuy > 0 then
-		tooltip:AddLine("Avg buy: " .. self:FormatCopperShort(avgBuy), 0.82, 0.88, 0.96, true)
+		addPair(tooltip, "Average buy", self:FormatCopperFull(avgBuy))
 	end
 	if craftAvg and craftAvg > 0 then
-		tooltip:AddLine("Craft avg (30d): " .. self:FormatCopperShort(craftAvg), 0.82, 0.88, 0.96, true)
+		addPair(tooltip, "Craft cost, 30 days", self:FormatCopperFull(craftAvg))
 	elseif craftLatest and craftLatest > 0 then
-		tooltip:AddLine("Craft latest: " .. self:FormatCopperShort(craftLatest), 0.82, 0.88, 0.96, true)
+		addPair(tooltip, "Craft cost, latest", self:FormatCopperFull(craftLatest))
 	end
-	if IsShiftKeyDown and IsShiftKeyDown() and (tonumber(totalOwned) or 0) > 0 then
-		local qtyLabel = string.format(
-			"Held now: %s total (%s bags, %s bank, %s warband)",
-			self:FormatNumberGrouped(totalOwned),
-			self:FormatNumberGrouped(bags),
-			self:FormatNumberGrouped(bank),
-			self:FormatNumberGrouped(warband)
-		)
-		tooltip:AddLine(qtyLabel, 0.95, 0.85, 0.55, true)
-		appendShiftTooltipTotalLine(self, tooltip, "AH total", cachedPrice or nativePrice or lastObservedPrice or marketEstimate, totalOwned, 0.82, 0.88, 0.96)
-		appendShiftTooltipTotalLine(self, tooltip, "Avg sale total", avgSale, totalOwned, 0.82, 0.88, 0.96)
-		appendShiftTooltipTotalLine(self, tooltip, "Avg buy total", avgBuy, totalOwned, 0.82, 0.88, 0.96)
-		appendShiftTooltipTotalLine(self, tooltip, "Craft total", craftAvg or craftLatest, totalOwned, 0.82, 0.88, 0.96)
+
+	totalOwned = tonumber(totalOwned) or 0
+	if totalOwned > 0 then
+		if IsShiftKeyDown and IsShiftKeyDown() then
+			local where = string.format("%s bags · %s bank", self:FormatNumberGrouped(bags), self:FormatNumberGrouped(bank))
+			if (tonumber(warband) or 0) > 0 then
+				where = where .. " · " .. self:FormatNumberGrouped(warband) .. " warband"
+			end
+			addPair(tooltip, "Owned", where)
+			local unit = price or nativePrice or marketEstimate
+			if unit and unit > 0 then
+				addPair(tooltip, "Worth, x" .. self:FormatNumberGrouped(totalOwned), self:FormatCopperFull(unit * totalOwned))
+			end
+			if avgSale and avgSale > 0 then
+				addPair(tooltip, "Average sale, all", self:FormatCopperFull(avgSale * totalOwned))
+			end
+			if (craftAvg or craftLatest) then
+				addPair(tooltip, "Craft cost, all", self:FormatCopperFull((craftAvg or craftLatest) * totalOwned))
+			end
+		else
+			tooltip:AddLine("Hold Shift for totals", TIP_LABEL[1], TIP_LABEL[2], TIP_LABEL[3])
+		end
 	end
 	return true
 end

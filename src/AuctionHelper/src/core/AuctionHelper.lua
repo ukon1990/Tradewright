@@ -29,7 +29,7 @@ AuctionHelper.EXPORT_FORMAT = "AHCBOR1"
 AuctionHelper.frame = AuctionHelper.frame or CreateFrame("Frame")
 
 function AuctionHelper:PrintMessage(message)
-	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99AuctionHelper|r: " .. tostring(message))
+	DEFAULT_CHAT_FRAME:AddMessage("|cffffd100AuctionHelper|r: " .. tostring(message))
 end
 
 addonTable = AuctionHelper

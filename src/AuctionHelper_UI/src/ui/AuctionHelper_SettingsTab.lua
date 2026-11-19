@@ -3,152 +3,187 @@ local addonName, ProfessionExporter = ...
 local SettingsTab = {}
 ProfessionExporter.SettingsTab = SettingsTab
 
-local ACCENT_SWATCHES = {
-	{ id = "teal", label = "Teal", color = { r = 0.24, g = 0.66, b = 0.74 } },
-	{ id = "gold", label = "Gold", color = { r = 0.82, g = 0.64, b = 0.23 } },
-	{ id = "ember", label = "Ember", color = { r = 0.80, g = 0.38, b = 0.28 } },
-	{ id = "ice", label = "Ice", color = { r = 0.36, g = 0.62, b = 0.85 } },
-}
+local COLUMN_GAP = 24
+local SECTION_GAP = 16
+local ROW_GAP = 6
+local SELECT_WIDTH = 150
 
-local function setCheck(button, value)
-	button:SetChecked(value and true or false)
+local function refreshEconomy(pe)
+	pe:RefreshInventoryTabIfVisible()
+	pe:RefreshCraftsTabIfVisible()
 end
 
-local function createCheckbox(parent, name, label, onClick)
-	local button = CreateFrame("CheckButton", addonName .. name, parent, "UICheckButtonTemplate")
-	local text = _G[button:GetName() .. "Text"]
-	if text then
-		text:SetText(label)
+local function refreshCraftingOrders(pe)
+	if pe.RefreshCraftingOrdersPageRecipeList then
+		pe:RefreshCraftingOrdersPageRecipeList()
 	end
-	button:SetScript("OnClick", function(self)
-		onClick(self:GetChecked() == true)
-	end)
-	return button
+	if pe.SyncCraftingOrdersFilterBarFromSettings then
+		pe:SyncCraftingOrdersFilterBarFromSettings()
+	end
 end
 
-local function createCycleButton(parent, width, text, onClick)
-	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-	button:SetSize(width or 180, 22)
-	button:SetText(text or "")
-	button:SetScript("OnClick", onClick)
-	return button
+local function numberOptions(values, format)
+	local options = {}
+	for _, value in ipairs(values) do
+		options[#options + 1] = { value = value, label = string.format(format, value) }
+	end
+	return options
 end
 
-local function openColorPicker(initial, onCommit)
-	local info = {
-		r = initial.r,
-		g = initial.g,
-		b = initial.b,
-		hasOpacity = false,
-		swatchFunc = function()
-			local r, g, b = ColorPickerFrame:GetColorRGB()
-			onCommit({ r = r, g = g, b = b })
-		end,
-		cancelFunc = function(previous)
-			if previous and previous.r then
-				onCommit({ r = previous.r, g = previous.g, b = previous.b })
-			end
-		end,
+-- Every setting on the tab. kind: check | select | note. Sections go in `column` 1 or 2.
+local function buildSections(pe)
+	local sections = {
+		{ column = 1, title = "General", items = {
+			{ kind = "check", label = "Show minimap button", path = "general.showMinimapButton", default = true,
+				onChange = function() pe:EnsureMinimapButton() end },
+			{ kind = "select", label = "Window scale", path = "appearance.windowScale", default = 1,
+				options = pe:GetWindowScaleOptions(), onChange = function() pe:ApplyWindowScale() end },
+		} },
+		{ column = 1, title = "Profession scan", items = {
+			{ kind = "check", label = "Capture specialization tree", path = "capture.captureSpecializationTree", default = true },
+			{ kind = "check", label = "Include detailed recipe output data", path = "capture.includeRecipeOutputItemData", default = false },
+			{ kind = "select", label = "Inventory items read per frame", path = "capture.inventorySnapshotBatchSize", default = 0,
+				options = { { value = 0, label = "Automatic" }, { value = 50, label = "50" }, { value = 100, label = "100" } } },
+		} },
+		{ column = 1, title = "Inventory", items = {
+			{ kind = "check", label = "Show price and profit columns by default", path = "inventory.economyShowColumns", default = true,
+				onChange = refreshEconomy },
+			{ kind = "check", label = "Estimate material cost", path = "inventory.economyShowMatCost", default = true, onChange = refreshEconomy },
+			{ kind = "check", label = "Show TSM sale rate", path = "inventory.economyShowSaleRate", default = true, onChange = refreshEconomy },
+		} },
+		{ column = 1, title = "Troubleshooting", items = {
+			{ kind = "check", label = "Write debug messages to chat", path = "debug.enabled", default = false },
+		} },
+		{ column = 2, title = "Auction house", items = {
+			{ kind = "select", label = "Keep price history for", path = "auction.historyRetentionDays", default = 30,
+				options = numberOptions({ 7, 14, 30, 60, 90 }, "%d days"),
+				onChange = function() if pe.TrimFullDumpMarketHistory then pe:TrimFullDumpMarketHistory() end end },
+			{ kind = "select", label = "Refresh prices older than", path = "auction.priceFreshnessMinutes", default = 15,
+				options = numberOptions({ 5, 15, 30, 60, 180 }, "%d minutes") },
+			{ kind = "check", label = "Scan craft and reagent prices when the auction house opens",
+				path = "auction.autoCraftEconomyRefreshOnOpen", default = false },
+			{ kind = "check", label = "Include optional reagents in the craft scan", path = "auction.craftScanIncludeOptionalSlots", default = false },
+		} },
+		{ column = 2, title = "Other price sources", items = {
+			{ kind = "check", label = "Use Auctionator when there is no scanned price", path = "integrations.economyUseAuctionatorFallback",
+				default = true, onChange = refreshEconomy },
+			{ kind = "select", label = "TSM fallback price", path = "integrations.economyTSMFallbackString", default = "DBMinBuyout",
+				options = { { value = "DBMinBuyout", label = "DBMinBuyout" }, { value = "dbmarket", label = "dbmarket" },
+					{ value = "DBRecent", label = "DBRecent" } }, onChange = refreshEconomy },
+			{ kind = "note", text = function()
+				return string.format("TSM sources in use: market %s, materials %s, sale rate %s.",
+					tostring(pe:GetSetting("integrations.economyTSMMarketString", "dbmarket")),
+					tostring(pe:GetSetting("integrations.economyTSMMatString", "Crafting")),
+					tostring(pe:GetSetting("integrations.economyTSMSaleRateString", "DBRegionSaleRate")))
+			end },
+		} },
 	}
-	ColorPickerFrame.func = info.swatchFunc
-	ColorPickerFrame.cancelFunc = info.cancelFunc
-	ColorPickerFrame.hasOpacity = false
-	ColorPickerFrame.opacity = 1
-	ColorPickerFrame:SetColorRGB(info.r, info.g, info.b)
-	ColorPickerFrame.previousValues = { r = info.r, g = info.g, b = info.b }
-	ColorPickerFrame:Show()
+	if pe.IS_RETAIL then
+		sections[#sections + 1] = { column = 2, title = "Crafting orders", items = {
+			{ kind = "check", label = "Hide unlearned recipes in the orders list", path = "craftingOrders.hideUnlearned", default = false,
+				onChange = refreshCraftingOrders },
+			{ kind = "check", label = "Patron orders: only recipes that give knowledge", path = "craftingOrders.patronKnowledgeOnly",
+				default = false, onChange = refreshCraftingOrders },
+			{ kind = "note", text = "Uses the recipe list in the addon's data file. When that list is empty, the option does nothing." },
+		} }
+	end
+	return sections
+end
+
+local function createItem(pe, parent, item)
+	if item.kind == "check" then
+		local check = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
+		pe:SkinCheckButton(check)
+		local label = check.Text or check.text
+		if not label then
+			label = check:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+			check.Text = label
+		end
+		label:ClearAllPoints()
+		label:SetPoint("LEFT", check, "RIGHT", 2, 0)
+		label:SetPoint("RIGHT", parent, "RIGHT", 0, 0)
+		label:SetJustifyH("LEFT")
+		label:SetWordWrap(true)
+		label:SetText(item.label)
+		check:SetScript("OnClick", function(self)
+			pe:SetSetting(item.path, self:GetChecked() == true)
+			if item.onChange then
+				item.onChange(pe)
+			end
+		end)
+		item.control = check
+		return
+	end
+	if item.kind == "select" then
+		local row = CreateFrame("Frame", nil, parent)
+		row:SetHeight(26)
+		row.select = pe:CreateSingleSelectDropdown(row, {
+			width = SELECT_WIDTH,
+			getOptions = function() return item.options end,
+			getValue = function() return pe:GetSetting(item.path, item.default) end,
+			setValue = function(value) pe:SetSetting(item.path, value) end,
+			onChanged = function()
+				if item.onChange then
+					item.onChange(pe)
+				end
+				SettingsTab:Refresh()
+			end,
+		})
+		row.select:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+		row.label = pe:CreateText(row, "GameFontHighlightSmall")
+		row.label:SetPoint("LEFT", row, "LEFT", 0, 0)
+		row.label:SetPoint("RIGHT", row.select, "LEFT", -12, 0)
+		row.label:SetText(item.label)
+		item.control = row
+		return
+	end
+	item.control = pe:CreateParagraph(parent)
+end
+
+local function itemHeight(item)
+	if item.kind == "check" then
+		local label = item.control.Text
+		return math.max(22, math.ceil(label and label:GetStringHeight() or 0) + 8)
+	end
+	if item.kind == "select" then
+		return 26
+	end
+	return math.ceil(item.control:GetStringHeight())
 end
 
 function SettingsTab:Layout(panel)
-	if not panel or not panel.scroll or not panel.content then
+	if not panel then
 		return
 	end
-
-	local contentWidth = math.max(560, (panel.scroll:GetWidth() or 840) - 28)
-	local cardWidth = contentWidth - 10
-	local left = 10
-	local top = -6
-	local sectionGap = 12
-	local innerGap = 8
-	local controlHeight = 22
-
-	panel.content:SetWidth(contentWidth)
-	panel.subtitle:SetWidth(math.max(520, contentWidth - 24))
-
-	local function placeCard(card, height)
-		card:ClearAllPoints()
-		card:SetPoint("TOPLEFT", panel.content, "TOPLEFT", 0, top)
-		card:SetWidth(cardWidth)
-		card:SetHeight(height)
-		top = top - height - sectionGap
+	local width = math.floor((panel:GetWidth() - COLUMN_GAP) / 2)
+	local columns = { panel.columnLeft, panel.columnRight }
+	for _, column in ipairs(columns) do
+		column:SetWidth(width)
 	end
-
-	local function widthForText(margin)
-		return math.max(320, cardWidth - (margin or 24))
-	end
-
-	panel.generalOpenBlizzard:ClearAllPoints()
-	panel.generalOpenBlizzard:SetPoint("TOPLEFT", panel.generalMinimap, "BOTTOMLEFT", 4, -6)
-	placeCard(panel.generalCard, 92)
-
-	local buttonWidth = 220
-	local rowCapacity = math.max(1, math.floor((cardWidth - 20 + innerGap) / (buttonWidth + innerGap)))
-	local function positionButtonRow(buttons, anchorY)
-		for index, button in ipairs(buttons) do
-			local col = (index - 1) % rowCapacity
-			local row = math.floor((index - 1) / rowCapacity)
-			button:ClearAllPoints()
-			button:SetPoint("TOPLEFT", left + (col * (buttonWidth + innerGap)), anchorY - (row * (controlHeight + innerGap)))
+	local y = { 0, 0 }
+	for _, section in ipairs(panel.sections) do
+		local column = columns[section.column]
+		local top = y[section.column]
+		section.heading:ClearAllPoints()
+		section.heading:SetPoint("TOPLEFT", column, "TOPLEFT", 0, -top)
+		section.heading:SetPoint("TOPRIGHT", column, "TOPRIGHT", 0, -top)
+		top = top + 18 + 8
+		for _, item in ipairs(section.items) do
+			local control = item.control
+			control:ClearAllPoints()
+			if item.kind == "check" then
+				control:SetPoint("TOPLEFT", column, "TOPLEFT", -4, -top)
+			elseif item.kind == "select" then
+				control:SetPoint("TOPLEFT", column, "TOPLEFT", 0, -top)
+				control:SetPoint("TOPRIGHT", column, "TOPRIGHT", 0, -top)
+			else
+				control:SetPoint("TOPLEFT", column, "TOPLEFT", 0, -top)
+				control:SetWidth(width)
+			end
+			top = top + itemHeight(item) + ROW_GAP
 		end
-		return math.ceil(#buttons / rowCapacity)
+		y[section.column] = top + SECTION_GAP - ROW_GAP
 	end
-
-	local appearanceButtons = {
-		panel.appearancePreset,
-		panel.appearanceScale,
-		panel.appearanceAccent,
-	}
-	local appearanceButtonRows = positionButtonRow(appearanceButtons, -34)
-	local swatchY = -34 - (appearanceButtonRows * (controlHeight + innerGap)) - 8
-	local swatchWidth = 96
-	local swatchCapacity = math.max(1, math.floor((cardWidth - 20 + 6) / (swatchWidth + 6)))
-	for index, button in ipairs(panel.appearanceSwatches) do
-		local col = (index - 1) % swatchCapacity
-		local row = math.floor((index - 1) / swatchCapacity)
-		button:ClearAllPoints()
-		button:SetPoint("TOPLEFT", left + (col * (swatchWidth + 6)), swatchY - (row * 26))
-	end
-	local swatchRows = math.ceil(#panel.appearanceSwatches / swatchCapacity)
-	panel.appearanceReduced:ClearAllPoints()
-	panel.appearanceReduced:SetPoint("TOPLEFT", panel.appearanceCard, "TOPLEFT", left, swatchY - (swatchRows * 26) - 10)
-	placeCard(panel.appearanceCard, 34 + (appearanceButtonRows * (controlHeight + innerGap)) + 8 + (swatchRows * 26) + 34)
-
-	panel.captureBatch:ClearAllPoints()
-	panel.captureBatch:SetPoint("TOPLEFT", panel.captureOutput, "BOTTOMLEFT", 4, -8)
-	placeCard(panel.captureCard, 118)
-
-	placeCard(panel.inventoryCard, 112)
-
-	if panel.craftingOrdersCard then
-		panel.coHideUnlearned:ClearAllPoints()
-		panel.coHideUnlearned:SetPoint("TOPLEFT", 10, -34)
-		panel.coPatronKnowledge:ClearAllPoints()
-		panel.coPatronKnowledge:SetPoint("TOPLEFT", panel.coHideUnlearned, "BOTTOMLEFT", 0, -4)
-		panel.coOrdersNote:ClearAllPoints()
-		panel.coOrdersNote:SetPoint("TOPLEFT", panel.coPatronKnowledge, "BOTTOMLEFT", 4, -8)
-		panel.coOrdersNote:SetWidth(widthForText(24))
-		placeCard(panel.craftingOrdersCard, 32 + 22 + 22 + 8 + math.max(36, panel.coOrdersNote:GetStringHeight() or 36))
-	end
-
-	placeCard(panel.auctionCard, 158)
-
-	panel.integrationText:SetWidth(widthForText(30))
-	local integrationHeight = 64 + math.max(20, panel.integrationText:GetStringHeight() or 0)
-	placeCard(panel.integrationCard, integrationHeight)
-
-	placeCard(panel.debugCard, 76)
-
-	panel.content:SetHeight(math.max(720, -top + 10))
 end
 
 function SettingsTab:Create(container, uiState)
@@ -157,275 +192,42 @@ function SettingsTab:Create(container, uiState)
 	panel:SetAllPoints()
 	uiState.settingsPanel = panel
 
-	panel.title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-	panel.title:SetPoint("TOPLEFT", 12, -10)
-	panel.title:SetText("Settings")
-
-	panel.subtitle = pe:CreateMutedText(panel, 860)
-	panel.subtitle:SetPoint("TOPLEFT", panel.title, "BOTTOMLEFT", 0, -6)
-	panel.subtitle:SetText("Theme, capture, inventory, integration, and debug settings. Changes apply immediately.")
-
-	panel.scroll = CreateFrame("ScrollFrame", addonName .. "SettingsScroll", panel, "UIPanelScrollFrameTemplate")
-	panel.scroll:SetPoint("TOPLEFT", panel.subtitle, "BOTTOMLEFT", 0, -10)
-	panel.scroll:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -28, 10)
-	panel.content = CreateFrame("Frame", nil, panel.scroll)
-	panel.content:SetWidth(850)
-	panel.content:SetHeight(760)
-	panel.scroll:SetScrollChild(panel.content)
-
-	local function createSection(titleText, height)
-		local card = pe:CreateCard(panel.content, 840, height, "surface2")
-		local title = pe:CreateSectionTitle(card, titleText)
-		title:SetPoint("TOPLEFT", 10, -10)
-		return card, title
-	end
-
-	panel.generalCard = createSection("General", 96)
-	panel.generalMinimap = createCheckbox(panel.generalCard, "SettingsMinimap", "Show minimap button", function(value)
-		pe:SetSetting("general.showMinimapButton", value)
-		pe:EnsureMinimapButton()
-		SettingsTab:Refresh()
-	end)
-	panel.generalMinimap:SetPoint("TOPLEFT", 10, -34)
-	panel.generalOpenBlizzard = createCycleButton(panel.generalCard, 180, "Open Blizzard Settings", function()
+	panel.footer = CreateFrame("Frame", nil, panel)
+	panel.footer:SetPoint("BOTTOMLEFT")
+	panel.footer:SetPoint("BOTTOMRIGHT")
+	panel.footer:SetHeight(26)
+	panel.openGameSettings = pe:CreateButton(panel.footer, "Open game settings", function()
 		pe:OpenBlizzardSettings()
 	end)
-	panel.generalOpenBlizzard:SetPoint("TOPLEFT", panel.generalMinimap, "BOTTOMLEFT", 4, -6)
+	panel.openGameSettings:SetPoint("RIGHT")
+	panel.footerNote = pe:CreateText(panel.footer, "GameFontHighlightSmall", "textMuted")
+	panel.footerNote:SetPoint("LEFT")
+	panel.footerNote:SetPoint("RIGHT", panel.openGameSettings, "LEFT", -12, 0)
+	panel.footerNote:SetText("Changes apply at once and are saved for the whole account.")
 
-	panel.appearanceCard = createSection("Appearance", 176)
-	panel.appearancePreset = createCycleButton(panel.appearanceCard, 220, "", function()
-		local options = pe:GetThemePresetOptions()
-		local current = pe:GetSetting("appearance.themePreset", "slate")
-		local nextIndex = 1
-		for index, option in ipairs(options) do
-			if option.value == current then
-				nextIndex = (index % #options) + 1
-				break
-			end
+	panel.columnLeft = CreateFrame("Frame", nil, panel)
+	panel.columnLeft:SetPoint("TOPLEFT")
+	panel.columnLeft:SetPoint("BOTTOM", panel.footer, "TOP", 0, 12)
+	panel.columnRight = CreateFrame("Frame", nil, panel)
+	panel.columnRight:SetPoint("TOPRIGHT")
+	panel.columnRight:SetPoint("BOTTOM", panel.footer, "TOP", 0, 12)
+
+	panel.sections = buildSections(pe)
+	for _, section in ipairs(panel.sections) do
+		local parent = section.column == 1 and panel.columnLeft or panel.columnRight
+		section.heading = pe:CreateHeading(parent, section.title)
+		for _, item in ipairs(section.items) do
+			createItem(pe, parent, item)
 		end
-		pe:SetSetting("appearance.themePreset", options[nextIndex].value)
-		pe:ApplyThemeToUI()
-		SettingsTab:Refresh()
-	end)
-	panel.appearancePreset:SetPoint("TOPLEFT", 10, -34)
-	panel.appearanceScale = createCycleButton(panel.appearanceCard, 220, "", function()
-		local options = pe:GetWindowScaleOptions()
-		local current = pe:GetSetting("appearance.windowScale", 1)
-		local nextIndex = 1
-		for index, option in ipairs(options) do
-			if math.abs(option.value - current) < 0.001 then
-				nextIndex = (index % #options) + 1
-				break
-			end
-		end
-		pe:SetSetting("appearance.windowScale", options[nextIndex].value)
-		pe:ApplyWindowScale()
-		SettingsTab:Refresh()
-	end)
-	panel.appearanceScale:SetPoint("LEFT", panel.appearancePreset, "RIGHT", 12, 0)
-	panel.appearanceAccent = createCycleButton(panel.appearanceCard, 220, "Pick accent color", function()
-		openColorPicker(pe:GetSetting("appearance.accentColor", { r = 0.24, g = 0.66, b = 0.74 }), function(color)
-			pe:SetSetting("appearance.accentColor", color)
-			pe:ApplyThemeToUI()
-			SettingsTab:Refresh()
-		end)
-	end)
-	panel.appearanceAccent:SetPoint("LEFT", panel.appearanceScale, "RIGHT", 12, 0)
-	panel.appearanceSwatches = {}
-	for index, swatch in ipairs(ACCENT_SWATCHES) do
-		local button = CreateFrame("Button", nil, panel.appearanceCard, "UIPanelButtonTemplate")
-		button:SetSize(96, 20)
-		button:SetPoint("TOPLEFT", 10 + ((index - 1) * 102), -72)
-		button:SetText(swatch.label)
-		button:SetScript("OnClick", function()
-			pe:SetSetting("appearance.accentColor", swatch.color)
-			pe:ApplyThemeToUI()
-			SettingsTab:Refresh()
-		end)
-		panel.appearanceSwatches[index] = button
-	end
-	panel.appearanceReduced = createCheckbox(panel.appearanceCard, "SettingsReduced", "Reduced ornament", function(value)
-		pe:SetSetting("appearance.reducedOrnament", value)
-		pe:ApplyThemeToUI()
-	end)
-	panel.appearanceReduced:SetPoint("TOPLEFT", 10, -108)
-
-	panel.captureCard = createSection("Data Capture", 122)
-	panel.captureTree = createCheckbox(panel.captureCard, "SettingsTree", "Capture specialization tree", function(value)
-		pe:SetSetting("capture.captureSpecializationTree", value)
-		SettingsTab:Refresh()
-	end)
-	panel.captureTree:SetPoint("TOPLEFT", 10, -34)
-	panel.captureOutput = createCheckbox(panel.captureCard, "SettingsRecipeOutput", "Verbose recipe output API", function(value)
-		pe:SetSetting("capture.includeRecipeOutputItemData", value)
-		SettingsTab:Refresh()
-	end)
-	panel.captureOutput:SetPoint("TOPLEFT", panel.captureTree, "BOTTOMLEFT", 0, -4)
-	panel.captureBatch = createCycleButton(panel.captureCard, 220, "", function()
-		local values = { 0, 50, 100 }
-		local current = tonumber(pe:GetSetting("capture.inventorySnapshotBatchSize", 0)) or 0
-		local nextIndex = 1
-		for index, value in ipairs(values) do
-			if value == current then
-				nextIndex = (index % #values) + 1
-				break
-			end
-		end
-		pe:SetSetting("capture.inventorySnapshotBatchSize", values[nextIndex])
-		SettingsTab:Refresh()
-	end)
-	panel.captureBatch:SetPoint("TOPLEFT", panel.captureOutput, "BOTTOMLEFT", 4, -8)
-
-	panel.inventoryCard = createSection("Inventory", 120)
-	panel.invEconomy = createCheckbox(panel.inventoryCard, "SettingsInvEconomy", "Show economy columns by default", function(value)
-		pe:SetSetting("inventory.economyShowColumns", value)
-		pe:RefreshInventoryTabIfVisible()
-		pe:RefreshCraftsTabIfVisible()
-	end)
-	panel.invEconomy:SetPoint("TOPLEFT", 10, -34)
-	panel.invMat = createCheckbox(panel.inventoryCard, "SettingsInvMat", "Estimate material cost", function(value)
-		pe:SetSetting("inventory.economyShowMatCost", value)
-		pe:RefreshInventoryTabIfVisible()
-		pe:RefreshCraftsTabIfVisible()
-	end)
-	panel.invMat:SetPoint("TOPLEFT", panel.invEconomy, "BOTTOMLEFT", 0, -4)
-	panel.invSale = createCheckbox(panel.inventoryCard, "SettingsInvSale", "Show TSM sale rate", function(value)
-		pe:SetSetting("inventory.economyShowSaleRate", value)
-		pe:RefreshInventoryTabIfVisible()
-		pe:RefreshCraftsTabIfVisible()
-	end)
-	panel.invSale:SetPoint("TOPLEFT", panel.invMat, "BOTTOMLEFT", 0, -4)
-
-	if pe.IS_RETAIL then
-		panel.craftingOrdersCard = createSection("Crafting orders (Blizzard)", 120)
-		panel.coHideUnlearned = createCheckbox(panel.craftingOrdersCard, "SettingsCOHideUnlearned", "Hide unlearned recipes in orders list", function(value)
-			pe:SetSetting("craftingOrders.hideUnlearned", value)
-			if pe.RefreshCraftingOrdersPageRecipeList then
-				pe:RefreshCraftingOrdersPageRecipeList()
-			end
-			if pe.SyncCraftingOrdersFilterBarFromSettings then
-				pe:SyncCraftingOrdersFilterBarFromSettings()
-			end
-			SettingsTab:Refresh()
-		end)
-		panel.coHideUnlearned:SetPoint("TOPLEFT", 10, -34)
-		panel.coPatronKnowledge = createCheckbox(panel.craftingOrdersCard, "SettingsCOPatronK", "Patron knowledge recipes only (NPC tab)", function(value)
-			pe:SetSetting("craftingOrders.patronKnowledgeOnly", value)
-			if pe.RefreshCraftingOrdersPageRecipeList then
-				pe:RefreshCraftingOrdersPageRecipeList()
-			end
-			if pe.SyncCraftingOrdersFilterBarFromSettings then
-				pe:SyncCraftingOrdersFilterBarFromSettings()
-			end
-			SettingsTab:Refresh()
-		end)
-		panel.coPatronKnowledge:SetPoint("TOPLEFT", panel.coHideUnlearned, "BOTTOMLEFT", 0, -4)
-		panel.coOrdersNote = pe:CreateMutedText(panel.craftingOrdersCard, 800)
-		panel.coOrdersNote:SetPoint("TOPLEFT", panel.coPatronKnowledge, "BOTTOMLEFT", 4, -8)
-		panel.coOrdersNote:SetText(
-			"Patron filter uses CRAFTING_ORDERS_PATRON_KNOWLEDGE_RECIPE_IDS in the data file (not first-craft). If the list is empty, that option has no effect."
-		)
 	end
 
-	panel.auctionCard = createSection("Auction", 130)
-	panel.auctionHistoryRetention = createCycleButton(panel.auctionCard, 220, "", function()
-		local values = { 7, 14, 30, 60, 90 }
-		local current = tonumber(pe:GetSetting("auction.historyRetentionDays", 30)) or 30
-		local nextIndex = 1
-		for index, value in ipairs(values) do
-			if value == current then
-				nextIndex = (index % #values) + 1
-				break
-			end
-		end
-		pe:SetSetting("auction.historyRetentionDays", values[nextIndex])
-		if pe.TrimFullDumpMarketHistory then
-			pe:TrimFullDumpMarketHistory()
-		end
-		SettingsTab:Refresh()
-	end)
-	panel.auctionHistoryRetention:SetPoint("TOPLEFT", 10, -34)
-	panel.auctionFreshness = createCycleButton(panel.auctionCard, 220, "", function()
-		local values = { 5, 15, 30, 60, 180 }
-		local current = tonumber(pe:GetSetting("auction.priceFreshnessMinutes", 15)) or 15
-		local nextIndex = 1
-		for index, value in ipairs(values) do
-			if value == current then
-				nextIndex = (index % #values) + 1
-				break
-			end
-		end
-		pe:SetSetting("auction.priceFreshnessMinutes", values[nextIndex])
-		SettingsTab:Refresh()
-	end)
-	panel.auctionFreshness:SetPoint("TOPLEFT", panel.auctionHistoryRetention, "BOTTOMLEFT", 0, -8)
-	panel.auctionAutoCraftScan = createCheckbox(panel.auctionCard, "SettingsAuctionAutoCraft", "Auto-queue craft output/reagent AH prices when opening AH", function(value)
-		pe:SetSetting("auction.autoCraftEconomyRefreshOnOpen", value)
-		SettingsTab:Refresh()
-	end)
-	panel.auctionAutoCraftScan:SetPoint("TOPLEFT", panel.auctionFreshness, "BOTTOMLEFT", 0, -8)
-	panel.auctionCraftOptionalSlots = createCheckbox(panel.auctionCard, "SettingsAuctionCraftOptional", "Craft scan: include optional reagent slots", function(value)
-		pe:SetSetting("auction.craftScanIncludeOptionalSlots", value)
-		SettingsTab:Refresh()
-	end)
-	panel.auctionCraftOptionalSlots:SetPoint("TOPLEFT", panel.auctionAutoCraftScan, "BOTTOMLEFT", 0, -4)
-
-	panel.integrationCard = createSection("Integrations", 150)
-	panel.integrationFallback = createCheckbox(panel.integrationCard, "SettingsFallback", "Use Auctionator fallback", function(value)
-		pe:SetSetting("integrations.economyUseAuctionatorFallback", value)
-		pe:RefreshInventoryTabIfVisible()
-		pe:RefreshCraftsTabIfVisible()
-	end)
-	panel.integrationFallback:SetPoint("TOPLEFT", 10, -34)
-	panel.integrationFallbackSource = createCycleButton(panel.integrationCard, 260, "", function()
-		local values = { "DBMinBuyout", "dbmarket", "DBRecent" }
-		local current = tostring(pe:GetSetting("integrations.economyTSMFallbackString", "DBMinBuyout"))
-		local nextIndex = 1
-		for index, value in ipairs(values) do
-			if value == current then
-				nextIndex = (index % #values) + 1
-				break
-			end
-		end
-		pe:SetSetting("integrations.economyTSMFallbackString", values[nextIndex])
-		pe:RefreshInventoryTabIfVisible()
-		pe:RefreshCraftsTabIfVisible()
-		SettingsTab:Refresh()
-	end)
-	panel.integrationFallbackSource:SetPoint("TOPLEFT", panel.integrationFallback, "BOTTOMLEFT", 4, -8)
-	panel.integrationText = pe:CreateMutedText(panel.integrationCard, 800)
-	panel.integrationText:SetPoint("TOPLEFT", panel.integrationFallbackSource, "BOTTOMLEFT", 0, -8)
-
-	panel.debugCard = createSection("Debug", 88)
-	panel.debugEnabled = createCheckbox(panel.debugCard, "SettingsDebug", "Enable debug logging in chat", function(value)
-		pe:SetSetting("debug.enabled", value)
-		SettingsTab:Refresh()
-	end)
-	panel.debugEnabled:SetPoint("TOPLEFT", 10, -34)
-
-	panel.scroll:SetScript("OnSizeChanged", function()
+	panel:SetScript("OnSizeChanged", function()
 		SettingsTab:Layout(panel)
 	end)
-	panel:SetScript("OnShow", function()
-		SettingsTab:Layout(panel)
-	end)
-	SettingsTab:Layout(panel)
 	return panel
 end
 
 function SettingsTab:ApplyTheme()
-	local panel = ProfessionExporter.ui.settingsPanel
-	if not panel then
-		return
-	end
-	local pe = ProfessionExporter
-	pe:StylePanel(panel.generalCard, "surface2")
-	pe:StylePanel(panel.appearanceCard, "surface2")
-	pe:StylePanel(panel.captureCard, "surface2")
-	pe:StylePanel(panel.inventoryCard, "surface2")
-	pe:StylePanel(panel.auctionCard, "surface2")
-	pe:StylePanel(panel.integrationCard, "surface2")
-	pe:StylePanel(panel.debugCard, "surface2")
 end
 
 function SettingsTab:Refresh()
@@ -434,45 +236,16 @@ function SettingsTab:Refresh()
 	if not panel then
 		return
 	end
-	setCheck(panel.generalMinimap, pe:GetSetting("general.showMinimapButton", true))
-	setCheck(panel.appearanceReduced, pe:GetSetting("appearance.reducedOrnament", false))
-	setCheck(panel.captureTree, pe:GetSetting("capture.captureSpecializationTree", true))
-	setCheck(panel.captureOutput, pe:GetSetting("capture.includeRecipeOutputItemData", false))
-	setCheck(panel.invEconomy, pe:GetSetting("inventory.economyShowColumns", true))
-	setCheck(panel.invMat, pe:GetSetting("inventory.economyShowMatCost", true))
-	setCheck(panel.invSale, pe:GetSetting("inventory.economyShowSaleRate", true))
-	setCheck(panel.integrationFallback, pe:GetSetting("integrations.economyUseAuctionatorFallback", true))
-	setCheck(panel.debugEnabled, pe:GetSetting("debug.enabled", false))
-	if panel.auctionAutoCraftScan then
-		setCheck(panel.auctionAutoCraftScan, pe:GetSetting("auction.autoCraftEconomyRefreshOnOpen", false))
+	for _, section in ipairs(panel.sections) do
+		for _, item in ipairs(section.items) do
+			if item.kind == "check" then
+				item.control:SetChecked(pe:GetSetting(item.path, item.default) and true or false)
+			elseif item.kind == "select" then
+				item.control.select:RefreshText()
+			else
+				item.control:SetText(type(item.text) == "function" and item.text() or item.text)
+			end
+		end
 	end
-	if panel.auctionCraftOptionalSlots then
-		setCheck(panel.auctionCraftOptionalSlots, pe:GetSetting("auction.craftScanIncludeOptionalSlots", false))
-	end
-	if panel.coHideUnlearned then
-		setCheck(panel.coHideUnlearned, pe:GetSetting("craftingOrders.hideUnlearned", false))
-	end
-	if panel.coPatronKnowledge then
-		setCheck(panel.coPatronKnowledge, pe:GetSetting("craftingOrders.patronKnowledgeOnly", false))
-	end
-
-	local preset = pe:GetSetting("appearance.themePreset", "slate")
-	local scale = tonumber(pe:GetSetting("appearance.windowScale", 1)) or 1
-	local batch = tonumber(pe:GetSetting("capture.inventorySnapshotBatchSize", 0)) or 0
-	local historyRetention = tonumber(pe:GetSetting("auction.historyRetentionDays", 30)) or 30
-	local freshnessMinutes = tonumber(pe:GetSetting("auction.priceFreshnessMinutes", 15)) or 15
-	panel.appearancePreset:SetText("Theme preset: " .. preset)
-	panel.appearanceScale:SetText(string.format("Window scale: %d%%", math.floor(scale * 100 + 0.5)))
-	panel.captureBatch:SetText("Inventory batch size: " .. tostring(batch))
-	panel.auctionHistoryRetention:SetText(string.format("Market history retention: %d days", historyRetention))
-	panel.auctionFreshness:SetText(string.format("Non-inventory AH refresh age: %d min", freshnessMinutes))
-	panel.integrationFallbackSource:SetText("Fallback price string: " .. tostring(pe:GetSetting("integrations.economyTSMFallbackString", "DBMinBuyout")))
-	panel.integrationText:SetText(string.format(
-		"TSM source strings:\nMarket: %s | Fallback: %s | Materials: %s | Sale rate: %s",
-		tostring(pe:GetSetting("integrations.economyTSMMarketString", "dbmarket")),
-		tostring(pe:GetSetting("integrations.economyTSMFallbackString", "DBMinBuyout")),
-		tostring(pe:GetSetting("integrations.economyTSMMatString", "Crafting")),
-		tostring(pe:GetSetting("integrations.economyTSMSaleRateString", "DBRegionSaleRate"))
-	))
 	self:Layout(panel)
 end

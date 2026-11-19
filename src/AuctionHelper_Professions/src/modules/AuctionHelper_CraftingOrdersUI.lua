@@ -177,13 +177,9 @@ local function updatePatronCheckboxState()
 	filterBarFrame.cbPatronKnowledge:SetEnabled(isNpc and hasData)
 	local lab = filterBarFrame.cbPatronKnowledgeLabel
 	if lab and lab.SetTextColor then
-		if not isNpc then
-			lab:SetTextColor(0.5, 0.5, 0.5)
-		elseif not hasData then
-			lab:SetTextColor(0.6, 0.55, 0.4)
-		else
-			lab:SetTextColor(1, 1, 1)
-		end
+		local theme = ProfessionExporter:GetTheme()
+		local color = (not isNpc and theme.textDisabled) or (not hasData and theme.warning) or theme.textPrimary
+		lab:SetTextColor(color.r, color.g, color.b)
 	end
 end
 
@@ -198,7 +194,7 @@ function ProfessionExporter:EnsureCraftingOrdersFilterBar()
 		return nil
 	end
 	local f = CreateFrame("Frame", addonName .. "CraftingOrdersFilterBar", browse)
-	f:SetHeight(44)
+	f:SetHeight(24)
 	if browse.RecipeList then
 		f:SetPoint("BOTTOMLEFT", browse.RecipeList, "TOPLEFT", -2, 6)
 		f:SetPoint("BOTTOMRIGHT", browse.RecipeList, "TOPRIGHT", 2, 6)
@@ -213,7 +209,6 @@ function ProfessionExporter:EnsureCraftingOrdersFilterBar()
 	local t1 = _G[cb1:GetName() .. "Text"]
 	if t1 then
 		t1:SetText("Hide unlearned recipes")
-		t1:SetTextColor(1, 1, 1)
 	end
 	cb1:SetScript("OnClick", function(self)
 		ProfessionExporter:SetSetting("craftingOrders.hideUnlearned", self:GetChecked() == true)
@@ -221,22 +216,19 @@ function ProfessionExporter:EnsureCraftingOrdersFilterBar()
 	end)
 
 	local cb2 = CreateFrame("CheckButton", addonName .. "COPatronKnowledge", f, "UICheckButtonTemplate")
-	cb2:SetPoint("TOPLEFT", cb1, "BOTTOMLEFT", 0, 2)
 	local t2 = _G[cb2:GetName() .. "Text"]
 	if t2 then
-		t2:SetText("Patron knowledge recipes only")
-		t2:SetTextColor(1, 1, 1)
+		t2:SetText("Only recipes that give knowledge")
 	end
+	ProfessionExporter:SkinCheckButton(cb1)
+	ProfessionExporter:SkinCheckButton(cb2)
+	cb2:SetPoint("LEFT", cb1, "RIGHT", (t1 and t1:GetStringWidth() or 140) + 18, 0)
 	cb2:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:AddLine("AuctionHelper", 1, 1, 1)
-		GameTooltip:AddLine(
-			"Only applies on the Patron/NPC orders tab. Uses CRAFTING_ORDERS_PATRON_KNOWLEDGE_RECIPE_IDS in data file (not first-craft). Empty list = no effect.",
-			1,
-			0.82,
-			0,
-			true
-		)
+		local theme = ProfessionExporter:GetTheme()
+		GameTooltip:SetText("Only recipes that give knowledge", 1, 1, 1)
+		GameTooltip:AddLine("Works on the Patron orders tab. Uses the recipe list in the addon's data file; when that list is empty, it does nothing.",
+			theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, true)
 		GameTooltip:Show()
 	end)
 	cb2:SetScript("OnLeave", GameTooltip_Hide)

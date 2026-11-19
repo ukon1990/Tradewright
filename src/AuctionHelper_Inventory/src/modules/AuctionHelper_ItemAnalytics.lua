@@ -200,6 +200,16 @@ function ProfessionExporter:GetInventoryMetricRangeOptions()
 	}
 end
 
+-- "Last 30 days" / "All time": the range as the player reads it, for labels and summaries.
+function ProfessionExporter:GetRangeLabel(rangeKey)
+	for _, option in ipairs(self:GetInventoryMetricRangeOptions()) do
+		if option.value == rangeKey then
+			return option.value == "all" and option.label or ("Last " .. option.label)
+		end
+	end
+	return tostring(rangeKey or "")
+end
+
 function ProfessionExporter:GetInventoryMetricRange()
 	return self:GetSetting("inventory.metricRange", "30d")
 end
@@ -1128,13 +1138,12 @@ function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, 
 	local qtyFilter = config.quantityCharacterFilter or {}
 	local emptyQty = config.quantityEmptyHint
 		or "No quantity history in this range yet. Run an inventory refresh while this item is tracked."
-	local accent = self:GetSetting("appearance.accentColor", {})
-	graphWidget:SetAccentColor({ r = accent.r, g = accent.g, b = accent.b, a = 0.95 })
+	graphWidget:SetAccentColor(self:GetTheme().accent)
 	if graphWidget.SetSecondaryAccentColor then
-		graphWidget:SetSecondaryAccentColor({ r = 0.92, g = 0.58, b = 0.18, a = 0.95 })
+		graphWidget:SetSecondaryAccentColor(self:GetTheme().warning)
 	end
 	if graphWidget.SetQuantityAccentColor then
-		graphWidget:SetQuantityAccentColor({ r = 0.42, g = 0.78, b = 0.5, a = 0.9 })
+		graphWidget:SetQuantityAccentColor(self:GetTheme().success)
 	end
 	local series = {}
 	local secondarySeries = {}

@@ -2,15 +2,40 @@ local addonName, ProfessionExporter = ...
 
 ProfessionExporter.ui = ProfessionExporter.ui or {}
 
-local function copyColor(color, fallback)
-	color = color or fallback or {}
-	return {
-		r = color.r or 0,
-		g = color.g or 0,
-		b = color.b or 0,
-		a = color.a,
-	}
-end
+local WHITE = "Interface\\Buttons\\WHITE8X8"
+
+-- One look for every AuctionHelper frame, shared with QuestPlanner (UI/PlanCard.lua):
+-- flat near-black panels, 1px outlines, gold corner ticks. Read-only: callers must not mutate it.
+local THEME = {
+	surface1 = { r = 0.043, g = 0.051, b = 0.071, a = 0.92 }, -- window
+	surface2 = { r = 0.067, g = 0.078, b = 0.106, a = 1 }, -- raised: table header, fields, tiles
+	surface3 = { r = 0.094, g = 0.110, b = 0.145, a = 1 }, -- icon placeholder, progress track
+	borderStrong = { r = 0.23, g = 0.25, b = 0.28, a = 1 }, -- window and button outline
+	borderControl = { r = 0.41, g = 0.44, b = 0.48, a = 1 }, -- edit box, dropdown, checkbox outline
+	borderSubtle = { r = 0.15, g = 0.16, b = 0.19, a = 1 }, -- dividers, table and tile outline
+	gold = { r = 1, g = 0.82, b = 0 }, -- title, selected tab, sorted column, primary action
+	tick = { r = 0.79, g = 0.64, b = 0.15 }, -- corner ticks, primary outline, progress fill
+	textPrimary = { r = 0.95, g = 0.94, b = 0.92 },
+	textMuted = { r = 0.60, g = 0.63, b = 0.67 },
+	textDisabled = { r = 0.5, g = 0.5, b = 0.5 },
+	success = { r = 0.40, g = 0.73, b = 0.42 },
+	warning = { r = 0.95, g = 0.65, b = 0.30 },
+	danger = { r = 0.89, g = 0.39, b = 0.38 },
+	accent = { r = 0.39, g = 0.71, b = 0.96, a = 0.95 }, -- neutral status and graph line
+	spacing = { xs = 4, sm = 8, md = 12, lg = 16, xl = 24 },
+	size = {
+		header = 34,
+		tabs = 30,
+		control = 26,
+		controlSmall = 22,
+		tableHead = 22,
+		row = 24,
+		rowTall = 36,
+		footer = 24,
+		icon = 18,
+		scrollGutter = 14,
+	},
+}
 
 function ProfessionExporter:GetSetting(path, defaultValue)
 	self:InitDB()
@@ -50,14 +75,6 @@ function ProfessionExporter:SetSetting(path, value)
 	self:InitDB()
 end
 
-function ProfessionExporter:GetThemePresetOptions()
-	return {
-		{ value = "slate", label = "Slate" },
-		{ value = "ember", label = "Ember" },
-		{ value = "storm", label = "Storm" },
-	}
-end
-
 function ProfessionExporter:GetWindowScaleOptions()
 	return {
 		{ value = 0.9, label = "90%" },
@@ -68,115 +85,333 @@ function ProfessionExporter:GetWindowScaleOptions()
 end
 
 function ProfessionExporter:GetTheme()
-	self:InitDB()
-	local presetId = self:GetSetting("appearance.themePreset", "slate")
-	local accent = copyColor(self:GetSetting("appearance.accentColor"), { r = 0.24, g = 0.66, b = 0.74 })
-	local surfaceTint = copyColor(self:GetSetting("appearance.surfaceTint"), { r = 0.10, g = 0.12, b = 0.16 })
-
-	local presets = {
-		slate = {
-			surface1 = { r = 0.07, g = 0.09, b = 0.12, a = 0.98 },
-			surface2 = { r = 0.10, g = 0.12, b = 0.16, a = 0.98 },
-			surface3 = { r = 0.13, g = 0.16, b = 0.21, a = 0.98 },
-			borderStrong = { r = 0.24, g = 0.30, b = 0.38, a = 1 },
-			borderSubtle = { r = 0.16, g = 0.20, b = 0.26, a = 1 },
-			textPrimary = { r = 0.95, g = 0.97, b = 0.99 },
-			textMuted = { r = 0.67, g = 0.73, b = 0.80 },
-			success = { r = 0.35, g = 0.80, b = 0.56 },
-			warning = { r = 0.95, g = 0.76, b = 0.32 },
-			danger = { r = 0.89, g = 0.39, b = 0.38 },
-		},
-		ember = {
-			surface1 = { r = 0.10, g = 0.08, b = 0.08, a = 0.98 },
-			surface2 = { r = 0.14, g = 0.10, b = 0.10, a = 0.98 },
-			surface3 = { r = 0.19, g = 0.13, b = 0.12, a = 0.98 },
-			borderStrong = { r = 0.40, g = 0.28, b = 0.20, a = 1 },
-			borderSubtle = { r = 0.28, g = 0.19, b = 0.16, a = 1 },
-			textPrimary = { r = 0.99, g = 0.96, b = 0.92 },
-			textMuted = { r = 0.83, g = 0.72, b = 0.64 },
-			success = { r = 0.42, g = 0.78, b = 0.56 },
-			warning = { r = 0.98, g = 0.80, b = 0.35 },
-			danger = { r = 0.89, g = 0.41, b = 0.31 },
-		},
-		storm = {
-			surface1 = { r = 0.06, g = 0.08, b = 0.11, a = 0.98 },
-			surface2 = { r = 0.09, g = 0.12, b = 0.17, a = 0.98 },
-			surface3 = { r = 0.12, g = 0.16, b = 0.22, a = 0.98 },
-			borderStrong = { r = 0.20, g = 0.30, b = 0.42, a = 1 },
-			borderSubtle = { r = 0.15, g = 0.21, b = 0.29, a = 1 },
-			textPrimary = { r = 0.95, g = 0.98, b = 1.00 },
-			textMuted = { r = 0.67, g = 0.77, b = 0.84 },
-			success = { r = 0.35, g = 0.80, b = 0.64 },
-			warning = { r = 0.93, g = 0.76, b = 0.34 },
-			danger = { r = 0.90, g = 0.45, b = 0.42 },
-		},
-	}
-
-	local base = presets[presetId] or presets.slate
-	return {
-		id = presetId,
-		accent = accent,
-		success = base.success,
-		warning = base.warning,
-		danger = base.danger,
-		textPrimary = base.textPrimary,
-		textMuted = base.textMuted,
-		surface1 = base.surface1,
-		surface2 = surfaceTint.a and surfaceTint or {
-			r = surfaceTint.r or base.surface2.r,
-			g = surfaceTint.g or base.surface2.g,
-			b = surfaceTint.b or base.surface2.b,
-			a = base.surface2.a,
-		},
-		surface3 = base.surface3,
-		borderStrong = base.borderStrong,
-		borderSubtle = base.borderSubtle,
-		spacing = {
-			xs = 4,
-			sm = 8,
-			md = 12,
-			lg = 16,
-			xl = 24,
-		},
-	}
+	return THEME
 end
 
-function ProfessionExporter:ApplyBackdrop(frame, bg, border, inset)
+function ProfessionExporter:ApplyBackdrop(frame, bg, border)
 	if not frame then
 		return
 	end
-	frame:SetBackdrop({
-		bgFile = "Interface/ChatFrame/ChatFrameBackground",
-		edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-		tile = true,
-		tileSize = 8,
-		edgeSize = 12,
-		insets = inset or { left = 3, right = 3, top = 3, bottom = 3 },
-	})
-	frame:SetBackdropColor(bg.r or 0, bg.g or 0, bg.b or 0, bg.a or 1)
-	frame:SetBackdropBorderColor(border.r or 0, border.g or 0, border.b or 0, border.a or 1)
+	frame:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
+	frame:SetBackdropColor(bg.r, bg.g, bg.b, bg.a or 1)
+	frame:SetBackdropBorderColor(border.r, border.g, border.b, border.a or 1)
 end
 
+-- A raised region inside a window (never a second window outline).
 function ProfessionExporter:StylePanel(frame, tone)
-	local theme = self:GetTheme()
-	self:ApplyBackdrop(frame, theme[tone or "surface2"], theme.borderSubtle)
+	self:ApplyBackdrop(frame, THEME[tone or "surface2"], THEME.borderSubtle)
 end
 
+local function addCornerTicks(frame)
+	if frame.ahCornerTicks then
+		return
+	end
+	frame.ahCornerTicks = true
+	local tick = THEME.tick
+	for _, corner in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
+		for _, size in ipairs({ { 10, 2 }, { 2, 10 } }) do
+			local texture = frame:CreateTexture(nil, "OVERLAY")
+			texture:SetColorTexture(tick.r, tick.g, tick.b, 1)
+			texture:SetSize(size[1], size[2])
+			texture:SetPoint(corner)
+		end
+	end
+end
+
+-- The outer frame of a window or docked panel: window fill, 1px outline, gold corner ticks, clipped.
+function ProfessionExporter:StyleWindow(frame)
+	if not frame then
+		return
+	end
+	self:ApplyBackdrop(frame, THEME.surface1, THEME.borderStrong)
+	addCornerTicks(frame)
+	if frame.SetClipsChildren then
+		frame:SetClipsChildren(true)
+	end
+end
+
+-- Skinning: flat 1px controls drawn over Blizzard templates. Template art is hidden with alpha 0
+-- (template scripts swap textures on press, but never restore alpha).
+
+local function colorTexture(texture, color, alpha)
+	texture:SetColorTexture(color.r, color.g, color.b, alpha or color.a or 1)
+end
+
+local function hideRegions(frame, keys)
+	for _, key in ipairs(keys) do
+		local region = frame[key]
+		if region and region.SetAlpha then
+			region:SetAlpha(0)
+		end
+	end
+end
+
+-- Fill plus four 1px edges, inset by `pad` (x, y) around the frame. Returns the surface table.
+function ProfessionExporter:AddSurface(frame, fill, edge, padX, padY)
+	if frame.ahSurface then
+		return frame.ahSurface
+	end
+	padX, padY = padX or 0, padY or 0
+	local surface = { edges = {} }
+	surface.fill = frame:CreateTexture(nil, "BACKGROUND", nil, -7)
+	surface.fill:SetPoint("TOPLEFT", -padX, padY)
+	surface.fill:SetPoint("BOTTOMRIGHT", padX, -padY)
+	colorTexture(surface.fill, fill)
+	for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
+		local line = frame:CreateTexture(nil, "BORDER", nil, -7)
+		if side == "TOP" or side == "BOTTOM" then
+			local y = side == "TOP" and padY or -padY
+			line:SetPoint(side .. "LEFT", frame, side .. "LEFT", -padX, y)
+			line:SetPoint(side .. "RIGHT", frame, side .. "RIGHT", padX, y)
+			line:SetHeight(1)
+		else
+			local x = side == "LEFT" and -padX or padX
+			line:SetPoint("TOP" .. side, frame, "TOP" .. side, x, padY)
+			line:SetPoint("BOTTOM" .. side, frame, "BOTTOM" .. side, x, -padY)
+			line:SetWidth(1)
+		end
+		colorTexture(line, edge)
+		surface.edges[#surface.edges + 1] = line
+	end
+	function surface:SetColors(newFill, newEdge)
+		if newFill then
+			colorTexture(self.fill, newFill)
+		end
+		for _, line in ipairs(self.edges) do
+			colorTexture(line, newEdge or edge)
+		end
+	end
+	frame.ahSurface = surface
+	return surface
+end
+
+local function isPanelButton(frame)
+	return frame.Left and frame.Middle and frame.Right and frame.GetFontString and frame:GetFontString() ~= nil
+end
+
+local CLEAR = { r = 0, g = 0, b = 0, a = 0 }
+
+local function setFontColor(font, color)
+	if font then
+		font:SetTextColor(color.r, color.g, color.b)
+	end
+end
+
+-- Colours follow state: disabled grey; primary or selected gold; tab muted; otherwise text.
+local function applyButtonState(button)
+	local surface = button.ahSurface
+	if not surface then
+		return
+	end
+	local enabled = button:IsEnabled()
+	local marked = enabled and (button.ahPrimary or button.ahSelected)
+	surface:SetColors(marked and THEME.surface2 or CLEAR, marked and THEME.tick or THEME.borderStrong)
+	local color = not enabled and THEME.textDisabled or marked and THEME.gold or button.ahTab and THEME.textMuted or THEME.textPrimary
+	setFontColor(button:GetFontString(), color)
+end
+
+local function onButtonEnter(button)
+	if button:IsEnabled() then
+		setFontColor(button:GetFontString(), THEME.gold)
+	end
+end
+
+-- Any Button with a font string: transparent fill, 1px outline, gold wash on hover.
+function ProfessionExporter:SkinButton(button)
+	if not button or button.ahSkinned then
+		return button
+	end
+	button.ahSkinned = true
+	hideRegions(button, { "Left", "Middle", "Right", "LeftSeparator", "RightSeparator" })
+	for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetDisabledTexture" }) do
+		local texture = button[getter] and button[getter](button)
+		if texture then
+			texture:SetAlpha(0)
+		end
+	end
+	button:SetHighlightTexture(WHITE)
+	local highlight = button:GetHighlightTexture()
+	if highlight then
+		highlight:SetVertexColor(THEME.gold.r, THEME.gold.g, THEME.gold.b, 0.09)
+		highlight:SetAllPoints()
+	end
+	button:SetNormalFontObject("GameFontHighlightSmall")
+	button:SetHighlightFontObject("GameFontHighlightSmall")
+	button:SetDisabledFontObject("GameFontDisableSmall")
+	self:AddSurface(button, THEME.surface2, THEME.borderStrong)
+	button:HookScript("OnEnable", applyButtonState)
+	button:HookScript("OnDisable", applyButtonState)
+	button:HookScript("OnShow", applyButtonState)
+	button:HookScript("OnEnter", onButtonEnter)
+	button:HookScript("OnLeave", applyButtonState)
+	applyButtonState(button)
+	return button
+end
+
+-- The one main action of a region: gold label, gold outline.
+function ProfessionExporter:SetButtonPrimary(button, primary)
+	self:SkinButton(button)
+	button.ahPrimary = primary and true or nil
+	applyButtonState(button)
+end
+
+-- Tab and segment buttons: the selected one is gold with a gold outline, the rest muted.
 function ProfessionExporter:StyleShellButton(button, selected)
-	local theme = self:GetTheme()
 	if not button then
 		return
 	end
-	local font = button.GetFontString and button:GetFontString()
-	if font then
-		if selected then
-			font:SetTextColor(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b)
-		else
-			font:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	self:SkinButton(button)
+	button.ahTab = true
+	button.ahSelected = selected and true or nil
+	applyButtonState(button)
+end
+
+function ProfessionExporter:SkinEditBox(editBox)
+	if not editBox or editBox.ahSkinned then
+		return editBox
+	end
+	editBox.ahSkinned = true
+	hideRegions(editBox, { "Left", "Middle", "Right" })
+	local name = editBox.GetName and editBox:GetName()
+	if name then
+		for _, suffix in ipairs({ "Left", "Middle", "Right", "Mid" }) do
+			local region = _G[name .. suffix]
+			if region and region.SetAlpha then
+				region:SetAlpha(0)
+			end
 		end
 	end
-	button:SetNormalFontObject(selected and "GameFontNormal" or "GameFontHighlightSmall")
-	button:SetAlpha(selected and 1 or 0.95)
+	self:AddSurface(editBox, THEME.surface2, THEME.borderControl, 6, 2)
+	editBox:SetFontObject("GameFontHighlightSmall")
+	editBox:SetTextColor(THEME.textPrimary.r, THEME.textPrimary.g, THEME.textPrimary.b)
+	return editBox
+end
+
+-- 14px square box with an 8px gold check; the label sits to the right, muted text colour.
+function ProfessionExporter:SkinCheckButton(check)
+	if not check or check.ahSkinned then
+		return check
+	end
+	check.ahSkinned = true
+	for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture" }) do
+		local texture = check[getter] and check[getter](check)
+		if texture then
+			texture:SetAlpha(0)
+		end
+	end
+	check:SetSize(22, 22)
+	local box = CreateFrame("Frame", nil, check)
+	box:SetSize(14, 14)
+	box:SetPoint("LEFT", 4, 0)
+	box:EnableMouse(false)
+	self:AddSurface(box, THEME.surface2, THEME.borderControl)
+	check:SetCheckedTexture(WHITE)
+	local mark = check:GetCheckedTexture()
+	mark:ClearAllPoints()
+	mark:SetSize(8, 8)
+	mark:SetPoint("CENTER", box, "CENTER")
+	mark:SetVertexColor(THEME.gold.r, THEME.gold.g, THEME.gold.b, 1)
+	mark:SetDrawLayer("OVERLAY")
+	local disabledMark = check.GetDisabledCheckedTexture and check:GetDisabledCheckedTexture()
+	if disabledMark then
+		disabledMark:SetAlpha(0)
+	end
+	local name = check.GetName and check:GetName()
+	local label = check.Text or (name and _G[name .. "Text"])
+	if label then
+		label:ClearAllPoints()
+		label:SetPoint("LEFT", check, "RIGHT", 2, 0)
+		label:SetFontObject("GameFontHighlightSmall")
+		label:SetTextColor(THEME.textPrimary.r, THEME.textPrimary.g, THEME.textPrimary.b)
+	end
+	return check
+end
+
+local function skinScrollBar(scrollFrame)
+	local name = scrollFrame.GetName and scrollFrame:GetName()
+	local bar = scrollFrame.ScrollBar or (name and _G[name .. "ScrollBar"])
+	if not bar or bar.ahSkinned or not bar.GetThumbTexture then
+		return
+	end
+	bar.ahSkinned = true
+	local barName = bar.GetName and bar:GetName()
+	for _, key in ipairs({ "ScrollUpButton", "ScrollDownButton" }) do
+		local button = bar[key] or (barName and _G[barName .. key])
+		if button then
+			button:SetAlpha(0)
+			button:EnableMouse(false)
+			button:SetSize(1, 1)
+		end
+	end
+	for _, region in ipairs({ bar:GetRegions() }) do
+		if region:GetObjectType() == "Texture" and region ~= bar:GetThumbTexture() then
+			region:SetAlpha(0)
+		end
+	end
+	bar:ClearAllPoints()
+	bar:SetPoint("TOPLEFT", scrollFrame, "TOPRIGHT", 4, 0)
+	bar:SetPoint("BOTTOMLEFT", scrollFrame, "BOTTOMRIGHT", 4, 0)
+	bar:SetWidth(6)
+	local track = bar:CreateTexture(nil, "BACKGROUND")
+	track:SetAllPoints()
+	colorTexture(track, THEME.surface2)
+	bar:SetThumbTexture(WHITE)
+	local thumb = bar:GetThumbTexture()
+	thumb:SetSize(6, 32)
+	thumb:SetVertexColor(THEME.borderStrong.r, THEME.borderStrong.g, THEME.borderStrong.b, 1)
+end
+
+-- Replaces the red close button art with a 22px outlined square holding a drawn X.
+function ProfessionExporter:SkinCloseButton(button)
+	if not button or button.ahSkinned then
+		return button
+	end
+	button.ahSkinned = true
+	for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetDisabledTexture" }) do
+		local texture = button[getter] and button[getter](button)
+		if texture then
+			texture:SetAlpha(0)
+		end
+	end
+	button:SetSize(22, 22)
+	button:SetHighlightTexture(WHITE)
+	button:GetHighlightTexture():SetVertexColor(THEME.gold.r, THEME.gold.g, THEME.gold.b, 0.09)
+	self:AddSurface(button, { r = 0, g = 0, b = 0, a = 0 }, THEME.borderStrong)
+	for _, angle in ipairs({ math.pi / 4, -math.pi / 4 }) do
+		local line = button:CreateTexture(nil, "ARTWORK")
+		line:SetSize(11, 1.5)
+		line:SetPoint("CENTER")
+		colorTexture(line, THEME.textMuted)
+		if line.SetRotation then
+			line:SetRotation(angle)
+		end
+	end
+	return button
+end
+
+-- Walks a frame tree once per call and skins every template control it finds. Safe to repeat:
+-- each control is skinned once; new children added since the last call get skinned too.
+function ProfessionExporter:SkinTree(root)
+	if not root or not root.GetChildren then
+		return
+	end
+	for _, child in ipairs({ root:GetChildren() }) do
+		if not child.ahNoSkin then
+			local kind = child:GetObjectType()
+			if kind == "CheckButton" then
+				self:SkinCheckButton(child)
+			elseif kind == "Button" and isPanelButton(child) then
+				self:SkinButton(child)
+			elseif kind == "EditBox" and (child.Left or child.Middle or (child:GetName() and _G[child:GetName() .. "Left"])) then
+				self:SkinEditBox(child)
+			elseif kind == "ScrollFrame" then
+				skinScrollBar(child)
+			end
+			if kind ~= "Slider" then
+				self:SkinTree(child)
+			end
+		end
+	end
 end
 
 function ProfessionExporter:ApplyWindowScale()

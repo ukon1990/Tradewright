@@ -274,21 +274,6 @@ local function containsText(haystack, needle)
 	return string.find(string.lower(tostring(haystack or "")), string.lower(tostring(needle or "")), 1, true) ~= nil
 end
 
-local function applyRankBadge(texture, text, rankIndex)
-	if not texture or not text or not rankIndex or rankIndex <= 0 then
-		if texture then texture:Hide() end
-		if text then text:Hide() end
-		return
-	end
-	local atlas = "Professions-Icon-Quality-Tier" .. tostring(rankIndex) .. "-Inv"
-	if texture.SetAtlas then
-		texture:SetAtlas(atlas, true)
-	end
-	texture:Show()
-	text:SetText(tostring(rankIndex))
-	text:Show()
-end
-
 local function formatDurationShort(seconds)
 	seconds = math.max(0, math.floor(tonumber(seconds) or 0))
 	local minutes = math.floor(seconds / 60)
@@ -304,10 +289,11 @@ local function attachSimpleTooltip(widget, title, body)
 		return
 	end
 	widget:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, "ANCHOR_TOP")
-		GameTooltip:SetText(title or "", 1, 0.82, 0.2)
+		local theme = ProfessionExporter:GetTheme()
+		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+		GameTooltip:SetText(title or "", 1, 1, 1)
 		if body and body ~= "" then
-			GameTooltip:AddLine(body, 0.82, 0.88, 0.96, true)
+			GameTooltip:AddLine(body, theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, true)
 		end
 		GameTooltip:Show()
 	end)
@@ -1639,60 +1625,105 @@ function ProfessionExporter:RefreshAuctionPanelRules()
 	end
 end
 
+function ProfessionExporter:ApplyAuctionReserve(itemID, value)
+	local qty = math.max(0, math.floor(tonumber(value) or 0))
+	self:SetAuctionItemRule(itemID, { reserveQty = qty > 0 and qty or nil })
+	self:DebugLog("AH", "rule reserve set", { string.format("itemID=%d reserveQty=%d", itemID, qty) })
+	self:PrimeAuctionPanelRows()
+	self:RefreshAuctionHousePanel()
+end
+
+-- Small "Keep in bags" window beside the auction panel. It always acts on the item it was last opened
+-- for (the old StaticPopup kept the first item it was ever shown with).
+function ProfessionExporter:EnsureAuctionReserveWindow()
+	if self._auctionReserveWindow then
+		return self._auctionReserveWindow
+	end
+	local pe = self
+	local theme = self:GetTheme()
+	local f = CreateFrame("Frame", addonName .. "AuctionReserveWindow", UIParent, "BackdropTemplate")
+	f:SetSize(300, theme.size.header + 1 + 12 + 18 + 10 + 14 + 4 + 26 + 12 + 26 + 12)
+	f:SetFrameStrata("DIALOG")
+	f:SetClampedToScreen(true)
+	f:EnableMouse(true)
+	self:StyleWindow(f)
+	tinsert(UISpecialFrames, f:GetName())
+	f.close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+	f.close:ClearAllPoints()
+	f.close:SetPoint("RIGHT", f, "TOPRIGHT", -6, -(theme.size.header / 2))
+	self:SkinCloseButton(f.close)
+	f.close:SetScript("OnClick", function() f:Hide() end)
+	f.title = self:CreateText(f, "GameFontNormalLarge", "gold")
+	f.title:SetPoint("LEFT", f, "TOPLEFT", 12, -(theme.size.header / 2) - 1)
+	f.title:SetPoint("RIGHT", f.close, "LEFT", -12, 0)
+	f.title:SetText("Keep in bags")
+	local rule = f:CreateTexture(nil, "BORDER")
+	rule:SetPoint("TOPLEFT", 1, -theme.size.header)
+	rule:SetPoint("TOPRIGHT", -1, -theme.size.header)
+	rule:SetHeight(1)
+	rule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+
+	f.icon = self:CreateItemIcon(f)
+	f.icon:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -(theme.size.header + 13))
+	f.itemName = self:CreateText(f, "GameFontHighlightSmall")
+	f.itemName:SetPoint("LEFT", f.icon, "RIGHT", 6, 0)
+	f.itemName:SetPoint("RIGHT", f, "RIGHT", -12, 0)
+	f.label = self:CreateText(f, "GameFontHighlightSmall", "textMuted")
+	f.label:SetPoint("TOPLEFT", f.icon, "BOTTOMLEFT", 0, -10)
+	f.label:SetText("Never post below this many")
+	f.input = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+	f.input:SetHeight(22)
+	f.input:SetPoint("TOPLEFT", f.label, "BOTTOMLEFT", 6, -6)
+	f.input:SetPoint("RIGHT", f, "RIGHT", -18, 0)
+	f.input:SetAutoFocus(false)
+	f.input:SetNumeric(true)
+	f.input:SetMaxLetters(6)
+	self:SkinEditBox(f.input)
+	local function accept()
+		if f.itemID then
+			pe:ApplyAuctionReserve(f.itemID, f.input:GetText())
+		end
+		f:Hide()
+	end
+	f.input:SetScript("OnEnterPressed", accept)
+	f.input:SetScript("OnEscapePressed", function() f:Hide() end)
+	f.keep = self:CreateButton(f, "Keep", accept, { primary = true })
+	f.keep:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12, 12)
+	f.cancel = self:CreateButton(f, "Cancel", function() f:Hide() end)
+	f.cancel:SetPoint("RIGHT", f.keep, "LEFT", -8, 0)
+	f.input:HookScript("OnTextChanged", function()
+		local n = tonumber(f.input:GetText()) or 0
+		pe:SetButtonLabel(f.keep, n > 0 and ("Keep " .. n) or "Remove keep")
+	end)
+	f:Hide()
+	self._auctionReserveWindow = f
+	return f
+end
+
 function ProfessionExporter:ShowAuctionReservePrompt(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		self:PrintMessage("Select an auction row first.")
 		return
 	end
-	local function getPopupEditBox(dialog)
-		if not dialog then
-			return nil
-		end
-		return dialog.editBox or dialog.EditBox or dialog.editbox
+	local f = self:EnsureAuctionReserveWindow()
+	f.itemID = itemID
+	f.icon:SetItem(itemID)
+	local _, color = self:GetItemLook(itemID)
+	f.itemName:SetText(self:GetItemDisplayName(itemID))
+	f.itemName:SetTextColor(color.r, color.g, color.b)
+	local current = tonumber((self:GetAuctionItemRule(itemID) or {}).reserveQty) or 0
+	f.input:SetText(current > 0 and tostring(current) or "")
+	f:ClearAllPoints()
+	local panel = self.ui and self.ui.auctionPanel
+	if panel and panel:IsShown() then
+		f:SetPoint("TOPLEFT", panel, "TOPLEFT", 40, -120)
+	else
+		f:SetPoint("CENTER")
 	end
-	local dialogKey = addonName .. "AuctionReserveQty"
-	StaticPopupDialogs[dialogKey] = StaticPopupDialogs[dialogKey] or {
-		text = "Keep at least this many items in bags:",
-		button1 = ACCEPT,
-		button2 = CANCEL,
-		hasEditBox = true,
-		timeout = 0,
-		whileDead = true,
-		hideOnEscape = true,
-		OnAccept = function(dialog)
-			local editBox = getPopupEditBox(dialog)
-			local value = editBox and editBox:GetText() or ""
-			local qty = math.max(0, math.floor(tonumber(value) or 0))
-			ProfessionExporter:SetAuctionItemRule(itemID, { reserveQty = qty > 0 and qty or nil })
-			ProfessionExporter:DebugLog("AH", "rule reserve set", {
-				string.format("itemID=%d reserveQty=%d", itemID, qty),
-			})
-			ProfessionExporter:PrimeAuctionPanelRows()
-			ProfessionExporter:RefreshAuctionHousePanel()
-		end,
-		EditBoxOnEnterPressed = function(editBox)
-			local parent = editBox and editBox:GetParent()
-			if parent then
-				parent.button1:Click()
-			end
-		end,
-		OnShow = function(dialog)
-			local rule = ProfessionExporter:GetAuctionItemRule(itemID) or {}
-			local current = tonumber(rule.reserveQty) or 0
-			local editBox = getPopupEditBox(dialog)
-			if not editBox then
-				ProfessionExporter:DebugLog("AH", "reserve dialog missing edit box", {
-					string.format("itemID=%d", itemID),
-				})
-				return
-			end
-			editBox:SetText(current > 0 and tostring(current) or "")
-			editBox:SetFocus()
-			editBox:HighlightText()
-		end,
-	}
-	StaticPopup_Show(dialogKey)
+	f:Show()
+	f.input:SetFocus()
+	f.input:HighlightText()
 end
 
 function ProfessionExporter:GetAuctionPanelActiveTab(defaultTab)
@@ -1978,125 +2009,45 @@ function ProfessionExporter:FilterAuctionCraftCartRows(rows)
 end
 
 function ProfessionExporter:BuildAuctionCartColumns()
+	local pe = self
+	local function count(id, label, field, optional)
+		return {
+			id = id, label = label, justifyH = "RIGHT", width = 40, sortable = true, defaultSort = "desc", optional = optional,
+			sortValue = function(row) return tonumber(row and row[field]) or 0 end,
+			getText = function(row) return pe:FormatNumberGrouped(row and row[field] or 0) end,
+		}
+	end
+	local function money(id, label, field, optional)
+		return {
+			id = id, label = label, justifyH = "RIGHT", width = 78, sortable = true, defaultSort = "desc", optional = optional,
+			sortValue = function(row) return tonumber(row and row[field]) or -1 end,
+			getText = function(row) return row and row[field] and pe:FormatCopperShort(row[field]) or "-" end,
+		}
+	end
+	local have = count("quantityHave", "Have", "quantityOnCharacter")
+	have.getText = function(row) return pe:FormatNumberGrouped(row and (row.quantityOnCharacter or row.quantityHave) or 0) end
 	return {
-		{
+		self:CreateItemColumn({
 			id = "item",
 			label = "Item",
-			width = 150,
-			minWidth = 100,
-			flex = 3,
-			sortable = true,
 			defaultSort = "asc",
-			sortValue = function(row) return row and row.itemName end,
-			createCell = function(rowFrame)
-				local root = CreateFrame("Frame", nil, rowFrame)
-				root:SetHeight(20)
-				if root.SetClipsChildren then
-					root:SetClipsChildren(true)
+			minWidth = 110,
+			getItemID = function(row) return row and row.itemID end,
+			getIcon = function(row) return row and row.itemIcon end,
+			getName = function(row) return row and row.itemName or "-" end,
+			getDetail = function(row)
+				local detail = row and row.sourceText and row.sourceText ~= "" and ("For " .. row.sourceText) or ""
+				if row and row.mailToText and row.mailToText ~= "" and row.mailToText ~= "-" then
+					detail = detail .. (detail ~= "" and " · " or "") .. "mail to " .. row.mailToText
 				end
-				local icon = root:CreateTexture(nil, "ARTWORK")
-				icon:SetSize(16, 16)
-				icon:SetPoint("LEFT", root, "LEFT", 0, 0)
-				local text = root:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-				text:SetPoint("LEFT", icon, "RIGHT", 6, 0)
-				text:SetPoint("RIGHT", root, "RIGHT", 0, 0)
-				text:SetJustifyH("LEFT")
-				text:SetWordWrap(false)
-				return { root = root, icon = icon, text = text }
+				return detail
 			end,
-			updateCell = function(cell, row)
-				cell.icon:SetTexture((row and row.itemIcon) or 134400)
-				cell.text:SetText(row and row.itemName or "-")
-			end,
-		},
-		{
-			id = "quantityNeeded",
-			label = "Need",
-			width = 42,
-			minWidth = 36,
-			flex = 0,
-			sortable = true,
-			defaultSort = "desc",
-			sortValue = function(row) return tonumber(row and row.quantityNeeded) or 0 end,
-			getText = function(row) return self:FormatNumberGrouped(row and row.quantityNeeded or 0) end,
-		},
-		{
-			id = "quantityHave",
-			label = "Have",
-			width = 42,
-			minWidth = 36,
-			flex = 0,
-			sortable = true,
-			defaultSort = "desc",
-			sortValue = function(row) return tonumber(row and (row.quantityOnCharacter or row.quantityHave)) or 0 end,
-			getText = function(row) return self:FormatNumberGrouped(row and (row.quantityOnCharacter or row.quantityHave) or 0) end,
-		},
-		{
-			id = "quantityToBuy",
-			label = "Buy",
-			width = 42,
-			minWidth = 36,
-			flex = 0,
-			sortable = true,
-			defaultSort = "desc",
-			sortValue = function(row) return tonumber(row and row.quantityToBuy) or 0 end,
-			getText = function(row) return self:FormatNumberGrouped(row and row.quantityToBuy or 0) end,
-		},
-		{
-			id = "estimatedUnitPrice",
-			label = "Est",
-			width = 58,
-			minWidth = 48,
-			flex = 0,
-			sortable = true,
-			defaultSort = "desc",
-			sortValue = function(row) return tonumber(row and row.estimatedUnitPrice) or -1 end,
-			getText = function(row) return row and row.estimatedUnitPrice and self:FormatCopperShort(row.estimatedUnitPrice) or "-" end,
-		},
-		{
-			id = "currentPrice",
-			label = "Live",
-			width = 58,
-			minWidth = 48,
-			flex = 0,
-			sortable = true,
-			defaultSort = "desc",
-			sortValue = function(row) return tonumber(row and row.currentPrice) or -1 end,
-			getText = function(row) return row and row.currentPrice and self:FormatCopperShort(row.currentPrice) or "-" end,
-		},
-		{
-			id = "estimatedBuyCost",
-			label = "Cost",
-			width = 64,
-			minWidth = 52,
-			flex = 0,
-			sortable = true,
-			defaultSort = "desc",
-			sortValue = function(row) return tonumber(row and row.estimatedBuyCost) or -1 end,
-			getText = function(row) return row and row.estimatedBuyCost and self:FormatCopperShort(row.estimatedBuyCost) or "-" end,
-		},
-		{
-			id = "mailToText",
-			label = "Mail to",
-			width = 90,
-			minWidth = 60,
-			flex = 1,
-			sortable = true,
-			defaultSort = "asc",
-			sortValue = function(row) return row and row.mailToText end,
-			getText = function(row) return row and row.mailToText or "-" end,
-		},
-		{
-			id = "sourceText",
-			label = "Sources",
-			width = 110,
-			minWidth = 70,
-			flex = 2,
-			sortable = true,
-			defaultSort = "asc",
-			sortValue = function(row) return row and row.sourceText end,
-			getText = function(row) return row and row.sourceText or "-" end,
-		},
+			sortValue = function(row) return row and row.itemName end,
+		}),
+		have,
+		count("quantityToBuy", "Buy", "quantityToBuy"),
+		money("estimatedUnitPrice", "Each", "estimatedUnitPrice", true),
+		money("estimatedBuyCost", "Cost", "estimatedBuyCost"),
 	}
 end
 
@@ -2434,14 +2385,14 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 		panel:SetMinResize(380, 320)
 		panel:SetMaxResize(760, 900)
 	end
-	self:StylePanel(panel, "surface2")
+	self:StyleWindow(panel)
 	panel:Hide()
 
 	local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 	title:SetPoint("TOPLEFT", 10, -10)
 	title:SetPoint("TOPRIGHT", -10, -10)
 	title:SetJustifyH("LEFT")
-	title:SetText("AuctionHelper AH")
+	title:SetText("AuctionHelper")
 	panel.title = title
 
 	local tabSell = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
@@ -2456,7 +2407,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	local tabCart = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	tabCart:SetSize(92, 20)
 	tabCart:SetPoint("RIGHT", tabSell, "LEFT", -4, 0)
-	tabCart:SetText("Shopping cart")
+	tabCart:SetText("Cart")
 	tabCart:SetScript("OnClick", function()
 		ProfessionExporter:SetAuctionPanelActiveTab("cart", true)
 	end)
@@ -2480,7 +2431,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	local btnRefresh = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	btnRefresh:SetSize(86, 20)
 	btnRefresh:SetPoint("TOPLEFT", stats, "BOTTOMLEFT", 0, -6)
-	btnRefresh:SetText("Refresh")
+	btnRefresh:SetText("Refresh shown")
 	btnRefresh:SetScript("OnClick", function()
 		if not ProfessionExporter:CanStartFullAuctionSideActions(true) then
 			return
@@ -2499,8 +2450,8 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	end)
 	attachSimpleTooltip(
 		btnScanCraftPrices,
-		"Scan crafts",
-		"AH price lookups for outputs and reagents from learned recipes in your saved profession scan (/profexport scan). Refreshes craft/dashboard pricing when finished."
+		"Craft prices",
+		"Looks up the price of everything your scanned recipes make and use."
 	)
 	panel.btnScanCraftPrices = btnScanCraftPrices
 
@@ -2513,8 +2464,8 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	end)
 	attachSimpleTooltip(
 		btnScanAccountInv,
-		"Scan account inventory",
-		"AH lookups for item IDs that appear in any character snapshot with stock > 0, excluding items whose static bind type is BoP / quest / account / warband-style (C_Item.GetItemInfo). Does not know if your specific stack is soulbound."
+		"Account items",
+		"Looks up the price of tradable items any of your characters owns."
 	)
 	panel.btnScanAccountInv = btnScanAccountInv
 
@@ -2548,29 +2499,29 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	local btnDumpFull = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	btnDumpFull:SetSize(72, 20)
 	btnDumpFull:SetPoint("LEFT", btnDump, "RIGHT", 4, 0)
-	btnDumpFull:SetText("Full dump")
+	btnDumpFull:SetText("Full scan")
 	btnDumpFull:SetScript("OnClick", function()
 		ProfessionExporter:StartAuctionDump("full")
 		ProfessionExporter:RefreshAuctionHousePanel()
 	end)
 	attachSimpleTooltip(
 		btnDumpFull,
-		"Dump Full AH",
-		"Runs a full replicate scan of the auction house, stores per-item snapshots, and records market history."
+		"Full scan",
+		"Reads every auction in the house and adds an hour to each item's price history."
 	)
 	panel.btnDumpFull = btnDumpFull
 
 	local btnPostProfitable = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	btnPostProfitable:SetSize(96, 20)
 	btnPostProfitable:SetPoint("TOPLEFT", btnRefresh, "BOTTOMLEFT", 0, -4)
-	btnPostProfitable:SetText("Post profit")
+	btnPostProfitable:SetText("Post profitable")
 	btnPostProfitable:SetScript("OnClick", function()
 		ProfessionExporter:RunAuctionPanelBulkAction("post_profitable")
 	end)
 	attachSimpleTooltip(
 		btnPostProfitable,
 		"Post profitable",
-		"Posts visible rows where ROI is positive and price is not flagged as dumped unusually low."
+		"Posts every shown item that sells for more than it costs, skipping prices that look dumped."
 	)
 	panel.btnPostProfitable = btnPostProfitable
 
@@ -2584,7 +2535,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	attachSimpleTooltip(
 		btnPostAll,
 		"Post all",
-		"Attempts to post all visible rows, including low-margin items and items flagged as dumped low."
+		"Posts every shown item, including low margins and prices that look dumped."
 	)
 	panel.btnPostAll = btnPostAll
 
@@ -2623,29 +2574,29 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	end)
 	attachSimpleTooltip(
 		btnIgnoreItem,
-		"Ignore Item",
-		"Prevents the selected item from being included in bulk posting."
+		"Ignore",
+		"Never post the selected item in bulk."
 	)
 	panel.btnIgnoreItem = btnIgnoreItem
 
 	local btnReserveItem = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	btnReserveItem:SetSize(58, 20)
 	btnReserveItem:SetPoint("LEFT", btnIgnoreItem, "RIGHT", 4, 0)
-	btnReserveItem:SetText("Keep...")
+	btnReserveItem:SetText("Keep…")
 	btnReserveItem:SetScript("OnClick", function()
 		ProfessionExporter:ShowAuctionReservePrompt(ProfessionExporter:GetSelectedAuctionPanelItemID())
 	end)
 	attachSimpleTooltip(
 		btnReserveItem,
-		"Keep Amount",
-		"Sets a reserve quantity for the selected item so bulk posting will not use its first stack if that would drop you below the reserve."
+		"Keep",
+		"Keep a number of the selected item in your bags when posting in bulk."
 	)
 	panel.btnReserveItem = btnReserveItem
 
 	local btnClearRule = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	btnClearRule:SetSize(58, 20)
 	btnClearRule:SetPoint("LEFT", btnReserveItem, "RIGHT", 4, 0)
-	btnClearRule:SetText("Clear")
+	btnClearRule:SetText("Clear rule")
 	btnClearRule:SetScript("OnClick", function()
 		local itemID = ProfessionExporter:GetSelectedAuctionPanelItemID()
 		if not itemID then
@@ -2661,8 +2612,8 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	end)
 	attachSimpleTooltip(
 		btnClearRule,
-		"Clear Rule",
-		"Removes ignore and keep rules from the selected item."
+		"Clear rule",
+		"Remove the ignore or keep rule from the selected item."
 	)
 	panel.btnClearRule = btnClearRule
 
@@ -2680,7 +2631,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	craftedOnly:SetPoint("LEFT", search, "RIGHT", 6, -1)
 	local craftedLabel = craftedOnly.Text or (craftedOnly.GetName and craftedOnly:GetName() and _G[craftedOnly:GetName() .. "Text"]) or nil
 	if craftedLabel then
-		craftedLabel:SetText("Craft")
+		craftedLabel:SetText("Crafted only")
 	end
 	craftedOnly:SetScript("OnClick", function(btn)
 		ui.ahCraftedOnly = btn:GetChecked() == true
@@ -2692,7 +2643,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	profitableOnly:SetPoint("LEFT", craftedOnly, "RIGHT", 54, 0)
 	local profitableLabel = profitableOnly.Text or (profitableOnly.GetName and profitableOnly:GetName() and _G[profitableOnly:GetName() .. "Text"]) or nil
 	if profitableLabel then
-		profitableLabel:SetText("Profit")
+		profitableLabel:SetText("Profitable only")
 	end
 	profitableOnly:SetScript("OnClick", function(btn)
 		ui.ahProfitableOnly = btn:GetChecked() == true
@@ -2772,7 +2723,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	local clearBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	clearBtn:SetSize(52, 18)
 	clearBtn:SetPoint("LEFT", profitableOnly, "RIGHT", 48, 0)
-	clearBtn:SetText("Clear")
+	clearBtn:SetText("Reset filters")
 	clearBtn:SetScript("OnClick", function()
 		ui.ahFilterText = ""
 		ui.ahCraftedOnly = false
@@ -2817,7 +2768,14 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	ui.ahSubclassFilterValues = ui.ahSubclassFilterValues or {}
 	ui.ahExpansionFilterValues = ui.ahExpansionFilterValues or {}
 	panel.table = self:CreateReusableTable(panel.tableHost, {
-		rowHeight = 20,
+		rowHeight = 24,
+		autoFitToScroll = true,
+		footer = true,
+		emptyTitle = "Nothing to sell",
+		emptyHint = "No items in your bags match the filters.",
+		isRowSelected = function(rowData)
+			return rowData and rowData.itemID ~= nil and rowData.itemID == ProfessionExporter:GetSelectedAuctionPanelItemID()
+		end,
 		maxRows = 120,
 		sortKey = ui.ahSortKey,
 		sortAsc = ui.ahSortAsc,
@@ -2825,56 +2783,41 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 			ui.ahSortKey = sortKey
 			ui.ahSortAsc = sortAsc
 		end,
-		onRowEnter = function(_, rowData)
-			local itemID = rowData and rowData.itemID
-			if not itemID then
+		onRowEnter = function(rowFrame, rowData)
+			if not rowData or not rowData.itemID then
 				return
 			end
-			GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
-			if GameTooltip.SetItemByID then
-				GameTooltip:SetItemByID(itemID)
-			else
-				GameTooltip:SetText("#" .. tostring(itemID))
-			end
-			GameTooltip:AddLine(" ")
-			GameTooltip:AddLine(string.format("Owned: %s", ProfessionExporter:FormatNumberGrouped(tonumber(rowData.quantityOwned) or 0)), 0.82, 0.88, 0.96)
-			if rowData.isIgnoredByRule then
-				GameTooltip:AddLine("Rule: ignored for bulk posting", 1.0, 0.4, 0.4)
-			elseif (tonumber(rowData.reserveQty) or 0) > 0 then
-				GameTooltip:AddLine(string.format("Rule: keep at least %s (sellable now: %s)", ProfessionExporter:FormatNumberGrouped(tonumber(rowData.reserveQty) or 0), ProfessionExporter:FormatNumberGrouped(tonumber(rowData.quantitySellable) or 0)), 0.82, 0.88, 0.96)
-				if rowData.canBulkPost ~= true then
-					GameTooltip:AddLine("Bulk posting will skip this item because the first stack would violate the reserve.", 1.0, 0.82, 0.3, true)
-				end
-			end
-			GameTooltip:AddLine(string.format("Shown price: %s", rowData.currentPrice and ProfessionExporter:FormatCopperShort(rowData.currentPrice) or "-"), 0.82, 0.88, 0.96)
-			GameTooltip:AddLine(string.format("Shown source: %s", tostring(rowData.currentPriceSource or "unknown")), 0.82, 0.88, 0.96)
-			if tonumber(rowData.currentPriceSeenAt) then
-				GameTooltip:AddLine(string.format("Seen: %s", date("%H:%M:%S", tonumber(rowData.currentPriceSeenAt))), 0.82, 0.88, 0.96)
-			end
-			if rowData.nativePrice and rowData.nativePrice > 0 then
-				GameTooltip:AddLine(string.format("Live lowest buyout: %s", ProfessionExporter:FormatCopperShort(rowData.nativePrice)), 0.65, 0.9, 0.7)
-			else
-				GameTooltip:AddLine("Live lowest buyout: unavailable", 1.0, 0.82, 0.3)
-			end
+			local pe = ProfessionExporter
+			local pairs = {
+				{ "Owned", pe:FormatNumberGrouped(tonumber(rowData.quantityOwned) or 0) },
+				{ "Live lowest buyout", rowData.nativePrice and rowData.nativePrice > 0 and pe:FormatCopperFull(rowData.nativePrice) or "not scanned" },
+			}
 			if rowData.fallbackPrice and rowData.fallbackPrice > 0 then
-				GameTooltip:AddLine(string.format("Fallback price: %s (%s)", ProfessionExporter:FormatCopperShort(rowData.fallbackPrice), tostring(rowData.fallbackPriceSource or "fallback")), 0.82, 0.88, 0.96, true)
+				pairs[#pairs + 1] = { "Fallback price", pe:FormatCopperFull(rowData.fallbackPrice) .. " · " .. tostring(rowData.fallbackPriceSource or "other addon") }
 			end
-			GameTooltip:AddLine(string.format("ROI: %s", formatPercent(rowData.potentialROI)), 0.82, 0.88, 0.96)
-			GameTooltip:AddLine(string.format("Personal SR: %s", rowData.personalSaleRateDisplay or "-"), 0.82, 0.88, 0.96)
+			pairs[#pairs + 1] = { "Return", formatPercent(rowData.potentialROI) }
+			if rowData.isIgnoredByRule then
+				pairs[#pairs + 1] = { "Rule", "never posted in bulk" }
+			elseif (tonumber(rowData.reserveQty) or 0) > 0 then
+				pairs[#pairs + 1] = { "Rule", "keep " .. pe:FormatNumberGrouped(rowData.reserveQty) }
+			end
+			local hint = "Click to put it in the sell slot · Shift-click to link"
 			if rowData.isDumpedLow then
-				GameTooltip:AddLine("Warning: price appears dumped unusually low.", 1.0, 0.35, 0.35, true)
+				hint = "The price looks dumped unusually low. " .. hint
 			end
-			GameTooltip:AddLine("Click row to select item in AH sell frame.", 0.75, 0.82, 0.9)
-			GameTooltip:Show()
+			pe:ShowItemRowTooltip(rowFrame, rowData.itemID, pairs, hint)
 		end,
 		onRowLeave = function()
 			GameTooltip:Hide()
 		end,
-		onRowClick = function(_, rowData)
+		onRowClick = function(_, rowData, _, tableWidget)
 			local id = rowData and rowData.itemID
-			if not id then
+			if not id or ProfessionExporter:HandleItemRowModifiedClick(id) then
 				return
 			end
+			ProfessionExporter:GetState().auctionPanelSelectedItemID = id
+			tableWidget:SetSelectedRow(rowData)
+			ProfessionExporter:RefreshAuctionPanelRules()
 			-- Clicking a row should also revalidate this item's current market value.
 			if ProfessionExporter:CanStartFullAuctionSideActions(true) then
 				ProfessionExporter:QueueVisibleAuctionRefresh({ id })
@@ -2918,14 +2861,8 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	panel.progressBar:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 24)
 	panel.progressBar:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 24)
 	panel.progressBar:SetHeight(14)
-	panel.progressBar:SetStatusBarTexture("Interface/TARGETINGFRAME/UI-StatusBar")
-	panel.progressBar:SetMinMaxValues(0, 1)
-	panel.progressBar:SetValue(0)
-	panel.progressBar:SetStatusBarColor(0.30, 0.70, 0.95)
-	local bg = panel.progressBar:CreateTexture(nil, "BACKGROUND")
-	bg:SetAllPoints()
-	bg:SetColorTexture(0.12, 0.12, 0.14, 1)
-	panel.progressBarBg = bg
+	self:StyleProgressBar(panel.progressBar)
+	panel.progressBarBg = panel.progressBar.ahTrack
 
 	panel.btnPauseScan = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.btnPauseScan:SetSize(64, 18)
@@ -2969,7 +2906,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	panel.btnCartSearch = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.btnCartSearch:SetSize(58, 20)
 	panel.btnCartSearch:SetPoint("LEFT", panel.cartSearchBox, "RIGHT", 4, 0)
-	panel.btnCartSearch:SetText("Search")
+	panel.btnCartSearch:SetText("Find selected")
 	panel.btnCartSearch:SetScript("OnClick", function()
 		local rows = panel.cartTable and panel.cartTable.rows or nil
 		local selected = ProfessionExporter:GetState().auctionCartSelectedItemID
@@ -2985,7 +2922,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	panel.btnCartRefresh = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.btnCartRefresh:SetSize(64, 20)
 	panel.btnCartRefresh:SetPoint("LEFT", panel.btnCartSearch, "RIGHT", 4, 0)
-	panel.btnCartRefresh:SetText("Scan all")
+	panel.btnCartRefresh:SetText("Price all")
 	panel.btnCartRefresh:SetScript("OnClick", function()
 		local rows = ProfessionExporter:FilterAuctionCraftCartRows(select(1, ProfessionExporter:BuildAuctionCraftCartRows()))
 		ProfessionExporter:SearchAuctionCartRows(rows)
@@ -3021,7 +2958,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	panel.btnCartRemove = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.btnCartRemove:SetSize(70, 20)
 	panel.btnCartRemove:SetPoint("LEFT", panel.btnCartBuy, "RIGHT", 4, 0)
-	panel.btnCartRemove:SetText("Remove")
+	panel.btnCartRemove:SetText("Remove selected")
 	panel.btnCartRemove:SetScript("OnClick", function()
 		local selected = ProfessionExporter:GetState().auctionCartSelectedItemID
 		if not selected then
@@ -3044,7 +2981,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	panel.btnCartClear = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.btnCartClear:SetSize(56, 20)
 	panel.btnCartClear:SetPoint("LEFT", panel.btnCartRemove, "RIGHT", 4, 0)
-	panel.btnCartClear:SetText("Clear")
+	panel.btnCartClear:SetText("Clear cart")
 	panel.btnCartClear:SetScript("OnClick", function()
 		if ProfessionExporter.ClearCraftQueue then
 			ProfessionExporter:ClearCraftQueue()
@@ -3064,45 +3001,35 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	panel.cartTableHost:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -2, 52)
 	panel.cartTableHost:Hide()
 	panel.cartTable = self:CreateReusableTable(panel.cartTableHost, {
-		rowHeight = 20,
+		rowHeight = 36,
+		footer = true,
+		emptyTitle = "Cart is empty",
+		emptyHint = "Queue crafts to add their reagents here.",
+		isRowSelected = function(rowData)
+			return rowData and rowData.itemID ~= nil and rowData.itemID == ProfessionExporter:GetState().auctionCartSelectedItemID
+		end,
 		maxRows = 120,
 		sortKey = "quantityToBuy",
 		sortAsc = false,
 		autoFitToScroll = true,
-		onRowEnter = function(_, rowData)
-			local itemID = rowData and rowData.itemID
-			if not itemID then
+		onRowEnter = function(rowFrame, rowData)
+			if not rowData or not rowData.itemID then
 				return
 			end
-			GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
-			if GameTooltip.SetItemByID then
-				GameTooltip:SetItemByID(itemID)
-			else
-				GameTooltip:SetText("#" .. tostring(itemID))
-			end
-			GameTooltip:AddLine(" ")
-			GameTooltip:AddLine(string.format("Need %s  |  Have %s  |  Buy %s", ProfessionExporter:FormatNumberGrouped(rowData.quantityNeeded or 0), ProfessionExporter:FormatNumberGrouped(rowData.quantityHave or 0), ProfessionExporter:FormatNumberGrouped(rowData.quantityToBuy or 0)), 0.82, 0.88, 0.96)
-			if rowData.mailToText and rowData.mailToText ~= "—" and rowData.mailToText ~= "" then
-				GameTooltip:AddLine(string.format("Mail to: %s", tostring(rowData.mailToText)), 0.82, 0.88, 0.96, true)
-			end
-			if type(rowData.mailAllocations) == "table" then
-				for _, alloc in ipairs(rowData.mailAllocations) do
-					local label = alloc.characterKey
-					if ProfessionExporter.GetDashboardSidebarCharacterLabel then
-						label = ProfessionExporter:GetDashboardSidebarCharacterLabel(alloc.characterKey, nil, ProfessionExporter:GetCharacterKey())
-					end
-					GameTooltip:AddLine(string.format("  %s: need %s, have %s, mail %s", label, ProfessionExporter:FormatNumberGrouped(alloc.quantityNeeded or 0), ProfessionExporter:FormatNumberGrouped(alloc.quantityHave or 0), ProfessionExporter:FormatNumberGrouped(alloc.mailQuantity or 0)), 0.75, 0.82, 0.9)
+			local pe = ProfessionExporter
+			local pairs = {
+				{ "Need", pe:FormatNumberGrouped(rowData.quantityNeeded or 0) },
+				{ "Have here", pe:FormatNumberGrouped(rowData.quantityOnCharacter or rowData.quantityHave or 0) },
+				{ "Buy", pe:FormatNumberGrouped(rowData.quantityToBuy or 0) },
+				{ "Live price", rowData.currentPrice and pe:FormatCopperFull(rowData.currentPrice) or "not scanned" },
+				{ "Cost", rowData.estimatedBuyCost and pe:FormatCopperFull(rowData.estimatedBuyCost) or "-" },
+			}
+			for _, alloc in ipairs(type(rowData.mailAllocations) == "table" and rowData.mailAllocations or {}) do
+				if (tonumber(alloc.mailQuantity) or 0) > 0 then
+					pairs[#pairs + 1] = { "Mail to " .. tostring(alloc.characterKey), pe:FormatNumberGrouped(alloc.mailQuantity) }
 				end
 			end
-			GameTooltip:AddLine(string.format("Planned crafts: %s", tostring(rowData.sourceText or "—")), 0.82, 0.88, 0.96, true)
-			if rowData.currentPrice then
-				GameTooltip:AddLine(string.format("Live AH: %s (%s)", ProfessionExporter:FormatCopperShort(rowData.currentPrice), tostring(rowData.currentPriceSource or "?")), 0.65, 0.9, 0.7)
-			end
-			if rowData.estimatedBuyCost then
-				GameTooltip:AddLine(string.format("Estimated buy cost: %s", ProfessionExporter:FormatCopperShort(rowData.estimatedBuyCost)), 0.82, 0.88, 0.96)
-			end
-			GameTooltip:AddLine("Click row to select. Use Search to refresh the AH listing and Buy cheapest for commodity reagents.", 0.75, 0.82, 0.9, true)
-			GameTooltip:Show()
+			pe:ShowItemRowTooltip(rowFrame, rowData.itemID, pairs, "Click to find it at the auction house")
 		end,
 		onRowLeave = function()
 			GameTooltip:Hide()
@@ -3159,11 +3086,274 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	end)
 	attachSimpleTooltip(panel.resizeHandle, "Resize", "Drag to resize the auction side panel.")
 
+	self:BuildAuctionPanelLayout(panel)
 	panel.__ahAuctionPanelInitInProgress = nil
 	panel.__ahAuctionPanelInitialized = true
 	ui.auctionPanel = panel
 	self:HideExtraAuctionHousePanels(panel)
 	return panel
+end
+
+local AH_PAD = 12
+local AH_ROW = 26
+local AH_ROW_GAP = 8
+
+-- One scan control replaces four buttons: pick what to scan, then press Scan.
+local AUCTION_SCAN_CHOICES = {
+	{ value = "both", label = "Craft and account prices" },
+	{ value = "crafts", label = "Craft prices" },
+	{ value = "account", label = "Account items" },
+	{ value = "shown", label = "Save shown prices" },
+}
+
+function ProfessionExporter:RunAuctionPanelScanChoice()
+	local choice = self:GetSetting("auction.panelScanChoice", "both")
+	if choice == "crafts" then
+		self:QueueAuctionEconomyScan({ crafts = true })
+	elseif choice == "account" then
+		self:QueueAuctionEconomyScan({ accountInventory = true })
+	elseif choice == "shown" then
+		if not self:CanStartFullAuctionSideActions(true) then
+			return
+		end
+		self:StartAuctionDump("visible")
+	else
+		self:QueueAuctionEconomyScan({ crafts = true, accountInventory = true })
+	end
+	self:RefreshAuctionHousePanel()
+end
+
+local function anchorRow(panel, frame, y)
+	frame:ClearAllPoints()
+	frame:SetPoint("TOPLEFT", panel, "TOPLEFT", AH_PAD, -y)
+	frame:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -AH_PAD, -y)
+	frame:SetHeight(AH_ROW)
+end
+
+local function placeIn(row, frame, point, relative, relativePoint, x)
+	frame:SetParent(row)
+	frame:ClearAllPoints()
+	frame:SetPoint(point, relative, relativePoint, x or 0, 0)
+end
+
+-- Re-anchors the panel to the shared design: 34px header with Sell / Cart switch, rows of 26px controls
+-- 8px apart inside a 12px inset, the table filling the rest, a progress row and a 24px status footer.
+function ProfessionExporter:BuildAuctionPanelLayout(panel)
+	local pe = self
+	local ui = self.ui
+	local theme = self:GetTheme()
+	local headerHeight = theme.size.header
+
+	panel:SetClampedToScreen(true)
+	panel.title:SetFontObject("GameFontNormalLarge")
+	panel.title:ClearAllPoints()
+	panel.title:SetPoint("LEFT", panel, "TOPLEFT", 12, -(headerHeight / 2) - 1)
+	panel.title:SetPoint("RIGHT", panel.tabCart, "LEFT", -12, 0)
+	panel.title:SetWordWrap(false)
+	panel.headerRule = panel:CreateTexture(nil, "BORDER")
+	panel.headerRule:SetPoint("TOPLEFT", 1, -headerHeight)
+	panel.headerRule:SetPoint("TOPRIGHT", -1, -headerHeight)
+	panel.headerRule:SetHeight(1)
+	panel.headerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	panel.subtitle:Hide()
+	panel.stats:Hide()
+	panel.subtitle.Show = panel.subtitle.Hide
+	panel.stats.Show = panel.stats.Hide
+	panel.subtitle.SetShown = function() end
+	panel.stats.SetShown = function() end
+
+	for _, tab in ipairs({ panel.tabSell, panel.tabCart }) do
+		self:SkinButton(tab)
+		tab:SetHeight(theme.size.controlSmall)
+	end
+	self:SetButtonLabel(panel.tabSell, "Sell", true)
+	panel.tabSell:ClearAllPoints()
+	panel.tabSell:SetPoint("RIGHT", panel, "TOPRIGHT", -12, -(headerHeight / 2))
+	panel.tabCart:ClearAllPoints()
+	panel.tabCart:SetPoint("RIGHT", panel.tabSell, "LEFT", 1, 0)
+	-- Sell sits left of Cart in reading order.
+	panel.tabCart:ClearAllPoints()
+	panel.tabCart:SetPoint("RIGHT", panel, "TOPRIGHT", -12, -(headerHeight / 2))
+	panel.tabSell:ClearAllPoints()
+	panel.tabSell:SetPoint("RIGHT", panel.tabCart, "LEFT", 1, 0)
+	panel.title:SetPoint("RIGHT", panel.tabSell, "LEFT", -12, 0)
+
+	-- Footer: status text, resize grip.
+	panel.footer = CreateFrame("Frame", nil, panel)
+	panel.footer:SetPoint("BOTTOMLEFT", 1, 1)
+	panel.footer:SetPoint("BOTTOMRIGHT", -1, 1)
+	panel.footer:SetHeight(theme.size.footer)
+	local footerRule = panel.footer:CreateTexture(nil, "BORDER")
+	footerRule:SetPoint("TOPLEFT")
+	footerRule:SetPoint("TOPRIGHT")
+	footerRule:SetHeight(1)
+	footerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	panel.resizeHandle:SetParent(panel.footer)
+	panel.resizeHandle:ClearAllPoints()
+	panel.resizeHandle:SetSize(14, 14)
+	panel.resizeHandle:SetPoint("BOTTOMRIGHT", -2, 2)
+	panel.footerText = self:CreateText(panel.footer, "GameFontHighlightSmall", "textMuted")
+	panel.footerText:SetPoint("LEFT", AH_PAD, 0)
+	panel.footerText:SetPoint("RIGHT", panel.resizeHandle, "LEFT", -8, 0)
+
+	local y = headerHeight + 1 + AH_PAD
+	-- Sell row 1: scan choice, Scan, Refresh shown, Full scan.
+	panel.sellRow1 = CreateFrame("Frame", nil, panel)
+	anchorRow(panel, panel.sellRow1, y)
+	placeIn(panel.sellRow1, panel.btnDumpFull, "RIGHT", panel.sellRow1, "RIGHT")
+	local refresh = panel.sellControls[1]
+	placeIn(panel.sellRow1, refresh, "RIGHT", panel.btnDumpFull, "LEFT", -AH_ROW_GAP)
+	panel.btnScanChoice = self:CreateButton(panel.sellRow1, "Scan", function()
+		pe:RunAuctionPanelScanChoice()
+	end, { tooltip = "Run the scan picked on the left. Keep the auction house open until it ends." })
+	panel.btnScanChoice:SetPoint("RIGHT", refresh, "LEFT", -AH_ROW_GAP, 0)
+	panel.scanChoice = self:CreateSingleSelectDropdown(panel.sellRow1, {
+		width = 160,
+		getOptions = function() return AUCTION_SCAN_CHOICES end,
+		getValue = function() return pe:GetSetting("auction.panelScanChoice", "both") end,
+		setValue = function(value) pe:SetSetting("auction.panelScanChoice", value) end,
+		tooltip = "What to scan",
+	})
+	panel.scanChoice:SetPoint("LEFT", panel.sellRow1, "LEFT", 0, 0)
+	panel.scanChoice:SetPoint("RIGHT", panel.btnScanChoice, "LEFT", -AH_ROW_GAP, 0)
+	for _, old in ipairs({ panel.btnScanCraftPrices, panel.btnScanAccountInv, panel.btnScanCraftAndAccount, panel.btnDumpVisible }) do
+		old:Hide()
+		old.Show = old.Hide
+		old.SetShown = function() end
+	end
+
+	-- Sell row 2: posting on the left, rules for the selected item on the right.
+	y = y + AH_ROW + AH_ROW_GAP
+	panel.sellRow2 = CreateFrame("Frame", nil, panel)
+	anchorRow(panel, panel.sellRow2, y)
+	placeIn(panel.sellRow2, panel.btnPostProfitable, "LEFT", panel.sellRow2, "LEFT")
+	self:SetButtonPrimary(panel.btnPostProfitable, true)
+	placeIn(panel.sellRow2, panel.btnPostAll, "LEFT", panel.btnPostProfitable, "RIGHT", AH_ROW_GAP)
+	placeIn(panel.sellRow2, panel.btnPauseBulk, "LEFT", panel.btnPostAll, "RIGHT", AH_ROW_GAP)
+	placeIn(panel.sellRow2, panel.btnClearRule, "RIGHT", panel.sellRow2, "RIGHT")
+	placeIn(panel.sellRow2, panel.btnReserveItem, "RIGHT", panel.btnClearRule, "LEFT", -AH_ROW_GAP)
+	placeIn(panel.sellRow2, panel.btnIgnoreItem, "RIGHT", panel.btnReserveItem, "LEFT", -AH_ROW_GAP)
+
+	-- Sell row 3: search and item filters.
+	y = y + AH_ROW + AH_ROW_GAP
+	panel.sellRow3 = CreateFrame("Frame", nil, panel)
+	anchorRow(panel, panel.sellRow3, y)
+	local filters = { panel.subclassDropdown, panel.classDropdown }
+	if self.IS_RETAIL then
+		table.insert(filters, 1, panel.expansionDropdown)
+	else
+		panel.expansionDropdown:Hide()
+		panel.expansionDropdown.Show = panel.expansionDropdown.Hide
+		panel.expansionDropdown.SetShown = function() end
+		ui.ahExpansionFilterValues = {}
+	end
+	placeIn(panel.sellRow3, filters[1], "RIGHT", panel.sellRow3, "RIGHT")
+	for index = 2, #filters do
+		placeIn(panel.sellRow3, filters[index], "RIGHT", filters[index - 1], "LEFT", -AH_ROW_GAP)
+	end
+	placeIn(panel.sellRow3, panel.searchBox, "LEFT", panel.sellRow3, "LEFT", 6)
+	panel.searchBox:SetPoint("RIGHT", filters[#filters], "LEFT", -14, 0)
+	self:AddSearchPlaceholder(panel.searchBox, "Search name or ID")
+
+	-- Sell row 4: two filter checkboxes and Reset filters.
+	y = y + AH_ROW + AH_ROW_GAP
+	panel.sellRow4 = CreateFrame("Frame", nil, panel)
+	anchorRow(panel, panel.sellRow4, y)
+	placeIn(panel.sellRow4, panel.craftedOnly, "LEFT", panel.sellRow4, "LEFT", -4)
+	self:SkinCheckButton(panel.craftedOnly)
+	local craftedLabel = panel.craftedOnly.Text
+	placeIn(panel.sellRow4, panel.profitableOnly, "LEFT", panel.craftedOnly, "RIGHT", (craftedLabel and craftedLabel:GetStringWidth() or 60) + 18)
+	placeIn(panel.sellRow4, panel.clearBtn, "RIGHT", panel.sellRow4, "RIGHT")
+	panel.clearBtn:SetHeight(theme.size.controlSmall)
+	self:SetButtonLabel(panel.clearBtn, "Reset filters", true)
+
+	panel.sellRows = { panel.sellRow1, panel.sellRow2, panel.sellRow3, panel.sellRow4 }
+	panel.sellTableTop = y + AH_ROW + AH_PAD
+
+	-- Progress row (shown while scanning or posting).
+	panel.progressRow = CreateFrame("Frame", nil, panel)
+	panel.progressRow:SetPoint("BOTTOMLEFT", panel.footer, "TOPLEFT", AH_PAD - 1, AH_ROW_GAP)
+	panel.progressRow:SetPoint("BOTTOMRIGHT", panel.footer, "TOPRIGHT", -(AH_PAD - 1), AH_ROW_GAP)
+	panel.progressRow:SetHeight(AH_ROW)
+	placeIn(panel.progressRow, panel.btnPauseScan, "RIGHT", panel.progressRow, "RIGHT")
+	panel.btnPauseScan:SetHeight(theme.size.controlSmall)
+	placeIn(panel.progressRow, panel.progressText, "LEFT", panel.progressRow, "LEFT")
+	panel.progressText:SetWidth(170)
+	panel.progressText:SetWordWrap(false)
+	panel.progressTiming:SetParent(panel.progressRow)
+	panel.progressTiming:ClearAllPoints()
+	panel.progressTiming:SetPoint("RIGHT", panel.btnPauseScan, "LEFT", -AH_ROW_GAP, 0)
+	panel.progressTiming:SetFontObject("GameFontHighlightSmall")
+	panel.progressTiming:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	panel.progressTiming:SetWordWrap(false)
+	panel.progressBar:SetParent(panel.progressRow)
+	panel.progressBar:ClearAllPoints()
+	panel.progressBar:SetPoint("LEFT", panel.progressText, "RIGHT", AH_ROW_GAP, 0)
+	panel.progressBar:SetPoint("RIGHT", panel.progressTiming, "LEFT", -AH_ROW_GAP, 0)
+
+	-- Cart: summary, search row, table, action row.
+	y = headerHeight + 1 + AH_PAD
+	panel.cartSummary:ClearAllPoints()
+	panel.cartSummary:SetPoint("TOPLEFT", panel, "TOPLEFT", AH_PAD, -y)
+	panel.cartSummary:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -AH_PAD, -y)
+	panel.cartSummary:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	panel.cartRow1 = CreateFrame("Frame", nil, panel)
+	anchorRow(panel, panel.cartRow1, y + 32)
+	placeIn(panel.cartRow1, panel.btnCartRefresh, "RIGHT", panel.cartRow1, "RIGHT")
+	placeIn(panel.cartRow1, panel.btnCartSearch, "RIGHT", panel.btnCartRefresh, "LEFT", -AH_ROW_GAP)
+	self:SetButtonPrimary(panel.btnCartSearch, true)
+	placeIn(panel.cartRow1, panel.cartSearchBox, "LEFT", panel.cartRow1, "LEFT", 6)
+	panel.cartSearchBox:SetPoint("RIGHT", panel.btnCartSearch, "LEFT", -14, 0)
+	self:AddSearchPlaceholder(panel.cartSearchBox, "Search item, recipe or character")
+	panel.cartRow2 = CreateFrame("Frame", nil, panel)
+	panel.cartRow2:SetPoint("BOTTOMLEFT", panel.footer, "TOPLEFT", AH_PAD - 1, AH_ROW_GAP)
+	panel.cartRow2:SetPoint("BOTTOMRIGHT", panel.footer, "TOPRIGHT", -(AH_PAD - 1), AH_ROW_GAP)
+	panel.cartRow2:SetHeight(AH_ROW)
+	placeIn(panel.cartRow2, panel.btnCartClear, "RIGHT", panel.cartRow2, "RIGHT")
+	panel.btnCartClear:GetFontString():SetTextColor(theme.danger.r, theme.danger.g, theme.danger.b)
+	placeIn(panel.cartRow2, panel.btnCartRemove, "RIGHT", panel.btnCartClear, "LEFT", -AH_ROW_GAP)
+	if self.IS_RETAIL then
+		placeIn(panel.cartRow2, panel.btnCartBuy, "RIGHT", panel.btnCartRemove, "LEFT", -AH_ROW_GAP)
+	else
+		panel.btnCartBuy:Hide()
+		panel.btnCartBuy.Show = panel.btnCartBuy.Hide
+		panel.btnCartBuy.SetShown = function() end
+	end
+	panel.cartHint = self:CreateText(panel.cartRow2, "GameFontHighlightSmall", "textMuted")
+	panel.cartHint:SetPoint("LEFT")
+	panel.cartHint:SetPoint("RIGHT", self.IS_RETAIL and panel.btnCartBuy or panel.btnCartRemove, "LEFT", -AH_ROW_GAP, 0)
+	panel.cartTableHost:ClearAllPoints()
+	panel.cartTableHost:SetPoint("TOPLEFT", panel.cartRow1, "BOTTOMLEFT", 0, -AH_PAD)
+	panel.cartTableHost:SetPoint("BOTTOMRIGHT", panel.cartRow2, "TOPRIGHT", 0, AH_PAD)
+
+	for _, button in ipairs({ panel.btnDumpFull, refresh, panel.btnPostProfitable, panel.btnPostAll, panel.btnPauseBulk,
+		panel.btnIgnoreItem, panel.btnReserveItem, panel.btnClearRule, panel.btnCartSearch, panel.btnCartRefresh,
+		panel.btnCartBuy, panel.btnCartRemove, panel.btnCartClear }) do
+		self:SkinButton(button)
+		self:SetButtonLabel(button, button:GetText())
+		button:SetHeight(theme.size.control)
+	end
+	self:SkinButton(panel.btnPauseScan)
+	self:SetButtonLabel(panel.btnPauseScan, "Pause", true)
+	self:SkinTree(panel)
+end
+
+-- Places the active tab's table between its controls and the progress row or footer.
+function ProfessionExporter:LayoutAuctionPanelBody(panel, activeTab, progressShown)
+	local sell = activeTab ~= "cart"
+	for _, row in ipairs(panel.sellRows or {}) do
+		row:SetShown(sell)
+	end
+	panel.cartRow1:SetShown(not sell)
+	panel.cartRow2:SetShown(not sell)
+	panel.progressRow:SetShown(sell and progressShown)
+	panel.tableHost:ClearAllPoints()
+	panel.tableHost:SetPoint("TOPLEFT", panel, "TOPLEFT", AH_PAD, -panel.sellTableTop)
+	if sell and progressShown then
+		panel.tableHost:SetPoint("BOTTOMRIGHT", panel.progressRow, "TOPRIGHT", 0, AH_ROW_GAP)
+	else
+		panel.tableHost:SetPoint("BOTTOMRIGHT", panel.footer, "TOPRIGHT", -(AH_PAD - 1), AH_PAD)
+	end
 end
 
 function ProfessionExporter:GetAuctionClassFilterOptions(rows)
@@ -3222,142 +3412,106 @@ function ProfessionExporter:GetAuctionSubclassFilterOptions(rows, classSelection
 	return options
 end
 
+local function rankMarkup(rankIndex)
+	rankIndex = tonumber(rankIndex)
+	if not rankIndex or rankIndex <= 0 then
+		return ""
+	end
+	return string.format(" |A:Professions-Icon-Quality-Tier%d-Small:14:14|a", rankIndex)
+end
+
+-- A badge-like word in its own colour, for the Flag column.
+local function flagText(pe, text, colorKey)
+	local color = pe:GetTheme()[colorKey]
+	return string.format("|cff%02x%02x%02x%s|r", color.r * 255, color.g * 255, color.b * 255, string.upper(text))
+end
+
 function ProfessionExporter:BuildAuctionPanelColumns()
+	local pe = self
 	return {
-		{
+		self:CreateItemColumn({
 			id = "itemRecipe",
-			label = "Item / Recipe",
-			width = 136,
-			sortable = true,
+			label = "Item",
 			defaultSort = "asc",
+			minWidth = 120,
+			getItemID = function(row) return row and row.itemID end,
+			getIcon = function(row) return row and row.itemIcon end,
+			getName = function(row)
+				local marker = (row and row._isScanning) and "› " or ""
+				return marker .. tostring(row and row.itemName or "-") .. rankMarkup(row and row.qualityIndex)
+			end,
 			sortValue = function(row) return row and row.itemName end,
-			createCell = function(rowFrame)
-				local root = CreateFrame("Frame", nil, rowFrame)
-				root:SetHeight(20)
-				local icon = root:CreateTexture(nil, "ARTWORK")
-				icon:SetSize(16, 16)
-				icon:SetPoint("LEFT", root, "LEFT", 0, 0)
-				local rankIcon = root:CreateTexture(nil, "OVERLAY")
-				rankIcon:SetSize(16, 16)
-				rankIcon:SetPoint("TOPLEFT", icon, "TOPLEFT", -2, 2)
-				rankIcon:Hide()
-				local rankText = root:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-				rankText:SetPoint("CENTER", rankIcon, "CENTER", 0, 0)
-				rankText:SetTextColor(1, 1, 1)
-				rankText:Hide()
-				local text = root:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-				text:SetPoint("LEFT", icon, "RIGHT", 6, 0)
-				text:SetPoint("RIGHT", root, "RIGHT", 0, 0)
-				text:SetJustifyH("LEFT")
-				text:SetWordWrap(false)
-				return { root = root, icon = icon, rankIcon = rankIcon, rankText = rankText, text = text }
-			end,
-			updateCell = function(cell, row)
-				cell.icon:SetTexture((row and row.itemIcon) or 134400)
-				applyRankBadge(cell.rankIcon, cell.rankText, row and row.qualityIndex)
-				local scanMarker = (row and row._isScanning) and "[-] " or ""
-				if row and row.recipeName and row.recipeName ~= "" then
-					cell.text:SetText(string.format("%s%s (%s)", scanMarker, row.itemName or "?", row.recipeName))
-				else
-					cell.text:SetText(scanMarker .. (row and row.itemName or "-"))
-				end
-			end,
-		},
+		}),
 		{
-			id = "quantityOwned",
-			label = "Qty",
-			width = 52,
-			sortable = true,
-			defaultSort = "desc",
+			id = "quantityOwned", label = "Qty", justifyH = "RIGHT", width = 58, sortable = true, defaultSort = "desc",
+			tooltipTitle = "Quantity", tooltipText = "Sellable / owned when a keep rule holds some back.",
 			sortValue = function(row) return tonumber(row and row.quantityOwned) or 0 end,
 			getText = function(row)
-				if not row then
-					return "0"
-				end
-				local owned = self:FormatNumberGrouped((row and row.quantityOwned) or 0)
-				local sellable = tonumber(row.quantitySellable) or 0
-				if row.isIgnoredByRule then
+				local owned = pe:FormatNumberGrouped(row and row.quantityOwned or 0)
+				if row and row.isIgnoredByRule then
 					return "0/" .. owned
 				end
-				if (tonumber(row.reserveQty) or 0) > 0 then
-					return self:FormatNumberGrouped(sellable) .. "/" .. owned
+				if (tonumber(row and row.reserveQty) or 0) > 0 then
+					return pe:FormatNumberGrouped(tonumber(row.quantitySellable) or 0) .. "/" .. owned
 				end
 				return owned
 			end,
 		},
 		{
-			id = "auctionRule",
-			label = "Rule",
-			width = 42,
-			sortable = true,
-			defaultSort = "desc",
-			sortValue = function(row)
-				if row and row.isIgnoredByRule then
-					return 2
-				end
-				if (tonumber(row and row.reserveQty) or 0) > 0 then
-					return 1
-				end
-				return 0
-			end,
-			getText = function(row) return row and row.auctionRuleLabel or "-" end,
-		},
-		{
-			id = "currentPrice",
-			label = "Price",
-			width = 72,
-			sortable = true,
-			defaultSort = "desc",
+			id = "currentPrice", label = "Price", justifyH = "RIGHT", width = 84, sortable = true, defaultSort = "desc",
+			tooltipTitle = "Price", tooltipText = "Live lowest buyout. Grey when it comes from an older scan or another addon.",
 			sortValue = function(row) return tonumber(row and row.currentPrice) or -1 end,
 			getText = function(row)
 				if not row or not row.currentPrice then
 					return "-"
 				end
-				local text = self:FormatCopperShort(row.currentPrice)
+				local text = pe:FormatCopperShort(row.currentPrice)
 				if row.currentPriceIsNative ~= true then
-					text = text .. " *"
-				end
-				if row.isDumpedLow then
-					return text .. " !"
+					local muted = pe:GetTheme().textMuted
+					return string.format("|cff%02x%02x%02x%s|r", muted.r * 255, muted.g * 255, muted.b * 255, text)
 				end
 				return text
 			end,
 		},
 		{
-			id = "lastAuctionScan",
-			label = "Scan",
-			width = 68,
-			sortable = true,
-			defaultSort = "desc",
+			id = "lastAuctionScan", label = "Scan", justifyH = "RIGHT", width = 60, sortable = true, defaultSort = "desc", optional = true,
+			tooltipTitle = "Last scanned",
 			sortValue = function(row) return tonumber(row and row.lastAuctionScanAtTs) or 0 end,
 			getText = function(row) return row and row.auctionScanAgeDisplay or "never" end,
 		},
 		{
-			id = "potentialROI",
-			label = "ROI",
-			width = 44,
-			sortable = true,
-			defaultSort = "desc",
+			id = "potentialROI", label = "ROI", justifyH = "RIGHT", width = 46, sortable = true, defaultSort = "desc",
+			tooltipTitle = "Return", tooltipText = "Profit over material cost for crafted items.",
 			sortValue = function(row) return tonumber(row and row.potentialROI) or -9999 end,
 			getText = function(row) return formatPercent(row and row.potentialROI) end,
 		},
 		{
-			id = "personalSaleRate",
-			label = "P-SR",
-			width = 46,
-			sortable = true,
-			defaultSort = "desc",
+			id = "personalSaleRate", label = "Sold", justifyH = "RIGHT", width = 44, sortable = true, defaultSort = "desc", optional = true,
+			tooltipTitle = "Your sale rate", tooltipText = "Share of your own past listings of this item that sold.",
 			sortValue = function(row) return tonumber(row and row.personalSaleRateValue) or -1 end,
 			getText = function(row) return row and row.personalSaleRateDisplay or "-" end,
 		},
 		{
-			id = "dumpAlert",
-			label = "Alert",
-			width = 50,
-			sortable = true,
-			defaultSort = "desc",
-			sortValue = function(row) return row and row.isDumpedLow and 1 or 0 end,
-			getText = function(row) return (row and row.isDumpedLow) and "LOW" or "-" end,
+			id = "dumpAlert", label = "Flag", width = 64, sortable = true, defaultSort = "desc",
+			tooltipTitle = "Flag", tooltipText = "Keep and Ignore rules, and prices that look dumped.",
+			sortValue = function(row)
+				return (row and row.isDumpedLow and 4 or 0) + (row and row.isIgnoredByRule and 2 or 0) + ((tonumber(row and row.reserveQty) or 0) > 0 and 1 or 0)
+			end,
+			getText = function(row)
+				if not row then
+					return ""
+				end
+				if row.isDumpedLow then
+					return flagText(pe, "Low", "warning")
+				end
+				if row.isIgnoredByRule then
+					return flagText(pe, "Ignored", "textMuted")
+				end
+				if (tonumber(row.reserveQty) or 0) > 0 then
+					return flagText(pe, "Keep " .. tostring(row.reserveQty), "gold")
+				end
+				return ""
+			end,
 		},
 	}
 end
@@ -3768,7 +3922,7 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 	local src = refreshState.auctionSourceCounts or {}
 	local dumpState = refreshState.auctionDump
 	local cooldownRemaining = self:GetFullAuctionDumpCooldownRemaining()
-	local lastFullDumpLabel = (tonumber(refreshState.auctionLastFullDumpAt) and date("%H:%M:%S", tonumber(refreshState.auctionLastFullDumpAt))) or "never"
+	local lastFullDumpLabel = self:FormatScanTimestamp(tonumber(refreshState.auctionLastFullDumpAt))
 	local fullDumpStatus = "idle"
 	if dumpState and dumpState.mode == "full" and dumpState.running == true then
 		if dumpState.status == "requesting" then
@@ -3806,21 +3960,15 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 	end
 	local selID = self:GetSelectedAuctionPanelItemID()
 	local selScanLabel = selID and self:FormatAuctionScanAge(self:GetItemLastAuctionScanAt(selID)) or "n/a"
-	if activeTab ~= "cart" then
-		panel.subtitle:SetText("Current character sellables")
-		panel.stats:SetText(string.format(
-			"Rows %d/%d  |  Queue %d  |  Load %s  |  Src N/F %d/%d\nLast queue %s  |  Selected %s  |  Full dump %s  |  Last full %s",
-			#rows,
-			preFilterCount,
-			queuedCount,
-			loadingLine,
-			tonumber(src.native) or 0,
-			tonumber(src.fallback) or 0,
-			self:FormatAuctionScanAge(self:GetLastAuctionQueueScanAt()),
-			selScanLabel,
-			fullDumpStatus,
-			lastFullDumpLabel
-		))
+	if panel.footerText then
+		local footer = cooldownRemaining > 0 and ("Full scan ready in " .. formatDurationShort(cooldownRemaining))
+			or (fullDumpStatus ~= "idle" and ("Full scan " .. fullDumpStatus))
+			or "Full scan ready"
+		panel.footerText:SetText(string.format("%s · Last full scan %s", footer, lastFullDumpLabel))
+	end
+	if panel.table and panel.table.SetFooterText then
+		panel.table:SetFooterText(string.format("%d of %d items", #rows, preFilterCount),
+			queuedCount > 0 and string.format("%d prices queued", queuedCount) or "Click a row to put it in the sell slot")
 	end
 	local total = tonumber(refreshState.auctionScanTotal) or 0
 	local done = tonumber(refreshState.auctionScanDone) or 0
@@ -3842,13 +3990,13 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 	if panel.btnDumpFull then
 		if fullDumpActive then
 			panel.btnDumpFull:SetEnabled(false)
-			panel.btnDumpFull:SetText("Dumping...")
+			panel.btnDumpFull:SetText("Scanning…")
 		elseif cooldownRemaining > 0 then
 			panel.btnDumpFull:SetEnabled(false)
-			panel.btnDumpFull:SetText("CD " .. formatDurationShort(cooldownRemaining))
+			panel.btnDumpFull:SetText(formatDurationShort(cooldownRemaining))
 		else
 			panel.btnDumpFull:SetEnabled(true)
-			panel.btnDumpFull:SetText("Full dump")
+			panel.btnDumpFull:SetText("Full scan")
 		end
 	end
 	if panel.btnDumpVisible then
@@ -3865,6 +4013,9 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 	if panel.btnScanCraftAndAccount then
 		local scanBusy = refreshState.auctionRefreshRunning == true
 		panel.btnScanCraftAndAccount:SetEnabled(not fullDumpActive and not scanBusy)
+	end
+	if panel.btnScanChoice then
+		panel.btnScanChoice:SetEnabled(not fullDumpActive and refreshState.auctionRefreshRunning ~= true)
 	end
 	if panel.btnPauseBulk then
 		if bulkActive then
@@ -3887,16 +4038,16 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 	if panel.progressText then
 		if fullDumpActive then
 			if dumpState.status == "requesting" then
-				panel.progressText:SetText("Full dump: requesting replicate list...")
+				panel.progressText:SetText("Full scan: asking the server…")
 			elseif dumpState.persistTotal and dumpState.persistTotal > 0 then
 				panel.progressText:SetText(string.format(
-					"Full dump persist %s/%s",
+					"Saving %s of %s",
 					self:FormatNumberGrouped(math.min(tonumber(dumpState.persistDone) or 0, tonumber(dumpState.persistTotal) or 0)),
 					self:FormatNumberGrouped(tonumber(dumpState.persistTotal) or 0)
 				))
 			else
 				panel.progressText:SetText(string.format(
-					"Full dump %s/%s",
+					"Full scan %s of %s",
 					self:FormatNumberGrouped(math.min(tonumber(dumpState.done) or 0, tonumber(dumpState.total) or 0)),
 					self:FormatNumberGrouped(tonumber(dumpState.total) or 0)
 				))
@@ -3905,26 +4056,19 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 		elseif bulkActive then
 			displayTotal = tonumber(bulk.total) or 0
 			displayDone = tonumber(bulk.done) or 0
-			local modeLabel = bulk.mode == "post_profitable" and "post-profitable" or "post-all"
-			local currentLabel = bulk.currentItemID and self:GetItemDisplayName(bulk.currentItemID) or "-"
-			panel.progressText:SetText(string.format(
-				"Bulk %d/%d (%s): %s | posted %d | skipped %d | failed %d",
-				math.min(displayDone, displayTotal),
-				displayTotal,
-				modeLabel,
-				bulk.status or currentLabel,
-				tonumber(bulk.posted) or 0,
-				tonumber(bulk.skippedDumped) or 0,
-				tonumber(bulk.failed) or 0
-			))
+			panel.progressText:SetText(string.format("Posting %d of %d", math.min(displayDone, displayTotal), displayTotal))
+			if panel.footerText then
+				panel.footerText:SetText(string.format("%s · posted %d, skipped %d, failed %d",
+					tostring(bulk.status or "Posting"), tonumber(bulk.posted) or 0, tonumber(bulk.skippedDumped) or 0, tonumber(bulk.failed) or 0))
+			end
 			panel.progressText:Show()
 		elseif (scanActive or scanPaused) and total > 0 then
 			local verb = scanPaused and "Paused" or "Scanning"
-			panel.progressText:SetText(string.format("%s %d/%d (%s): %s", verb, math.min(done, total), total, mode, activeName))
+			panel.progressText:SetText(string.format("%s %d of %d", verb, math.min(done, total), total))
 			panel.progressText:Show()
 		elseif cooldownRemaining > 0 then
-			panel.progressText:SetText("Full dump cooldown: " .. formatDurationShort(cooldownRemaining))
-			panel.progressText:Show()
+			panel.progressText:SetText("")
+			panel.progressText:Hide()
 		else
 			panel.progressText:SetText("Idle")
 			panel.progressText:Hide()
@@ -3968,7 +4112,7 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 			local started = tonumber(refreshState.auctionRefreshStartedAt) or gt
 			local elapsed = math.max(0, gt - started)
 			if scanPaused then
-				panel.progressTiming:SetText(string.format("Elapsed: %s  |  Paused", formatDurationShort(elapsed)))
+				panel.progressTiming:SetText("paused")
 			else
 				local etaStr = "…"
 				if done > 0 and total > done then
@@ -3976,7 +4120,7 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 				elseif total > 0 and done >= total then
 					etaStr = "0s"
 				end
-				panel.progressTiming:SetText(string.format("Elapsed: %s  |  Est. remaining: ~%s", formatDurationShort(elapsed), etaStr))
+				panel.progressTiming:SetText(string.format("about %s left", etaStr))
 			end
 			panel.progressTiming:Show()
 		else
@@ -3989,7 +4133,7 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 		if self.StyleShellButton then
 			self:StyleShellButton(panel.tabSell, activeTab == "sell")
 		end
-		panel.tabSell:SetAlpha(activeTab == "sell" and 1 or 0.9)
+		panel.tabSell:SetAlpha(1)
 		panel.tabSell:EnableMouse(true)
 		panel.tabSell:RegisterForClicks("LeftButtonUp")
 	end
@@ -3998,13 +4142,10 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 		if self.StyleShellButton then
 			self:StyleShellButton(panel.tabCart, activeTab == "cart")
 		end
-		panel.tabCart:SetAlpha(activeTab == "cart" and 1 or 0.9)
+		panel.tabCart:SetAlpha(1)
 		panel.tabCart:EnableMouse(true)
 		panel.tabCart:RegisterForClicks("LeftButtonUp")
-		panel.tabCart:SetText(cartOutstanding > 0 and string.format("Cart (%d)", cartOutstanding) or "Shopping cart")
-		if panel.tabCart.GetTextWidth and panel.tabCart.SetWidth then
-			panel.tabCart:SetWidth(math.max(92, math.min(148, panel.tabCart:GetTextWidth() + 24)))
-		end
+		self:SetButtonLabel(panel.tabCart, cartOutstanding > 0 and string.format("Cart (%d)", cartOutstanding) or "Cart", true)
 	end
 	for _, control in ipairs(panel.sellControls or {}) do
 		if control and control.SetShown then
@@ -4015,9 +4156,10 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 	end
 	if panel.subtitle then panel.subtitle:SetShown(activeTab == "sell") end
 	if panel.stats then panel.stats:SetShown(activeTab == "sell") end
-	if panel.btnPauseScan then panel.btnPauseScan:SetShown(activeTab == "sell") end
-	if panel.progressText then panel.progressText:SetShown(activeTab == "sell" and panel.progressText:GetText() ~= "") end
-	if panel.progressTiming then panel.progressTiming:SetShown(activeTab == "sell") end
+	if panel.progressRow then
+		local progressShown = panel.progressText:IsShown() and panel.progressText:GetText() ~= ""
+		self:LayoutAuctionPanelBody(panel, activeTab, progressShown)
+	end
 	if panel.tableHost then
 		panel.tableHost:SetShown(activeTab == "sell")
 	end
@@ -4026,21 +4168,10 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 	end
 	if panel.cartSummary then
 		panel.cartSummary:SetShown(activeTab == "cart")
-		panel.cartSummary:SetText(string.format(
-			"Buy on this character; mail destinations per row  |  %d lines  |  Buy %s  |  Est. %s",
-			cartOutstanding,
-			self:FormatNumberGrouped(cartQuantityToBuy),
-			cartEstimatedBuyCostText
-		))
-		if activeTab == "cart" then
-			panel.cartSummary:ClearAllPoints()
-			-- Left-align like Sell subtitle/stats (do not anchor to right-side tab buttons).
-			panel.cartSummary:SetPoint("TOPLEFT", panel.title or panel, "BOTTOMLEFT", 0, -4)
-			panel.cartSummary:SetPoint("RIGHT", panel, "RIGHT", -10, 0)
-		else
-			panel.cartSummary:ClearAllPoints()
-			panel.cartSummary:SetPoint("TOPLEFT", panel.stats, "BOTTOMLEFT", 0, -6)
-			panel.cartSummary:SetPoint("RIGHT", panel, "RIGHT", -10, 0)
+		panel.cartSummary:SetText("Reagents for your queued crafts. Buy them on this character; the mailbox panel sends the rest to your other characters.")
+		if panel.cartTable and panel.cartTable.SetFooterText then
+			panel.cartTable:SetFooterText(string.format("%d items, %s to buy", cartOutstanding, self:FormatNumberGrouped(cartQuantityToBuy)),
+				cartEstimatedBuyCost > 0 and ("About " .. cartEstimatedBuyCostText) or nil)
 		end
 	end
 	if panel.cartSearchBox then
@@ -4069,33 +4200,6 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 			panel.__ahCartLayoutV3 = true
 			panel.cartTable.autoFitToScroll = true
 			panel.cartTable:SetColumns(self:BuildAuctionCartColumns())
-			if panel.cartSummary and panel.title then
-				panel.cartSummary:ClearAllPoints()
-				panel.cartSummary:SetPoint("TOPLEFT", panel.title, "BOTTOMLEFT", 0, -4)
-				panel.cartSummary:SetPoint("RIGHT", panel, "RIGHT", -10, 0)
-			end
-			if panel.cartSearchBox and panel.cartSummary then
-				panel.cartSearchBox:ClearAllPoints()
-				panel.cartSearchBox:SetPoint("TOPLEFT", panel.cartSummary, "BOTTOMLEFT", 0, -8)
-			end
-			if panel.btnCartBuy and panel.cartSearchBox and panel.cartTableHost then
-				panel.btnCartBuy:ClearAllPoints()
-				panel.btnCartBuy:SetPoint("TOPLEFT", panel.cartSearchBox, "BOTTOMLEFT", 0, -6)
-				panel.btnCartBuy:SetSize(86, 20)
-				if panel.btnCartRemove then
-					panel.btnCartRemove:ClearAllPoints()
-					panel.btnCartRemove:SetPoint("LEFT", panel.btnCartBuy, "RIGHT", 4, 0)
-					panel.btnCartRemove:SetSize(70, 20)
-				end
-				if panel.btnCartClear then
-					panel.btnCartClear:ClearAllPoints()
-					panel.btnCartClear:SetPoint("LEFT", panel.btnCartRemove or panel.btnCartBuy, "RIGHT", 4, 0)
-					panel.btnCartClear:SetSize(56, 20)
-				end
-				panel.cartTableHost:ClearAllPoints()
-				panel.cartTableHost:SetPoint("TOPLEFT", panel.btnCartBuy, "BOTTOMLEFT", 0, -8)
-				panel.cartTableHost:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -2, 52)
-			end
 		end
 		local filteredCartRows = self:FilterAuctionCraftCartRows(cartRows)
 		panel.cartTable:SetRows(filteredCartRows)
@@ -4126,6 +4230,15 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 		end
 		if panel.btnCartClear then
 			panel.btnCartClear:SetEnabled(#filteredCartRows > 0)
+		end
+		if panel.cartHint then
+			local unpriced = 0
+			for _, row in ipairs(filteredCartRows) do
+				if (tonumber(row.quantityToBuy) or 0) > 0 and not tonumber(row.estimatedBuyCost) then
+					unpriced = unpriced + 1
+				end
+			end
+			panel.cartHint:SetText(unpriced > 0 and string.format("%d %s no price yet. Press Price all.", unpriced, unpriced == 1 and "item has" or "items have") or "")
 		end
 	end
 end

@@ -110,18 +110,19 @@ Use account_summary when you only need cross-character rollups without full reci
 	{
 		id = "inventory_tab",
 		title = "Inventory tab & economy",
-		body = [=[INVENTORY TAB (dashboard)
-Open the main window (/auctionhelper or /profexport) and use the Inventory tab for a sortable table of profession-relevant items from stored snapshots (same item set as the inventory export scope).
+		body = [=[INVENTORY TAB
+Open the dashboard (/auctionhelper) and pick Inventory. The table lists the profession-relevant items stored for your characters, one row per item.
 
-Columns: Role (from your scanned recipes - Crafted, Crafting reagent, Crafted + reagent, or Tracked), Name, Qty, bags/bank/warband split, and optional economy columns. In the sidebar, pick "All characters (account)" to list one row per character x item with stock; pick a single character to hide the Character column.
+Columns: Item, Qty and, by default, Current AH, Avg craft, Profit each and SR. Use Columns in the toolbar to show Bags / bank, Last AH, Avg AH, Last craft, Profit, all and Seen. Drag a column header to move it; click it to sort.
 
-Search filters by item name, item id, role, and type text. The left sidebar uses multi-select dropdown filters for role and item type. Click column headers to sort ascending/descending.
+FILTERS
+Search matches item name, item ID, role and type. The toolbar dropdowns filter by character, role (Crafted, Crafting reagent, Crafted + reagent, Tracked) and item type. The time range sets how far back averages and charts look. Refresh reads bags and bank again on this character.
 
-Economy columns (optional): Market uses TSM_API GetCustomPriceValue with your settings string (default dbmarket), then Auctionator scan price if enabled as fallback. Mat estimates material cost per crafted unit for items that are recipe outputs: reagent quantities from stored schematics × unit prices (TSM mat string default Crafting, then dbmarket, then Auctionator). Mgn is market minus mat per unit. SR uses a TSM custom price string (default DBRegionSaleRate) when TSM is loaded—this is whatever TSM evaluates for that string, not a separate Blizzard statistic.
+ITEM DETAILS
+Click a row to open the detail pane: auction price, averages, craft cost, where you hold the item, a chart (Price, Craft cost or Quantity) and the scanned recipes that make or use it. Shift-click a row to link the item in chat.
 
-Totals in the summary line sum qty × unit price over visible rows (filtered list). These are third-party estimates, not official game values.
-
-TSM and Auctionator are optional; the addon loads without them. OptionalDeps helps load order when those addons are present. There is no public TSM API for raw auction-house ledgers line-by-line; we only show prices TSM can evaluate via custom price strings.]=],
+PRICES
+Current AH comes from your auction house scans. With TSM loaded, prices use your TSM price strings (market dbmarket, materials Crafting); Auctionator is a fallback when enabled. SR is the TSM sale rate string (default DBRegionSaleRate). Totals in the table footer add up quantity times price for the rows shown. These are estimates, not official game values.]=],
 	},
 	{
 		id = "savedvars_paging",

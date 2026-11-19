@@ -1,24 +1,6 @@
 local addonName, ProfessionExporter = ...
 
 local PROFESSION_PANEL_WATCHER_KEY = "professionCraftPanel"
-local RANK_BADGE_PX = 16
-local RANK_ICON_GAP = 4
-
-local function applyRankBadge(texture, text, rankIndex)
-	if not texture or not text or not rankIndex or rankIndex <= 0 then
-		if texture then texture:Hide() end
-		if text then text:Hide() end
-		return
-	end
-	local atlas = "Professions-Icon-Quality-Tier" .. tostring(rankIndex) .. "-Inv"
-	if texture.SetAtlas then
-		texture:SetAtlas(atlas, true)
-	end
-	texture:SetSize(RANK_BADGE_PX, RANK_BADGE_PX)
-	texture:Show()
-	text:SetText(tostring(rankIndex))
-	text:Show()
-end
 
 function ProfessionExporter:GetProfessionCraftOperationSignature()
 	if not self.IS_SUPPORTED then
@@ -479,7 +461,7 @@ function ProfessionExporter:UpdateProfessionPanelToggleButton(expanded)
 	local toggle = panel.panelToggleBtn
 	if toggle then
 		toggle:Show()
-		toggle:SetText(expanded and "Hide AH" or "Show AH")
+		toggle:SetText(expanded and "Hide panel" or "Show panel")
 	end
 	-- Legacy skinny side tab (kept hidden; toggle lives on the profession title bar).
 	if panel.collapseTab then
@@ -588,6 +570,313 @@ function ProfessionExporter:LayoutProfessionCraftEconomyPanel(panel)
 	end
 end
 
+local PANEL_WIDTH = 400
+local PAD = 12
+local TALL_ROW = 36
+
+local function rankMarkup(rankIndex)
+	rankIndex = tonumber(rankIndex)
+	if not rankIndex or rankIndex <= 0 then
+		return ""
+	end
+	return string.format(" |A:Professions-Icon-Quality-Tier%d-Small:14:14|a", rankIndex)
+end
+
+local function queueOpenRecipe(amount)
+	local pe = ProfessionExporter
+	local order = pe.GetOpenCraftingOrder and pe:GetOpenCraftingOrder() or nil
+	if order and pe.AddCraftingOrderToWorkQueue then
+		pe:PrintMessage(string.format("Queueing crafting order #%s...", tostring(order.orderID or "?")))
+		pe:AddCraftingOrderToWorkQueue(order)
+	elseif pe.QueueOpenProfessionRecipe then
+		pe:QueueOpenProfessionRecipe(amount)
+	elseif pe._lastProfessionEvalContext then
+		pe:AddCraftToQueue(pe._lastProfessionEvalContext, amount)
+	end
+	if pe.CraftingOrderViewRefreshButtons then
+		pe:CraftingOrderViewRefreshButtons(nil, order)
+	end
+end
+
+local function createRecipeView(pe, f)
+	local host = CreateFrame("Frame", nil, f)
+	host:SetPoint("TOPLEFT", f, "TOPLEFT", PAD, -(pe:GetTheme().size.header + 1 + PAD))
+	host:SetPoint("BOTTOMRIGHT", f.footer, "TOPRIGHT", -(PAD - 1), PAD)
+	f.infoHost = host
+
+	host.empty = pe:CreateEmptyState(host)
+	host.empty:SetAllPoints()
+	host.body = CreateFrame("Frame", nil, host)
+	host.body:SetAllPoints()
+
+	host.header = pe:CreateDetailHeader(host.body)
+	host.header:SetPoint("TOPLEFT")
+	host.header:SetPoint("TOPRIGHT")
+	host.statsRow = CreateFrame("Frame", nil, host.body)
+	host.statsRow:SetPoint("TOPLEFT", host.header, "BOTTOMLEFT", 0, -10)
+	host.statsRow:SetPoint("TOPRIGHT", host.header, "BOTTOMRIGHT", 0, -10)
+	host.statsRow:SetHeight(58)
+	host.stats = { pe:CreateStat(host.statsRow), pe:CreateStat(host.statsRow), pe:CreateStat(host.statsRow) }
+	host.statsRow:SetScript("OnSizeChanged", function()
+		pe:LayoutEvenRow(host.statsRow, host.stats, 0, 8)
+	end)
+	host.facts = pe:CreateKeyValueList(host.body)
+	host.facts:SetPoint("TOPLEFT", host.statsRow, "BOTTOMLEFT", 0, -10)
+	host.facts:SetPoint("TOPRIGHT", host.statsRow, "BOTTOMRIGHT", 0, -10)
+	host.materialsHeading = pe:CreateHeading(host.body, "Materials per craft")
+	host.materialsHeading:SetPoint("TOPLEFT", host.facts, "BOTTOMLEFT", 0, -10)
+	host.materialsHeading:SetPoint("TOPRIGHT", host.facts, "BOTTOMRIGHT", 0, -10)
+
+	host.actions = CreateFrame("Frame", nil, host)
+	host.actions:SetPoint("BOTTOMLEFT")
+	host.actions:SetPoint("BOTTOMRIGHT")
+	host.actions:SetHeight(26)
+	host.qty = CreateFrame("EditBox", nil, host.actions, "InputBoxTemplate")
+	host.qty:SetSize(32, 22)
+	host.qty:SetPoint("LEFT", 6, 0)
+	host.qty:SetAutoFocus(false)
+	host.qty:SetNumeric(true)
+	host.qty:SetMaxLetters(4)
+	host.qty:SetJustifyH("RIGHT")
+	host.qty:SetText("1")
+	host.qty:SetScript("OnEnterPressed", function(box) box:ClearFocus() end)
+	pe:SkinEditBox(host.qty)
+	f.addButton = pe:CreateButton(host.actions, "Add to queue", function()
+		queueOpenRecipe(math.max(1, tonumber(host.qty:GetText()) or 1))
+	end, { primary = true })
+	f.addButton:SetPoint("LEFT", host.qty, "RIGHT", 10, 0)
+	f.exportBtn = pe:CreateButton(host.actions, "Export", function()
+		local info = C_TradeSkillUI and C_TradeSkillUI.GetBaseProfessionInfo and C_TradeSkillUI.GetBaseProfessionInfo() or nil
+		if not (info and tonumber(info.professionID or info.profession or info.skillLineID)) then
+			pe:PrintMessage("Open a profession window first.")
+			return
+		end
+		pe:ScanOpenProfession({ exportTalents = true })
+	end, { tooltip = "Scan this profession, then open the export window." })
+	f.exportBtn:SetPoint("RIGHT")
+	f.scanBtn = pe:CreateButton(host.actions, "Scan", function()
+		pe:ScanOpenProfession()
+	end, { tooltip = "Store every recipe and reagent of this profession." })
+	f.scanBtn:SetPoint("RIGHT", f.exportBtn, "LEFT", -8, 0)
+
+	host.materials = pe:CreateReusableTable(host.body, {
+		autoFitToScroll = true,
+		footer = true,
+		emptyTitle = "No materials",
+		emptyHint = "This recipe has no stored reagents.",
+	})
+	host.materials.frame:SetPoint("TOPLEFT", host.materialsHeading, "BOTTOMLEFT", 0, -6)
+	host.materials.frame:SetPoint("BOTTOMRIGHT", host.actions, "TOPRIGHT", 0, 10)
+	host.materials:SetColumns({
+		pe:CreateItemColumn({ label = "Reagent", sortable = false,
+			getItemID = function(slot) return slot.itemID end,
+			getName = function(slot) return pe:GetItemDisplayName(slot.itemID) end }),
+		{ id = "need", label = "Need", width = 40, justifyH = "RIGHT", getText = function(slot) return tostring(slot.need) end },
+		{ id = "have", label = "Have", width = 46, justifyH = "RIGHT",
+			getText = function(slot)
+				local danger = pe:GetTheme().danger
+				if slot.have < slot.need then
+					return string.format("|cff%02x%02x%02x%s|r", danger.r * 255, danger.g * 255, danger.b * 255, pe:FormatNumberGrouped(slot.have))
+				end
+				return pe:FormatNumberGrouped(slot.have)
+			end },
+		{ id = "cost", label = "Cost", width = 76, justifyH = "RIGHT", getText = function(slot) return slot.cost and pe:FormatCopperShort(slot.cost) or "-" end },
+	})
+	return host
+end
+
+local function stepperCell(pe)
+	return function(rowFrame)
+		local cell = CreateFrame("Frame", nil, rowFrame)
+		cell.minus = pe:CreateButton(cell, "-", nil, { small = true, width = 22 })
+		cell.minus:SetPoint("LEFT", 5, 0)
+		cell.value = pe:CreateText(cell, "NumberFontNormalSmall", "textPrimary", "CENTER")
+		cell.value:SetPoint("LEFT", cell.minus, "RIGHT", 0, 0)
+		cell.value:SetWidth(26)
+		cell.plus = pe:CreateButton(cell, "+", nil, { small = true, width = 22 })
+		cell.plus:SetPoint("LEFT", cell.value, "RIGHT", 0, 0)
+		return cell
+	end
+end
+
+local function createQueueView(pe, f)
+	local host = CreateFrame("Frame", nil, f)
+	host:SetPoint("TOPLEFT", f.infoHost, "TOPLEFT")
+	host:SetPoint("BOTTOMRIGHT", f.infoHost, "BOTTOMRIGHT")
+	host:Hide()
+	f.queueHost = host
+
+	-- Crafting order navigation (retail): placed by the crafting orders module.
+	local orderNav = CreateFrame("Frame", nil, host)
+	orderNav:SetPoint("TOPLEFT")
+	orderNav:SetPoint("TOPRIGHT")
+	orderNav:SetHeight(48)
+	orderNav:Hide()
+	f.orderNav = orderNav
+	f.peAddWorkOrderBtn = pe:CreateButton(orderNav, "Add to shopping", nil, { tooltip = "Adds this order's crafter-supplied reagents to the cart without starting the order." })
+	f.peAddWorkOrderBtn:SetPoint("TOPLEFT")
+	f.peAddWorkOrderBtn:Hide()
+	f.peRemoveWorkOrderBtn = pe:CreateButton(orderNav, "Remove")
+	f.peRemoveWorkOrderBtn:SetPoint("LEFT", f.peAddWorkOrderBtn, "RIGHT", 8, 0)
+	f.peRemoveWorkOrderBtn:Hide()
+	f.pePrevOrderBtn = pe:CreateButton(orderNav, "Previous", nil, { small = true })
+	f.pePrevOrderBtn:SetPoint("TOPLEFT", f.peAddWorkOrderBtn, "BOTTOMLEFT", 0, -4)
+	f.pePrevOrderBtn:Hide()
+	f.peNextOrderBtn = pe:CreateButton(orderNav, "Next", nil, { small = true })
+	f.peNextOrderBtn:SetPoint("LEFT", f.pePrevOrderBtn, "RIGHT", 8, 0)
+	f.peNextOrderBtn:Hide()
+	f.peQueueStatusText = pe:CreateText(orderNav, "GameFontHighlightSmall", "textMuted")
+	f.peQueueStatusText:SetPoint("LEFT", f.peNextOrderBtn, "RIGHT", 8, 0)
+	f.peQueueStatusText:Hide()
+
+	local card = CreateFrame("Frame", nil, host)
+	card:SetPoint("TOPLEFT")
+	card:SetPoint("TOPRIGHT")
+	card:SetPoint("BOTTOMLEFT", host, "BOTTOMLEFT", 0, 30)
+	f.queueCard = card
+
+	f.queueOverviewText = pe:CreateParagraph(card)
+	f.queueOverviewText:SetPoint("TOPLEFT")
+	f.queueOverviewText:SetPoint("TOPRIGHT")
+	f.recipeTitle = pe:CreateHeading(card, "To craft")
+	f.recipeTitle:SetPoint("TOPLEFT", f.queueOverviewText, "BOTTOMLEFT", 0, -8)
+	f.recipeTitle:SetPoint("TOPRIGHT", f.queueOverviewText, "BOTTOMRIGHT", 0, -8)
+	f.recipeTable = pe:CreateReusableTable(card, {
+		rowHeight = TALL_ROW,
+		autoFitToScroll = true,
+		emptyTitle = "Nothing queued",
+		emptyHint = "Pick a recipe and press Add to queue.",
+		onRowClick = function(_, row)
+			if not row then
+				return
+			end
+			local orderID = tonumber(row.orderID)
+			if orderID and pe.OpenCraftingOrderWorkQueueEntry then
+				local storage = pe.GetCraftingOrderWorkQueueStorage and pe:GetCraftingOrderWorkQueueStorage() or {}
+				pe:OpenCraftingOrderWorkQueueEntry(type(storage[tostring(orderID)]) == "table" and storage[tostring(orderID)]
+					or { orderID = orderID, spellID = row.recipeID, itemID = row.outputItemID })
+				return
+			end
+			pe:JumpToProfessionRecipe(row.recipeID, row.skillLineID)
+		end,
+	})
+	f.recipeTable.frame:SetPoint("TOPLEFT", f.recipeTitle, "BOTTOMLEFT", 0, -6)
+	f.recipeTable.frame:SetPoint("TOPRIGHT", f.recipeTitle, "BOTTOMRIGHT", 0, -6)
+	f.recipeTable:SetColumns({
+		{ id = "recipe", label = "Recipe", width = 100, flex = 1, minWidth = 90,
+			createCell = function(rowFrame)
+				local cell = CreateFrame("Frame", nil, rowFrame)
+				cell.name = pe:CreateText(cell, "GameFontHighlightSmall")
+				cell.name:SetPoint("BOTTOMLEFT", cell, "LEFT", 5, 1)
+				cell.name:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
+				cell.detail = pe:CreateText(cell, "GameFontHighlightSmall", "textMuted")
+				cell.detail:SetPoint("TOPLEFT", cell, "LEFT", 5, -1)
+				cell.detail:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
+				return cell
+			end,
+			updateCell = function(cell, row)
+				cell.name:SetText(row.recipeLabel .. rankMarkup(row.qualityIndex))
+				cell.detail:SetText(row.detailText)
+			end },
+		{ id = "qty", label = "Qty", width = 80, createCell = stepperCell(pe),
+			updateCell = function(cell, row)
+				cell.value:SetText(tostring(row.quantity))
+				cell.minus:SetScript("OnClick", function() pe:UpdateCraftQueueQuantity(row.queueKey, row.quantity - 1) end)
+				cell.plus:SetScript("OnClick", function() pe:UpdateCraftQueueQuantity(row.queueKey, row.quantity + 1) end)
+			end },
+		{ id = "craft", label = "", width = 56,
+			createCell = function(rowFrame)
+				local cell = CreateFrame("Frame", nil, rowFrame)
+				cell.button = pe:CreateButton(cell, "Craft", nil, { small = true, width = 46 })
+				cell.button:SetPoint("CENTER")
+				return cell
+			end,
+			updateCell = function(cell, row)
+				cell.button:SetScript("OnClick", function() pe:CraftProfessionQueueRecipe(row) end)
+				cell.button:SetEnabled(row.recipeID ~= nil and row.canCraftNow == true)
+				pe:SetButtonPrimary(cell.button, row.canCraftNow == true)
+			end },
+		{ id = "remove", label = "", width = 30,
+			createCell = function(rowFrame)
+				local cell = CreateFrame("Frame", nil, rowFrame)
+				cell.button = CreateFrame("Button", nil, cell, "UIPanelCloseButton")
+				cell.button:ClearAllPoints()
+				cell.button:SetPoint("CENTER")
+				pe:SkinCloseButton(cell.button)
+				return cell
+			end,
+			updateCell = function(cell, row)
+				cell.button:SetScript("OnClick", function() pe:RemoveCraftFromQueue(row.queueKey) end)
+			end },
+	})
+
+	f.reagentTitle = pe:CreateHeading(card, "To buy")
+	f.reagentTitle:SetPoint("TOPLEFT", f.recipeTable.frame, "BOTTOMLEFT", 0, -10)
+	f.reagentTitle:SetPoint("TOPRIGHT", f.recipeTable.frame, "BOTTOMRIGHT", 0, -10)
+	f.reagentTable = pe:CreateReusableTable(card, {
+		autoFitToScroll = true,
+		footer = true,
+		sortKey = "totalCost",
+		sortAsc = false,
+		emptyTitle = "Nothing to buy",
+		emptyHint = "This character has every material the queue needs.",
+		onRowEnter = function(rowFrame, row)
+			if row then
+				pe:ShowItemRowTooltip(rowFrame, row.itemID, {
+					{ "Buy", pe:FormatNumberGrouped(row.quantity) },
+					{ "Each", row.unitPrice and pe:FormatCopperFull(row.unitPrice) or "-" },
+					{ "Used by", table.concat(row.recipeRefs or {}, ", ") },
+				}, "Click to find it at the auction house")
+			end
+		end,
+		onRowLeave = function()
+			GameTooltip:Hide()
+		end,
+		onRowClick = function(_, row)
+			local itemID = row and tonumber(row.itemID)
+			if not itemID then
+				return
+			end
+			pe:GetState().auctionCartSelectedItemID = itemID
+			if pe.SetAuctionPanelActiveTab then
+				pe:SetAuctionPanelActiveTab("cart", true)
+			end
+			if pe.SearchAuctionCartRow and pe:SearchAuctionCartRow({ itemID = itemID, quantity = row.quantity }) then
+				pe:PrintMessage(string.format("Searching AH for %s.", pe:GetItemDisplayName(itemID)))
+			elseif not (_G.AuctionHouseFrame and _G.AuctionHouseFrame:IsShown()) and not (_G.AuctionFrame and _G.AuctionFrame:IsShown()) then
+				pe:PrintMessage("Open the auction house to find reagents from the cart.")
+			end
+		end,
+	})
+	f.reagentTable.frame:SetPoint("TOPLEFT", f.reagentTitle, "BOTTOMLEFT", 0, -6)
+	f.reagentTable.frame:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", 0, 0)
+	f.reagentTable:SetColumns({
+		pe:CreateItemColumn({ label = "Reagent", sortable = true,
+			getItemID = function(row) return row.itemID end,
+			getName = function(row) return row.name .. rankMarkup(row.qualityIndex) end }),
+		{ id = "quantity", label = "Buy", width = 40, justifyH = "RIGHT", sortable = true, defaultSort = "desc",
+			sortValue = function(row) return row.quantity end, getText = function(row) return pe:FormatNumberGrouped(row.quantity) end },
+		{ id = "unitPrice", label = "Each", width = 70, justifyH = "RIGHT", optional = true, sortable = true, defaultSort = "desc",
+			sortValue = function(row) return row.unitPrice or -1 end,
+			getText = function(row) return row.unitPrice and pe:FormatCopperShort(row.unitPrice) or "-" end },
+		{ id = "totalCost", label = "Total", width = 76, justifyH = "RIGHT", sortable = true, defaultSort = "desc",
+			sortValue = function(row) return row.totalCost or -1 end,
+			getText = function(row) return row.totalCost and pe:FormatCopperShort(row.totalCost) or "-" end },
+	})
+
+	local actions = CreateFrame("Frame", nil, host)
+	actions:SetPoint("BOTTOMLEFT")
+	actions:SetPoint("BOTTOMRIGHT")
+	actions:SetHeight(26)
+	local open = pe:CreateButton(actions, "Open in dashboard", function() pe:OpenCraftsTabWithQueueFocus() end)
+	open:SetPoint("LEFT")
+	f.clearQueueButton = pe:CreateButton(actions, "Clear queue", function() pe:ClearCraftQueue() end)
+	f.clearQueueButton:SetPoint("RIGHT")
+	local danger = pe:GetTheme().danger
+	f.clearQueueButton:GetFontString():SetTextColor(danger.r, danger.g, danger.b)
+	return host
+end
+
 function ProfessionExporter:EnsureProfessionCraftEconomyPanel()
 	if self._professionCraftPanel then
 		self:LayoutProfessionCraftEconomyPanel(self._professionCraftPanel)
@@ -600,709 +889,116 @@ function ProfessionExporter:EnsureProfessionCraftEconomyPanel()
 	if not pf then
 		return nil
 	end
+	local pe = self
+	local theme = self:GetTheme()
 
 	local f = CreateFrame("Frame", addonName .. "ProfessionEconomyBlock", pf, "BackdropTemplate")
 	f:SetFrameStrata("MEDIUM")
-	f:SetWidth(400)
+	f:SetWidth(PANEL_WIDTH)
 	self:LayoutProfessionCraftEconomyPanel(f)
-	self:StylePanel(f, "surface2")
-	local theme = self:GetTheme()
+	self:StyleWindow(f)
+	f:SetClampedToScreen(true)
 
-	local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	title:SetPoint("TOPLEFT", 10, -10)
-	title:SetText("AuctionHelper")
-	f.title = title
+	-- Header: title and the Recipe / Queue switch.
+	f.tabQueue = self:CreateButton(f, "Queue", function()
+		pe:SetProfessionPanelActiveTab("queue", true)
+	end, { small = true })
+	f.tabQueue:SetPoint("RIGHT", f, "TOPRIGHT", -PAD, -(theme.size.header / 2))
+	f.tabInfo = self:CreateButton(f, "Recipe", function()
+		pe:SetProfessionPanelActiveTab("info", true)
+	end, { small = true })
+	f.tabInfo:SetPoint("RIGHT", f.tabQueue, "LEFT", 1, 0)
+	f.title = self:CreateText(f, "GameFontNormalLarge", "gold")
+	f.title:SetPoint("LEFT", f, "TOPLEFT", PAD, -(theme.size.header / 2) - 1)
+	f.title:SetPoint("RIGHT", f.tabInfo, "LEFT", -12, 0)
+	f.title:SetText("AuctionHelper")
+	local headerRule = f:CreateTexture(nil, "BORDER")
+	headerRule:SetPoint("TOPLEFT", 1, -theme.size.header)
+	headerRule:SetPoint("TOPRIGHT", -1, -theme.size.header)
+	headerRule:SetHeight(1)
+	headerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
 
-	local tabQueue = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-	tabQueue:SetSize(64, 20)
-	tabQueue:SetPoint("TOPRIGHT", f, "TOPRIGHT", -10, -8)
-	tabQueue:SetText("Queue")
-	tabQueue:SetScript("OnClick", function()
-		ProfessionExporter:SetProfessionPanelActiveTab("queue", true)
-	end)
-	f.tabQueue = tabQueue
+	-- Footer: when this profession was scanned.
+	f.footer = CreateFrame("Frame", nil, f)
+	f.footer:SetPoint("BOTTOMLEFT", 1, 1)
+	f.footer:SetPoint("BOTTOMRIGHT", -1, 1)
+	f.footer:SetHeight(theme.size.footer)
+	local footerRule = f.footer:CreateTexture(nil, "BORDER")
+	footerRule:SetPoint("TOPLEFT")
+	footerRule:SetPoint("TOPRIGHT")
+	footerRule:SetHeight(1)
+	footerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	f.footerText = self:CreateText(f.footer, "GameFontHighlightSmall", "textMuted")
+	f.footerText:SetPoint("LEFT", PAD, 0)
+	f.footerText:SetPoint("RIGHT", -PAD, 0)
 
-	local tabInfo = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-	tabInfo:SetSize(96, 20)
-	tabInfo:SetPoint("RIGHT", tabQueue, "LEFT", -4, 0)
-	tabInfo:SetText("Crafting info")
-	tabInfo:SetScript("OnClick", function()
-		ProfessionExporter:SetProfessionPanelActiveTab("info", true)
-	end)
-	f.tabInfo = tabInfo
-
-	-- Visible toggle next to the profession window close button (not a skinny side tab).
+	-- Toggle on the profession window's title bar, left of its close button.
 	local panelToggle = CreateFrame("Button", addonName .. "ProfessionPanelToggle", pf, "UIPanelButtonTemplate")
-	panelToggle:SetSize(72, 22)
-	panelToggle:SetText("Hide AH")
+	panelToggle:SetText("Hide panel")
+	self:SkinButton(panelToggle)
+	panelToggle:SetSize(80, theme.size.controlSmall)
 	anchorProfessionPanelToggleButton(panelToggle, pf)
-	panelToggle:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-		GameTooltip:AddLine("AuctionHelper profession panel", 1, 1, 1)
-		GameTooltip:AddLine("Show or hide the side panel (shopping cart, crafting info).", 1, 0.9, 0.6, true)
+	panelToggle:HookScript("OnEnter", function(button)
+		GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
+		GameTooltip:SetText("AuctionHelper panel", 1, 1, 1)
+		GameTooltip:AddLine("Show or hide recipe profit and the craft queue.", theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, true)
 		GameTooltip:Show()
 	end)
-	panelToggle:SetScript("OnLeave", GameTooltip_Hide)
+	panelToggle:HookScript("OnLeave", GameTooltip_Hide)
 	panelToggle:SetScript("OnClick", function()
-		local wasExpanded = ProfessionExporter:GetSetting("professions.sidePanelExpanded", true) ~= false
-		ProfessionExporter:ApplyProfessionPanelExpanded(not wasExpanded)
+		local wasExpanded = pe:GetSetting("professions.sidePanelExpanded", true) ~= false
+		pe:ApplyProfessionPanelExpanded(not wasExpanded)
 		if not wasExpanded then
-			ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
+			pe:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
 		end
 	end)
 	f.panelToggleBtn = panelToggle
 
-	-- Keep legacy frame name for any external references; never shown.
-	local collapseTab = CreateFrame("Button", addonName .. "ProfessionPanelTab", pf)
-	collapseTab:SetSize(1, 1)
-	collapseTab:Hide()
-	f.collapseTab = collapseTab
-	f.collapseTabText = nil
-
-	local infoHost = CreateFrame("Frame", nil, f)
-	infoHost:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -36)
-	infoHost:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -8, 8)
-	f.infoHost = infoHost
-
-	local status = infoHost:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	status:SetPoint("TOPRIGHT", infoHost, "TOPRIGHT", -2, -2)
-	status:SetJustifyH("RIGHT")
-
-	local scanBtn = CreateFrame("Button", nil, infoHost, "UIPanelButtonTemplate")
-	scanBtn:SetSize(52, 20)
-	scanBtn:SetPoint("RIGHT", status, "LEFT", -6, 0)
-	scanBtn:SetText("Scan")
-	scanBtn:SetScript("OnClick", function()
-		ProfessionExporter:ScanOpenProfession()
-	end)
-
-	local exportBtn = CreateFrame("Button", nil, infoHost, "UIPanelButtonTemplate")
-	exportBtn:SetSize(58, 20)
-	exportBtn:SetPoint("RIGHT", scanBtn, "LEFT", -4, 0)
-	exportBtn:SetText("Export")
-	exportBtn:SetScript("OnClick", function()
-		local openInfo = C_TradeSkillUI and C_TradeSkillUI.GetBaseProfessionInfo and C_TradeSkillUI.GetBaseProfessionInfo() or nil
-		local skillLineID = openInfo and tonumber(openInfo.professionID or openInfo.profession or openInfo.skillLineID)
-		if not skillLineID then
-			ProfessionExporter:PrintMessage("Open a profession window first.")
-			return
-		end
-		ProfessionExporter:ScanOpenProfession({ exportTalents = true })
-	end)
-	f.scanBtn = scanBtn
-	f.exportBtn = exportBtn
-
-	local summary = infoHost:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	summary:SetPoint("TOPLEFT", infoHost, "TOPLEFT", 2, -28)
-	summary:SetPoint("TOPRIGHT", infoHost, "TOPRIGHT", -2, -28)
-	summary:SetJustifyH("LEFT")
-	summary:SetWordWrap(true)
-
-	local details = infoHost:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	details:SetPoint("TOPLEFT", summary, "BOTTOMLEFT", 0, -6)
-	details:SetPoint("TOPRIGHT", infoHost, "TOPRIGHT", -2, 0)
-	details:SetJustifyH("LEFT")
-	details:SetWordWrap(true)
-
-	local crafter = infoHost:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	crafter:SetPoint("TOPLEFT", details, "BOTTOMLEFT", 0, -6)
-	crafter:SetPoint("TOPRIGHT", infoHost, "TOPRIGHT", -2, 0)
-	crafter:SetJustifyH("LEFT")
-	crafter:SetWordWrap(true)
-
-	local queueHost = CreateFrame("Frame", nil, f)
-	queueHost:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -36)
-	queueHost:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -8, 8)
-	queueHost:Hide()
-	f.queueHost = queueHost
-
-	local orderNav = CreateFrame("Frame", nil, queueHost)
-	orderNav:SetPoint("TOPLEFT", queueHost, "TOPLEFT", 0, 0)
-	orderNav:SetPoint("TOPRIGHT", queueHost, "TOPRIGHT", 0, 0)
-	orderNav:SetHeight(48)
-	orderNav:Hide()
-	f.orderNav = orderNav
-
-	local addOrder = CreateFrame("Button", nil, orderNav, "UIPanelButtonTemplate")
-	addOrder:SetSize(120, 22)
-	addOrder:SetPoint("TOPLEFT", orderNav, "TOPLEFT", 0, 0)
-	addOrder:SetText("Add to shopping")
-	addOrder:Hide()
-	f.peAddWorkOrderBtn = addOrder
-
-	local remOrder = CreateFrame("Button", nil, orderNav, "UIPanelButtonTemplate")
-	remOrder:SetSize(72, 22)
-	remOrder:SetPoint("LEFT", addOrder, "RIGHT", 6, 0)
-	remOrder:SetText("Remove")
-	remOrder:Hide()
-	f.peRemoveWorkOrderBtn = remOrder
-
-	local prevOrder = CreateFrame("Button", nil, orderNav, "UIPanelButtonTemplate")
-	prevOrder:SetSize(52, 22)
-	prevOrder:SetPoint("TOPLEFT", addOrder, "BOTTOMLEFT", 0, -4)
-	prevOrder:SetText("Prev")
-	prevOrder:Hide()
-	f.pePrevOrderBtn = prevOrder
-
-	local nextOrder = CreateFrame("Button", nil, orderNav, "UIPanelButtonTemplate")
-	nextOrder:SetSize(52, 22)
-	nextOrder:SetPoint("LEFT", prevOrder, "RIGHT", 6, 0)
-	nextOrder:SetText("Next")
-	nextOrder:Hide()
-	f.peNextOrderBtn = nextOrder
-
-	local orderStatus = orderNav:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	orderStatus:SetPoint("LEFT", nextOrder, "RIGHT", 8, 0)
-	orderStatus:SetJustifyH("LEFT")
-	orderStatus:Hide()
-	f.peQueueStatusText = orderStatus
-
-	addOrder:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:AddLine("AuctionHelper", 1, 1, 1)
-		GameTooltip:AddLine(
-			"Adds this crafting order to AuctionHelper shopping without starting the order. Only crafter-supplied reagents are included.",
-			1,
-			0.9,
-			0.6,
-			true
-		)
-		GameTooltip:Show()
-	end)
-	addOrder:SetScript("OnLeave", GameTooltip_Hide)
-
-	local queueCard = CreateFrame("Frame", nil, queueHost, "BackdropTemplate")
-	queueCard:SetPoint("TOPLEFT", queueHost, "TOPLEFT", 0, 0)
-	queueCard:SetPoint("TOPRIGHT", queueHost, "TOPRIGHT", 0, 0)
-	queueCard:SetPoint("BOTTOMLEFT", queueHost, "BOTTOMLEFT", 0, 30)
-	ProfessionExporter:ApplyBackdrop(queueCard, theme.surface3, theme.borderSubtle)
-
-	local queueTitle = queueCard:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	queueTitle:SetPoint("TOPLEFT", 8, -8)
-	queueTitle:SetText("Shopping cart")
-
-	local queueOverview = queueCard:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	queueOverview:SetPoint("TOPLEFT", queueTitle, "BOTTOMLEFT", 0, -4)
-	queueOverview:SetPoint("TOPRIGHT", queueCard, "TOPRIGHT", -8, 0)
-	queueOverview:SetJustifyH("LEFT")
-	queueOverview:SetWordWrap(true)
-
-	local queueFooter = queueCard:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	queueFooter:SetPoint("BOTTOMLEFT", queueCard, "BOTTOMLEFT", 8, 8)
-	queueFooter:SetPoint("BOTTOMRIGHT", queueCard, "BOTTOMRIGHT", -8, 8)
-	queueFooter:SetJustifyH("LEFT")
-	queueFooter:SetWordWrap(true)
-
-	local recipeTitle = queueCard:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	recipeTitle:SetPoint("TOPLEFT", queueOverview, "BOTTOMLEFT", 0, -8)
-	recipeTitle:SetText("Recipes to craft")
-
-	local recipeTableHost = CreateFrame("Frame", nil, queueCard)
-	recipeTableHost:SetPoint("TOPLEFT", recipeTitle, "BOTTOMLEFT", -2, -4)
-	recipeTableHost:SetPoint("TOPRIGHT", queueCard, "TOPRIGHT", -8, 0)
-	recipeTableHost:SetHeight(86)
-
-	local recipeActions = CreateFrame("Frame", nil, queueCard)
-	recipeActions:SetPoint("TOPLEFT", recipeTableHost, "BOTTOMLEFT", 0, -4)
-	recipeActions:SetPoint("TOPRIGHT", queueCard, "TOPRIGHT", -8, 0)
-	recipeActions:SetHeight(22)
-
-	local reagentTitle = queueCard:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	reagentTitle:SetPoint("TOPLEFT", recipeTableHost, "BOTTOMLEFT", 0, -8)
-	reagentTitle:SetText("Reagents to buy")
-
-	local reagentTableHost = CreateFrame("Frame", nil, queueCard)
-	reagentTableHost:SetPoint("TOPLEFT", reagentTitle, "BOTTOMLEFT", -2, -4)
-	reagentTableHost:SetPoint("BOTTOMRIGHT", queueFooter, "TOPRIGHT", 2, 8)
-
-	local btnRow = CreateFrame("Frame", nil, queueHost)
-	btnRow:SetHeight(24)
-	btnRow:SetPoint("BOTTOMLEFT", queueHost, "BOTTOMLEFT", 0, 0)
-	btnRow:SetPoint("BOTTOMRIGHT", queueHost, "BOTTOMRIGHT", 0, 0)
-
-	local x = 0
-	local function mkBtn(label, w, onClick)
-		local b = CreateFrame("Button", nil, btnRow, "UIPanelButtonTemplate")
-		b:SetSize(w, 22)
-		b:SetPoint("LEFT", btnRow, "LEFT", x, 0)
-		b:SetText(label)
-		b:SetScript("OnClick", onClick)
-		x = x + w + 4
-		return b
-	end
-
-	local addQ = mkBtn("Add to queue", 96, function()
-		local order = ProfessionExporter.GetOpenCraftingOrder and ProfessionExporter:GetOpenCraftingOrder() or nil
-		if order and ProfessionExporter.AddCraftingOrderToWorkQueue then
-			ProfessionExporter:PrintMessage(string.format("Queueing crafting order #%s...", tostring(order.orderID or "?")))
-			ProfessionExporter:AddCraftingOrderToWorkQueue(order)
-			if ProfessionExporter.CraftingOrderViewRefreshButtons then
-				ProfessionExporter:CraftingOrderViewRefreshButtons(nil, order)
-			end
-			return
-		end
-		if ProfessionExporter.QueueOpenProfessionRecipe then
-			ProfessionExporter:QueueOpenProfessionRecipe(1)
-			if ProfessionExporter.CraftingOrderViewRefreshButtons then
-				ProfessionExporter:CraftingOrderViewRefreshButtons()
-			end
-			return
-		end
-		local ctx = ProfessionExporter._lastProfessionEvalContext
-		if ctx then
-			ProfessionExporter:AddCraftToQueue(ctx, 1)
-		end
-	end)
-	mkBtn("+1", 36, function()
-		local order = ProfessionExporter.GetOpenCraftingOrder and ProfessionExporter:GetOpenCraftingOrder() or nil
-		if order and ProfessionExporter.AddCraftingOrderToWorkQueue then
-			ProfessionExporter:AddCraftingOrderToWorkQueue(order)
-			return
-		end
-		if ProfessionExporter.QueueOpenProfessionRecipe then
-			ProfessionExporter:QueueOpenProfessionRecipe(1)
-			if ProfessionExporter.CraftingOrderViewRefreshButtons then
-				ProfessionExporter:CraftingOrderViewRefreshButtons()
-			end
-			return
-		end
-		local ctx = ProfessionExporter._lastProfessionEvalContext
-		if ctx then
-			ProfessionExporter:AddCraftToQueue(ctx, 1)
-		end
-	end)
-	mkBtn("+5", 36, function()
-		local order = ProfessionExporter.GetOpenCraftingOrder and ProfessionExporter:GetOpenCraftingOrder() or nil
-		if order and ProfessionExporter.AddCraftingOrderToWorkQueue then
-			ProfessionExporter:AddCraftingOrderToWorkQueue(order)
-			return
-		end
-		if ProfessionExporter.QueueOpenProfessionRecipe then
-			ProfessionExporter:QueueOpenProfessionRecipe(5)
-			if ProfessionExporter.CraftingOrderViewRefreshButtons then
-				ProfessionExporter:CraftingOrderViewRefreshButtons()
-			end
-			return
-		end
-		local ctx = ProfessionExporter._lastProfessionEvalContext
-		if ctx then
-			ProfessionExporter:AddCraftToQueue(ctx, 5)
-		end
-	end)
-	mkBtn("Open queue", 92, function()
-		ProfessionExporter:OpenCraftsTabWithQueueFocus()
-	end)
-
-	local recipeTable = ProfessionExporter:CreateReusableTable(recipeTableHost, {
-		rowHeight = 20,
-		maxRows = 4,
-		sortKey = "recipeName",
-		sortAsc = true,
-		onRowClick = function(_, rowData)
-			if not rowData then
-				return
-			end
-			local orderID = tonumber(rowData.orderID)
-			if orderID and ProfessionExporter.OpenCraftingOrderWorkQueueEntry then
-				local entry = ProfessionExporter.GetCraftingOrderWorkQueueStorage
-					and ProfessionExporter:GetCraftingOrderWorkQueueStorage()[tostring(orderID)]
-				if type(entry) == "table" then
-					ProfessionExporter:OpenCraftingOrderWorkQueueEntry(entry)
-					return
-				end
-				ProfessionExporter:OpenCraftingOrderWorkQueueEntry({ orderID = orderID, spellID = rowData.recipeID, itemID = rowData.outputItemID })
-				return
-			end
-			ProfessionExporter:JumpToProfessionRecipe(rowData.recipeID, rowData.skillLineID)
-		end,
-	})
-	if recipeTable and recipeTable.frame then
-		recipeTable.frame:ClearAllPoints()
-		recipeTable.frame:SetPoint("TOPLEFT", recipeTableHost, "TOPLEFT", 0, 0)
-		recipeTable.frame:SetPoint("BOTTOMRIGHT", recipeTableHost, "BOTTOMRIGHT", 0, 0)
-		recipeTable:SetColumns({
-			{
-				id = "recipe",
-				label = "Recipe",
-				width = 110,
-				sortable = true,
-				defaultSort = "asc",
-				sortValue = function(row) return row and row.recipeName or "" end,
-				createCell = function(rowFrame)
-					local root = CreateFrame("Frame", nil, rowFrame)
-					root:SetHeight(20)
-					local rankIcon = root:CreateTexture(nil, "OVERLAY")
-					rankIcon:SetSize(RANK_BADGE_PX, RANK_BADGE_PX)
-					rankIcon:SetPoint("LEFT", root, "LEFT", 0, 0)
-					rankIcon:Hide()
-					local rankText = root:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-					rankText:SetPoint("CENTER", rankIcon, "CENTER", 0, 0)
-					rankText:SetTextColor(1, 1, 1)
-					rankText:Hide()
-					local icon = root:CreateTexture(nil, "ARTWORK")
-					icon:SetSize(16, 16)
-					icon:SetPoint("LEFT", rankIcon, "RIGHT", RANK_ICON_GAP, 0)
-					local text = root:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-					text:SetPoint("LEFT", icon, "RIGHT", 6, 0)
-					text:SetPoint("RIGHT", root, "RIGHT", 0, 0)
-					text:SetJustifyH("LEFT")
-					text:SetWordWrap(false)
-					return { root = root, rankIcon = rankIcon, rankText = rankText, icon = icon, text = text }
-				end,
-				updateCell = function(cell, row)
-					applyRankBadge(cell.rankIcon, cell.rankText, row and row.qualityIndex)
-					cell.icon:SetTexture((row and row.outputIcon) or 134400)
-					cell.text:SetText(row and row.recipeLabel or "-")
-				end,
-			},
-			{
-				id = "quantityEdit",
-				label = "Qty",
-				width = 110,
-				sortable = true,
-				defaultSort = "desc",
-				sortValue = function(row) return tonumber(row and row.quantity) or 0 end,
-				createCell = function(rowFrame)
-					local root = CreateFrame("Frame", nil, rowFrame)
-					root:SetHeight(20)
-					local minus = CreateFrame("Button", nil, root, "UIPanelButtonTemplate")
-					minus:SetSize(20, 18)
-					minus:SetPoint("LEFT", root, "LEFT", 0, 0)
-					minus:SetText("-")
-					local input = CreateFrame("EditBox", nil, root, "InputBoxTemplate")
-					input:SetSize(34, 18)
-					input:SetPoint("LEFT", minus, "RIGHT", 4, 0)
-					input:SetAutoFocus(false)
-					input:SetNumeric(true)
-					input:SetMaxLetters(4)
-					local plus = CreateFrame("Button", nil, root, "UIPanelButtonTemplate")
-					plus:SetSize(20, 18)
-					plus:SetPoint("LEFT", input, "RIGHT", 4, 0)
-					plus:SetText("+")
-					local remove = CreateFrame("Button", nil, root, "UIPanelButtonTemplate")
-					remove:SetSize(20, 18)
-					remove:SetPoint("LEFT", plus, "RIGHT", 6, 0)
-					remove:SetText("X")
-					local function applyQuantity(queueKey, quantity)
-						if queueKey then
-							ProfessionExporter:UpdateCraftQueueQuantity(queueKey, tonumber(quantity) or 0)
-						end
-					end
-					minus:SetScript("OnClick", function(self)
-						applyQuantity(self.queueKey, (tonumber(input:GetText()) or 0) - 1)
-					end)
-					plus:SetScript("OnClick", function(self)
-						applyQuantity(self.queueKey, (tonumber(input:GetText()) or 0) + 1)
-					end)
-					remove:SetScript("OnClick", function(self)
-						if self.queueKey then
-							ProfessionExporter:RemoveCraftFromQueue(self.queueKey)
-						end
-					end)
-					input:SetScript("OnEnterPressed", function(self)
-						applyQuantity(self.queueKey, self:GetText())
-						self:ClearFocus()
-					end)
-					input:SetScript("OnEditFocusLost", function(self)
-						applyQuantity(self.queueKey, self:GetText())
-					end)
-					return { root = root, minus = minus, input = input, plus = plus, remove = remove }
-				end,
-				updateCell = function(cell, row)
-					local queueKey = row and row.queueKey or nil
-					cell.minus.queueKey = queueKey
-					cell.plus.queueKey = queueKey
-					cell.remove.queueKey = queueKey
-					cell.input.queueKey = queueKey
-					local value = tostring(tonumber(row and row.quantity) or 0)
-					if cell.input:GetText() ~= value then
-						cell.input:SetText(value)
-						cell.input:HighlightText(0, 0)
-					end
-				end,
-			},
-			{
-				id = "scenario",
-				label = "Mode",
-				width = 46,
-				sortable = true,
-				defaultSort = "asc",
-				sortValue = function(row) return row and row.scenario or "" end,
-				getText = function(row) return row and row.scenarioLabel or "-" end,
-			},
-			{
-				id = "craft",
-				label = "Do",
-				width = 46,
-				sortable = false,
-				createCell = function(rowFrame)
-					local button = CreateFrame("Button", nil, rowFrame, "UIPanelButtonTemplate")
-					button:SetSize(42, 18)
-					button:SetText("Craft")
-					button:SetScript("OnClick", function(self)
-						if self.rowData then
-							ProfessionExporter:CraftProfessionQueueRecipe(self.rowData)
-						end
-					end)
-					return button
-				end,
-				updateCell = function(cell, row)
-					cell.rowData = row
-					cell:SetEnabled(row and row.recipeID ~= nil)
-					cell:SetText("Craft")
-				end,
-			},
-			{
-				id = "profit",
-				label = "Profit",
-				width = 80,
-				sortable = true,
-				defaultSort = "desc",
-				sortValue = function(row) return tonumber(row and row.totalProfitValue) or -1e15 end,
-				getText = function(row) return row and row.totalProfitText or "-" end,
-			},
-		})
-	end
-
-	local reagentTable = ProfessionExporter:CreateReusableTable(reagentTableHost, {
-		rowHeight = 20,
-		maxRows = 6,
-		sortKey = "totalCost",
-		sortAsc = false,
-		onRowEnter = function(_, rowData)
-			if not rowData or not rowData.itemID then
-				return
-			end
-			GameTooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
-			if GameTooltip.SetItemByID then
-				GameTooltip:SetItemByID(rowData.itemID)
-			else
-				GameTooltip:SetText("#" .. tostring(rowData.itemID))
-			end
-			GameTooltip:AddLine(" ")
-			GameTooltip:AddLine(string.format("Buy %s @ %s each", ProfessionExporter:FormatNumberGrouped(rowData.quantity or 0), rowData.unitPrice and ProfessionExporter:FormatCopperShort(rowData.unitPrice) or "-"), 0.82, 0.88, 0.96)
-			GameTooltip:AddLine(string.format("Total: %s", rowData.totalCost and ProfessionExporter:FormatCopperShort(rowData.totalCost) or "-"), 0.82, 0.88, 0.96)
-			if rowData.recipeRefs and #rowData.recipeRefs > 0 then
-				GameTooltip:AddLine("Used by:", 0.95, 0.85, 0.55)
-				for i = 1, math.min(#rowData.recipeRefs, 5) do
-					GameTooltip:AddLine("  " .. tostring(rowData.recipeRefs[i]), 0.75, 0.82, 0.88)
-				end
-			end
-			GameTooltip:AddLine("Click to search this reagent in the AH shopping cart.", 0.75, 0.82, 0.9, true)
-			GameTooltip:Show()
-		end,
-		onRowLeave = function()
-			GameTooltip:Hide()
-		end,
-		onRowClick = function(_, rowData)
-			if not rowData or not rowData.itemID then
-				return
-			end
-			local itemID = tonumber(rowData.itemID)
-			if not itemID then
-				return
-			end
-			local state = ProfessionExporter:GetState()
-			state.auctionCartSelectedItemID = itemID
-			if ProfessionExporter.SetAuctionPanelActiveTab then
-				ProfessionExporter:SetAuctionPanelActiveTab("cart", true)
-			end
-			local ok = ProfessionExporter.SearchAuctionCartRow and ProfessionExporter:SearchAuctionCartRow({ itemID = itemID, quantity = rowData.quantity })
-			if ok then
-				ProfessionExporter:PrintMessage(string.format("Searching AH for %s.", ProfessionExporter:GetItemDisplayName(itemID)))
-			elseif not (_G.AuctionHouseFrame and _G.AuctionHouseFrame.IsShown and _G.AuctionHouseFrame:IsShown()) then
-				ProfessionExporter:PrintMessage("Open the Auction House to search reagents from the shopping cart.")
-			end
-		end,
-	})
-	if reagentTable and reagentTable.frame then
-		reagentTable.frame:ClearAllPoints()
-		reagentTable.frame:SetPoint("TOPLEFT", reagentTableHost, "TOPLEFT", 0, 0)
-		reagentTable.frame:SetPoint("BOTTOMRIGHT", reagentTableHost, "BOTTOMRIGHT", 0, 0)
-		reagentTable:SetColumns({
-			{
-				id = "item",
-				label = "Reagent",
-				width = 150,
-				sortable = true,
-				defaultSort = "asc",
-				sortValue = function(row) return row and row.name or "" end,
-				createCell = function(rowFrame)
-					local root = CreateFrame("Frame", nil, rowFrame)
-					root:SetHeight(20)
-					local rankIcon = root:CreateTexture(nil, "OVERLAY")
-					rankIcon:SetSize(RANK_BADGE_PX, RANK_BADGE_PX)
-					rankIcon:SetPoint("LEFT", root, "LEFT", 0, 0)
-					rankIcon:Hide()
-					local rankText = root:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-					rankText:SetPoint("CENTER", rankIcon, "CENTER", 0, 0)
-					rankText:SetTextColor(1, 1, 1)
-					rankText:Hide()
-					local icon = root:CreateTexture(nil, "ARTWORK")
-					icon:SetSize(16, 16)
-					icon:SetPoint("LEFT", rankIcon, "RIGHT", RANK_ICON_GAP, 0)
-					local text = root:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-					text:SetPoint("LEFT", icon, "RIGHT", 6, 0)
-					text:SetPoint("RIGHT", root, "RIGHT", 0, 0)
-					text:SetJustifyH("LEFT")
-					text:SetWordWrap(false)
-					return { root = root, rankIcon = rankIcon, rankText = rankText, icon = icon, text = text }
-				end,
-				updateCell = function(cell, row)
-					applyRankBadge(cell.rankIcon, cell.rankText, row and row.qualityIndex)
-					cell.icon:SetTexture((row and row.icon) or 134400)
-					cell.text:SetText(row and row.name or "-")
-				end,
-			},
-			{
-				id = "quantity",
-				label = "Qty",
-				width = 34,
-				sortable = true,
-				defaultSort = "desc",
-				sortValue = function(row) return tonumber(row and row.quantity) or 0 end,
-				getText = function(row) return ProfessionExporter:FormatNumberGrouped(row and row.quantity or 0) end,
-			},
-			{
-				id = "unitPrice",
-				label = "Each",
-				width = 52,
-				sortable = true,
-				defaultSort = "desc",
-				sortValue = function(row) return tonumber(row and row.unitPrice) or -1 end,
-				getText = function(row) return row and row.unitPrice and ProfessionExporter:FormatCopperShort(row.unitPrice) or "-" end,
-			},
-			{
-				id = "totalCost",
-				label = "Total",
-				width = 56,
-				sortable = true,
-				defaultSort = "desc",
-				sortValue = function(row) return tonumber(row and row.totalCost) or -1 end,
-				getText = function(row) return row and row.totalCost and ProfessionExporter:FormatCopperShort(row.totalCost) or "-" end,
-			},
-		})
-	end
-
-	f.statusText = status
-	f.summaryText = summary
-	f.detailsText = details
-	f.crafterText = crafter
-	f.queueCard = queueCard
-	f.queueTitle = queueTitle
-	f.queueOverviewText = queueOverview
-	f.queueFooterText = queueFooter
-	f.recipeTitle = recipeTitle
-	f.recipeTable = recipeTable
-	f.reagentTitle = reagentTitle
-	f.reagentTable = reagentTable
-	f.addButton = addQ
+	createRecipeView(self, f)
+	createQueueView(self, f)
+	self:SkinTree(f)
 
 	self._professionCraftPanel = f
-	local savedTab = self:GetSetting("professions.sidePanelTab", "info")
-	self:SetProfessionPanelActiveTab(savedTab, false)
-
-	local function showEconomicsTooltip(owner)
-		local ctx = ProfessionExporter._lastProfessionEvalContext
-		if not ctx or not ctx.eval then
-			return
-		end
-		GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
-		GameTooltip:SetText("Economics detail", 1, 1, 1)
-		local ev = ctx.eval
-		local cutPct = math.floor((ProfessionExporter:GetCraftsAhCutFraction() or 0) * 100 + 0.5)
-		GameTooltip:AddLine(string.format("AH cut setting: %d%% (applied to gross sale).", cutPct), 0.85, 0.9, 0.95, true)
-		GameTooltip:AddLine(string.format("Sale (gross est.): %s", ev.saleGross and ProfessionExporter:FormatCopperShort(ev.saleGross) or "—"), 0.8, 0.9, 1)
-		GameTooltip:AddLine(string.format("Sale (net est.): %s", ev.saleNet and ProfessionExporter:FormatCopperShort(ev.saleNet) or "—"), 0.8, 0.9, 1)
-		local planLabel = ev.liveSelectedPlan and "live setup" or "required slots"
-		GameTooltip:AddLine(string.format("Materials (market): %s", ev.matCost and ProfessionExporter:FormatCopperShort(ev.matCost) or "—"), 0.8, 0.9, 1)
-		if ev.outOfPocketMatCost and ev.outOfPocketMatCost ~= ev.matCost then
-			GameTooltip:AddLine(string.format("Materials (%s out-of-pocket): %s", planLabel, ProfessionExporter:FormatCopperShort(ev.outOfPocketMatCost)), 0.8, 0.9, 1)
-		end
-		GameTooltip:AddLine(string.format("Inventory coverage: %.0f%%", (ev.coverage or 0) * 100), 0.8, 0.9, 1)
-		if ev.requiredTargetReagent and ev.requiredTargetReagentItemID then
-			GameTooltip:AddLine(
-				string.format(
-					"Required target reagent: %s (%s).",
-					ProfessionExporter:GetItemDisplayName(ev.requiredTargetReagentItemID),
-					ev.requiredTargetReagentAuto and "auto-selected" or "live-selected"
-				),
-				0.85, 0.82, 0.62
-			)
-		end
-		if ev.qualityReachable == false then
-			if ev.concentrationNeeded then
-				GameTooltip:AddLine(string.format("+%s conc", ProfessionExporter:FormatNumberGrouped(ev.concentrationNeeded)), 1, 0.82, 0.45)
-			elseif ev.concentrationCost and ev.concentrationCost > 0 then
-				GameTooltip:AddLine("+conc", 1, 0.82, 0.45)
-			else
-				GameTooltip:AddLine("Unreachable", 1, 0.5, 0.5)
-			end
-		end
-		if ev.reagentPlan then
-			GameTooltip:AddLine(" ", 1, 1, 1)
-			GameTooltip:AddLine("Reagents per craft:", 0.95, 0.85, 0.55)
-			for _, slot in ipairs(ev.reagentPlan) do
-				local nm = ProfessionExporter:GetItemDisplayName(slot.itemID)
-				local inv = ProfessionExporter:BuildAccountItemInventoryTotals(slot.itemID)
-				local note = ""
-				if slot.slotClass == "required_target" then
-					note = slot.liveSelected and " [target selected]" or " [target auto]"
-				elseif slot.slotClass == "optional" then
-					note = " [optional selected]"
-				end
-				local costSuffix = ProfessionExporter:FormatReagentSlotEconomicsTooltipSuffix(slot)
-				GameTooltip:AddLine(string.format("  %s x%s  %s  (account %s)%s", nm, ProfessionExporter:FormatNumberGrouped(tonumber(slot.quantityRequired) or 0), costSuffix, ProfessionExporter:FormatNumberGrouped(tonumber(inv.total) or 0), note), 0.75, 0.82, 0.88)
-			end
-		end
-		GameTooltip:Show()
-	end
-	infoHost:EnableMouse(true)
-	infoHost:SetScript("OnEnter", function(self)
-		showEconomicsTooltip(self)
-	end)
-	infoHost:SetScript("OnLeave", GameTooltip_Hide)
-
+	self:SetProfessionPanelActiveTab(self:GetSetting("professions.sidePanelTab", "info"), false)
 	return f
 end
 
 local function buildProfessionQueueRecipeRows(pe, queueSummary)
 	local rows = {}
-	for _, entry in ipairs(queueSummary and queueSummary.lines or {}) do
+	for index, entry in ipairs(queueSummary and queueSummary.lines or {}) do
 		local perProfit = tonumber(entry.snapshot and entry.snapshot.profit)
-		local totalProfitValue = perProfit and (perProfit * (tonumber(entry.quantity) or 0)) or nil
+		local quantity = tonumber(entry.quantity) or 0
+		local totalProfit = perProfit and perProfit * quantity or nil
 		local orderID = tonumber(entry.orderID)
-		local isOrder = orderID ~= nil or entry.scenario == "craftingOrder" or entry.source == "craftingOrder"
 		local recipeName = entry.recipeName
 		if (not recipeName or recipeName == "" or recipeName == "?") and tonumber(entry.recipeID) and C_TradeSkillUI and C_TradeSkillUI.GetRecipeInfo then
-			local ri = C_TradeSkillUI.GetRecipeInfo(tonumber(entry.recipeID))
-			recipeName = ri and ri.name or recipeName
+			local info = C_TradeSkillUI.GetRecipeInfo(tonumber(entry.recipeID))
+			recipeName = info and info.name or recipeName
 		end
 		if (not recipeName or recipeName == "" or recipeName == "?") and tonumber(entry.outputItemID) then
 			recipeName = pe:GetItemDisplayName(entry.outputItemID)
 		end
-		recipeName = tostring(recipeName or "?")
-		local recipeLabel = recipeName
-		local outputIcon = entry.outputIcon
-		if (not outputIcon or outputIcon == 134400) and tonumber(entry.outputItemID) then
-			local desc = pe.ResolveItemDescriptor and pe:ResolveItemDescriptor(entry.outputItemID)
-			outputIcon = desc and desc.icon or outputIcon
+		local detail = {}
+		if orderID then
+			detail[#detail + 1] = "Order #" .. orderID
+		end
+		detail[#detail + 1] = "Profit " .. (totalProfit and pe:FormatSignedMoney(totalProfit) or "unknown")
+		if entry.snapshot and entry.snapshot.canCraftNow then
+			detail[#detail + 1] = "ready"
 		end
 		rows[#rows + 1] = {
+			_rowIdentity = index,
 			queueKey = entry.queueKey,
 			orderID = orderID,
 			recipeID = tonumber(entry.recipeID),
 			outputItemID = tonumber(entry.outputItemID),
 			skillLineID = tonumber(entry.skillLineID),
-			recipeName = recipeName,
-			recipeLabel = recipeLabel,
-			outputIcon = outputIcon,
+			recipeLabel = tostring(recipeName or "?"),
 			qualityIndex = tonumber(entry.qualityIndex),
-			quantity = tonumber(entry.quantity) or 0,
+			quantity = quantity,
 			scenario = tostring(entry.scenario or "default"),
-			scenarioLabel = isOrder and "Order" or ((entry.scenario == "concentration") and "Conc" or "Default"),
-			totalProfitValue = totalProfitValue,
-			totalProfitText = totalProfitValue and pe:FormatCopperShort(totalProfitValue) or "-",
+			canCraftNow = entry.snapshot and entry.snapshot.canCraftNow == true,
+			detailText = table.concat(detail, " · "),
 		}
 	end
 	return rows
@@ -1313,29 +1009,24 @@ local function buildProfessionQueueReagentRows(pe, queueSummary)
 	for _, reagent in ipairs(queueSummary and queueSummary.reagentLines or {}) do
 		local qty = tonumber(reagent.quantityToBuy) or 0
 		if qty > 0 then
-			local desc = pe:ResolveItemDescriptor(reagent.itemID) or nil
+			local refs, seen = {}, {}
+			for _, src in ipairs(reagent.sources or {}) do
+				local label = tostring(src and src.recipeName or "")
+				if label ~= "" and not seen[label] then
+					seen[label] = true
+					refs[#refs + 1] = label
+				end
+			end
+			table.sort(refs)
 			rows[#rows + 1] = {
+				_rowIdentity = reagent.itemID,
 				itemID = tonumber(reagent.itemID),
 				name = reagent.name or pe:GetItemDisplayName(reagent.itemID),
-				icon = desc and desc.icon or 134400,
 				qualityIndex = pe:GetItemDisplayProfessionQualityRank(reagent.itemID),
 				quantity = qty,
-				mailToText = reagent.mailToText,
 				unitPrice = tonumber(reagent.estimatedUnitPrice) or tonumber(reagent.priceUnit),
 				totalCost = tonumber(reagent.estimatedBuyCost),
-				recipeRefs = (function()
-					local seen = {}
-					local out = {}
-					for _, src in ipairs(reagent.sources or {}) do
-						local label = tostring(src and src.recipeName or "")
-						if label ~= "" and not seen[label] then
-							seen[label] = true
-							out[#out + 1] = label
-						end
-					end
-					table.sort(out)
-					return out
-				end)(),
+				recipeRefs = refs,
 			}
 		end
 	end
@@ -1343,33 +1034,100 @@ local function buildProfessionQueueReagentRows(pe, queueSummary)
 end
 
 local function refreshProfessionQueueCard(pe, panel)
-	if not panel or not panel.queueOverviewText or not panel.queueFooterText or not panel.recipeTable or not panel.reagentTable then
+	if not panel or not panel.recipeTable then
 		return
 	end
-	local queueSummary = pe:BuildCraftQueueSummary()
-	local recipeRows = buildProfessionQueueRecipeRows(pe, queueSummary)
-	local reagentRows = buildProfessionQueueReagentRows(pe, queueSummary)
-	panel.queueOverviewText:SetText(string.format(
-		"%d recipes queued  |  Reagents to buy %d  |  Buy total %s",
-		tonumber(queueSummary.lineCount) or 0,
-		#reagentRows,
-		queueSummary.totalCurrentCharacterBuyCostKnown and pe:FormatCopperShort(queueSummary.totalCurrentCharacterBuyCostValue or 0) or "—"
-	))
+	local summary = pe:BuildCraftQueueSummary()
+	local recipeRows = buildProfessionQueueRecipeRows(pe, summary)
+	local reagentRows = buildProfessionQueueReagentRows(pe, summary)
+	local crafts = 0
+	for _, row in ipairs(recipeRows) do
+		crafts = crafts + row.quantity
+	end
+	pe:SetButtonLabel(panel.tabQueue, #recipeRows > 0 and string.format("Queue (%d)", #recipeRows) or "Queue", true)
+	panel.queueOverviewText:SetText(#recipeRows == 0 and "The queue is empty." or string.format(
+		"%d crafts of %d recipes · potential profit %s · %d reagents to buy",
+		crafts, #recipeRows, summary.totalProfit and pe:FormatSignedMoney(summary.totalProfit) or "unknown", #reagentRows))
 	panel.recipeTable:SetRows(recipeRows)
+	panel.recipeTable:Refresh()
+	panel.recipeTable.frame:SetHeight(22 + 2 + TALL_ROW * math.max(1, math.min(#recipeRows, 3)))
 	panel.reagentTable:SetRows(reagentRows)
-	local profitText = pe:FormatCopperShort(queueSummary.totalProfitValue or 0)
-	if #reagentRows == 0 then
-		panel.queueFooterText:SetText(string.format(
-			"Potential profit %s  |  No reagents to buy on this character.",
-			profitText
-		))
+	panel.reagentTable:Refresh()
+	panel.reagentTable:SetFooterText("Click a reagent to find it at the auction house",
+		summary.totalCurrentCharacterBuyCostKnown and pe:FormatCopperShort(summary.totalCurrentCharacterBuyCostValue or 0) or nil)
+	panel.clearQueueButton:SetEnabled(#recipeRows > 0)
+end
+
+-- Fills the Recipe view from the selected recipe's evaluation.
+local function renderProfessionRecipe(pe, panel, ctx)
+	local host = panel.infoHost
+	local ev = ctx.eval or {}
+	local theme = pe:GetTheme()
+	host.empty:Hide()
+	host.body:Show()
+	host.header:SetItem(ev.outputItemID, (ev.recipeName or pe:GetItemDisplayName(ev.outputItemID)) .. rankMarkup(ev.qualityIndex),
+		string.format("%s · best crafter %s", tostring(ev.professionName or "?"), tostring(ctx.recommendedCrafterLabel or "-")), ev.outputIcon)
+
+	local conf = ctx.confidence or "ok"
+	if conf == "missing_sale_price" or conf == "missing_mat_price" then
+		host.header.badge:SetBadge("No price", "warning")
+	elseif conf == "stale_scan" then
+		host.header.badge:SetBadge("Old scan", "warning")
+	elseif ev.canCraftNow then
+		host.header.badge:SetBadge("Can craft", "success")
+	elseif ev.qualityReachable == false then
+		host.header.badge:SetBadge((ev.concentrationNeeded or ev.concentrationCost) and "Needs concentration" or "Out of reach", "warning")
 	else
-		panel.queueFooterText:SetText(string.format(
-			"Potential profit %s  |  Buy total %s",
-			profitText,
-			queueSummary.totalCurrentCharacterBuyCostKnown and pe:FormatCopperShort(queueSummary.totalCurrentCharacterBuyCostValue or 0) or "—"
-		))
+		local missing = 0
+		for _, slot in ipairs(ev.reagentPlan or {}) do
+			missing = missing + math.max(0, tonumber(slot.purchasedQuantity) or 0)
 		end
+		host.header.badge:SetBadge(missing > 0 and ("Missing " .. missing) or "Missing", "danger")
+	end
+
+	host.stats[1]:SetValues("Sale after cut", ev.saleNet and pe:FormatCopperShort(ev.saleNet) or "-")
+	host.stats[2]:SetValues("Materials", ev.matCost and pe:FormatCopperShort(ev.matCost) or "-")
+	host.stats[3]:SetValues("Profit", pe:FormatSignedMoney(ev.profit), nil, (tonumber(ev.profit) or 0) < 0 and "danger" or "success")
+	pe:LayoutEvenRow(host.statsRow, host.stats, 0, 8)
+
+	local cut = math.floor((pe:GetCraftsAhCutFraction() or 0) * 100 + 0.5)
+	local facts = {
+		{ "Return", ev.roi and string.format("%.0f%%", ev.roi) or "-" },
+		{ "Materials you already own", string.format("%.0f%%", (ev.coverage or 0) * 100) },
+		{ "Still to buy", ev.outOfPocketMatCost and pe:FormatCopperFull(ev.outOfPocketMatCost) or "-" },
+		{ string.format("Sale before the %d%% auction cut", cut), ev.saleGross and pe:FormatCopperFull(ev.saleGross) or "-" },
+	}
+	if pe.IS_RETAIL and ev.concentrationNeeded then
+		facts[#facts + 1] = { "Concentration needed", pe:FormatNumberGrouped(ev.concentrationNeeded) }
+	end
+	if ev.requiredTargetReagent and ev.requiredTargetReagentItemID then
+		facts[#facts + 1] = { "Target reagent", pe:GetItemDisplayName(ev.requiredTargetReagentItemID) }
+	end
+	host.facts:SetRows(facts)
+
+	local materials = {}
+	for index, slot in ipairs(ev.reagentPlan or {}) do
+		local inv = pe:BuildAccountItemInventoryTotals(slot.itemID)
+		materials[#materials + 1] = {
+			_rowIdentity = index,
+			itemID = slot.itemID,
+			need = tonumber(slot.quantityRequired) or 0,
+			have = tonumber(inv and inv.total) or 0,
+			cost = tonumber(slot.lineCost),
+		}
+	end
+	host.materials:SetRows(materials)
+	host.materials:Refresh()
+	host.materials:SetFooterText("Have counts every character", ev.matCost and pe:FormatCopperShort(ev.matCost) or nil)
+	panel.footerText:SetText(string.format("%s scanned %s", tostring(ev.professionName or "Profession"), pe:FormatScanTimestamp(ev.scanAt)))
+end
+
+local function renderProfessionEmpty(panel, message)
+	local host = panel.infoHost
+	host.body:Hide()
+	host.empty:Show()
+	host.empty:SetMessage("No recipe to show", message)
+	panel.footerText:SetText("")
 end
 
 function ProfessionExporter:RefreshProfessionCraftEconomyPanel(force)
@@ -1431,17 +1189,17 @@ function ProfessionExporter:RefreshProfessionCraftEconomyPanel(force)
 
 	if not ctx then
 		panel:Show()
-		local msg = "Select a recipe to see economics."
+		local msg = "Select a recipe to see its profit and materials."
 		if reason == "no_data" then
-			msg = "No stored data for this recipe — run a profession scan on this character or wait for the recipe list to finish loading."
+			msg = "This recipe is not stored yet. Press Scan, or wait for the recipe list to finish loading."
 		elseif reason == "no_recipe" then
-			msg = "No recipe selected."
+			msg = "Select a recipe to see its profit and materials."
 		elseif reason == "not_ready" then
-			msg = "Profession UI not ready yet."
+			msg = "The profession window is still loading."
 		elseif reason == "no_eval" then
-			msg = "Could not resolve economics for the selected recipe yet. Try reselecting the recipe or rescanning this profession."
+			msg = "Profit for this recipe could not be worked out yet. Select it again or press Scan."
 		elseif reason == "no_profession" then
-			msg = "Could not resolve the active profession for the selected recipe."
+			msg = "The profession for this recipe could not be found. Press Scan."
 		elseif reason == "not_retail" then
 			panel:Hide()
 			if panel.panelToggleBtn then
@@ -1453,10 +1211,7 @@ function ProfessionExporter:RefreshProfessionCraftEconomyPanel(force)
 			self._refreshingProfessionCraftPanel = nil
 			return
 		end
-		panel.statusText:SetText(msg)
-		panel.summaryText:SetText("")
-		panel.detailsText:SetText("")
-		panel.crafterText:SetText("")
+		renderProfessionEmpty(panel, msg)
 		refreshProfessionQueueCard(self, panel)
 		panel.addButton:SetEnabled(false)
 		if self.CraftingOrderViewRefreshButtons then
@@ -1467,53 +1222,7 @@ function ProfessionExporter:RefreshProfessionCraftEconomyPanel(force)
 	end
 
 	panel.addButton:SetEnabled(true)
-	local ev = ctx.eval
-	local conf = ctx.confidence or "ok"
-
-	local statusMsg
-	if conf == "missing_sale_price" or conf == "missing_mat_price" then
-		statusMsg = "|cffff9900Missing price data|r"
-	elseif conf == "stale_scan" then
-		statusMsg = "|cffcccc55Using last scan (live recipe API unavailable)|r"
-	elseif ev.canCraftNow then
-		statusMsg = "|cff88ff88Can craft now|r"
-	elseif ev.qualityReachable == false and ev.concentrationNeeded then
-		statusMsg = string.format("|cffffff80+%s conc|r", self:FormatNumberGrouped(ev.concentrationNeeded))
-	elseif ev.qualityReachable == false and ev.concentrationCost and ev.concentrationCost > 0 then
-		statusMsg = "|cffffff80+conc|r"
-	elseif ev.qualityReachable == false then
-		statusMsg = "|cffff6666Unreachable|r"
-	else
-		statusMsg = "|cffff6666Missing materials|r"
-	end
-	panel.statusText:SetText(statusMsg)
-
-	panel.summaryText:SetText(string.format(
-		"Sale (net) %s  |  Mats %s  |  Profit %s",
-		ev.saleNet and self:FormatCopperShort(ev.saleNet) or "—",
-		ev.matCost and self:FormatCopperShort(ev.matCost) or "—",
-		ev.profit and self:FormatCopperShort(ev.profit) or "—"
-	))
-	local detailParts = {
-		string.format("Coverage %.0f%%", (ev.coverage or 0) * 100),
-	}
-	if ev.outOfPocketMatCost and ev.outOfPocketMatCost ~= ev.matCost then
-		detailParts[#detailParts + 1] = string.format("Buy-only %s", self:FormatCopperShort(ev.outOfPocketMatCost))
-	end
-	if ev.concentrationNeeded then
-		detailParts[#detailParts + 1] = string.format("+%s conc", self:FormatNumberGrouped(ev.concentrationNeeded))
-	elseif ev.qualityReachable == false and ev.concentrationCost and ev.concentrationCost > 0 then
-		detailParts[#detailParts + 1] = "+conc"
-	end
-	if ev.requiredTargetReagent and ev.requiredTargetReagentItemID then
-		detailParts[#detailParts + 1] = string.format(
-			"Target %s (%s)",
-			self:GetItemDisplayName(ev.requiredTargetReagentItemID),
-			ev.requiredTargetReagentAuto and "auto" or "live"
-		)
-	end
-	panel.detailsText:SetText(table.concat(detailParts, "  |  "))
-	panel.crafterText:SetText(string.format("Recommended crafter: %s", ctx.recommendedCrafterLabel or "—"))
+	renderProfessionRecipe(self, panel, ctx)
 
 	refreshProfessionQueueCard(self, panel)
 	if self.CraftingOrderViewRefreshButtons then

@@ -2,6 +2,9 @@ local addonName, ProfessionExporter = ...
 
 local TableMixin = {}
 
+local WHITE = "Interface\\Buttons\\WHITE8X8"
+local CELL_PAD = 5
+
 local function shallowCopy(list)
 	local out = {}
 	if type(list) ~= "table" then
@@ -234,17 +237,19 @@ function TableMixin:ShowHeaderTooltip(button)
 		return
 	end
 
-	GameTooltip:SetOwner(button, "ANCHOR_BOTTOMRIGHT")
-	GameTooltip:SetText(column.tooltipTitle or column.label or column.id or "Column", 1, 0.82, 0.2)
+	local theme = ProfessionExporter:GetTheme()
+	local gold, muted = theme.gold, theme.textMuted
+	GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
+	GameTooltip:SetText(column.tooltipTitle or column.label or column.id or "Column", gold.r, gold.g, gold.b)
 	if text and text ~= "" then
-		GameTooltip:AddLine(text, 0.82, 0.88, 0.96, true)
+		GameTooltip:AddLine(text, muted.r, muted.g, muted.b, true)
 	end
 	if hasLines then
 		for _, line in ipairs(lines) do
 			if type(line) == "table" then
-				GameTooltip:AddLine(line.text or "", line.r or 0.82, line.g or 0.88, line.b or 0.96, line.wrap == true)
+				GameTooltip:AddLine(line.text or "", line.r or muted.r, line.g or muted.g, line.b or muted.b, line.wrap == true)
 			else
-				GameTooltip:AddLine(tostring(line), 0.82, 0.88, 0.96, true)
+				GameTooltip:AddLine(tostring(line), muted.r, muted.g, muted.b, true)
 			end
 		end
 	end
@@ -259,10 +264,15 @@ function TableMixin:AcquireHeaderButton(index)
 
 	button = CreateFrame("Button", nil, self.header)
 	button:SetHeight(self.headerHeight)
-	button.text = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	button.text = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	button.text:SetJustifyH("LEFT")
-	button.text:SetPoint("LEFT", button, "LEFT", 0, 0)
-	button.text:SetPoint("RIGHT", button, "RIGHT", 0, 0)
+	button.text:SetWordWrap(false)
+	button.text:SetPoint("LEFT", button, "LEFT", CELL_PAD, 0)
+	button.text:SetPoint("RIGHT", button, "RIGHT", -CELL_PAD, 0)
+	button.arrow = button:CreateTexture(nil, "OVERLAY")
+	button.arrow:SetTexture("Interface\\Buttons\\UI-SortArrow")
+	button.arrow:SetSize(9, 8)
+	button.arrow:Hide()
 	button:RegisterForDrag("LeftButton")
 	button:SetScript("OnClick", function(btn)
 		if btn.columnId then
@@ -302,9 +312,11 @@ function TableMixin:AcquireHeaderButton(index)
 end
 
 function TableMixin:CreateDefaultCell(rowFrame, column)
-	local fontString = rowFrame:CreateFontString(nil, "OVERLAY", column.fontObject or "GameFontHighlightSmall")
+	local fontString = rowFrame:CreateFontString(nil, "OVERLAY", column.fontObject or (column.justifyH == "RIGHT" and "NumberFontNormalSmall" or "GameFontHighlightSmall"))
 	fontString:SetJustifyH(column.justifyH or "LEFT")
 	fontString:SetWordWrap(false)
+	local text = ProfessionExporter:GetTheme().textPrimary
+	fontString:SetTextColor(text.r, text.g, text.b)
 	return fontString
 end
 
@@ -316,7 +328,14 @@ function TableMixin:AcquireRow(index)
 
 	row = CreateFrame("Button", nil, self.scrollChild)
 	row:SetHeight(self.rowHeight)
-	row:SetHighlightTexture("Interface/QuestFrame/UI-QuestTitleHighlight", "ADD")
+	row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	row:SetHighlightTexture(WHITE)
+	row:GetHighlightTexture():SetVertexColor(1, 1, 1, 0.04)
+	row.selectedFill = row:CreateTexture(nil, "BACKGROUND")
+	row.selectedFill:SetAllPoints()
+	local gold = ProfessionExporter:GetTheme().gold
+	row.selectedFill:SetColorTexture(gold.r, gold.g, gold.b, 0.07)
+	row.selectedFill:Hide()
 	row.cells = {}
 
 	row:SetScript("OnEnter", function(frame)
@@ -365,86 +384,98 @@ function TableMixin:GetLayoutColumnWidth(column)
 	return tonumber(column.width) or 80
 end
 
+-- Layout rule: fixed columns keep their width; flex columns share what is left (never below
+-- minWidth). When even that does not fit, columns marked `optional` are dropped from the right.
 function TableMixin:RecomputeLayoutColumnWidths()
 	local visible = self:GetVisibleColumns()
 	self._layoutColumnWidths = {}
-	local n = #visible
-	if n == 0 then
+	self._droppedColumns = {}
+	if #visible == 0 then
 		self.contentWidth = self.paddingX * 2
 		return
 	end
 
+	local function fixedWidth(col)
+		return tonumber(col.width) or 80
+	end
+	local function flexWeight(col)
+		return math.max(0, tonumber(col.flex) or 0)
+	end
+
 	if not self.autoFitToScroll or not self.scrollFrame then
-		local sumCols = 0
+		local sum = 0
 		for _, col in ipairs(visible) do
-			local w = tonumber(col.width) or 80
-			self._layoutColumnWidths[col.id] = w
-			sumCols = sumCols + w
+			self._layoutColumnWidths[col.id] = fixedWidth(col)
+			sum = sum + fixedWidth(col)
 		end
-		self.contentWidth = self.paddingX * 2 + sumCols
+		self.contentWidth = self.paddingX * 2 + sum
 		return
 	end
 
-	local viewport = (self.scrollFrame:GetWidth() or 400) - (self.scrollbarReserve or 28) - self.paddingX * 2
-	viewport = math.max(80, math.floor(viewport))
-
-	local prefs, mins, flexW = {}, {}, {}
-	local totalPref, totalFlex = 0, 0
-	for i, col in ipairs(visible) do
-		prefs[i] = tonumber(col.width) or 80
-		mins[i] = tonumber(col.minWidth)
-		if not mins[i] then
-			mins[i] = prefs[i]
-		end
-		if mins[i] > prefs[i] then
-			mins[i] = prefs[i]
-		end
-		flexW[i] = tonumber(col.flex) or 0
-		if flexW[i] < 0 then
-			flexW[i] = 0
-		end
-		totalPref = totalPref + prefs[i]
-		totalFlex = totalFlex + flexW[i]
-	end
-
-	if totalPref <= viewport then
-		local extra = viewport - totalPref
-		for i, col in ipairs(visible) do
-			local w = prefs[i]
-			if totalFlex > 0 and extra > 0 and flexW[i] > 0 then
-				w = w + extra * (flexW[i] / totalFlex)
-			end
-			self._layoutColumnWidths[col.id] = math.max(mins[i], math.floor(w + 0.5))
-		end
-	else
-		local scale = viewport / totalPref
-		for i, col in ipairs(visible) do
-			local w = math.max(mins[i], math.floor(prefs[i] * scale + 0.5))
-			self._layoutColumnWidths[col.id] = w
-		end
-		local sumCols = 0
-		for _, col in ipairs(visible) do
-			sumCols = sumCols + self._layoutColumnWidths[col.id]
-		end
-		if sumCols ~= viewport and n > 0 then
-			local last = visible[n]
-			local li = n
-			local id = last.id
-			self._layoutColumnWidths[id] = math.max(mins[li], self._layoutColumnWidths[id] + (viewport - sumCols))
-		end
-	end
-
-	local sumCols = 0
+	local viewport = math.max(80, math.floor((self.scrollFrame:GetWidth() or 400) - self.paddingX * 2))
+	local columns = {}
 	for _, col in ipairs(visible) do
-		sumCols = sumCols + self._layoutColumnWidths[col.id]
+		columns[#columns + 1] = col
 	end
-	self.contentWidth = self.paddingX * 2 + sumCols
+
+	local function measure()
+		local fixed, minFlex, totalFlex = 0, 0, 0
+		for _, col in ipairs(columns) do
+			if flexWeight(col) > 0 then
+				minFlex = minFlex + (tonumber(col.minWidth) or 60)
+				totalFlex = totalFlex + flexWeight(col)
+			else
+				fixed = fixed + fixedWidth(col)
+			end
+		end
+		return fixed, minFlex, totalFlex
+	end
+
+	local fixed, minFlex, totalFlex = measure()
+	while fixed + minFlex > viewport do
+		local dropIndex
+		for index = #columns, 1, -1 do
+			if columns[index].optional then
+				dropIndex = index
+				break
+			end
+		end
+		if not dropIndex then
+			break
+		end
+		self._droppedColumns[columns[dropIndex].id] = true
+		table.remove(columns, dropIndex)
+		fixed, minFlex, totalFlex = measure()
+	end
+
+	local spare = viewport - fixed
+	local sum = 0
+	for _, col in ipairs(columns) do
+		local width = fixedWidth(col)
+		if flexWeight(col) > 0 then
+			width = math.max(tonumber(col.minWidth) or 60, math.floor(spare * flexWeight(col) / totalFlex))
+		end
+		self._layoutColumnWidths[col.id] = width
+		sum = sum + width
+	end
+	self.contentWidth = self.paddingX * 2 + sum
+end
+
+function TableMixin:GetLayoutColumns()
+	local out = {}
+	for _, col in ipairs(self:GetVisibleColumns()) do
+		if not (self._droppedColumns and self._droppedColumns[col.id]) then
+			out[#out + 1] = col
+		end
+	end
+	return out
 end
 
 function TableMixin:UpdateHeader()
 	self:RecomputeLayoutColumnWidths()
-	local visibleColumns = self:GetVisibleColumns()
+	local visibleColumns = self:GetLayoutColumns()
 	local x = self.paddingX
+	local theme = ProfessionExporter:GetTheme()
 
 	for index, column in ipairs(visibleColumns) do
 		local button = self:AcquireHeaderButton(index)
@@ -457,11 +488,21 @@ function TableMixin:UpdateHeader()
 		button:SetWidth(lw)
 		button:EnableMouse(column.sortable == true or hasTooltip ~= nil)
 
-		local label = column.label or column.id
-		if column.sortable and self.sortKey == column.id then
-			label = label .. (self.sortAsc and " ^" or " v")
+		local sorted = column.sortable and self.sortKey == column.id
+		local color = sorted and theme.gold or theme.textMuted
+		button.text:SetText(column.label or column.id)
+		button.text:SetJustifyH(column.justifyH or "LEFT")
+		button.text:SetTextColor(color.r, color.g, color.b)
+		button.text:ClearAllPoints()
+		button.arrow:ClearAllPoints()
+		button.text:SetPoint("LEFT", button, "LEFT", CELL_PAD, 0)
+		button.text:SetPoint("RIGHT", button, "RIGHT", sorted and -(CELL_PAD + 11) or -CELL_PAD, 0)
+		button.arrow:SetPoint("RIGHT", button, "RIGHT", -CELL_PAD, 0)
+		button.arrow:SetShown(sorted)
+		if sorted then
+			button.arrow:SetVertexColor(theme.gold.r, theme.gold.g, theme.gold.b)
+			button.arrow:SetTexCoord(0, 0.5625, self.sortAsc and 1 or 0, self.sortAsc and 0 or 1)
 		end
-		button.text:SetText(label)
 		button:Show()
 
 		x = x + lw
@@ -474,19 +515,39 @@ function TableMixin:UpdateHeader()
 	self.header:SetHeight(self.headerHeight)
 end
 
+function TableMixin:IsRowSelected(rowData)
+	if type(self.isRowSelected) == "function" then
+		return self.isRowSelected(rowData, self) == true
+	end
+	return rowData ~= nil and rowData == self.selectedRowData
+end
+
+function TableMixin:SetSelectedRow(rowData)
+	self.selectedRowData = rowData
+	for _, row in ipairs(self.rowPool) do
+		if row:IsShown() then
+			row.selectedFill:SetShown(self:IsRowSelected(row.rowData))
+		end
+	end
+end
+
 function TableMixin:UpdateRow(rowFrame, rowData, rowIndex)
-	local visibleColumns = self:GetVisibleColumns()
+	local visibleColumns = self:GetLayoutColumns()
 	local x = self.paddingX
 	rowFrame.rowData = rowData
 	rowFrame:SetWidth(self.contentWidth)
+	rowFrame.selectedFill:SetShown(self:IsRowSelected(rowData))
 
 	for _, column in ipairs(visibleColumns) do
 		local cell = self:AcquireCell(rowFrame, column)
 		local region = getCellRegion(cell)
+		local width = self:GetLayoutColumnWidth(column)
+		local isFontString = region.GetObjectType and region:GetObjectType() == "FontString"
+		local pad = isFontString and CELL_PAD or 0
 		region:ClearAllPoints()
-		region:SetPoint("LEFT", rowFrame, "LEFT", x, 0)
+		region:SetPoint("LEFT", rowFrame, "LEFT", x + pad, 0)
 		if region.SetWidth then
-			region:SetWidth(self:GetLayoutColumnWidth(column))
+			region:SetWidth(width - pad * 2)
 		end
 		if region.SetHeight and region ~= rowFrame then
 			region:SetHeight(self.rowHeight)
@@ -516,7 +577,7 @@ function TableMixin:UpdateRow(rowFrame, rowData, rowIndex)
 	for columnId, cell in pairs(rowFrame.cells) do
 		local column = self:GetColumn(columnId)
 		local region = getCellRegion(cell)
-		if not column or not isColumnVisible(column, self.context or {}) then
+		if not column or not isColumnVisible(column, self.context or {}) or (self._droppedColumns and self._droppedColumns[columnId]) then
 			region:Hide()
 		end
 	end
@@ -590,6 +651,7 @@ function TableMixin:RefreshRows(opts)
 	self.displayRows = self:GetSortedRows()
 
 	local count = #self.displayRows
+	self.totalRowCount = count
 	if self.maxRows and count > self.maxRows then
 		local trimmed = {}
 		for index = 1, self.maxRows do
@@ -641,9 +703,46 @@ function TableMixin:RefreshRows(opts)
 	applyScrollAfterContentSize()
 end
 
+function TableMixin:SetEmptyText(title, hint)
+	self.emptyTitle = title
+	self.emptyHint = hint
+	self:UpdateEmptyState()
+end
+
+function TableMixin:UpdateEmptyState()
+	local empty = #(self.displayRows or {}) == 0
+	self.emptyFrame:SetShown(empty)
+	self.emptyFrame.title:SetText(self.emptyTitle or "Nothing to show")
+	self.emptyFrame.hint:SetText(self.emptyHint or "Change the search or filters.")
+end
+
+-- Footer text: `left` is replaced by "Showing N of M" when rows were capped by maxRows.
+function TableMixin:SetFooterText(left, right)
+	if not self.footer then
+		return
+	end
+	self.footerLeftOverride = left
+	self.footer.right:SetText(right or "")
+	self:UpdateFooter()
+end
+
+function TableMixin:UpdateFooter()
+	if not self.footer then
+		return
+	end
+	local shown, total = #(self.displayRows or {}), self.totalRowCount or 0
+	local left = self.footerLeftOverride
+	if shown < total then
+		left = string.format("Showing %s of %s", ProfessionExporter:FormatNumberGrouped(shown), ProfessionExporter:FormatNumberGrouped(total))
+	end
+	self.footer.left:SetText(left or "")
+end
+
 function TableMixin:Refresh(opts)
 	self:UpdateHeader()
 	self:RefreshRows(opts)
+	self:UpdateEmptyState()
+	self:UpdateFooter()
 end
 
 function ProfessionExporter:CreateReusableTable(parent, options)
@@ -656,9 +755,11 @@ function ProfessionExporter:CreateReusableTable(parent, options)
 	widget.context = {}
 	widget.rowPool = {}
 	widget.headerButtons = {}
+	local sizes = ProfessionExporter:GetTheme().size
 	widget.paddingX = options.paddingX or 4
-	widget.rowHeight = options.rowHeight or 20
-	widget.headerHeight = options.headerHeight or widget.rowHeight
+	widget.rowHeight = math.max(options.rowHeight or sizes.row, sizes.row)
+	widget.headerHeight = options.headerHeight or sizes.tableHead
+	widget.isRowSelected = options.isRowSelected
 	widget.maxRows = options.maxRows
 	widget.sortKey = options.sortKey
 	widget.sortAsc = options.sortAsc ~= false
@@ -669,26 +770,84 @@ function ProfessionExporter:CreateReusableTable(parent, options)
 	widget.onRowClick = options.onRowClick
 	widget.contentWidth = 0
 	widget.autoFitToScroll = options.autoFitToScroll == true
-	widget.scrollbarReserve = options.scrollbarReserve or 28
 	widget._layoutColumnWidths = {}
 	widget.useViewportVirtualization = options.viewportVirtualize == true
 
+	local theme = ProfessionExporter:GetTheme()
+	local gutter = theme.size.scrollGutter
 	local frame = CreateFrame("Frame", nil, parent)
 	widget.frame = frame
 	if frame.SetClipsChildren then
 		frame:SetClipsChildren(true)
 	end
+	ProfessionExporter:AddSurface(frame, { r = 0, g = 0, b = 0, a = 0 }, theme.borderSubtle)
 
 	local header = CreateFrame("Frame", nil, frame)
-	header:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
-	header:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -28, 0)
+	header:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+	header:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -1)
 	header:SetHeight(widget.headerHeight)
+	local headerFill = header:CreateTexture(nil, "BACKGROUND")
+	headerFill:SetAllPoints()
+	headerFill:SetColorTexture(theme.surface2.r, theme.surface2.g, theme.surface2.b, 1)
+	local headerRule = header:CreateTexture(nil, "BORDER")
+	headerRule:SetPoint("BOTTOMLEFT")
+	headerRule:SetPoint("BOTTOMRIGHT")
+	headerRule:SetHeight(1)
+	headerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
 	widget.header = header
 
+	local footerHeight = 0
+	if options.footer then
+		footerHeight = theme.size.footer
+		local footer = CreateFrame("Frame", nil, frame)
+		footer:SetPoint("BOTTOMLEFT", 1, 1)
+		footer:SetPoint("BOTTOMRIGHT", -1, 1)
+		footer:SetHeight(footerHeight)
+		local fill = footer:CreateTexture(nil, "BACKGROUND")
+		fill:SetAllPoints()
+		fill:SetColorTexture(theme.surface2.r, theme.surface2.g, theme.surface2.b, 1)
+		local rule = footer:CreateTexture(nil, "BORDER")
+		rule:SetPoint("TOPLEFT")
+		rule:SetPoint("TOPRIGHT")
+		rule:SetHeight(1)
+		rule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+		footer.right = footer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		footer.right:SetPoint("RIGHT", -gutter, 0)
+		footer.right:SetJustifyH("RIGHT")
+		footer.right:SetWordWrap(false)
+		footer.left = footer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		footer.left:SetPoint("LEFT", 8, 0)
+		footer.left:SetPoint("RIGHT", footer.right, "LEFT", -12, 0)
+		footer.left:SetJustifyH("LEFT")
+		footer.left:SetWordWrap(false)
+		for _, text in ipairs({ footer.left, footer.right }) do
+			text:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+		end
+		widget.footer = footer
+	end
+
 	local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-	scrollFrame:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -2)
-	scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -28, 0)
+	scrollFrame:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, 0)
+	scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -(gutter + 1), footerHeight + 1)
 	widget.scrollFrame = scrollFrame
+	ProfessionExporter:SkinTree(frame)
+
+	local empty = CreateFrame("Frame", nil, frame)
+	empty:SetPoint("TOPLEFT", scrollFrame, "TOPLEFT", 24, -24)
+	empty:SetPoint("BOTTOMRIGHT", scrollFrame, "BOTTOMRIGHT", -24, 24)
+	empty.title = empty:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	empty.title:SetPoint("BOTTOM", empty, "CENTER", 0, 2)
+	empty.title:SetPoint("LEFT")
+	empty.title:SetPoint("RIGHT")
+	empty.hint = empty:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	empty.hint:SetPoint("TOP", empty, "CENTER", 0, -4)
+	empty.hint:SetPoint("LEFT")
+	empty.hint:SetPoint("RIGHT")
+	empty.hint:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	empty:Hide()
+	widget.emptyFrame = empty
+	widget.emptyTitle = options.emptyTitle
+	widget.emptyHint = options.emptyHint
 
 	local scrollChild = CreateFrame("Frame", nil, scrollFrame)
 	scrollChild:SetWidth(1)

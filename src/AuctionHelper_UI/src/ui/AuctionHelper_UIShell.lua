@@ -36,6 +36,62 @@ local TAB_ORDER = {
 	{ id = "settings", label = "Settings", module = function() return ProfessionExporter.SettingsTab end },
 }
 
+local ADDON_ICON = "Interface\\Icons\\INV_Misc_Book_09"
+
+local function addRule(frame, edge, color)
+	local rule = frame:CreateTexture(nil, "BORDER")
+	rule:SetPoint(edge .. "LEFT")
+	rule:SetPoint(edge .. "RIGHT")
+	rule:SetHeight(1)
+	rule:SetColorTexture(color.r, color.g, color.b, color.a or 1)
+	return rule
+end
+
+local function characterLabel()
+	local name = UnitName and UnitName("player") or nil
+	local realm = GetRealmName and GetRealmName() or nil
+	if name and realm and realm ~= "" then
+		return name .. " · " .. realm
+	end
+	return name or ""
+end
+
+-- A tab: text only, muted; selected tab is gold with a 2px gold underline.
+local function createTabButton(parent, label)
+	local theme = ProfessionExporter:GetTheme()
+	local button = CreateFrame("Button", nil, parent)
+	button:SetHeight(theme.size.tabs)
+	local text = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	text:SetPoint("CENTER", 0, 1)
+	text:SetText(label)
+	button:SetFontString(text)
+	button:SetWidth(math.ceil(text:GetStringWidth()) + 20)
+	button:SetHighlightTexture("Interface\\Buttons\\WHITE8X8")
+	button:GetHighlightTexture():SetVertexColor(1, 1, 1, 0.04)
+	button.underline = button:CreateTexture(nil, "OVERLAY")
+	button.underline:SetPoint("BOTTOMLEFT")
+	button.underline:SetPoint("BOTTOMRIGHT")
+	button.underline:SetHeight(2)
+	button.underline:SetColorTexture(theme.gold.r, theme.gold.g, theme.gold.b, 1)
+	button:SetScript("OnEnter", function(self)
+		if not self.selected then
+			self:GetFontString():SetTextColor(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b)
+		end
+	end)
+	button:SetScript("OnLeave", function(self)
+		ProfessionExporter:StyleDashboardTab(self, self.selected)
+	end)
+	return button
+end
+
+function ProfessionExporter:StyleDashboardTab(button, selected)
+	local theme = self:GetTheme()
+	local color = selected and theme.gold or theme.textMuted
+	button.selected = selected and true or nil
+	button:GetFontString():SetTextColor(color.r, color.g, color.b)
+	button.underline:SetShown(selected and true or false)
+end
+
 local function showPanel(frame, shown)
 	if frame then
 		frame:SetShown(shown)
@@ -221,15 +277,19 @@ function ProfessionExporter:CreateDashboardFrame()
 		ProfessionExporter:SetSetting("appearance.windowWidth", self:GetWidth())
 		ProfessionExporter:SetSetting("appearance.windowHeight", self:GetHeight())
 	end)
-	self:ApplyBackdrop(frame, self:GetTheme().surface1, self:GetTheme().borderStrong)
+	self:StyleWindow(frame)
 
 	ui.mainFrame = frame
 
-	frame.titleBar = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-	frame.titleBar:SetPoint("TOPLEFT", 8, -8)
-	frame.titleBar:SetPoint("TOPRIGHT", -8, -8)
-	frame.titleBar:SetHeight(40)
-	self:StylePanel(frame.titleBar, "surface2")
+	local theme = self:GetTheme()
+	local size = theme.size
+	local inset = theme.spacing.md
+
+	-- Header: drag handle, icon, gold title, character name, close button.
+	frame.titleBar = CreateFrame("Frame", nil, frame)
+	frame.titleBar:SetPoint("TOPLEFT", 1, -1)
+	frame.titleBar:SetPoint("TOPRIGHT", -1, -1)
+	frame.titleBar:SetHeight(size.header)
 	frame.titleBar:RegisterForDrag("LeftButton")
 	frame.titleBar:EnableMouse(true)
 	frame.titleBar:SetScript("OnDragStart", function()
@@ -238,23 +298,36 @@ function ProfessionExporter:CreateDashboardFrame()
 	end)
 	frame.titleBar:SetScript("OnDragStop", function()
 		frame:StopMovingOrSizing()
-		ProfessionExporter:SetSetting("appearance.windowWidth", frame:GetWidth())
-		ProfessionExporter:SetSetting("appearance.windowHeight", frame:GetHeight())
 	end)
+	addRule(frame.titleBar, "BOTTOM", theme.borderSubtle)
 
-	frame.title = frame.titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-	frame.title:SetPoint("LEFT", 12, 0)
-	frame.title:SetText("AuctionHelper")
-
-	frame.subtitle = frame.titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	frame.subtitle:SetPoint("LEFT", frame.title, "RIGHT", 10, 0)
-	frame.subtitle:SetText("Profession data, exports, and settings")
+	frame.icon = frame.titleBar:CreateTexture(nil, "ARTWORK")
+	frame.icon:SetTexture(ADDON_ICON)
+	frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	frame.icon:SetSize(16, 16)
+	frame.icon:SetPoint("LEFT", 11, 0)
 
 	frame.closeButton = CreateFrame("Button", nil, frame.titleBar, "UIPanelCloseButton")
-	frame.closeButton:SetPoint("RIGHT", 0, 0)
+	frame.closeButton:ClearAllPoints()
+	frame.closeButton:SetPoint("RIGHT", -6, 0)
+	self:SkinCloseButton(frame.closeButton)
 	frame.closeButton:SetScript("OnClick", function()
 		frame:Hide()
 	end)
+
+	frame.subtitle = frame.titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	frame.subtitle:SetPoint("RIGHT", frame.closeButton, "LEFT", -10, 0)
+	frame.subtitle:SetJustifyH("RIGHT")
+	frame.subtitle:SetWordWrap(false)
+	frame.subtitle:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	frame.subtitle:SetText(characterLabel())
+
+	frame.title = frame.titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+	frame.title:SetPoint("LEFT", frame.icon, "RIGHT", 8, 0)
+	frame.title:SetPoint("RIGHT", frame.subtitle, "LEFT", -12, 0)
+	frame.title:SetJustifyH("LEFT")
+	frame.title:SetWordWrap(false)
+	frame.title:SetText("AuctionHelper")
 
 	frame:HookScript("OnMouseDown", function()
 		ProfessionExporter:RecordExternalFrameInteraction("addon", "dashboard_mouse_down")
@@ -266,29 +339,23 @@ function ProfessionExporter:CreateDashboardFrame()
 		ProfessionExporter:UpdateDynamicPanelLayering("dashboard_show")
 	end)
 
-	frame.statusBar = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-	frame.statusBar:SetPoint("TOPLEFT", frame.titleBar, "BOTTOMLEFT", 0, -8)
-	frame.statusBar:SetPoint("TOPRIGHT", frame.titleBar, "BOTTOMRIGHT", 0, -8)
-	frame.statusBar:SetHeight(26)
-	self:StylePanel(frame.statusBar, "surface2")
-	frame.statusText = frame.statusBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	frame.statusText:SetPoint("LEFT", 10, 0)
-	frame.statusText:SetWidth(700)
-	frame.statusText:SetJustifyH("LEFT")
-
+	-- Tab strip.
 	frame.tabBar = CreateFrame("Frame", nil, frame)
-	frame.tabBar:SetPoint("TOPLEFT", frame.statusBar, "BOTTOMLEFT", 0, -10)
-	frame.tabBar:SetPoint("TOPRIGHT", frame.statusBar, "BOTTOMRIGHT", 0, -10)
-	frame.tabBar:SetHeight(28)
+	frame.tabBar:SetPoint("TOPLEFT", frame.titleBar, "BOTTOMLEFT", 0, 0)
+	frame.tabBar:SetPoint("TOPRIGHT", frame.titleBar, "BOTTOMRIGHT", 0, 0)
+	frame.tabBar:SetHeight(size.tabs)
+	addRule(frame.tabBar, "BOTTOM", theme.borderSubtle)
 
-	frame.contentHost = CreateFrame("Frame", nil, frame, "BackdropTemplate")
-	frame.contentHost:SetPoint("TOPLEFT", frame.tabBar, "BOTTOMLEFT", 0, -8)
-	frame.contentHost:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -8, 8)
-	self:StylePanel(frame.contentHost, "surface1")
+	-- Footer: status on the left, stored data on the right, resize grip in the corner.
+	frame.statusBar = CreateFrame("Frame", nil, frame)
+	frame.statusBar:SetPoint("BOTTOMLEFT", 1, 1)
+	frame.statusBar:SetPoint("BOTTOMRIGHT", -1, 1)
+	frame.statusBar:SetHeight(size.footer)
+	addRule(frame.statusBar, "TOP", theme.borderSubtle)
 
-	frame.resizeHandle = CreateFrame("Button", nil, frame)
-	frame.resizeHandle:SetSize(18, 18)
-	frame.resizeHandle:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -6, 6)
+	frame.resizeHandle = CreateFrame("Button", nil, frame.statusBar)
+	frame.resizeHandle:SetSize(14, 14)
+	frame.resizeHandle:SetPoint("BOTTOMRIGHT", -2, 2)
 	frame.resizeHandle:SetNormalTexture("Interface/ChatFrame/UI-ChatIM-SizeGrabber-Up")
 	frame.resizeHandle:SetHighlightTexture("Interface/ChatFrame/UI-ChatIM-SizeGrabber-Highlight")
 	frame.resizeHandle:SetPushedTexture("Interface/ChatFrame/UI-ChatIM-SizeGrabber-Down")
@@ -303,21 +370,45 @@ function ProfessionExporter:CreateDashboardFrame()
 	end)
 	frame.resizeHandle:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
-		GameTooltip:SetText("Resize window", 1, 1, 1)
-		GameTooltip:AddLine("Drag from the bottom-right corner.", 0.8, 0.8, 0.8, true)
+		GameTooltip:SetText("Drag to resize", 1, 1, 1)
 		GameTooltip:Show()
 	end)
 	frame.resizeHandle:SetScript("OnLeave", GameTooltip_Hide)
+
+	frame.statusRight = frame.statusBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	frame.statusRight:SetPoint("RIGHT", frame.resizeHandle, "LEFT", -8, 0)
+	frame.statusRight:SetJustifyH("RIGHT")
+	frame.statusRight:SetWordWrap(false)
+	frame.statusText = frame.statusBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	frame.statusText:SetPoint("LEFT", inset, 0)
+	frame.statusText:SetPoint("RIGHT", frame.statusRight, "LEFT", -12, 0)
+	frame.statusText:SetJustifyH("LEFT")
+	frame.statusText:SetWordWrap(false)
+	for _, text in ipairs({ frame.statusText, frame.statusRight }) do
+		text:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	end
+
+	-- Content: everything between the tab strip and the footer, inset on every side.
+	frame.contentHost = CreateFrame("Frame", nil, frame)
+	frame.contentHost:SetPoint("TOPLEFT", frame.tabBar, "BOTTOMLEFT", inset, -inset)
+	frame.contentHost:SetPoint("BOTTOMRIGHT", frame.statusBar, "TOPRIGHT", -inset, inset)
+	if frame.contentHost.SetClipsChildren then
+		frame.contentHost:SetClipsChildren(true)
+	end
 
 	ui.tabButtons = {}
 	ui.tabPanels = {}
 	ui.tabModules = {}
 	ui.tabInited = {}
-	for index, tab in ipairs(TAB_ORDER) do
-		local button = CreateFrame("Button", nil, frame.tabBar, "UIPanelButtonTemplate")
-		button:SetSize(96, 26)
-		button:SetPoint("LEFT", frame.tabBar, "LEFT", (index - 1) * 100, 0)
-		button:SetText(tab.label)
+	local previous
+	for _, tab in ipairs(TAB_ORDER) do
+		local button = createTabButton(frame.tabBar, tab.label)
+		if previous then
+			button:SetPoint("LEFT", previous, "RIGHT", theme.spacing.xs, 0)
+		else
+			button:SetPoint("LEFT", frame.tabBar, "LEFT", inset, 0)
+		end
+		previous = button
 		button:SetScript("OnClick", function()
 			ProfessionExporter:ShowDashboardTab(tab.id)
 		end)
@@ -347,12 +438,13 @@ function ProfessionExporter:RefreshShellStatus()
 	local state = self:GetState()
 	local currentKey = self:GetCharacterKey()
 	local charData = self.db and self.db.characters and self.db.characters[currentKey]
-	local scanState = state.scanInProgress and ("Scanning " .. tostring(state.currentProfession and state.currentProfession.professionName or "â€¦")) or "Idle"
+	local scanState = state.scanInProgress and ("Scanning " .. tostring(state.currentProfession and state.currentProfession.professionName or "professions") .. "…") or "Idle"
 	local stored = self:TableCount(self.db and self.db.characters or {})
-	ui.mainFrame.statusText:SetText(string.format(
-		"State: %s | Stored characters: %d | Current character scan: %s",
-		scanState,
+	ui.mainFrame.statusText:SetText(scanState)
+	ui.mainFrame.statusRight:SetText(string.format(
+		"%d %s stored · Last scan %s",
 		stored,
+		stored == 1 and "character" or "characters",
 		self:FormatScanTimestamp(charData and charData.scanFinishedAt)
 	))
 end
@@ -361,12 +453,8 @@ function ProfessionExporter:ApplyThemeToUI()
 	local ui = self.ui
 	local theme = self:GetTheme()
 	if ui.mainFrame then
-		self:ApplyBackdrop(ui.mainFrame, theme.surface1, theme.borderStrong)
-		self:StylePanel(ui.mainFrame.titleBar, "surface2")
-		self:StylePanel(ui.mainFrame.statusBar, "surface2")
-		self:StylePanel(ui.mainFrame.contentHost, "surface1")
 		for tabId, button in pairs(ui.tabButtons or {}) do
-			self:StyleShellButton(button, tabId == self:GetActiveMainTab())
+			self:StyleDashboardTab(button, tabId == self:GetActiveMainTab())
 		end
 	end
 	for tabId, module in pairs(ui.tabModules or {}) do
@@ -374,6 +462,7 @@ function ProfessionExporter:ApplyThemeToUI()
 			module:ApplyTheme(theme)
 		end
 	end
+	self:SkinTree(ui.mainFrame)
 end
 
 function ProfessionExporter:EnsureDashboardTabCreated(tabId)
@@ -435,7 +524,7 @@ function ProfessionExporter:ShowDashboardTab(tabId)
 		showPanel(panel, id == tabId)
 	end
 	for id, button in pairs(ui.tabButtons or {}) do
-		self:StyleShellButton(button, id == tabId)
+		self:StyleDashboardTab(button, id == tabId)
 	end
 
 	self:EnsureDashboardTabCreated(tabId)
@@ -473,6 +562,7 @@ function ProfessionExporter:RefreshDashboard(skipRebuild)
 	if active == "crafts" then
 		self:RefreshCraftsTab()
 	end
+	self:SkinTree(self.ui and self.ui.mainFrame)
 end
 
 function ProfessionExporter:ToggleDashboard()
@@ -534,7 +624,7 @@ function ProfessionExporter:EnsureMinimapButton()
 	btn:SetFrameStrata("MEDIUM")
 	btn:SetFrameLevel(Minimap:GetFrameLevel() + 2)
 	btn:SetHighlightTexture("Interface/Minimap/UI-Minimap-ZoomButton-Highlight", "ADD")
-	btn:RegisterForClicks("LeftButtonUp")
+	btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	btn:RegisterForDrag("LeftButton")
 
 	local icon = btn:CreateTexture(nil, "ARTWORK")
@@ -548,14 +638,20 @@ function ProfessionExporter:EnsureMinimapButton()
 	border:SetSize(52, 52)
 	border:SetPoint("TOPLEFT", -9, 7)
 
-	btn:SetScript("OnClick", function()
-		ProfessionExporter:ToggleDashboard()
+	btn:SetScript("OnClick", function(_, mouse)
+		if mouse == "RightButton" then
+			ProfessionExporter:OpenSettingsTab()
+		else
+			ProfessionExporter:ToggleDashboard()
+		end
 	end)
 	btn:SetScript("OnDragStart", function(self)
 		self:SetScript("OnUpdate", function()
 			ProfessionExporter:InitDB()
 			local mx, my = Minimap:GetCenter()
 			local px, py = GetCursorPosition()
+			local scale = Minimap:GetEffectiveScale()
+			px, py = px / scale, py / scale
 			local angle = math.deg(math.atan2(py - my, px - mx))
 			ProfessionExporter:SetSetting("integrations.minimapButtonAngle", angle)
 			ProfessionExporter:UpdateMinimapButtonPosition(self)
@@ -565,10 +661,12 @@ function ProfessionExporter:EnsureMinimapButton()
 		self:SetScript("OnUpdate", nil)
 	end)
 	btn:SetScript("OnEnter", function(self)
+		local theme = ProfessionExporter:GetTheme()
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-		GameTooltip:SetText("AuctionHelper", 1, 1, 1)
-		GameTooltip:AddLine("Open the Overview, Inventory, Crafts, Export, Docs, and Settings tabs.", nil, nil, nil, true)
-		GameTooltip:AddLine("Drag to move this button.", 0.8, 0.8, 0.8, true)
+		GameTooltip:SetText("AuctionHelper", theme.gold.r, theme.gold.g, theme.gold.b)
+		for _, pair in ipairs({ { "Click", "Open the dashboard" }, { "Right-click", "Open settings" }, { "Drag", "Move this button" } }) do
+			GameTooltip:AddDoubleLine(pair[1], pair[2], theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, 1, 1, 1)
+		end
 		GameTooltip:Show()
 	end)
 	btn:SetScript("OnLeave", GameTooltip_Hide)
@@ -620,12 +718,12 @@ function ProfessionExporter:RegisterBlizzardSettings()
 	subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
 	subtitle:SetWidth(760)
 	subtitle:SetJustifyH("LEFT")
-	subtitle:SetText("Open the addon window or change a small set of high-impact options here. Full configuration lives in the addon Settings tab.")
+	subtitle:SetText("Open the AuctionHelper window. Every option is on its Settings tab; the most used ones are also here.")
 
 	local openButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 	openButton:SetSize(180, 24)
 	openButton:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -12)
-	openButton:SetText("Open Addon Window")
+	openButton:SetText("Open AuctionHelper")
 	openButton:SetScript("OnClick", function()
 		ProfessionExporter:OpenSettingsTab()
 	end)
@@ -660,7 +758,7 @@ function ProfessionExporter:RegisterBlizzardSettings()
 		ProfessionExporter:SetSetting("capture.captureSpecializationTree", value)
 	end)
 
-	local outputCheck = createCheckbox(specCheck, -8, "Verbose recipe output API", function()
+	local outputCheck = createCheckbox(specCheck, -8, "Include detailed recipe output data", function()
 		return ProfessionExporter:GetSetting("capture.includeRecipeOutputItemData", false)
 	end, function(value)
 		ProfessionExporter:SetSetting("capture.includeRecipeOutputItemData", value)
@@ -669,19 +767,11 @@ function ProfessionExporter:RegisterBlizzardSettings()
 	local scaleButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 	scaleButton:SetSize(180, 24)
 	scaleButton:SetPoint("TOPLEFT", outputCheck, "BOTTOMLEFT", 4, -12)
-	local themeButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-	themeButton:SetSize(180, 24)
-	themeButton:SetPoint("LEFT", scaleButton, "RIGHT", 12, 0)
-	local accentButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-	accentButton:SetSize(180, 24)
-	accentButton:SetPoint("LEFT", themeButton, "RIGHT", 12, 0)
 	local function refreshScaleButton()
 		scaleButton:SetText(string.format(
-			"Window Scale: %d%%",
+			"Window scale: %d%%",
 			math.floor((ProfessionExporter:GetSetting("appearance.windowScale", 1) or 1) * 100 + 0.5)
 		))
-		themeButton:SetText("Theme: " .. tostring(ProfessionExporter:GetSetting("appearance.themePreset", "slate")))
-		accentButton:SetText("Accent: custom")
 	end
 	scaleButton:SetScript("OnClick", function()
 		local options = ProfessionExporter:GetWindowScaleOptions()
@@ -697,42 +787,30 @@ function ProfessionExporter:RegisterBlizzardSettings()
 		ProfessionExporter:ApplyWindowScale()
 		refreshScaleButton()
 	end)
-	themeButton:SetScript("OnClick", function()
-		local options = ProfessionExporter:GetThemePresetOptions()
-		local current = ProfessionExporter:GetSetting("appearance.themePreset", "slate")
-		local nextIndex = 1
-		for index, option in ipairs(options) do
-			if option.value == current then
-				nextIndex = (index % #options) + 1
-				break
-			end
-		end
-		ProfessionExporter:SetSetting("appearance.themePreset", options[nextIndex].value)
-		ProfessionExporter:ApplyThemeToUI()
-		refreshScaleButton()
-	end)
-	accentButton:SetScript("OnClick", function()
-		local accents = {
-			{ r = 0.24, g = 0.66, b = 0.74 },
-			{ r = 0.82, g = 0.64, b = 0.23 },
-			{ r = 0.80, g = 0.38, b = 0.28 },
-			{ r = 0.36, g = 0.62, b = 0.85 },
-		}
-		local current = ProfessionExporter:GetSetting("appearance.accentColor", accents[1])
-		local nextIndex = 1
-		for index, color in ipairs(accents) do
-			if math.abs((current.r or 0) - color.r) < 0.01 and math.abs((current.g or 0) - color.g) < 0.01 and math.abs((current.b or 0) - color.b) < 0.01 then
-				nextIndex = (index % #accents) + 1
-				break
-			end
-		end
-		ProfessionExporter:SetSetting("appearance.accentColor", accents[nextIndex])
-		ProfessionExporter:ApplyThemeToUI()
-		refreshScaleButton()
-	end)
 	refreshScaleButton()
 
 	local category = Settings.RegisterCanvasLayoutCategory(frame, "AuctionHelper")
 	self.settingsCategoryId = category:GetID()
 	Settings.RegisterAddOnCategory(category)
+end
+
+-- Every docked panel and popup is re-skinned after it refreshes, so controls created during a refresh
+-- get the same look. Hooks run after the original method returns.
+local SKIN_AFTER_REFRESH = {
+	RefreshAuctionHousePanel = function(pe) return pe.ui.auctionPanel end,
+	RefreshProfessionCraftEconomyPanel = function(pe) return pe._professionCraftPanel end,
+	RefreshMailPanel = function(pe) return pe.ui.mailPanel end,
+	RefreshInventoryTab = function(pe) return pe.ui.mainFrame end,
+	RefreshCraftsTab = function(pe) return pe.ui.mainFrame end,
+	EnsureCraftingOrdersFilterBar = function(_, frame) return frame end,
+}
+for method, getFrame in pairs(SKIN_AFTER_REFRESH) do
+	if type(ProfessionExporter[method]) == "function" then
+		local original = ProfessionExporter[method]
+		ProfessionExporter[method] = function(self, ...)
+			local result = original(self, ...)
+			self:SkinTree(getFrame(self, result))
+			return result
+		end
+	end
 end
