@@ -77,6 +77,7 @@ local function buildSections(pe)
 		{ column = 2, title = "Mail", items = {
 			{ kind = "select", label = "Auction house / bank character", path = "mail.sellerByRealm." .. realm, default = "",
 				options = sellerOptions },
+			{ kind = "check", label = "Mail collected materials to crafters when the mailbox opens", path = "mail.autoSendMaterials", default = true },
 		} },
 		{ column = 2, title = "Other price sources", items = {
 			{ kind = "check", label = "Use Auctionator when there is no scanned price", path = "integrations.economyUseAuctionatorFallback",

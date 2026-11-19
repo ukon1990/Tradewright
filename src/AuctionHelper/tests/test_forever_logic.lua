@@ -251,6 +251,21 @@ do
 	check("Seller: no settings table", FL.ResolveSellerCharacter(nil, "Stormrage", known) == nil)
 end
 
+-- Materials mail plan: complete sets, partial sets, shared stock
+do
+	local function alloc(key, quantity) return { characterKey = key, mailQuantity = quantity } end
+	local plan = FL.BuildMailPlan({
+		{ itemID = 1, name = "Ore", allocations = { alloc("Amy-R", 6), alloc("Bob-R", 6) } },
+		{ itemID = 2, name = "Flux", allocations = { alloc("Amy-R", 2) } },
+		{ itemID = 3, name = "Gem", allocations = { alloc("Cid-R", 1) } },
+	}, { [1] = 10, [2] = 2 })
+	check("Mail plan: destinations with items only, sorted", #plan == 2 and plan[1].characterKey == "Amy-R" and plan[2].mailName == "Bob")
+	check("Mail plan: complete set", plan[1].complete == true and plan[1].totalQuantity == 8 and #plan[1].missing == 0)
+	check("Mail plan: shared material runs out for the later crafter", plan[2].complete == false and plan[2].items[1].quantity == 4
+		and plan[2].missing[1].quantity == 2)
+	check("Mail plan: empty", #FL.BuildMailPlan({}, {}) == 0 and #FL.BuildMailPlan(nil, nil) == 0)
+end
+
 -- TOC sniff (Forever load markers)
 local toc = assert(io.open(root .. "/AuctionHelper.toc", "r")):read("*a")
 check("TOC Interface 16001", toc:find("Interface: 16001", 1, true) ~= nil)

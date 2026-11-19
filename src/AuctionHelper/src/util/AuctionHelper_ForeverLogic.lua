@@ -634,6 +634,48 @@ function ForeverLogic.ResolveSellerCharacter(sellerByRealm, realm, knownCharacte
 	return key
 end
 
+--- Shares the bag stock out over the characters that need materials mailed to them.
+--- lines: { { itemID, name, allocations = { { characterKey, mailQuantity } } } }; stock[itemID] is
+--- what the bags hold. Returns the destinations that get at least one item, sorted by character:
+--- { characterKey, mailName, items = { { itemID, quantity, name } }, totalQuantity,
+--- missing = { { itemID, quantity, name } }, complete }. A destination is complete when everything
+--- it needs mailed is in the bags; earlier lines and characters are served first.
+function ForeverLogic.BuildMailPlan(lines, stock)
+	local left, byKey, out = {}, {}, {}
+	for _, line in ipairs(lines or {}) do
+		local itemID = line.itemID
+		left[itemID] = left[itemID] or tonumber(stock and stock[itemID]) or 0
+		for _, alloc in ipairs(line.allocations or {}) do
+			local key = tostring(alloc.characterKey or "")
+			local need = tonumber(alloc.mailQuantity) or 0
+			if key ~= "" and need > 0 then
+				local dest = byKey[key]
+				if not dest then
+					dest = { characterKey = key, mailName = key:match("^([^%-]+)") or key, items = {}, missing = {}, totalQuantity = 0 }
+					byKey[key] = dest
+				end
+				local send = math.min(need, left[itemID])
+				left[itemID] = left[itemID] - send
+				if send > 0 then
+					dest.items[#dest.items + 1] = { itemID = itemID, quantity = send, name = line.name }
+					dest.totalQuantity = dest.totalQuantity + send
+				end
+				if send < need then
+					dest.missing[#dest.missing + 1] = { itemID = itemID, quantity = need - send, name = line.name }
+				end
+			end
+		end
+	end
+	for _, dest in pairs(byKey) do
+		if #dest.items > 0 then
+			dest.complete = #dest.missing == 0
+			out[#out + 1] = dest
+		end
+	end
+	table.sort(out, function(a, b) return a.characterKey < b.characterKey end)
+	return out
+end
+
 -- Classic recipe reagent slot from (itemID, quantity).
 function ForeverLogic.MakeClassicReagentSlot(slotIndex, itemID, quantity)
 	itemID = tonumber(itemID)

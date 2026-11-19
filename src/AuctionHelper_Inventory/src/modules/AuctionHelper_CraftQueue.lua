@@ -459,14 +459,12 @@ function ProfessionExporter:BuildReagentMailAllocations(itemID, sources)
 	return allocations
 end
 
---- Build per-destination mail parcels from current bags and shopping allocations.
---- @return table[] { characterKey, mailName, items = { { itemID, quantity, name } } }
+--- Per-crafter mail plan from the bags and the queue's material needs; see ForeverLogic.BuildMailPlan.
+--- @return table[] { characterKey, mailName, items, totalQuantity, missing, complete }
 function ProfessionExporter:BuildShoppingMailSendPlan()
 	local summary = self:BuildCraftQueueSummary()
 	local woSummary = self.BuildCraftingOrderWorkQueueSummary and self:BuildCraftingOrderWorkQueueSummary() or { reagentLines = {} }
 	local currentCharacterKey = tostring(self:GetCharacterKey())
-	local bagAvailable = {}
-	local destinations = {}
 	local mirroredOrderIDs = {}
 	for _, entry in ipairs(self:GetCraftQueueRows()) do
 		local oid = tonumber(entry and entry.orderID)
@@ -475,84 +473,38 @@ function ProfessionExporter:BuildShoppingMailSendPlan()
 		end
 	end
 
-	local function ensureDest(characterKey)
-		characterKey = tostring(characterKey or "")
-		if characterKey == "" or characterKey == currentCharacterKey then
-			return nil
-		end
-		local dest = destinations[characterKey]
-		if not dest then
-			local mailName = characterKey:match("^([^%-]+)") or characterKey
-			dest = {
-				characterKey = characterKey,
-				mailName = mailName,
-				items = {},
-				totalQuantity = 0,
-			}
-			destinations[characterKey] = dest
-		end
-		return dest
-	end
-
-	local function processLine(line)
+	local lines, stock = {}, {}
+	local function addLine(line, sources)
 		local itemID = tonumber(line.itemID)
 		if not itemID then
 			return
 		end
-		if bagAvailable[itemID] == nil then
-			bagAvailable[itemID] = self:GetCharacterItemTotal(currentCharacterKey, itemID)
-		end
-		local allocs = line.mailAllocations or self:BuildReagentMailAllocations(itemID, line.sources)
-		for _, alloc in ipairs(allocs) do
-			local dest = ensureDest(alloc.characterKey)
-			if dest then
-				local sendQty = math.min(tonumber(alloc.mailQuantity) or 0, tonumber(bagAvailable[itemID]) or 0)
-				if sendQty > 0 then
-					bagAvailable[itemID] = (bagAvailable[itemID] or 0) - sendQty
-					dest.items[#dest.items + 1] = {
-						itemID = itemID,
-						quantity = sendQty,
-						name = line.name or self:GetItemDisplayName(itemID),
-					}
-					dest.totalQuantity = (dest.totalQuantity or 0) + sendQty
-				end
-			end
-		end
+		stock[itemID] = stock[itemID] or self:GetCharacterItemTotal(currentCharacterKey, itemID)
+		lines[#lines + 1] = {
+			itemID = itemID,
+			name = line.name or self:GetItemDisplayName(itemID),
+			allocations = sources and self:BuildReagentMailAllocations(itemID, sources)
+				or line.mailAllocations or self:BuildReagentMailAllocations(itemID, line.sources),
+		}
 	end
 
 	for _, line in ipairs(summary.reagentLines or {}) do
-		processLine(line)
+		addLine(line)
 	end
+	-- Work orders already mirrored into the craft queue are counted there.
 	for _, line in ipairs(woSummary.reagentLines or {}) do
-		local filteredNeed = 0
-		local filteredSources = {}
+		local sources = {}
 		for _, src in ipairs(line.sources or {}) do
 			local oid = tonumber(src and src.orderID)
-			if not oid or not mirroredOrderIDs[oid] then
-				filteredNeed = filteredNeed + (tonumber(src and src.quantity) or 0)
-				filteredSources[#filteredSources + 1] = src
+			if (not oid or not mirroredOrderIDs[oid]) and (tonumber(src and src.quantity) or 0) > 0 then
+				sources[#sources + 1] = src
 			end
 		end
-		if filteredNeed > 0 then
-			processLine({
-				itemID = line.itemID,
-				name = line.name,
-				sources = filteredSources,
-				mailAllocations = self.BuildReagentMailAllocations and self:BuildReagentMailAllocations(line.itemID, filteredSources) or nil,
-			})
+		if #sources > 0 then
+			addLine(line, sources)
 		end
 	end
-
-	local out = {}
-	for _, dest in pairs(destinations) do
-		if #(dest.items or {}) > 0 then
-			out[#out + 1] = dest
-		end
-	end
-	table.sort(out, function(a, b)
-		return tostring(a.characterKey) < tostring(b.characterKey)
-	end)
-	return out
+	return self.ForeverLogic.BuildMailPlan(lines, stock)
 end
 
 function ProfessionExporter:FormatMailAllocationsShort(allocations, maxEntries)

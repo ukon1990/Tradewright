@@ -12,8 +12,8 @@ When the mailbox opens on the auction house character and all materials for a cr
 
 ## Scope
 
-- `ForeverLogic.SplitMailPlanByReadiness(plan, needs)`: marks each destination complete when every material it needs is fully covered by the plan, otherwise partial with what is missing
-- The plan builder exposes the full need per crafter next to what is in the bags
+- `ForeverLogic.BuildMailPlan(lines, stock)`: shares the bag stock out over the crafters and marks each destination complete when everything it needs is covered, otherwise partial with what is missing
+- `BuildShoppingMailSendPlan` gathers the queue's needs and the bag stock and hands them to that function
 - On mailbox open, when the current character is the seller (F20) and the setting is on, start the send queue for the complete destinations only
 - Setting `mail.autoSendMaterials` (default on) in the Settings tab: "Mail materials to crafters when the mailbox opens"
 - Mailbox panel: complete sets are marked "ready", partial ones show what is missing and keep the manual **Send**
@@ -22,11 +22,11 @@ When the mailbox opens on the auction house character and all materials for a cr
 
 ## Acceptance criteria
 
-- [ ] Complete sets are mailed on mailbox open with no click, partial sets are not
-- [ ] With the setting off, or on a non-seller character, nothing is sent automatically
-- [ ] With no auction house character set, behaviour is as today (manual Send / Send all)
-- [ ] A cancelled or failed run does not restart by itself until the mailbox is reopened
-- [ ] Offline tests cover: complete, partial, several crafters sharing one material, empty plan
+- [x] Complete sets are mailed on mailbox open with no click, partial sets are not
+- [x] With the setting off, or on a non-seller character, nothing is sent automatically
+- [x] With no auction house character set, behaviour is as today (manual Send / Send all)
+- [x] A cancelled or failed run does not restart by itself until the mailbox is reopened
+- [x] Offline tests cover: complete, partial, several crafters sharing one material, empty plan
 
 ## Verification
 
@@ -36,7 +36,7 @@ npm test
 
 In-game: queue crafts for two crafters → buy all materials for one and part for the other → open the mailbox → only the complete set leaves.
 
-Confirm first that Forever accepts a `SendMail` not started by a click. If it does not, fall back to a single prominent "Send ready sets" button and keep the rest of the feature.
+Still to confirm in-game: that Forever accepts a `SendMail` not started by a click. If it does not, the automatic run gives up after 6 seconds, says so in chat and leaves the sets to **Send all**.
 
 ## Dependencies
 

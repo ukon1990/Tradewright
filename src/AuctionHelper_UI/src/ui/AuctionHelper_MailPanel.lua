@@ -8,6 +8,8 @@ if not ProfessionExporter.IS_RETAIL then
 end
 
 local ATTACHMENTS_MAX = ATTACHMENTS_MAX_SEND or 12
+local AUTO_SEND_DELAY = 0.5
+local AUTO_SEND_TIMEOUT = 6
 local MAIL_SUBJECT = "AuctionHelper mats"
 local MAIL_BODY = "Materials from AuctionHelper shopping cart."
 
@@ -127,9 +129,14 @@ function ProfessionExporter:EnsureMailSendQueueState()
 	return self._mailSendQueue
 end
 
+--- Stops the queue at once. A send the client never answers would otherwise leave it running.
 function ProfessionExporter:CancelMailSendQueue()
 	local st = self:EnsureMailSendQueueState()
 	st.cancel = true
+	st.running = false
+	if self.ui and self.ui.mailPanel and self.ui.mailPanel:IsShown() then
+		self:RefreshMailPanel()
+	end
 end
 
 function ProfessionExporter:AdvanceMailSendQueue(success)
@@ -143,6 +150,9 @@ function ProfessionExporter:AdvanceMailSendQueue(success)
 	st.index = (st.index or 0) + 1
 	if st.cancel or st.index > #(st.parcels or {}) then
 		st.running = false
+		if st.auto and MailFrameTab1 and MailFrameTab1.Click then
+			MailFrameTab1:Click()
+		end
 		if self.RefreshMailPanel then
 			self:RefreshMailPanel()
 		end
@@ -192,12 +202,25 @@ function ProfessionExporter:ProcessNextMailParcel()
 	if SendMail then
 		SendMail(parcel.mailName, MAIL_SUBJECT, MAIL_BODY)
 	end
+	-- An automatic send has no click behind it. If the client ignores it, hand back to the buttons.
+	if st.auto then
+		local index = st.index
+		C_Timer.After(AUTO_SEND_TIMEOUT, function()
+			if st.running and st.auto and st.index == index then
+				clearMailAttachments()
+				ProfessionExporter:CancelMailSendQueue()
+				ProfessionExporter:PrintMessage("Could not mail the materials automatically. Use Send all in the mail panel.")
+			end
+		end)
+	end
 end
 
-function ProfessionExporter:StartMailSendQueue(destinations)
+function ProfessionExporter:StartMailSendQueue(destinations, auto)
 	local parcels = buildMailParcels(destinations)
 	if #parcels == 0 then
-		self:PrintMessage("No materials to mail from your bags.")
+		if not auto then
+			self:PrintMessage("No materials to mail from your bags.")
+		end
 		return false
 	end
 	local st = self:EnsureMailSendQueueState()
@@ -207,8 +230,28 @@ function ProfessionExporter:StartMailSendQueue(destinations)
 	st.total = #parcels
 	st.running = true
 	st.cancel = false
+	st.auto = auto == true
 	self:ProcessNextMailParcel()
 	return true
+end
+
+--- On the auction house / bank character, mails every crafter whose materials are all in the bags.
+--- Runs once per mailbox visit; incomplete sets wait for the Send buttons.
+function ProfessionExporter:AutoSendReadyMaterials()
+	if not (self.IsSellerCharacter and self:IsSellerCharacter()) or self:GetSetting("mail.autoSendMaterials", true) == false
+		or self:EnsureMailSendQueueState().running then
+		return
+	end
+	local ready, names = {}, {}
+	for _, dest in ipairs(self:BuildShoppingMailSendPlan()) do
+		if dest.complete then
+			ready[#ready + 1] = dest
+			names[#names + 1] = string.format("%s (%s)", characterLabel(self, dest.characterKey), self:FormatNumberGrouped(dest.totalQuantity))
+		end
+	end
+	if self:StartMailSendQueue(ready, true) then
+		self:PrintMessage("Mailing collected materials to " .. table.concat(names, ", ") .. ".")
+	end
 end
 
 function ProfessionExporter:StartMailSendAll()
@@ -253,6 +296,11 @@ local function createMailRow(pe, parent)
 		local muted = pe:GetTheme().textMuted
 		for _, it in ipairs(self.dest.items or {}) do
 			GameTooltip:AddDoubleLine(it.name or "?", pe:FormatNumberGrouped(it.quantity or 0), muted.r, muted.g, muted.b, 1, 1, 1)
+		end
+		local danger = pe:GetTheme().danger
+		for _, it in ipairs(self.dest.missing or {}) do
+			GameTooltip:AddDoubleLine((it.name or "?") .. " (not in bags)", pe:FormatNumberGrouped(it.quantity or 0),
+				danger.r, danger.g, danger.b, danger.r, danger.g, danger.b)
 		end
 		GameTooltip:Show()
 	end)
@@ -409,9 +457,11 @@ function ProfessionExporter:RefreshMailPanel()
 		row:SetPoint("TOPLEFT", panel.content, "TOPLEFT", 0, -((index - 1) * MAIL_ROW))
 		row:SetPoint("TOPRIGHT", panel.content, "TOPRIGHT", 0, -((index - 1) * MAIL_ROW))
 		row.dest = dest
-		local muted = self:GetTheme().textMuted
-		row.name:SetText(string.format("%s |cff%02x%02x%02x· %s items|r", characterLabel(self, dest.characterKey),
-			muted.r * 255, muted.g * 255, muted.b * 255, self:FormatNumberGrouped(dest.totalQuantity or 0)))
+		local theme = self:GetTheme()
+		local muted, state = theme.textMuted, dest.complete and theme.success or theme.warning
+		row.name:SetText(string.format("%s |cff%02x%02x%02x· %s items|r |cff%02x%02x%02x· %s|r", characterLabel(self, dest.characterKey),
+			muted.r * 255, muted.g * 255, muted.b * 255, self:FormatNumberGrouped(dest.totalQuantity or 0),
+			state.r * 255, state.g * 255, state.b * 255, dest.complete and "ready" or (#dest.missing .. " still missing")))
 		local parts = {}
 		for j = 1, math.min(3, #(dest.items or {})) do
 			local it = dest.items[j]
@@ -455,6 +505,11 @@ function ProfessionExporter:OnMailFrameShow()
 	if self.RefreshMailPanel then
 		self:RefreshMailPanel()
 	end
+	C_Timer.After(AUTO_SEND_DELAY, function()
+		if MailFrame:IsShown() then
+			ProfessionExporter:AutoSendReadyMaterials()
+		end
+	end)
 end
 
 function ProfessionExporter:OnMailFrameHide()
