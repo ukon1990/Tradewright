@@ -17,6 +17,7 @@ src\ui\AuctionHelper_CraftsUI.lua
 src\ui\AuctionHelper_ProfessionCraftPanel.lua
 src\ui\AuctionHelper_MailPanel.lua
 src\ui\AuctionHelper_GoldDashboard.lua
+src\ui\AuctionHelper_SalesDashboard.lua
 src\ui\AuctionHelper_OverviewTab.lua
 src\ui\AuctionHelper_InventoryTab.lua
 src\ui\AuctionHelper_MarketUI.lua

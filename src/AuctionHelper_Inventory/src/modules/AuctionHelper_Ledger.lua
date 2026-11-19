@@ -17,7 +17,8 @@ function ProfessionExporter:InitLedger()
 	return L
 end
 
---- @param entry table { kind, ts, characterKey, itemID, quantity, unitCopper, totalCopper, source, recipeID?, meta? }
+--- @param entry table { kind, ts, characterKey, itemID, itemName?, quantity, unitCopper, totalCopper, source, recipeID?, meta? }
+--- An entry needs an itemID, or at least an itemName when the id could not be resolved.
 function ProfessionExporter:LedgerAppendEvent(entry)
 	if type(entry) ~= "table" then
 		return
@@ -38,12 +39,62 @@ function ProfessionExporter:LedgerAppendEvent(entry)
 	entry.unitCopper = tonumber(entry.unitCopper)
 	entry.totalCopper = tonumber(entry.totalCopper)
 	entry.source = tostring(entry.source or "")
-	if entry.itemID and entry.itemID > 0 and entry.quantity > 0 then
+	if ((entry.itemID and entry.itemID > 0) or entry.itemName) and entry.quantity > 0 then
 		table.insert(L.events, entry)
 	end
 	while #L.events > MAX_EVENTS do
 		table.remove(L.events, 1)
 	end
+end
+
+-- Auction sales are read from the auction house's sale mails. Every inbox update lists the sale
+-- invoices that still hold their gold; a sale is written to the ledger when that gold is taken,
+-- so each one is counted once, however often the mailbox is opened.
+local AUCTION_MAIL_DAYS = 30
+local pendingSales = {}
+
+function ProfessionExporter:OnMailInboxUpdate()
+	wipe(pendingSales)
+	for index = 1, GetInboxNumItems() do
+		local _, _, _, _, money, _, daysLeft = GetInboxHeaderInfo(index)
+		local invoiceType, itemName, buyer, bid, _, _, consignment, _, _, _, count = GetInboxInvoiceInfo(index)
+		if invoiceType == "seller" and itemName and (tonumber(money) or 0) > 0 and (tonumber(bid) or 0) > 0 then
+			local quantity = math.max(1, tonumber(count) or 1)
+			-- The mail was sent when the sale paid out; its age comes from how long it has left.
+			local age = (AUCTION_MAIL_DAYS - (tonumber(daysLeft) or AUCTION_MAIL_DAYS)) * 86400
+			pendingSales[index] = {
+				kind = "sell",
+				ts = time() - math.max(0, math.min(AUCTION_MAIL_DAYS * 86400, age)),
+				itemID = (C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant)(itemName),
+				itemName = itemName,
+				quantity = quantity,
+				unitCopper = bid / quantity,
+				totalCopper = bid,
+				netCopper = bid - (tonumber(consignment) or 0),
+				buyer = buyer,
+				source = "mail",
+			}
+		end
+	end
+end
+
+local function recordCollectedSale(index)
+	local sale = pendingSales[index]
+	if sale then
+		pendingSales[index] = nil
+		ProfessionExporter:LedgerAppendEvent(sale)
+	end
+end
+
+if hooksecurefunc and TakeInboxMoney and AutoLootMailItem then
+	hooksecurefunc("TakeInboxMoney", recordCollectedSale)
+	hooksecurefunc("AutoLootMailItem", recordCollectedSale)
+end
+
+--- Sales statistics for the last `days` days (nil for all time); see ForeverLogic.SummarizeSales.
+function ProfessionExporter:GetSalesSummary(days)
+	local L = self:InitLedger()
+	return self.ForeverLogic.SummarizeSales(L and L.events or {}, time(), days)
 end
 
 local function iterEvents(L, kind, itemID, characterKey)

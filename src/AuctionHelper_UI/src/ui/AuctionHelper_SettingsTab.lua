@@ -63,6 +63,7 @@ local function buildSections(pe)
 			{ kind = "check", label = "Scan craft and reagent prices when the auction house opens",
 				path = "auction.autoCraftEconomyRefreshOnOpen", default = false },
 			{ kind = "check", label = "Include optional reagents in the craft scan", path = "auction.craftScanIncludeOptionalSlots", default = false },
+			{ kind = "check", label = "Count the lost deposit when cancelling undercut auctions", path = "auction.repostIncludeDeposit", default = true },
 		} },
 		{ column = 2, title = "Other price sources", items = {
 			{ kind = "check", label = "Use Auctionator when there is no scanned price", path = "integrations.economyUseAuctionatorFallback",

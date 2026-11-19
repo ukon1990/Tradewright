@@ -83,14 +83,15 @@ function OverviewTab:Create(container, uiState)
 	panel:SetAllPoints()
 	uiState.overviewPanel = panel
 
-	-- Gold | Characters switch. Gold is the money dashboard; Characters is per-character detail.
+	-- Gold | Sales | Characters switch. Gold is the money dashboard, Sales the auction sales ledger,
+	-- Characters per-character detail.
 	panel.viewBar = CreateFrame("Frame", nil, panel)
 	panel.viewBar:SetPoint("TOPLEFT")
 	panel.viewBar:SetPoint("TOPRIGHT")
 	panel.viewBar:SetHeight(22)
 	panel.viewButtons = {}
 	local previous
-	for _, view in ipairs({ { "gold", "Gold" }, { "characters", "Characters" } }) do
+	for _, view in ipairs({ { "gold", "Gold" }, { "sales", "Sales" }, { "characters", "Characters" } }) do
 		local button = pe:CreateButton(panel.viewBar, view[2], function()
 			pe:SetSetting("overview.view", view[1])
 			OverviewTab:Refresh()
@@ -116,6 +117,8 @@ function OverviewTab:Create(container, uiState)
 	end
 	panel.goldView = viewHost()
 	panel.goldDashboard = pe:CreateGoldDashboard(panel.goldView)
+	panel.salesView = viewHost()
+	panel.salesDashboard = pe:CreateSalesDashboard(panel.salesView)
 	panel.charactersView = viewHost()
 	local host = panel.charactersView
 
@@ -367,15 +370,21 @@ function OverviewTab:Refresh()
 		return
 	end
 
-	local view = pe:GetSetting("overview.view", "gold") == "characters" and "characters" or "gold"
+	local view = pe:GetSetting("overview.view", "gold")
+	view = (view == "characters" or view == "sales") and view or "gold"
 	for _, button in ipairs(panel.viewButtons) do
 		pe:StyleShellButton(button, button.view == view)
 	end
 	panel.goldView:SetShown(view == "gold")
+	panel.salesView:SetShown(view == "sales")
 	panel.charactersView:SetShown(view == "characters")
 	if view == "gold" then
 		panel.viewNote:SetText("Usual prices come from " .. (pe:GetSetting("gold.reference", "best") == "own" and "your scans" or "TSM when installed, else your scans") .. " · hover a row for details")
 		panel.goldDashboard:Refresh()
+		return
+	elseif view == "sales" then
+		panel.viewNote:SetText("Sales are added when you collect auction gold from the mailbox · earned is after the auction house cut")
+		panel.salesDashboard:Refresh()
 		return
 	end
 	panel.viewNote:SetText("")

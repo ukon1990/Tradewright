@@ -522,16 +522,109 @@ function ForeverLogic.BuildPlainLuaExportPayload(exportData)
 end
 
 --- Gate classic cursor sell inject (PickupContainerItem + ClickAuctionSellItemButton).
---- Retail keeps SetItemByLocation-only when that API exists; Forever always may use classic.
---- Clients without SetItemByLocation may use classic even when not Forever.
-function ForeverLogic.ShouldUseClassicSellInject(isForever, hasSetItemByLocation)
+--- Retail keeps the modern sell frame (SetPostItem) only when it exists; Forever always may use classic.
+--- Clients without the modern sell frame may use classic even when not Forever.
+function ForeverLogic.ShouldUseClassicSellInject(isForever, hasModernSellFrame)
 	if isForever == true then
 		return true
 	end
-	return hasSetItemByLocation ~= true
+	return hasModernSellFrame ~= true
 end
 
---- Classic recipe reagent slot from (itemID, quantity).
+---- Totals and undercut flags for the player's own auctions.
+--- auctions: { { itemID, quantity, sold, buyout, bid, deposit } } — the price is per unit while listed
+--- and the whole incoming amount once sold; deposit is the listing's whole deposit, nil when unknown
+--- or not counted. lowestByItem[itemID] is the lowest scanned unit price, if any.
+--- Each row gets `undercut`: true / false, or nil when the item has no scanned price to compare;
+--- undercut rows also get `undercutBy` (copper per unit) and `undercutPct` (of the player's price).
+--- ahCut (fraction, default 0.05) gives `net`, what a listing pays out after the auction house cut,
+--- and for undercut rows `repostNet`, the payout if it were cancelled (forfeiting the deposit) and
+--- reposted at the lowest scanned price.
+function ForeverLogic.SummarizeOwnedAuctions(auctions, lowestByItem, ahCut)
+	local keep = 1 - (tonumber(ahCut) or 0.05)
+	local rows = {}
+	local totals = { soldValue = 0, soldCount = 0, listedValue = 0, listedNet = 0, listedCount = 0, undercutCount = 0 }
+	for _, auction in ipairs(auctions or {}) do
+		local quantity = math.max(1, tonumber(auction.quantity) or 1)
+		local price = tonumber(auction.buyout) or tonumber(auction.bid) or 0
+		local row = { auctionID = auction.auctionID, itemID = auction.itemID, quantity = quantity, sold = auction.sold == true }
+		if row.sold then
+			row.value = price
+			totals.soldValue = totals.soldValue + price
+			totals.soldCount = totals.soldCount + 1
+		else
+			row.unitPrice = price
+			row.value = price * quantity
+			row.net = math.floor(row.value * keep)
+			row.deposit = tonumber(auction.deposit)
+			row.marketPrice = tonumber(lowestByItem and lowestByItem[auction.itemID])
+			if row.marketPrice and price > 0 then
+				row.undercut = row.marketPrice < price
+				if row.undercut then
+					row.undercutBy = price - row.marketPrice
+					row.undercutPct = row.undercutBy / price * 100
+					row.repostNet = math.floor(row.marketPrice * quantity * keep) - (row.deposit or 0)
+				end
+			end
+			totals.listedValue = totals.listedValue + row.value
+			totals.listedNet = totals.listedNet + row.net
+			totals.listedCount = totals.listedCount + 1
+			totals.undercutCount = totals.undercutCount + (row.undercut and 1 or 0)
+		end
+		rows[#rows + 1] = row
+	end
+	return rows, totals
+end
+
+--- Sales statistics from ledger events (kind "sell": ts, itemID / itemName, quantity, totalCopper
+--- gross, netCopper after the auction house cut). `days` limits to the last N days; nil is all time.
+--- Returns { totals, items, daily, recent, spanDays }: items carry sales, units, net, avgUnit,
+--- perWeek (sales per week over the span) and lastAt; daily is { at, value } net per day, oldest
+--- first; recent is the matching events, newest first.
+function ForeverLogic.SummarizeSales(events, now, days)
+	local since = days and (now - days * 86400) or 0
+	local totals = { net = 0, gross = 0, sales = 0, units = 0 }
+	local byItem, items, byDay, daily, recent = {}, {}, {}, {}, {}
+	local firstAt = now
+	for _, event in ipairs(events or {}) do
+		local ts = tonumber(event.ts) or 0
+		if event.kind == "sell" and ts >= since then
+			local gross = tonumber(event.totalCopper) or 0
+			local net = tonumber(event.netCopper) or gross
+			local units = tonumber(event.quantity) or 1
+			local key = event.itemID or event.itemName
+			local item = byItem[key]
+			if not item then
+				item = { itemID = event.itemID, name = event.itemName, sales = 0, units = 0, net = 0, gross = 0, lastAt = 0 }
+				byItem[key] = item
+				items[#items + 1] = item
+			end
+			item.sales, item.units = item.sales + 1, item.units + units
+			item.net, item.gross = item.net + net, item.gross + gross
+			item.lastAt = math.max(item.lastAt, ts)
+			totals.sales, totals.units = totals.sales + 1, totals.units + units
+			totals.net, totals.gross = totals.net + net, totals.gross + gross
+			firstAt = math.min(firstAt, ts)
+			local day = math.floor(ts / 86400)
+			if not byDay[day] then
+				byDay[day] = { at = day * 86400 + 43200, value = 0 }
+				daily[#daily + 1] = byDay[day]
+			end
+			byDay[day].value = byDay[day].value + net
+			recent[#recent + 1] = event
+		end
+	end
+	local spanDays = days or math.max(1, (now - firstAt) / 86400)
+	for _, item in ipairs(items) do
+		item.avgUnit = item.units > 0 and item.gross / item.units or nil
+		item.perWeek = item.sales / spanDays * 7
+	end
+	table.sort(daily, function(a, b) return a.at < b.at end)
+	table.sort(recent, function(a, b) return (tonumber(a.ts) or 0) > (tonumber(b.ts) or 0) end)
+	return { totals = totals, items = items, daily = daily, recent = recent, spanDays = spanDays }
+end
+
+-- Classic recipe reagent slot from (itemID, quantity).
 function ForeverLogic.MakeClassicReagentSlot(slotIndex, itemID, quantity)
 	itemID = tonumber(itemID)
 	quantity = tonumber(quantity) or 0

@@ -165,6 +165,18 @@ function ProfessionExporter:AUCTION_HOUSE_AUCTION_SOLD()
 	end
 end
 
+function ProfessionExporter:MAIL_INBOX_UPDATE()
+	if self.OnMailInboxUpdate then
+		self:OnMailInboxUpdate()
+	end
+end
+
+function ProfessionExporter:AUCTION_CANCELED()
+	if self.OnAuctionCanceled then
+		self:OnAuctionCanceled()
+	end
+end
+
 function ProfessionExporter:OWNED_AUCTIONS_UPDATED()
 	self:DebugLog("AH", "event: OWNED_AUCTIONS_UPDATED", {
 		"source=owned_auctions_updated",
@@ -324,6 +336,8 @@ ProfessionExporter.frame:RegisterEvent("AUCTION_HOUSE_CLOSED")
 safeRegisterEvent("AUCTION_HOUSE_AUCTION_CREATED")
 safeRegisterEvent("AUCTION_HOUSE_AUCTION_SOLD")
 safeRegisterEvent("OWNED_AUCTIONS_UPDATED")
+safeRegisterEvent("AUCTION_CANCELED")
+safeRegisterEvent("MAIL_INBOX_UPDATE")
 safeRegisterEvent("AUCTION_HOUSE_BROWSE_RESULTS_UPDATED")
 safeRegisterEvent("AUCTION_HOUSE_BROWSE_RESULTS_ADDED")
 safeRegisterEvent("COMMODITY_SEARCH_RESULTS_UPDATED")

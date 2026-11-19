@@ -1024,7 +1024,6 @@ function ProfessionExporter:MaybeStartDeferredAuctionBulk()
 	bulk.status = "Starting..."
 	bulk.currentItemID = nil
 	bulk.retryCount = 0
-	bulk.buttonAttempts = 0
 	bulk.currentSelectionCounted = false
 	bulk.paused = false
 	self:RefreshAuctionHousePanel()
@@ -1098,7 +1097,6 @@ function ProfessionExporter:FailAuctionBulkCurrent(reason)
 	bulk.phase = "selecting"
 	bulk.currentItemID = nil
 	bulk.retryCount = 0
-	bulk.buttonAttempts = 0
 	bulk.currentSelectionCounted = false
 	bulk.paused = false
 	self:DebugLog("AH", "bulk failed current", {
@@ -1133,7 +1131,6 @@ function ProfessionExporter:ConfirmAuctionBulkCurrent(source)
 	bulk.phase = "selecting"
 	bulk.currentItemID = nil
 	bulk.retryCount = 0
-	bulk.buttonAttempts = 0
 	bulk.currentSelectionCounted = false
 	bulk.paused = false
 	state.recentAuctionBulkConfirmation = {
@@ -1151,6 +1148,10 @@ function ProfessionExporter:ConfirmAuctionBulkCurrent(source)
 	return true
 end
 
+-- Throttle for bulk actions: seconds between an item landing in the sell frame and its post being
+-- accepted, and between two auction cancels.
+local AUCTION_BULK_MIN_INTERVAL = 1.0
+
 function ProfessionExporter:ProcessAuctionBulkPhase(token)
 	local state = self:GetState()
 	local bulk = state.auctionBulk
@@ -1158,35 +1159,6 @@ function ProfessionExporter:ProcessAuctionBulkPhase(token)
 		return
 	end
 	if bulk.paused == true then
-		return
-	end
-	if bulk.phase == "waiting_button" then
-		if self:TryClickAuctionPostButton() then
-			bulk.phase = "waiting_confirmation"
-			bulk.confirmationStartedAt = GetTime and GetTime() or 0
-			bulk.status = string.format("Waiting for confirmation: %s", self:GetItemDisplayName(bulk.currentItemID))
-			self:DebugLog("AH", "bulk click post", {
-				string.format("itemID=%s token=%s", tostring(bulk.currentItemID), tostring(token)),
-			})
-			self:RefreshAuctionHousePanel()
-			C_Timer.After(0.25, function()
-				ProfessionExporter:ProcessAuctionBulkPhase(token)
-			end)
-			return
-		end
-		bulk.buttonAttempts = (tonumber(bulk.buttonAttempts) or 0) + 1
-		if (tonumber(bulk.buttonAttempts) or 0) >= (tonumber(bulk.maxRetries) or 8) then
-			self:FailAuctionBulkCurrent("Failed to post")
-			return
-		end
-		bulk.status = string.format("Waiting post button (%d/%d): %s", bulk.buttonAttempts, bulk.maxRetries, self:GetItemDisplayName(bulk.currentItemID))
-		self:DebugLog("AH", "bulk wait button", {
-			string.format("itemID=%s attempts=%d/%d", tostring(bulk.currentItemID), bulk.buttonAttempts, bulk.maxRetries),
-		})
-		self:RefreshAuctionHousePanel()
-		C_Timer.After(0.12, function()
-			ProfessionExporter:ProcessAuctionBulkPhase(token)
-		end)
 		return
 	end
 	if bulk.phase == "waiting_confirmation" then
@@ -1199,7 +1171,6 @@ function ProfessionExporter:ProcessAuctionBulkPhase(token)
 			end
 			bulk.phase = "selecting"
 			bulk.status = string.format("Timed out, retrying (%d/%d): %s", bulk.retryCount, bulk.maxRetries, self:GetItemDisplayName(bulk.currentItemID))
-			bulk.buttonAttempts = 0
 			self:DebugLog("AH", "bulk confirmation timeout", {
 				string.format("itemID=%s retry=%d/%d", tostring(bulk.currentItemID), bulk.retryCount, bulk.maxRetries),
 			})
@@ -1239,7 +1210,6 @@ function ProfessionExporter:ContinueAuctionBulkPost()
 		bulk.phase = "selecting"
 		bulk.currentItemID = nil
 		bulk.retryCount = 0
-		bulk.buttonAttempts = 0
 		bulk.currentSelectionCounted = false
 		self:DebugLog("AH", "bulk skip dumped", {
 			string.format("itemID=%s index=%s", tostring(row.itemID), tostring(bulk.index)),
@@ -1266,15 +1236,51 @@ function ProfessionExporter:ContinueAuctionBulkPost()
 		bulk.currentSelectionCounted = true
 	end
 	bulk.phase = "waiting_button"
-	bulk.buttonAttempts = 0
 	bulk.token = (tonumber(bulk.token) or 0) + 1
+	bulk.status = string.format("Click Post next: %s", self:GetItemDisplayName(row.itemID))
+	-- Throttle: "Post next" unlocks a moment after the item lands in the sell frame, which also
+	-- gives Blizzard's price lookup time to fill in the going price.
+	bulk.nextPostAt = GetTime() + AUCTION_BULK_MIN_INTERVAL
 	self:RefreshAuctionHousePanel()
-	C_Timer.After(0.15, function()
-		ProfessionExporter:ProcessAuctionBulkPhase(bulk.token)
+	C_Timer.After(AUCTION_BULK_MIN_INTERVAL, function()
+		ProfessionExporter:RefreshAuctionHousePanel()
+	end)
+end
+
+--- Posts the item waiting in the sell frame. Must run from a real click: the client rejects
+--- auction posts that don't come from a hardware event, so bulk posting is one click per auction.
+function ProfessionExporter:PostAuctionBulkCurrent()
+	local bulk = self:GetState().auctionBulk
+	if not bulk or bulk.running ~= true or bulk.paused == true or bulk.phase ~= "waiting_button" then
+		return
+	end
+	local now = GetTime()
+	if now < (bulk.nextPostAt or 0) then
+		return
+	end
+	local name = self:GetItemDisplayName(bulk.currentItemID)
+	if not self:TryClickAuctionPostButton() then
+		bulk.status = string.format("Auction house not ready, click again: %s", name)
+		self:RefreshAuctionHousePanel()
+		return
+	end
+	local token = bulk.token
+	bulk.phase = "waiting_confirmation"
+	bulk.confirmationStartedAt = now
+	bulk.status = string.format("Waiting for confirmation: %s", name)
+	self:DebugLog("AH", "bulk click post", {
+		string.format("itemID=%s token=%s", tostring(bulk.currentItemID), tostring(token)),
+	})
+	self:RefreshAuctionHousePanel()
+	C_Timer.After(0.25, function()
+		ProfessionExporter:ProcessAuctionBulkPhase(token)
 	end)
 end
 
 function ProfessionExporter:OnOwnedAuctionsUpdated()
+	if self:GetAuctionPanelActiveTab() == "auctions" then
+		self:RefreshAuctionHousePanel()
+	end
 	local state = self:GetState()
 	local bulk = state.auctionBulk
 	if not bulk or bulk.running ~= true or bulk.phase ~= "waiting_confirmation" then
@@ -1306,7 +1312,7 @@ function ProfessionExporter:ToggleAuctionBulkPause()
 		self:DebugLog("AH", "bulk resumed", {
 			string.format("phase=%s itemID=%s", tostring(bulk.phase), tostring(bulk.currentItemID)),
 		})
-		if bulk.phase == "waiting_button" or bulk.phase == "waiting_confirmation" then
+		if bulk.phase == "waiting_confirmation" then
 			local token = tonumber(bulk.token)
 			if token then
 				C_Timer.After(0.05, function()
@@ -1346,6 +1352,7 @@ function ProfessionExporter:InitAuctionDB()
 	auction.rules = auction.rules or {}
 	auction.rules.byItemID = auction.rules.byItemID or {}
 	auction.itemLastScanAt = auction.itemLastScanAt or {}
+	auction.itemDepositPerUnit = auction.itemDepositPerUnit or {}
 	-- Version 2: item entries saved under a table address ("…:table: 0x…") are moved to real item keys.
 	if (tonumber(auction.storageKeyVersion) or 1) < 2 and self.ForeverLogic and self.ForeverLogic.RepairAuctionStorageKeys then
 		local moved = self.ForeverLogic.RepairAuctionStorageKeys(auction, function(itemID)
@@ -1357,6 +1364,36 @@ function ProfessionExporter:InitAuctionDB()
 		end
 	end
 	return auction
+end
+
+-- A non-commodity item's deposit can only be asked for while the item is in the bags, so it is
+-- remembered per item whenever one is posted and reused later for repost maths.
+if C_AuctionHouse and C_AuctionHouse.PostItem and hooksecurefunc then
+	hooksecurefunc(C_AuctionHouse, "PostItem", function(item, duration, quantity)
+		pcall(function()
+			local itemID = normalizeItemID(C_Item.GetItemID(item))
+			local deposit = tonumber(C_AuctionHouse.CalculateItemDeposit(item, duration, quantity))
+			if itemID and deposit and quantity > 0 then
+				ProfessionExporter:InitAuctionDB().itemDepositPerUnit[tostring(itemID)] = deposit / quantity
+			end
+		end)
+	end)
+end
+
+--- The deposit cancelling this auction forfeits, taken as what posting it again would cost at the
+--- sell frame's current duration. Nil when unknown (an item posted before deposits were recorded)
+--- or when the player has turned deposits off.
+function ProfessionExporter:GetOwnedAuctionDeposit(info, itemID)
+	if self:GetSetting("auction.repostIncludeDeposit", true) == false then
+		return nil
+	end
+	local keyInfo = C_AuctionHouse.GetItemKeyInfo(info.itemKey)
+	if keyInfo and keyInfo.isCommodity then
+		local duration = tonumber(GetCVar("auctionHouseDurationDropdown")) or 2
+		return tonumber(C_AuctionHouse.CalculateCommodityDeposit(itemID, duration, info.quantity))
+	end
+	local perUnit = tonumber(self:InitAuctionDB().itemDepositPerUnit[tostring(itemID)])
+	return perUnit and math.floor(perUnit * info.quantity + 0.5) or nil
 end
 
 function ProfessionExporter:NormalizeAuctionSnapshotEntry(entry)
@@ -1736,22 +1773,35 @@ function ProfessionExporter:ShowAuctionReservePrompt(itemID)
 	f.input:HighlightText()
 end
 
+local AUCTION_PANEL_TABS = { sell = true, cart = true, auctions = true }
+
+--- The client only has the player's auctions after they are asked for; the answer arrives as
+--- OWNED_AUCTIONS_UPDATED.
+function ProfessionExporter:RequestOwnedAuctions()
+	if C_AuctionHouse and C_AuctionHouse.QueryOwnedAuctions then
+		pcall(C_AuctionHouse.QueryOwnedAuctions, {})
+	end
+end
+
+function ProfessionExporter:OnAuctionCanceled()
+	if self:GetAuctionPanelActiveTab() == "auctions" then
+		self:RequestOwnedAuctions()
+	end
+end
+
 function ProfessionExporter:GetAuctionPanelActiveTab(defaultTab)
 	self.ui = self.ui or {}
 	local tab = tostring(self.ui.auctionPanelActiveTab or defaultTab or "sell")
-	if tab ~= "cart" then
-		tab = "sell"
-	end
-	return tab
+	return AUCTION_PANEL_TABS[tab] and tab or "sell"
 end
 
 function ProfessionExporter:SetAuctionPanelActiveTab(tabId, manual)
 	self.ui = self.ui or {}
-	tabId = tostring(tabId or "sell")
-	if tabId ~= "cart" then
-		tabId = "sell"
-	end
+	tabId = AUCTION_PANEL_TABS[tabId] and tabId or "sell"
 	self.ui.auctionPanelActiveTab = tabId
+	if tabId == "auctions" then
+		self:RequestOwnedAuctions()
+	end
 	if manual == true then
 		self.ui.auctionPanelTabManual = true
 	end
@@ -2018,6 +2068,14 @@ function ProfessionExporter:FilterAuctionCraftCartRows(rows)
 	return out
 end
 
+local function moneyColumn(pe, id, label, field, optional)
+	return {
+		id = id, label = label, justifyH = "RIGHT", width = 78, sortable = true, defaultSort = "desc", optional = optional,
+		sortValue = function(row) return tonumber(row and row[field]) or -1 end,
+		getText = function(row) return row and row[field] and pe:FormatCopperShort(row[field]) or "-" end,
+	}
+end
+
 function ProfessionExporter:BuildAuctionCartColumns()
 	local pe = self
 	local function count(id, label, field, optional)
@@ -2025,13 +2083,6 @@ function ProfessionExporter:BuildAuctionCartColumns()
 			id = id, label = label, justifyH = "RIGHT", width = 40, sortable = true, defaultSort = "desc", optional = optional,
 			sortValue = function(row) return tonumber(row and row[field]) or 0 end,
 			getText = function(row) return pe:FormatNumberGrouped(row and row[field] or 0) end,
-		}
-	end
-	local function money(id, label, field, optional)
-		return {
-			id = id, label = label, justifyH = "RIGHT", width = 78, sortable = true, defaultSort = "desc", optional = optional,
-			sortValue = function(row) return tonumber(row and row[field]) or -1 end,
-			getText = function(row) return row and row[field] and pe:FormatCopperShort(row[field]) or "-" end,
 		}
 	end
 	local have = count("quantityHave", "Have", "quantityOnCharacter")
@@ -2056,8 +2107,8 @@ function ProfessionExporter:BuildAuctionCartColumns()
 		}),
 		have,
 		count("quantityToBuy", "Buy", "quantityToBuy"),
-		money("estimatedUnitPrice", "Each", "estimatedUnitPrice", true),
-		money("estimatedBuyCost", "Cost", "estimatedBuyCost"),
+		moneyColumn(pe, "estimatedUnitPrice", "Each", "estimatedUnitPrice", true),
+		moneyColumn(pe, "estimatedBuyCost", "Cost", "estimatedBuyCost"),
 	}
 end
 
@@ -2423,6 +2474,11 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	end)
 	panel.tabCart = tabCart
 
+	panel.tabAuctions = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	panel.tabAuctions:SetScript("OnClick", function()
+		ProfessionExporter:SetAuctionPanelActiveTab("auctions", true)
+	end)
+
 	local subtitle = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
 	subtitle:SetPoint("TOPRIGHT", -10, -4)
@@ -2531,7 +2587,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	attachSimpleTooltip(
 		btnPostProfitable,
 		"Post profitable",
-		"Posts every shown item that sells for more than it costs, skipping prices that look dumped."
+		"Queues every shown item that sells for more than it costs, skipping prices that look dumped. Click Post next once per auction."
 	)
 	panel.btnPostProfitable = btnPostProfitable
 
@@ -2545,7 +2601,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	attachSimpleTooltip(
 		btnPostAll,
 		"Post all",
-		"Posts every shown item, including low margins and prices that look dumped."
+		"Queues every shown item, including low margins and prices that look dumped. Click Post next once per auction."
 	)
 	panel.btnPostAll = btnPostAll
 
@@ -2841,7 +2897,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 			else
 				ProfessionExporter:GetState().auctionPanelSelectedItemID = id
 				ProfessionExporter:RefreshAuctionPanelRules()
-				ProfessionExporter:PrintMessage("Could not auto-select item in Sell frame (UI variant/focus mismatch).")
+				ProfessionExporter:PrintMessage(string.format("Could not put %s in the sell slot (not sellable, or its data is still loading).", ProfessionExporter:GetItemDisplayName(id)))
 			end
 		end,
 	})
@@ -3056,6 +3112,69 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 		panel.cartTable:SetColumns(self:BuildAuctionCartColumns())
 	end
 
+	-- Auctions tab: totals, a price recheck and the player's own auctions.
+	panel.ownedSummary = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	panel.ownedSummary:SetJustifyH("LEFT")
+	panel.btnOwnedCheck = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	panel.btnOwnedCheck:SetText("Check prices")
+	panel.btnOwnedCheck:SetScript("OnClick", function()
+		local ids = {}
+		for _, row in ipairs(ProfessionExporter:BuildOwnedAuctionRows()) do
+			if not row.sold then
+				ids[#ids + 1] = row.itemID
+			end
+		end
+		ProfessionExporter:QueueVisibleAuctionRefresh(ids)
+	end)
+	panel.btnOwnedCancel = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	panel.btnOwnedCancel:SetText("Cancel undercut")
+	panel.btnOwnedCancel:SetScript("OnClick", function()
+		ProfessionExporter:CancelNextUndercutAuction()
+	end)
+	attachSimpleTooltip(panel.btnOwnedCancel, "Cancel undercut", "Each click cancels one undercut auction, the most undercut first. The deposit is not refunded, and the item comes back by mail. Skips auctions with a bid, and ones where reposting at the lowest price would pay nothing after the cut and deposit.")
+	attachSimpleTooltip(panel.btnOwnedCheck, "Check prices", "Looks up the current lowest price of every item you have listed, to show which are undercut.")
+	panel.ownedTableHost = CreateFrame("Frame", nil, panel)
+	panel.ownedTable = self:CreateReusableTable(panel.ownedTableHost, {
+		rowHeight = 24,
+		footer = true,
+		emptyTitle = "No auctions",
+		emptyHint = "Items you post show up here.",
+		maxRows = 200,
+		sortKey = "status",
+		sortAsc = false,
+		autoFitToScroll = true,
+		onRowEnter = function(rowFrame, rowData)
+			local pe = ProfessionExporter
+			local pairs = {}
+			if not rowData.sold then
+				local cutLabel = string.format("After %d%% cut", math.floor((panel.ownedCut or 0.05) * 100 + 0.5))
+				pairs[1] = { "Lowest scanned", rowData.marketPrice and pe:FormatCopperFull(rowData.marketPrice) or "not scanned this visit" }
+				pairs[2] = { "Scanned", pe:FormatAuctionScanAge(pe:GetItemLastAuctionScanAt(rowData.itemID)) }
+				pairs[3] = { cutLabel, pe:FormatCopperFull(rowData.net) }
+				if rowData.undercut then
+					pairs[4] = { "Undercut by", string.format("%s each (%d%%)", pe:FormatCopperFull(rowData.undercutBy), math.max(1, math.floor(rowData.undercutPct + 0.5))) }
+					if pe:GetSetting("auction.repostIncludeDeposit", true) ~= false then
+						pairs[#pairs + 1] = { "Deposit lost on cancel", rowData.deposit and pe:FormatCopperFull(rowData.deposit) or "unknown, not counted" }
+					end
+					pairs[#pairs + 1] = { "If cancelled and reposted at lowest", rowData.repostNet > 0
+						and string.format("%s (%s less)", pe:FormatCopperFull(rowData.repostNet), pe:FormatCopperFull(rowData.net - rowData.repostNet))
+						or "not worth it" }
+				end
+			end
+			pe:ShowItemRowTooltip(rowFrame, rowData.itemID, pairs, not rowData.sold and "Click to recheck its price" or nil)
+		end,
+		onRowLeave = function()
+			GameTooltip:Hide()
+		end,
+		onRowClick = function(_, rowData)
+			if not rowData.sold then
+				ProfessionExporter:QueueVisibleAuctionRefresh({ rowData.itemID })
+			end
+		end,
+	})
+	panel.ownedTable.frame:SetAllPoints(panel.ownedTableHost)
+	panel.ownedTable:SetColumns(self:BuildOwnedAuctionColumns())
+
 	panel.sellControls = {
 		btnRefresh,
 		btnScanCraftPrices,
@@ -3145,7 +3264,7 @@ local function placeIn(row, frame, point, relative, relativePoint, x)
 	frame:SetPoint(point, relative, relativePoint, x or 0, 0)
 end
 
--- Re-anchors the panel to the shared design: 34px header with Sell / Cart switch, rows of 26px controls
+-- Re-anchors the panel to the shared design: 34px header with Sell / Cart / Auctions switch, rows of 26px controls
 -- 8px apart inside a 12px inset, the table filling the rest, a progress row and a 24px status footer.
 function ProfessionExporter:BuildAuctionPanelLayout(panel)
 	local pe = self
@@ -3171,18 +3290,17 @@ function ProfessionExporter:BuildAuctionPanelLayout(panel)
 	panel.subtitle.SetShown = function() end
 	panel.stats.SetShown = function() end
 
-	for _, tab in ipairs({ panel.tabSell, panel.tabCart }) do
+	for _, tab in ipairs({ panel.tabSell, panel.tabCart, panel.tabAuctions }) do
 		self:SkinButton(tab)
 		tab:SetHeight(theme.size.controlSmall)
 	end
 	self:SetButtonLabel(panel.tabSell, "Sell", true)
-	panel.tabSell:ClearAllPoints()
-	panel.tabSell:SetPoint("RIGHT", panel, "TOPRIGHT", -12, -(headerHeight / 2))
+	self:SetButtonLabel(panel.tabAuctions, "Auctions", true)
+	-- Reading order: Sell, Cart, Auctions.
+	panel.tabAuctions:ClearAllPoints()
+	panel.tabAuctions:SetPoint("RIGHT", panel, "TOPRIGHT", -12, -(headerHeight / 2))
 	panel.tabCart:ClearAllPoints()
-	panel.tabCart:SetPoint("RIGHT", panel.tabSell, "LEFT", 1, 0)
-	-- Sell sits left of Cart in reading order.
-	panel.tabCart:ClearAllPoints()
-	panel.tabCart:SetPoint("RIGHT", panel, "TOPRIGHT", -12, -(headerHeight / 2))
+	panel.tabCart:SetPoint("RIGHT", panel.tabAuctions, "LEFT", 1, 0)
 	panel.tabSell:ClearAllPoints()
 	panel.tabSell:SetPoint("RIGHT", panel.tabCart, "LEFT", 1, 0)
 	panel.title:SetPoint("RIGHT", panel.tabSell, "LEFT", -12, 0)
@@ -3335,9 +3453,24 @@ function ProfessionExporter:BuildAuctionPanelLayout(panel)
 	panel.cartTableHost:SetPoint("TOPLEFT", panel.cartRow1, "BOTTOMLEFT", 0, -AH_PAD)
 	panel.cartTableHost:SetPoint("BOTTOMRIGHT", panel.cartRow2, "TOPRIGHT", 0, AH_PAD)
 
+	-- Auctions: a totals row, a row with the recheck and cancel buttons, then the table down to the footer.
+	panel.ownedRow = CreateFrame("Frame", nil, panel)
+	anchorRow(panel, panel.ownedRow, headerHeight + 1 + AH_PAD)
+	placeIn(panel.ownedRow, panel.ownedSummary, "LEFT", panel.ownedRow, "LEFT")
+	panel.ownedSummary:SetPoint("RIGHT", panel.ownedRow, "RIGHT")
+	panel.ownedRow2 = CreateFrame("Frame", nil, panel)
+	anchorRow(panel, panel.ownedRow2, headerHeight + 1 + AH_PAD + AH_ROW + AH_ROW_GAP)
+	placeIn(panel.ownedRow2, panel.btnOwnedCheck, "LEFT", panel.ownedRow2, "LEFT")
+	self:SetButtonPrimary(panel.btnOwnedCheck, true)
+	placeIn(panel.ownedRow2, panel.btnOwnedCancel, "LEFT", panel.btnOwnedCheck, "RIGHT", AH_ROW_GAP)
+	panel.btnOwnedCancel:GetFontString():SetTextColor(theme.danger.r, theme.danger.g, theme.danger.b)
+	panel.ownedTableHost:ClearAllPoints()
+	panel.ownedTableHost:SetPoint("TOPLEFT", panel.ownedRow2, "BOTTOMLEFT", 0, -AH_PAD)
+	panel.ownedTableHost:SetPoint("BOTTOMRIGHT", panel.footer, "TOPRIGHT", -(AH_PAD - 1), AH_PAD)
+
 	for _, button in ipairs({ panel.btnDumpFull, refresh, panel.btnPostProfitable, panel.btnPostAll, panel.btnPauseBulk,
 		panel.btnIgnoreItem, panel.btnReserveItem, panel.btnClearRule, panel.btnCartSearch, panel.btnCartRefresh,
-		panel.btnCartBuy, panel.btnCartRemove, panel.btnCartClear }) do
+		panel.btnCartBuy, panel.btnCartRemove, panel.btnCartClear, panel.btnOwnedCheck, panel.btnOwnedCancel }) do
 		self:SkinButton(button)
 		self:SetButtonLabel(button, button:GetText())
 		button:SetHeight(theme.size.control)
@@ -3349,12 +3482,15 @@ end
 
 -- Places the active tab's table between its controls and the progress row or footer.
 function ProfessionExporter:LayoutAuctionPanelBody(panel, activeTab, progressShown)
-	local sell = activeTab ~= "cart"
+	local sell = activeTab == "sell"
 	for _, row in ipairs(panel.sellRows or {}) do
 		row:SetShown(sell)
 	end
-	panel.cartRow1:SetShown(not sell)
-	panel.cartRow2:SetShown(not sell)
+	panel.cartRow1:SetShown(activeTab == "cart")
+	panel.cartRow2:SetShown(activeTab == "cart")
+	panel.ownedRow:SetShown(activeTab == "auctions")
+	panel.ownedRow2:SetShown(activeTab == "auctions")
+	panel.ownedTableHost:SetShown(activeTab == "auctions")
 	panel.progressRow:SetShown(sell and progressShown)
 	panel.tableHost:ClearAllPoints()
 	panel.tableHost:SetPoint("TOPLEFT", panel, "TOPLEFT", AH_PAD, -panel.sellTableTop)
@@ -3521,6 +3657,115 @@ function ProfessionExporter:BuildAuctionPanelColumns()
 	}
 end
 
+function ProfessionExporter:BuildOwnedAuctionColumns()
+	local pe = self
+	return {
+		self:CreateItemColumn({
+			id = "item",
+			label = "Item",
+			defaultSort = "asc",
+			minWidth = 110,
+			getItemID = function(row) return row and row.itemID end,
+			getIcon = function(row) return row and row.itemIcon end,
+			getName = function(row)
+				return tostring(row and row.itemName or "-") .. (row and row.quantity > 1 and (" x" .. row.quantity) or "")
+			end,
+			sortValue = function(row) return row and row.itemName end,
+		}),
+		moneyColumn(pe, "unitPrice", "Each", "unitPrice", true),
+		moneyColumn(pe, "value", "Total", "value"),
+		{
+			id = "status", label = "Status", width = 104, sortable = true, defaultSort = "desc",
+			tooltipTitle = "Status", tooltipText = "Sold, or how your price compares with the lowest one scanned this visit.",
+			-- Descending: most undercut first, then lowest, unchecked, sold.
+			sortValue = function(row)
+				return row.sold and -1 or (row.undercut and 1 + row.undercutPct) or (row.undercut == false and 0.5) or 0
+			end,
+			getText = function(row)
+				if row.sold then
+					return flagText(pe, "Sold", "success")
+				elseif row.canceling then
+					return flagText(pe, "Cancelling", "textMuted")
+				elseif row.undercut then
+					return flagText(pe, string.format("Undercut %d%%", math.max(1, math.floor(row.undercutPct + 0.5))), "danger")
+				elseif row.undercut == false then
+					return flagText(pe, "Lowest", "textMuted")
+				end
+				return "-"
+			end,
+		},
+	}
+end
+
+--- The player's own auctions with totals; undercut compares against prices scanned this visit.
+function ProfessionExporter:BuildOwnedAuctionRows()
+	local owned, lowest = {}, {}
+	local soldStatus = Enum and Enum.AuctionStatus and Enum.AuctionStatus.Sold
+	for _, info in ipairs(C_AuctionHouse and C_AuctionHouse.GetOwnedAuctions and C_AuctionHouse.GetOwnedAuctions() or {}) do
+		local itemID = normalizeItemID(info.itemKey and info.itemKey.itemID)
+		if itemID then
+			owned[#owned + 1] = {
+				auctionID = info.auctionID,
+				itemID = itemID,
+				quantity = info.quantity,
+				sold = soldStatus ~= nil and info.status == soldStatus,
+				buyout = info.buyoutAmount,
+				bid = info.bidAmount,
+				deposit = soldStatus ~= info.status and self:GetOwnedAuctionDeposit(info, itemID) or nil,
+			}
+			lowest[itemID] = lowest[itemID] or self:GetNativeAhPrice(itemID)
+		end
+	end
+	local cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05
+	local rows, totals = self.ForeverLogic.SummarizeOwnedAuctions(owned, lowest, cut)
+	local cancelRequestedAt = self:GetState().auctionCancelRequestedAt or {}
+	for _, row in ipairs(rows) do
+		local desc = self:ResolveItemDescriptor(row.itemID)
+		row.itemName = self:GetItemDisplayName(row.itemID)
+		row.itemIcon = desc and desc.icon or 134400
+		-- A cancel shows as pending until the client drops the auction (or 10s pass without that).
+		row.canceling = GetTime() - (cancelRequestedAt[row.auctionID] or -100) < 10
+	end
+	return rows, totals, cut
+end
+
+--- Undercut auctions a bulk cancel may take, most undercut first. Left alone: auctions with a
+--- cancel fee (someone has bid), and ones where a repost at the lowest price would pay nothing
+--- after the cut and the forfeited deposit.
+function ProfessionExporter:GetCancelableUndercutAuctions(rows)
+	local out = {}
+	for _, row in ipairs(rows) do
+		if row.undercut and not row.canceling and row.repostNet > 0 and C_AuctionHouse.CanCancelAuction(row.auctionID)
+			and (tonumber(C_AuctionHouse.GetCancelCost(row.auctionID)) or 0) == 0 then
+			out[#out + 1] = row
+		end
+	end
+	table.sort(out, function(a, b) return a.undercutPct > b.undercutPct end)
+	return out
+end
+
+--- Cancels the most undercut auction. Must run from a real click: like posting, the client
+--- rejects cancels that don't come from a hardware event, so it is one click per auction.
+function ProfessionExporter:CancelNextUndercutAuction()
+	local state = self:GetState()
+	local now = GetTime()
+	if now < (state.auctionNextCancelAt or 0) or not C_AuctionHouse.IsThrottledMessageSystemReady() then
+		return
+	end
+	local target = self:GetCancelableUndercutAuctions((self:BuildOwnedAuctionRows()))[1]
+	if not target then
+		return
+	end
+	C_AuctionHouse.CancelAuction(target.auctionID)
+	state.auctionCancelRequestedAt = state.auctionCancelRequestedAt or {}
+	state.auctionCancelRequestedAt[target.auctionID] = now
+	state.auctionNextCancelAt = now + AUCTION_BULK_MIN_INTERVAL
+	self:RefreshAuctionHousePanel()
+	C_Timer.After(AUCTION_BULK_MIN_INTERVAL, function()
+		ProfessionExporter:RefreshAuctionHousePanel()
+	end)
+end
+
 function ProfessionExporter:FilterAuctionPanelRows(rows)
 	self.ui = self.ui or {}
 	local ui = self.ui
@@ -3591,32 +3836,27 @@ function ProfessionExporter:TrySendItemToAuctionSellFrame(itemID, bag, slot)
 	end
 
 	local ah = _G.AuctionHouseFrame
-	local itemSellFrame = ah and (ah.ItemSellFrame or (ah.CommoditiesSellFrame and ah.CommoditiesSellFrame.ItemSellFrame)) or nil
-	local hasSetItemByLocation = itemSellFrame and type(itemSellFrame.SetItemByLocation) == "function" and true or false
+	local hasSetPostItem = ah and type(ah.SetPostItem) == "function" and true or false
 
-	-- Retail path first: optional display-mode focus, then SetItemByLocation.
-	if ah and hasSetItemByLocation and ItemLocation and ItemLocation.CreateFromBagAndSlot then
-		if ah.SetDisplayMode then
-			local modes = Enum and Enum.AuctionHouseFrameDisplayMode or _G.AuctionHouseFrameDisplayMode
-			local sellMode = modes and (modes.ItemSell or modes.CommoditiesSell)
-			if sellMode then
-				pcall(ah.SetDisplayMode, ah, sellMode)
-			end
-		end
+	-- Modern sell frame (retail and Forever): SetPostItem is what a bag right-click calls. It opens
+	-- the Sell tab on the item or commodity pane, and returns silently when the item can't be sold
+	-- or its data isn't loaded, so success is read back from the sell frames.
+	if hasSetPostItem and ItemLocation and ItemLocation.CreateFromBagAndSlot then
 		local loc = ItemLocation:CreateFromBagAndSlot(bag, slot)
-		if loc and ((not C_Item or not C_Item.DoesItemExist) or C_Item.DoesItemExist(loc)) then
-			local ok = pcall(itemSellFrame.SetItemByLocation, itemSellFrame, loc)
-			if ok then
-				return true
+		if pcall(ah.SetPostItem, ah, loc) then
+			for _, sellFrame in ipairs({ ah.ItemSellFrame, ah.CommoditiesSellFrame }) do
+				if sellFrame.GetItem and sellFrame:GetItem() == loc then
+					return true
+				end
 			end
 		end
 	end
 
-	-- Classic / Forever cursor inject. Do not use on true retail when SetItemByLocation exists
+	-- Classic cursor inject. Do not use on true retail when the modern sell frame exists
 	-- (Blizzard sell frame can hard-error on stale cursor placements during auto-refresh).
 	local shouldClassic = self.ForeverLogic
 		and self.ForeverLogic.ShouldUseClassicSellInject
-		and self.ForeverLogic.ShouldUseClassicSellInject(self.IS_FOREVER == true, hasSetItemByLocation)
+		and self.ForeverLogic.ShouldUseClassicSellInject(self.IS_FOREVER == true, hasSetPostItem)
 	if not shouldClassic then
 		ClearCursor()
 		return false
@@ -3672,7 +3912,8 @@ function ProfessionExporter:GetAuctionPostButton()
 		ah.ItemSellFrame and ah.ItemSellFrame.SaleFrame and ah.ItemSellFrame.SaleFrame.CreateAuctionButton,
 	}
 	for _, button in ipairs(candidates) do
-		if button and button.IsShown and button:IsShown() and button.Click then
+		-- IsVisible, not IsShown: the hidden pane's button still reports itself as shown.
+		if button and button.IsVisible and button:IsVisible() and button.Click then
 			return button
 		end
 	end
@@ -3779,6 +4020,13 @@ end
 function ProfessionExporter:RunAuctionPanelBulkAction(mode)
 	mode = tostring(mode or "post_all")
 	local state = self:GetState()
+	if state.auctionBulk and state.auctionBulk.running == true then
+		-- The button that started the job is its "Post next" button while it runs.
+		if state.auctionBulk.mode == mode then
+			self:PostAuctionBulkCurrent()
+		end
+		return
+	end
 	if not self:CanStartFullAuctionSideActions(true) then
 		return
 	end
@@ -3807,7 +4055,6 @@ function ProfessionExporter:RunAuctionPanelBulkAction(mode)
 		failed = 0,
 		maxRetries = 8,
 		retryCount = 0,
-		buttonAttempts = 0,
 		currentSelectionCounted = false,
 		phase = "selecting",
 		status = "Starting...",
@@ -4002,6 +4249,14 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 	if panel.btnScanChoice then
 		panel.btnScanChoice:SetEnabled(not fullDumpActive and refreshState.auctionRefreshRunning ~= true)
 	end
+	-- While a bulk job runs, the button that started it posts the item waiting in the sell frame.
+	local bulkPostReady = bulkActive and bulk.paused ~= true and bulk.phase == "waiting_button"
+		and GetTime() >= (bulk.nextPostAt or 0)
+	for mode, button in pairs({ post_profitable = panel.btnPostProfitable, post_all = panel.btnPostAll }) do
+		local isJob = bulkActive and bulk.mode == mode
+		button:SetText(isJob and "Post next" or (mode == "post_all" and "Post all" or "Post profitable"))
+		button:SetEnabled(not bulkActive or (isJob and bulkPostReady))
+	end
 	if panel.btnPauseBulk then
 		if bulkActive then
 			panel.btnPauseBulk:SetText((bulk.paused == true) and "Resume" or "Pause")
@@ -4131,6 +4386,22 @@ function ProfessionExporter:RefreshAuctionHousePanel()
 		panel.tabCart:EnableMouse(true)
 		panel.tabCart:RegisterForClicks("LeftButtonUp")
 		self:SetButtonLabel(panel.tabCart, cartOutstanding > 0 and string.format("Cart (%d)", cartOutstanding) or "Cart", true)
+	end
+	if self.StyleShellButton then
+		self:StyleShellButton(panel.tabAuctions, activeTab == "auctions")
+	end
+	if activeTab == "auctions" then
+		local ownedRows, owned, cut = self:BuildOwnedAuctionRows()
+		panel.ownedCut = cut
+		panel.ownedSummary:SetText(string.format("Sold %s · %d\nListed %s · %d, %s after cut",
+			self:FormatCopperShort(owned.soldValue), owned.soldCount,
+			self:FormatCopperShort(owned.listedValue), owned.listedCount, self:FormatCopperShort(owned.listedNet)))
+		local cancelable = #self:GetCancelableUndercutAuctions(ownedRows)
+		self:SetButtonLabel(panel.btnOwnedCancel, cancelable > 0 and string.format("Cancel undercut (%d)", cancelable) or "Cancel undercut")
+		panel.btnOwnedCancel:SetEnabled(cancelable > 0 and GetTime() >= (refreshState.auctionNextCancelAt or 0))
+		panel.ownedTable:SetRows(ownedRows)
+		panel.ownedTable:SetFooterText(string.format("%d auctions", #ownedRows),
+			queuedCount > 0 and string.format("%d prices queued", queuedCount) or "Click a row to recheck its price")
 	end
 	for _, control in ipairs(panel.sellControls or {}) do
 		if control and control.SetShown then

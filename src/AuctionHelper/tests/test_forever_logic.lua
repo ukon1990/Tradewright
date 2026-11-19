@@ -189,11 +189,56 @@ do
 	check("TopN ascending", FL.TopN({ { v = 3 }, { v = 1 } }, 1, "v", true)[1].v == 1)
 end
 
--- Classic sell inject gate (retail keeps SetItemByLocation-only when API exists)
-check("Classic sell: Forever with SetItemByLocation", FL.ShouldUseClassicSellInject(true, true) == true)
-check("Classic sell: Forever without SetItemByLocation", FL.ShouldUseClassicSellInject(true, false) == true)
-check("Classic sell: retail with SetItemByLocation blocked", FL.ShouldUseClassicSellInject(false, true) == false)
+-- Classic sell inject gate (retail keeps the modern sell frame when it exists)
+check("Classic sell: Forever with modern sell frame", FL.ShouldUseClassicSellInject(true, true) == true)
+check("Classic sell: Forever without modern sell frame", FL.ShouldUseClassicSellInject(true, false) == true)
+check("Classic sell: retail with modern sell frame blocked", FL.ShouldUseClassicSellInject(false, true) == false)
 check("Classic sell: non-Forever without API allowed", FL.ShouldUseClassicSellInject(false, false) == true)
+
+-- Own auctions: sold = incoming total, listed = unit price x quantity, undercut vs lowest scan
+do
+	local rows, totals = FL.SummarizeOwnedAuctions({
+		{ itemID = 1, quantity = 13, sold = true, buyout = 1300 },
+		{ auctionID = 77, itemID = 2, quantity = 7, buyout = 289 },
+		{ itemID = 3, quantity = 1, buyout = 620 },
+		{ itemID = 4, quantity = 2, bid = 100 },
+	}, { [2] = 250, [3] = 620 }, 0.05)
+	check("Owned auctions: sold total", totals.soldValue == 1300 and totals.soldCount == 1)
+	check("Owned auctions: listed total", totals.listedValue == 7 * 289 + 620 + 200 and totals.listedCount == 3)
+	check("Owned auctions: undercut count", totals.undercutCount == 1)
+	check("Owned auctions: cheaper scan is undercut", rows[2].undercut == true and rows[2].value == 2023)
+	check("Owned auctions: undercut amount and auction id", rows[2].undercutBy == 39 and math.floor(rows[2].undercutPct) == 13 and rows[2].auctionID == 77)
+	check("Owned auctions: after-cut payout now and if reposted", rows[2].net == 1921 and rows[2].repostNet == 1662 and rows[3].repostNet == nil)
+	check("Owned auctions: listed total after cut", totals.listedNet == 1921 + 589 + 190)
+	local withDeposit = FL.SummarizeOwnedAuctions({ { itemID = 2, quantity = 7, buyout = 289, deposit = 2000 } }, { [2] = 250 }, 0.05)
+	check("Owned auctions: deposit comes off the repost payout", withDeposit[1].repostNet == 1662 - 2000 and withDeposit[1].net == 1921)
+	check("Owned auctions: equal price is not undercut", rows[3].undercut == false and rows[3].undercutBy == nil)
+	check("Owned auctions: unscanned stays unknown", rows[4].undercut == nil and rows[4].unitPrice == 100)
+	check("Owned auctions: sold has no unit price", rows[1].unitPrice == nil and rows[1].value == 1300)
+end
+
+-- Sales ledger statistics
+do
+	local day = 86400
+	local now = 100 * day + 1000
+	local events = {
+		{ kind = "sell", ts = now - 40 * day, itemID = 1, itemName = "Old", quantity = 1, totalCopper = 500, netCopper = 475 },
+		{ kind = "sell", ts = now - 3 * day, itemID = 2, itemName = "Flesh", quantity = 7, totalCopper = 2100, netCopper = 1995 },
+		{ kind = "sell", ts = now - 1 * day, itemID = 2, itemName = "Flesh", quantity = 3, totalCopper = 900, netCopper = 855 },
+		{ kind = "sell", ts = now - 1 * day + 60, itemName = "Unknown gem", quantity = 1, totalCopper = 1000 },
+		{ kind = "buy", ts = now - 1 * day, itemID = 2, quantity = 5, totalCopper = 100 },
+	}
+	local week = FL.SummarizeSales(events, now, 7)
+	check("Sales: period filters old sales and non-sales", week.totals.sales == 3 and week.totals.units == 11)
+	check("Sales: net falls back to gross", week.totals.net == 1995 + 855 + 1000 and week.totals.gross == 4000)
+	check("Sales: grouped per item, by name without an id", #week.items == 2 and week.items[1].sales == 2 and week.items[2].name == "Unknown gem")
+	check("Sales: average unit price and weekly frequency", week.items[1].avgUnit == 300 and week.items[1].perWeek == 2)
+	check("Sales: one point per day, oldest first", #week.daily == 2 and week.daily[1].value == 1995 and week.daily[2].value == 1855)
+	check("Sales: recent is newest first", week.recent[1].itemName == "Unknown gem" and #week.recent == 3)
+	local all = FL.SummarizeSales(events, now, nil)
+	check("Sales: all time spans back to the first sale", all.totals.sales == 4 and all.spanDays == 40)
+	check("Sales: empty ledger", FL.SummarizeSales({}, now, 30).totals.sales == 0)
+end
 
 -- TOC sniff (Forever load markers)
 local toc = assert(io.open(root .. "/AuctionHelper.toc", "r")):read("*a")
