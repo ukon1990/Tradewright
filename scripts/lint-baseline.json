@@ -2110,7 +2110,7 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": {
    "ProfessionExporter:CreateReusableTable": {
     "lines": [
-     157
+     156
     ],
     "ccn": [
      13
@@ -2191,11 +2191,6 @@
    "ProfessionExporter:GetItemDisplayName": {
     "ccn": [
      12
-    ]
-   },
-   "ProfessionExporter:RefreshVisibleItemRows": {
-    "ccn": [
-     13
     ]
    },
    "ProfessionExporter:ShowExportProgress": {

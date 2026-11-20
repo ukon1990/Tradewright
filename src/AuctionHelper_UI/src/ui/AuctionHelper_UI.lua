@@ -98,22 +98,12 @@ function ProfessionExporter:GetItemDisplayName(itemID, noRequest)
 	return "#" .. tostring(itemID)
 end
 
--- Re-renders the rows of every visible item table without rebuilding their data.
+-- Re-renders the rows of every visible table without rebuilding their data. Every table created with
+-- `CreateReusableTable` is listed in `ReusableTables`, so new tabs need nothing here.
 function ProfessionExporter:RefreshVisibleItemRows()
 	local ui = self.ui or {}
-	local tables = { ui.inventoryTable, ui.marketTable, ui.craftsTable }
-	local auctionPanel = ui.auctionPanel
-	if auctionPanel then
-		tables[#tables + 1] = auctionPanel.table
-		tables[#tables + 1] = auctionPanel.cartTable
-	end
-	local professionPanel = self._professionCraftPanel
-	if professionPanel then
-		tables[#tables + 1] = professionPanel.reagentTable
-		tables[#tables + 1] = professionPanel.infoHost and professionPanel.infoHost.materials
-	end
-	for _, tableWidget in ipairs(tables) do
-		if tableWidget and tableWidget.frame and tableWidget.frame:IsVisible() then
+	for tableWidget in pairs(self.ReusableTables or {}) do
+		if tableWidget.frame and tableWidget.frame:IsVisible() then
 			tableWidget:RefreshRows()
 		end
 	end

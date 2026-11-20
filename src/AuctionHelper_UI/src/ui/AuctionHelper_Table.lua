@@ -1,6 +1,7 @@
 local _, ProfessionExporter = ...
 
 local TableMixin = {}
+ProfessionExporter.ReusableTables = setmetatable({}, { __mode = "k" }) -- every table, to redraw item names as they load
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local CELL_PAD = 5
@@ -773,10 +774,9 @@ function ProfessionExporter:CreateReusableTable(parent, options)
 	options = options or {}
 
 	local widget = setmetatable({}, { __index = TableMixin })
-	widget.columns = {}
-	widget.columnsById = {}
-	widget.rows = {}
-	widget.context = {}
+	widget.columns, widget.columnsById = {}, {}
+	widget.rows, widget.context = {}, {}
+	ProfessionExporter.ReusableTables[widget] = true
 	widget.rowPool = {}
 	widget.headerButtons = {}
 	local sizes = ProfessionExporter:GetTheme().size
