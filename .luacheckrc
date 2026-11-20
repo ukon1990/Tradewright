@@ -145,6 +145,7 @@ read_globals = {
 	"UnitLevel",
 	"UnitName",
 	"UnitRace",
+	"UseContainerItem",
 	"wipe",
 	"WOW_PROJECT_ID",
 	"WOW_PROJECT_MAINLINE",

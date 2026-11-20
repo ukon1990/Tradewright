@@ -37,8 +37,8 @@
 | [f70-farm-window](issues/e09-farming/f70-farm-window/README.md) | Farm window and loot log | planned |
 | [f71-my-farms](issues/e09-farming/f71-my-farms/README.md) | My farms, re-valued at today's prices | planned |
 | [f72-what-to-farm](issues/e09-farming/f72-what-to-farm/README.md) | What to farm | planned |
-| [e10-income](issues/e10-income/README.md) | Income: where gold comes from, what earns, how fast it sells | planned |
-| [f80-gold-by-source](issues/e10-income/f80-gold-by-source/README.md) | Gold changes by source | planned |
+| [e10-income](issues/e10-income/README.md) | Income: where gold comes from, what earns, how fast it sells | in progress |
+| [f80-gold-by-source](issues/e10-income/f80-gold-by-source/README.md) | Gold changes by source | implemented, in-game check pending |
 | [f81-sale-origin](issues/e10-income/f81-sale-origin/README.md) | Where each sold item came from | planned |
 | [f82-income-view](issues/e10-income/f82-income-view/README.md) | Income view | planned |
 

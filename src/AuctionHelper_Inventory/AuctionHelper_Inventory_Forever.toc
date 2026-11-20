@@ -10,6 +10,7 @@
 
 Bootstrap.lua
 src\modules\AuctionHelper_Ledger.lua
+src\modules\AuctionHelper_Income.lua
 src\modules\AuctionHelper_CraftQueue.lua
 src\modules\AuctionHelper_MailPlans.lua
 src\modules\AuctionHelper_Inventory.lua

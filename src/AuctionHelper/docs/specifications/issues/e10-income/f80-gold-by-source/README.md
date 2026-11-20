@@ -22,10 +22,12 @@ Every change to the character's gold is filed as gold in or gold out under one s
 
 - New `src/AuctionHelper/src/util/AuctionHelper_IncomeLogic.lua` (all four core TOCs, loaded by `run_tests.py`)
 - `IncomeLogic.ClassifyMoneyChange(delta, context, now)` → source key. `context` holds the open windows and the times of the latest quest turn-in, coin loot, invoice taken and trade
-- `IncomeLogic.AddToDay(store, characterKey, day, source, delta)` → updates `{in, out}` for that day and source
-- Saved in `AuctionHelperInventoryDB.income[characterKey][day][source] = {in, out}` (copper); days older than 400 are dropped
+- `IncomeLogic.AddToDay(days, day, source, delta)` → updates `{gain, spend}` for that day and source
+- The source is decided `EVENT_WINDOW` (2 s) after the change, so an event arriving just after the gold still counts; a window that closed within that time still counts
+- Saved in `AuctionHelperInventoryDB.ledger.income[characterKey][day][source] = {gain, spend}` (copper, day = UTC day number); days older than 400 are dropped at login
 - A small listener module in `AuctionHelper_Inventory` keeps the context and the last balance, and writes on each `PLAYER_MONEY`. The first balance after login is a baseline, not income
-- Vendor sales also write a ledger event `kind = "vendor"` with item, quantity and the vendor price paid, from the bag item sold while the merchant is open
+- Vendor sales also write a ledger event `kind = "vendor"` with item, quantity and the vendor price paid, from the bag item used (right-click) while the merchant is open; one event per item, character and day (`IncomeLogic.MergeIntoDayEvent`)
+- Known gaps: an item dragged onto the merchant gets its gold under Vendor but no `vendor` ledger event; gold back from an outbid auction comes without an invoice and counts as Mail
 - `.luacheckrc`: any new events or globals
 
 ## Acceptance criteria
