@@ -256,7 +256,7 @@ function ProfessionExporter:CreateGoldDashboard(parent)
 			if pe:GetSetting("gold.moversView", "risers") == "supply" then
 				return string.format("%s listed, usually %s", pe:FormatNumberGrouped(row.qtyNow or 0), pe:FormatNumberGrouped(row.qtyAvg7d or 0))
 			end
-			return "7-day average " .. pe:FormatCopperShort(row.avg7d or 0)
+			return (row.usualDays and "Usual price " or "7-day average ") .. pe:FormatCopperShort(row.avg7d or 0)
 		end),
 		moneyColumn(pe, "price", "Price", "price", 70),
 		{ id = "change", label = "Change", justifyH = "RIGHT", width = 60,
@@ -268,13 +268,13 @@ function ProfessionExporter:CreateGoldDashboard(parent)
 			end },
 	}, {
 		emptyTitle = "No big moves",
-		emptyHint = "Movers compare today's price and supply with the last 7 days of your scans.",
+		emptyHint = "Movers compare today's price and supply with the usual level in your scans.",
 		hint = rowHint(pe, true),
 		onClick = rowClickHandler(pe, true),
 		tooltipPairs = function(row)
 			return {
-				{ "7-day average", pe:FormatCopperFull(row.avg7d) },
-				{ "7-day range", string.format("%s – %s", pe:FormatCopperShort(row.low7d or 0), pe:FormatCopperShort(row.high7d or 0)) },
+				{ row.usualDays and "Usual price" or "7-day average", pe:FormatCopperFull(row.avg7d) },
+				{ row.usualDays and "Usual range" or "7-day range", string.format("%s – %s", pe:FormatCopperShort(row.low7d or 0), pe:FormatCopperShort(row.high7d or 0)) },
 				{ "Listed now", string.format("%s, usually %s", pe:FormatNumberGrouped(row.qtyNow or 0), pe:FormatNumberGrouped(row.qtyAvg7d or 0)) },
 			}
 		end,

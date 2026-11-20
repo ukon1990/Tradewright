@@ -17,8 +17,8 @@
 | [e04-ah-shortcuts](issues/e04-ah-shortcuts/README.md) | AH shortcuts: from AuctionHelper lists to the auction house | in progress |
 | [f30-buy-in-ah](issues/e04-ah-shortcuts/f30-buy-in-ah/README.md) | Open a deal's buy page in the auction house | in progress |
 | [e05-table-paging](issues/e05-table-paging/README.md) | Paging in the shared table | implemented, in-game check pending |
-| [e06-market-signals](issues/e06-market-signals/README.md) | Market signals: usual price, price steps, sells a day, real fees, fuller ledger | planned |
-| [f40-usual-price](issues/e06-market-signals/f40-usual-price/README.md) | Daily price history and a robust usual price | planned |
+| [e06-market-signals](issues/e06-market-signals/README.md) | Market signals: usual price, price steps, sells a day, real fees, fuller ledger | in progress |
+| [f40-usual-price](issues/e06-market-signals/f40-usual-price/README.md) | Daily price history and a robust usual price | implemented except chart ranges and tooltip, in-game check pending |
 | [f41-price-steps](issues/e06-market-signals/f41-price-steps/README.md) | Cheapest price steps kept from a full scan | planned |
 | [f42-sells-a-day](issues/e06-market-signals/f42-sells-a-day/README.md) | Estimated sells per day and days of supply | planned |
 | [f43-fees-from-the-game](issues/e06-market-signals/f43-fees-from-the-game/README.md) | Fees read from the game and measured from sale mail | planned |

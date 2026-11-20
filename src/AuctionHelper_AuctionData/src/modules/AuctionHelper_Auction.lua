@@ -1485,7 +1485,7 @@ function ProfessionExporter:CompactAuctionStorageData()
 	compactSnapshotRoot(auction.snapshot and auction.snapshot.commodities or nil)
 	compactSnapshotRoot(auction.snapshot and auction.snapshot.items or nil)
 	auction.history = auction.history or {}
-	auction.history.daily = nil
+	self:RollupDailyAuctionHistory()
 	self:TrimAuctionHistory()
 end
 
@@ -3815,7 +3815,7 @@ function ProfessionExporter:TrimAuctionHistory()
 	state.auctionHistoryTrimmedAt = now()
 	local auction = self:InitAuctionDB()
 	local settings = self.db and self.db.settings and self.db.settings.auction or nil
-	local retentionDays = tonumber(settings and settings.historyRetentionDays) or 14
+	local retentionDays = tonumber(settings and settings.historyRetentionDays) or 30
 	retentionDays = math.max(1, retentionDays)
 	local cutoffTs = now() - retentionDays * 24 * 3600
 	for storageKey, historyByHour in pairs(auction.history.hourly or {}) do
@@ -5032,7 +5032,7 @@ end
 function ProfessionExporter:TrimFullDumpMarketHistory()
 	self:InitDB()
 	local settings = self.db and self.db.settings and self.db.settings.auction or nil
-	local retentionDays = tonumber(settings and settings.historyRetentionDays) or 14
+	local retentionDays = tonumber(settings and settings.historyRetentionDays) or 30
 	retentionDays = math.max(1, retentionDays)
 	local cutoff = now() - (retentionDays * 24 * 3600)
 	for _, itemHistory in pairs(self.db.itemHistory or {}) do

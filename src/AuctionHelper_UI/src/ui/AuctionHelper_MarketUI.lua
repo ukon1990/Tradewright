@@ -13,6 +13,57 @@ local DETAIL_WIDTH = 288
 local GAP = 12
 local PAD = 10
 
+-- "12g 40s over 14 days", or why there is none yet.
+local function usualPriceText(pe, rowData)
+	local usual = pe.GetUsualPrice and pe:GetUsualPrice(rowData.storageKey)
+	if not usual then
+		return "Needs scans on 5 days"
+	end
+	return string.format("%s over %d days", pe:FormatCopperFull(usual.usual), usual.days)
+end
+
+local function usualRangeText(pe, rowData)
+	local usual = pe.GetUsualPrice and pe:GetUsualPrice(rowData.storageKey)
+	if not usual then
+		return "-"
+	end
+	return string.format("%s – %s", pe:FormatCopperShort(usual.low), pe:FormatCopperShort(usual.high))
+end
+
+-- The Market table's "Usual" and "Vs usual" columns; "-" until an item has 5 days of scans.
+local function usualColumns(pe)
+	local function usualOf(row)
+		local usual = pe.GetUsualPrice and pe:GetUsualPrice(row.storageKey)
+		return usual and usual.usual
+	end
+	local function vsUsual(row)
+		local usual = usualOf(row)
+		return usual and row.price and (row.price - usual) / usual
+	end
+	return {
+		id = "usual", label = "Usual", justifyH = "RIGHT", width = 86, sortable = true, defaultSort = "desc",
+		sortValue = function(row) return usualOf(row) or 0 end,
+		getText = function(row) return usualOf(row) and pe:FormatCopperShort(usualOf(row)) or "-" end,
+	}, {
+		id = "vsUsual", label = "Vs usual", justifyH = "RIGHT", width = 64, sortable = true, defaultSort = "asc",
+		sortValue = function(row) return vsUsual(row) or 0 end,
+		getText = function(row) return vsUsual(row) and string.format("%+d%%", math.floor(vsUsual(row) * 100 + 0.5)) or "-" end,
+	}
+end
+
+-- Key facts of one Market row for the item view.
+local function marketFactRows(pe, rowData)
+	return {
+		{ "Lowest", pe:FormatCopperFull(rowData.price) },
+		{ "Highest", pe:FormatCopperFull(rowData.marketHigh or rowData.price) },
+		{ "Usual price", usualPriceText(pe, rowData) },
+		{ "Usual range", usualRangeText(pe, rowData) },
+		{ "Quantity", pe:FormatNumberGrouped(rowData.sampleSize or 0) },
+		{ "Listings", (tonumber(rowData.listingCount) or 0) > 0 and pe:FormatNumberGrouped(rowData.listingCount) or "-" },
+		{ "Seen", pe:FormatScanTimestamp(rowData.seenAt) },
+	}
+end
+
 function ProfessionExporter:BuildMarketTableColumns()
 	local pe = self
 	local function money(id, label, field, fallback)
@@ -32,6 +83,7 @@ function ProfessionExporter:BuildMarketTableColumns()
 			end,
 		}
 	end
+	local usual, vsUsual = usualColumns(pe)
 	return {
 		self:CreateItemColumn({
 			label = "Item", defaultSort = "asc",
@@ -41,6 +93,7 @@ function ProfessionExporter:BuildMarketTableColumns()
 		}),
 		money("price", "Lowest", "price"),
 		money("marketHigh", "Highest", "marketHigh", "price"),
+		usual, vsUsual,
 		count("sampleSize", "Qty", "sampleSize", 60),
 		count("listingCount", "Listings", "listingCount", 60, true),
 		{
@@ -108,13 +161,7 @@ function ProfessionExporter:CreateMarketHistoryView(parent, opts)
 			self.header:SetItem(rowData.itemID, rowData.name or pe:GetItemDisplayName(rowData.itemID),
 				string.format("Item %s · %s", tostring(rowData.itemID or "?"), rowData.scope == "commodity" and "commodity" or "item"))
 		end
-		self.facts:SetRows({
-			{ "Lowest", pe:FormatCopperFull(rowData.price) },
-			{ "Highest", pe:FormatCopperFull(rowData.marketHigh or rowData.price) },
-			{ "Quantity", pe:FormatNumberGrouped(rowData.sampleSize or 0) },
-			{ "Listings", (tonumber(rowData.listingCount) or 0) > 0 and pe:FormatNumberGrouped(rowData.listingCount) or "-" },
-			{ "Seen", pe:FormatScanTimestamp(rowData.seenAt) },
-		})
+		self.facts:SetRows(marketFactRows(pe, rowData))
 
 		local auction = pe:InitAuctionDB()
 		local hourly = auction and auction.history and auction.history.hourly and auction.history.hourly[rowData.storageKey]

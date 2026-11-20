@@ -15,6 +15,7 @@ function ProfessionExporter:GetGoldDashboardOptions()
 		dealThreshold = tonumber(self:GetSetting("gold.dealThreshold", 0.3)) or 0.3,
 		moverThreshold = tonumber(self:GetSetting("gold.moverThreshold", 0.15)) or 0.15,
 		externalReference = self:GetSetting("gold.reference", "best") ~= "own",
+		usualDays = tonumber(self:GetSetting("auction.usualPriceDays", 14)) or 14,
 		minHours = 3,
 		ahCut = 0.05,
 	}
@@ -27,6 +28,25 @@ local function externalReference(pe, itemID)
 	end
 	local value = pe:GetTSMCustomPriceCopper(tostring(pe:GetSetting("integrations.economyTSMMarketString", "dbmarket")), itemID)
 	return value and value > 0 and value or nil
+end
+
+-- What an item's price is compared with. Movers use `price` (the usual price once an item has enough
+-- daily history, else the 7-day average); deals use `ref`: TSM when allowed, else that same price.
+local function resolveBaseline(pe, opts, itemID, storageKey, summary)
+	local usual = pe:GetUsualPrice(storageKey)
+	local base = { price = summary.avg7d, low = summary.low7d, high = summary.high7d, refSource = "7-day avg" }
+	if usual then
+		base = { price = usual.usual, low = usual.low, high = usual.high, days = usual.days, refSource = "daily middle" }
+	end
+	base.ref = base.price
+	local external = opts.externalReference and externalReference(pe, itemID)
+	if external then
+		base.ref, base.refSource = external, "TSM"
+	end
+	if not base.ref then
+		base.refSource = nil
+	end
+	return base
 end
 
 local function collectKeys(auction)
@@ -51,16 +71,11 @@ local function evaluateKey(pe, FL, auction, item, opts, ts, byItemID)
 	if previous and (previous.hours or 0) >= summary.hours then
 		return
 	end
-	local ref, refSource = nil, nil
-	if opts.externalReference then
-		ref = externalReference(pe, itemID)
-		refSource = ref and "TSM" or nil
-	end
-	if not ref and summary.avg7d then
-		ref, refSource = summary.avg7d, "7-day avg"
-	end
-	local flags = FL.ClassifyMarketItem(snap.price, summary, ref, {
-		refExternal = refSource == "TSM",
+	local base = resolveBaseline(pe, opts, itemID, item.storageKey, summary)
+	local ref, refSource = base.ref, base.refSource
+	local classified = { hours = summary.hours, avg7d = base.price, qtyNow = summary.qtyNow, qtyAvg7d = summary.qtyAvg7d }
+	local flags = FL.ClassifyMarketItem(snap.price, classified, ref, {
+		refExternal = refSource ~= "7-day avg",
 		dealThreshold = opts.dealThreshold,
 		moverThreshold = opts.moverThreshold,
 		minHours = opts.minHours,
@@ -75,9 +90,10 @@ local function evaluateKey(pe, FL, auction, item, opts, ts, byItemID)
 		quantity = snap.sampleSize or 0,
 		seenAt = snap.seenAt,
 		hours = summary.hours,
-		avg7d = summary.avg7d,
-		low7d = summary.low7d,
-		high7d = summary.high7d,
+		avg7d = base.price,
+		low7d = base.low,
+		high7d = base.high,
+		usualDays = base.days,
 		qtyNow = summary.qtyNow,
 		qtyAvg7d = summary.qtyAvg7d,
 		ref = ref,
@@ -126,12 +142,17 @@ local function finish(pe, byItemID, ts)
 	}
 end
 
+local function insightsRevision(state, opts)
+	return table.concat({ state.auctionDataRevision or 0, opts.dealThreshold, opts.moverThreshold,
+		tostring(opts.externalReference), opts.usualDays }, ":")
+end
+
 --- Cached insights, or nil while the first build runs. Starts a rebuild when scan data or settings changed;
 --- `onDone(insights)` fires when that rebuild finishes. Progress is `state.marketInsightsProgress` (0..1).
 function ProfessionExporter:GetMarketInsights(onDone)
 	local state = self:GetState()
 	local opts = self:GetGoldDashboardOptions()
-	local revision = string.format("%d:%s:%s:%s", state.auctionDataRevision or 0, opts.dealThreshold, opts.moverThreshold, tostring(opts.externalReference))
+	local revision = insightsRevision(state, opts)
 	local cached = state.marketInsights
 	if (cached and state.marketInsightsRevision == revision) or state.marketInsightsBuilding then
 		return cached

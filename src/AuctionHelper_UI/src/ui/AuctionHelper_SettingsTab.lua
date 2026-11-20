@@ -30,6 +30,24 @@ local function numberOptions(values, format)
 	return options
 end
 
+local function auctionHouseItems(pe)
+	return {
+		{ kind = "select", label = "Keep price history for", path = "auction.historyRetentionDays", default = 30,
+			options = numberOptions({ 7, 14, 30, 60, 90 }, "%d days"),
+			onChange = function() if pe.TrimFullDumpMarketHistory then pe:TrimFullDumpMarketHistory() end end },
+		{ kind = "select", label = "Usual price looks back", path = "auction.usualPriceDays", default = 14,
+			options = numberOptions({ 7, 14, 30 }, "%d days"), onChange = refreshEconomy },
+		{ kind = "select", label = "Keep daily prices for", path = "auction.dailyRetentionDays", default = 180,
+			options = numberOptions({ 90, 180, 365 }, "%d days") },
+		{ kind = "select", label = "Refresh prices older than", path = "auction.priceFreshnessMinutes", default = 15,
+			options = numberOptions({ 5, 15, 30, 60, 180 }, "%d minutes") },
+		{ kind = "check", label = "Scan craft and reagent prices when the auction house opens",
+			path = "auction.autoCraftEconomyRefreshOnOpen", default = false },
+		{ kind = "check", label = "Include optional reagents in the craft scan", path = "auction.craftScanIncludeOptionalSlots", default = false },
+		{ kind = "check", label = "Count the lost deposit when cancelling undercut auctions", path = "auction.repostIncludeDeposit", default = true },
+	}
+end
+
 -- Every setting on the tab. kind: check | select | note. Sections go in `column` 1 or 2.
 local function buildSections(pe)
 	-- The auction house / bank character is chosen per realm, from the characters known there.
@@ -63,17 +81,7 @@ local function buildSections(pe)
 		{ column = 1, title = "Troubleshooting", items = {
 			{ kind = "check", label = "Write debug messages to chat", path = "debug.enabled", default = false },
 		} },
-		{ column = 2, title = "Auction house", items = {
-			{ kind = "select", label = "Keep price history for", path = "auction.historyRetentionDays", default = 30,
-				options = numberOptions({ 7, 14, 30, 60, 90 }, "%d days"),
-				onChange = function() if pe.TrimFullDumpMarketHistory then pe:TrimFullDumpMarketHistory() end end },
-			{ kind = "select", label = "Refresh prices older than", path = "auction.priceFreshnessMinutes", default = 15,
-				options = numberOptions({ 5, 15, 30, 60, 180 }, "%d minutes") },
-			{ kind = "check", label = "Scan craft and reagent prices when the auction house opens",
-				path = "auction.autoCraftEconomyRefreshOnOpen", default = false },
-			{ kind = "check", label = "Include optional reagents in the craft scan", path = "auction.craftScanIncludeOptionalSlots", default = false },
-			{ kind = "check", label = "Count the lost deposit when cancelling undercut auctions", path = "auction.repostIncludeDeposit", default = true },
-		} },
+		{ column = 2, title = "Auction house", items = auctionHouseItems(pe) },
 		{ column = 2, title = "Mail", items = {
 			{ kind = "select", label = "Auction house / bank character", path = "mail.sellerByRealm." .. realm, default = "",
 				options = sellerOptions },

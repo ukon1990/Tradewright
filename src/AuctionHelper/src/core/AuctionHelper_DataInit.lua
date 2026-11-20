@@ -72,7 +72,7 @@ local CRAFTS_TABLE_KEYS = { "characterFilter", "professionFilter", "categoryFilt
 local CRAFTING_ORDER_DEFAULTS = { { "hideUnlearned", false }, { "patronKnowledgeOnly", false } }
 local AUCTION_SETTING_DEFAULTS = {
 	{ "enabled", true }, { "sellPanelEnabled", true }, { "tabEnabled", true }, { "minMarginPercent", 5 },
-	{ "minMarginCopper", 100 }, { "historyRetentionDays", 14 }, { "visibleRefreshThrottleMs", 150 },
+	{ "minMarginCopper", 100 }, { "historyRetentionDays", 30 }, { "visibleRefreshThrottleMs", 150 },
 	{ "dumpBatchSize", 50 }, { "priceFreshnessMinutes", 15 }, { "autoCraftEconomyRefreshOnOpen", false },
 	{ "craftScanIncludeOptionalSlots", false },
 }

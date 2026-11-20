@@ -936,10 +936,10 @@
    },
    "evaluateKey": {
     "lines": [
-     52
+     48
     ],
     "ccn": [
-     17
+     12
     ],
     "params": [
      7
@@ -2063,7 +2063,7 @@
    },
    "ProfessionExporter:CreateMarketHistoryView": {
     "lines": [
-     83
+     77
     ],
     "ccn": [
      12
@@ -2089,7 +2089,7 @@
    },
    "view:ShowRow": {
     "ccn": [
-     24
+     19
     ]
    }
   },
@@ -2251,7 +2251,7 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_SettingsTab.lua": {
    "buildSections": {
     "lines": [
-     88
+     78
     ]
    },
    "createItem": {
