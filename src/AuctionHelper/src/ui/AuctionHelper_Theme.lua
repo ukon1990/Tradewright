@@ -358,8 +358,15 @@ local function skinScrollBar(scrollFrame)
 	thumb:SetVertexColor(THEME.borderStrong.r, THEME.borderStrong.g, THEME.borderStrong.b, 1)
 end
 
--- Replaces the red close button art with a 22px outlined square holding a drawn X.
-function ProfessionExporter:SkinCloseButton(button)
+-- Glyphs drawn on 22px icon buttons, one texture per line: { width, height, x, y, rotation }.
+local GLYPHS = {
+	close = { { 11, 1.5, 0, 0, math.pi / 4 }, { 11, 1.5, 0, 0, -math.pi / 4 } },
+	-- A window outline with a thick title bar: "open in a window".
+	window = { { 11, 2, 0, 4.5 }, { 11, 1, 0, -5 }, { 1, 10, -5, 0 }, { 1, 10, 5, 0 } },
+}
+
+-- Replaces the red close button art with a 22px outlined square holding a drawn glyph (X by default).
+function ProfessionExporter:SkinCloseButton(button, glyph)
 	if not button or button.ahSkinned then
 		return button
 	end
@@ -374,14 +381,31 @@ function ProfessionExporter:SkinCloseButton(button)
 	button:SetHighlightTexture(WHITE)
 	button:GetHighlightTexture():SetVertexColor(THEME.gold.r, THEME.gold.g, THEME.gold.b, 0.09)
 	self:AddSurface(button, { r = 0, g = 0, b = 0, a = 0 }, THEME.borderStrong)
-	for _, angle in ipairs({ math.pi / 4, -math.pi / 4 }) do
+	for _, spec in ipairs(GLYPHS[glyph or "close"]) do
 		local line = button:CreateTexture(nil, "ARTWORK")
-		line:SetSize(11, 1.5)
-		line:SetPoint("CENTER")
+		line:SetSize(spec[1], spec[2])
+		line:SetPoint("CENTER", spec[3], spec[4])
 		colorTexture(line, THEME.textMuted)
-		if line.SetRotation then
-			line:SetRotation(angle)
+		if spec[5] and line.SetRotation then
+			line:SetRotation(spec[5])
 		end
+	end
+	return button
+end
+
+-- 22px square header button with a drawn glyph ("close" or "window"); `tooltip` is optional.
+function ProfessionExporter:CreateIconButton(parent, glyph, onClick, tooltip)
+	local button = CreateFrame("Button", nil, parent, glyph == "close" and "UIPanelCloseButton" or nil)
+	button:ClearAllPoints()
+	self:SkinCloseButton(button, glyph)
+	button:SetScript("OnClick", onClick)
+	if tooltip then
+		button:SetScript("OnEnter", function(owner)
+			GameTooltip:SetOwner(owner, "ANCHOR_BOTTOM")
+			GameTooltip:SetText(tooltip, 1, 1, 1)
+			GameTooltip:Show()
+		end)
+		button:SetScript("OnLeave", GameTooltip_Hide)
 	end
 	return button
 end

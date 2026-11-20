@@ -758,23 +758,22 @@ function ProfessionExporter:CreateBadge(parent)
 	return badge
 end
 
--- Detail pane header: 32px item icon, name, muted second line, optional close button.
-function ProfessionExporter:CreateDetailHeader(parent, onClose)
+-- Detail pane header: 32px item icon, name, muted second line, optional close and pop-out buttons.
+function ProfessionExporter:CreateDetailHeader(parent, onClose, onPopOut)
 	local header = CreateFrame("Frame", nil, parent)
 	header:SetHeight(32)
 	header.icon = self:CreateItemIcon(header, 32)
 	header.icon:SetPoint("LEFT")
-	local right = header
-	if onClose then
-		header.close = CreateFrame("Button", nil, header, "UIPanelCloseButton")
-		header.close:ClearAllPoints()
-		header.close:SetPoint("TOPRIGHT", 0, 0)
-		self:SkinCloseButton(header.close)
-		header.close:SetScript("OnClick", onClose)
-		right = header.close
+	local right, point, gap = header, "TOPRIGHT", 0 -- buttons and badge line up right to left
+	for _, spec in ipairs({ { "close", "close", onClose }, { "popOut", "window", onPopOut, "Open in item details window" } }) do
+		if spec[3] then
+			header[spec[1]] = self:CreateIconButton(header, spec[2], spec[3], spec[4])
+			header[spec[1]]:SetPoint("TOPRIGHT", right, point, gap, 0)
+			right, point, gap = header[spec[1]], "TOPLEFT", -6
+		end
 	end
 	header.badge = self:CreateBadge(header)
-	header.badge:SetPoint("TOPRIGHT", right, right == header and "TOPRIGHT" or "TOPLEFT", right == header and 0 or -6, -2)
+	header.badge:SetPoint("TOPRIGHT", right, point, gap, -2)
 	header.badge:Hide()
 	header.title = self:CreateText(header, "GameFontHighlight")
 	header.title:SetPoint("TOPLEFT", header.icon, "TOPRIGHT", 8, -1)

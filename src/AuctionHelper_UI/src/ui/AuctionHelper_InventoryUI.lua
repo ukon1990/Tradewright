@@ -581,7 +581,7 @@ function ProfessionExporter:CreateItemDetailPane(parent, opts)
 	if pane.SetClipsChildren then
 		pane:SetClipsChildren(true)
 	end
-	pane.header = self:CreateDetailHeader(pane, opts.onClose)
+	pane.header = self:CreateDetailHeader(pane, opts.onClose, opts.onClose and function() pe:ShowItemDetailsWindow(pane.itemID) end)
 	pane.header:SetPoint("TOPLEFT", pad, -pad)
 	pane.header:SetPoint("TOPRIGHT", -pad, -pad)
 	pane.facts = self:CreateKeyValueList(pane)
