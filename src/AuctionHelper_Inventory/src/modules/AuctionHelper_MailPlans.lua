@@ -84,13 +84,13 @@ function ProfessionExporter:NoteCraftForSeller(itemID, quantity)
 	toSeller[itemID] = (toSeller[itemID] or 0) + quantity
 end
 
---- Whether this character also mails items without a keep amount to the seller.
+--- Whether this character mails everything sellable, not only items with a keep amount. On unless turned off.
 function ProfessionExporter:GetMailSendOthers()
-	return characterStore(self, "surplusByCharacter").sendOthers == true
+	return characterStore(self, "surplusByCharacter").sendOthers ~= false
 end
 
 function ProfessionExporter:SetMailSendOthers(enabled)
-	characterStore(self, "surplusByCharacter").sendOthers = enabled == true or nil
+	characterStore(self, "surplusByCharacter").sendOthers = enabled == true
 end
 
 --- How many of an item this character keeps; nil or 0 clears the keep amount.
@@ -125,7 +125,7 @@ local function heldQuantities(pe, plan)
 	return held
 end
 
--- The surplus row, shown on a crafter even when nothing goes: its review rows (F24) with names
+-- The surplus row, shown on every character but the seller even when nothing goes: its review rows (F24) with names
 -- and prices, their summary, and the items that go.
 local function surplusDestination(pe, plan, bags, seller)
 	local rows = pe.MailLogic.BuildReviewRows(bags, characterStore(pe, "keepByCharacter"), heldQuantities(pe, plan),
@@ -139,8 +139,8 @@ local function surplusDestination(pe, plan, bags, seller)
 		items = pe.MailLogic.SurplusItems(rows), totalQuantity = summary.send, reviewRows = rows, summary = summary }
 end
 
---- Everything the mailbox panel can send from this character: materials for crafters, and on a
---- crafter the crafted items owed to the seller and the surplus above its keep amounts. Each
+--- Everything the mailbox panel can send from this character: materials for crafters, and on any
+--- character but the seller the crafted items owed to it and the surplus above keep amounts. Each
 --- destination carries its `kind`.
 function ProfessionExporter:BuildMailPanelPlan()
 	local plan = self:BuildShoppingMailSendPlan()
@@ -209,7 +209,7 @@ function ProfessionExporter:GetMailItemUnitPrice(itemID)
 end
 
 --- The surplus review rows (MailLogic.BuildReviewRows, with names and prices) and the surplus
---- destination of `panelPlan` (BuildMailPanelPlan, built when not given). No rows off a crafter.
+--- destination of `panelPlan` (BuildMailPanelPlan, built when not given). No rows on the seller.
 function ProfessionExporter:BuildMailReviewRows(panelPlan)
 	for _, dest in ipairs(panelPlan or self:BuildMailPanelPlan()) do
 		if dest.kind == "surplus" then

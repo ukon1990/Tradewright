@@ -15,7 +15,7 @@ The mailbox panel's buttons no longer send in the background. They fill the game
 - F21's automatic send to crafters keeps sending by itself.
 - Surplus row: a **Review…** button in place of Send; its second line says "214 to send · 8 kept · 4 skipped". The row is shown on a crafter even when nothing would go, so the review can always be opened.
 - **Send all** → **Prepare all**: materials and crafted items only. The footer points to Review… for the surplus.
-- "Send other sellable items" moves from the mailbox panel into the review panel as "Also send items with no keep amount".
+- "Send other sellable items" moves from the mailbox panel into the review panel as "Send everything sellable, not just items with a keep amount", and is **on by default** on every character but the seller: BoEs, drops, crafts and reagents all go unless kept or skipped. Only poor-quality (grey), bound and quest items never go.
 - The review panel's button reads "Prepare 214 items · 3 mails".
 - The review panel reopens with the mailbox when it was open last time (saved setting).
 

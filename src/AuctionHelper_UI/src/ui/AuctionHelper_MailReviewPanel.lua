@@ -8,7 +8,7 @@ local addonName, ProfessionExporter = ...
 local PAD = 12
 local WIDTH = 520
 local FILTERS = { { id = "sending", label = "Sending" }, { id = "kept", label = "Kept" }, { id = "all", label = "All" } }
-local REASONS = { held = "For your crafts", kept = "All kept", skipped = "Not this time", othersOff = "Not sending others" }
+local REASONS = { held = "For your crafts", kept = "All kept", skipped = "Not this time", othersOff = "No keep amount set" }
 local KEEP_HINT = "Type a number; while typing, mouse wheel adds or removes one stack. Shift-click: keep all. Ctrl-click: clear the keep amount."
 
 local function colored(color, text)
@@ -227,7 +227,7 @@ local function createToolbar(pe, f)
 	end)
 	f.search:SetPoint("LEFT", f, "TOPLEFT", PAD + 6, top - 11)
 	f.search:SetPoint("RIGHT", previous, "LEFT", -10, 0)
-	f.sendOthers = pe:CreateCheckbox(f, "Also send items with no keep amount", function(checked)
+	f.sendOthers = pe:CreateCheckbox(f, "Send everything sellable, not just items with a keep amount", function(checked)
 		pe:SetMailSendOthers(checked)
 		pe:RefreshMailPanel()
 	end)
@@ -321,7 +321,7 @@ function ProfessionExporter:ToggleMailReviewPanel(show)
 end
 
 -- Shows the review panel again when it was open last time the mailbox closed: on opening the
--- mailbox, and on expanding a collapsed mailbox panel. Only on a crafter (it has a surplus row).
+-- mailbox, and on expanding a collapsed mailbox panel. Not on the seller (it has no surplus row).
 local function restorePanel(pe, plan)
 	local panel = pe.ui and pe.ui.mailPanel
 	if not (pe:GetSetting("mail.reviewPanelOpen", false) and panel and panel:IsShown()) then

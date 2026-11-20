@@ -28,9 +28,9 @@ local function roleText(pe)
 	if not seller then
 		return "No auction house / bank character is set for this realm. Choose one in Settings."
 	elseif seller == pe:GetCharacterKey() then
-		return "This is your auction house / bank character."
+		return "This is your auction house / bank character. Your other characters mail their items here."
 	end
-	return "Crafter. Your auction house / bank character is " .. pe:GetMailCharacterLabel(seller) .. "."
+	return "Everything sellable here can go to your auction house / bank character, " .. pe:GetMailCharacterLabel(seller) .. "."
 end
 
 local function clearMailAttachments()
