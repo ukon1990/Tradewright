@@ -17,6 +17,7 @@ src\util\AuctionHelper_FlipLogic.lua
 src\util\AuctionHelper_MaterialLogic.lua
 src\util\AuctionHelper_FarmLogic.lua
 src\util\AuctionHelper_WeekdayPattern.lua
+src\util\AuctionHelper_TooltipLogic.lua
 src\core\AuctionHelper_Data.lua
 src\core\AuctionHelper_DataInit.lua
 src\util\AuctionHelper_Util.lua

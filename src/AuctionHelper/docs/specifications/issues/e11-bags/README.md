@@ -22,10 +22,11 @@ Designs: [AuctionHelper Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnS
 - F92: the bag window for the logged-in character
 - F93: the bag row: equipped bags and reagent bag, swap and replace
 - F94: other characters as tabs, bank and the All tab
+- F95: make room when the bags are full: delete the cheapest stack, or swap it for loot
 
 ## Acceptance criteria
 
-- [ ] F90 to F94 done
+- [ ] F90 to F95 done
 - [ ] With the module disabled in the AddOns list, or the checkbox off, the game's bags (or another bag addon) open as before
 - [ ] No protected call is made by addon code; items are used through the game's item button template
 - [ ] Retail and Forever both load the module; `npm test` passes
@@ -46,6 +47,6 @@ In-game on Forever (full restart, the module adds new files): enable AuctionHelp
 
 - A live bank window (the game's bank stays; the bank shows here as a saved, read-only list)
 - Changing the order of the categories (the "Category order" row of the design)
-- Sorting or auto-stacking bags, selling junk with one click
+- Sorting or auto-stacking bags, selling junk at a vendor with one click
 - Item sets, item level or new-item markers on slots
 - The slot count of a replacement bag in the picker (the game does not give it without reading tooltips)

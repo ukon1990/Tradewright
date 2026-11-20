@@ -16,7 +16,7 @@ The decisions of the bag window as pure functions: which category an item belong
 - `BagLogic.GroupItems(items)`: non-empty groups in display order; inside a group by quality (best first), name, then count
 - `BagLogic.Layout(groups, opts)`: heading and slot positions for a column count, slot size and gap, and the total height
 - `BagLogic.MergeCounts(snapshot, mode)` and `BagLogic.MergeAll(characters, mode)`: per-item counts for bags, bank or both
-- `BagLogic.Owners(characters, itemID)`: who holds an item, largest first, and the total
+- `TooltipLogic.Owners(characters, itemID, skipKey)` (moved to the core so the item tooltip can use it without the bags module): who holds an item, largest first, and the total
 - `BagLogic.BagTotals(bags)`: slots, used and free, with the reagent bag counted apart
 - `BagLogic.JunkValue(items)`, `BagLogic.Matches(item, query)`, `BagLogic.ReplacementBags(items, forReagentSlot)`, `BagLogic.TabOrder(characters, currentKey, limit)`
 - `src/AuctionHelper/tests/test_bag_logic.lua`

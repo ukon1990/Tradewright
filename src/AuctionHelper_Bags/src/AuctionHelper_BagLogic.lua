@@ -130,27 +130,6 @@ function BagLogic.MergeAll(characters, mode)
 	return counts
 end
 
---- Who holds an item: { { key, name, bags, bank } } with the largest holder first, and the total.
-function BagLogic.Owners(characters, itemID)
-	local owners, total = {}, 0
-	for key, snapshot in pairs(characters) do
-		local bags = snapshot.bags and snapshot.bags[itemID] or 0
-		local bank = snapshot.bank and snapshot.bank[itemID] or 0
-		if bags + bank > 0 then
-			owners[#owners + 1] = { key = key, name = snapshot.name or key, bags = bags, bank = bank }
-			total = total + bags + bank
-		end
-	end
-	table.sort(owners, function(a, b)
-		local ta, tb = a.bags + a.bank, b.bags + b.bank
-		if ta ~= tb then
-			return ta > tb
-		end
-		return a.name < b.name
-	end)
-	return owners, total
-end
-
 --- Copy saved characters from `from` into `into`, keeping whichever record of a character was
 --- seen last (a record never seen loses).
 function BagLogic.AdoptHoldings(into, from)
@@ -206,6 +185,69 @@ function BagLogic.JunkValue(items)
 		end
 	end
 	return value
+end
+
+-- The cheaper of two candidates ({ item, value }); a missing one loses.
+local function cheaper(best, item, value)
+	if not best or value < best.value then
+		return { item = item, value = value }
+	end
+	return best
+end
+
+local MAX_DROP_QUALITY = 2
+
+-- Whether an item that is not junk may be offered for deleting: it has a vendor price (so it is
+-- no key, hearthstone or other item without value), is at most uncommon, and is no quest item or bag.
+local function mayDrop(item)
+	return (item.sellPrice or 0) > 0 and (item.quality or 1) <= MAX_DROP_QUALITY and item.classID ~= CLASS.container
+		and BagLogic.CategoryOf(item) ~= "quest"
+end
+
+-- "junk" or "other" and what the stack is worth; nil for a stack that is never offered.
+local function dropKind(item, auctionPriceOf)
+	local count, vendor = item.count or 1, item.sellPrice or 0
+	if item.locked then
+		return nil
+	end
+	if BagLogic.CategoryOf(item) == "junk" then
+		return "junk", vendor * count
+	end
+	if not mayDrop(item) then
+		return nil
+	end
+	return "other", math.max(vendor, auctionPriceOf and auctionPriceOf(item.itemID) or 0) * count
+end
+
+--- The stack to delete when the bags are full: the junk stack a vendor pays least for, or with no
+--- junk the cheapest other stack that may be dropped, valued at the higher of its vendor and
+--- auction price (`auctionPriceOf(itemID)` -> copper each, or nil). Locked items are skipped.
+--- Returns { item, value, isJunk }, or nil when nothing qualifies.
+function BagLogic.CheapestToDrop(items, auctionPriceOf)
+	local best = {}
+	for _, item in ipairs(items) do
+		local kind, value = dropKind(item, auctionPriceOf)
+		if kind then
+			best[kind] = cheaper(best[kind], item, value)
+		end
+	end
+	local pick = best.junk or best.other
+	if pick then
+		pick.isJunk = best.junk ~= nil
+	end
+	return pick
+end
+
+--- The loot worth taking in place of `drop` (CheapestToDrop's result): the most valuable entry of
+--- `loot` ({ { slot, name, count, value } }) when it is worth more than the stack to delete, else nil.
+function BagLogic.BestLootSwap(loot, drop)
+	local best
+	for _, entry in ipairs(loot) do
+		if entry.value > drop.value and (not best or entry.value > best.value) then
+			best = entry
+		end
+	end
+	return best
 end
 
 --- Whether an item matches the search text (any case, plain text). Empty text matches all.

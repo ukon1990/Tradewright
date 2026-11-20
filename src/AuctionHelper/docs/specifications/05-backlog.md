@@ -49,6 +49,7 @@
 | [f92-bag-window](issues/e11-bags/f92-bag-window/README.md) | Bag window for the logged-in character | implemented, in-game check pending |
 | [f93-bag-row](issues/e11-bags/f93-bag-row/README.md) | Bag row: equipped bags and the reagent bag | implemented, in-game check pending |
 | [f94-other-characters](issues/e11-bags/f94-other-characters/README.md) | Other characters as tabs, bank, and the All tab | implemented, in-game check pending |
+| [f95-make-room](issues/e11-bags/f95-make-room/README.md) | Make room: delete the cheapest stack, or swap it for loot | implemented, in-game check pending |
 
 Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E10: F80 first (no dependencies), then F81 and F82.
 

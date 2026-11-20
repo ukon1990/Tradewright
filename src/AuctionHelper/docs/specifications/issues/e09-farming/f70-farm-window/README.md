@@ -50,7 +50,7 @@ Differs from the scope:
 - **No "Farm finished" dialog.** Stop saves under the name the run was started with (default: the zone) and prints a chat line; Discard does not exist yet
 - **No automatic pause when idle** and no start on entering an instance
 - **No collapsed one-line form** of the window
-- **Tooltip lines** ("Vendor pays", "You looted it in …") are not added
+- **Tooltip lines:** "Vendor pays" is on the item tooltip (with Shift; always, in orange, when a vendor pays more than the auction house after the cut). "You looted it in …" is not added
 - **Vendor sales:** only items sold by using them from the bags with a merchant open are taken out of the run; items sold another way stay counted while their gold is also counted
 - **Storage:** in the ledger table, not a new saved-variables key
 

@@ -186,14 +186,13 @@ local function sevenDayBaseline(pe, out, itemID)
 	end
 end
 
---- Fill a tooltip summary with what the price is compared with: the usual price once an item has enough daily history,
--- else the 7-day average. Also notes how many sell a day when the scans say.
+--- Fill a tooltip summary with what the price is compared with: the usual price once an item has enough daily history
+-- (usualDays is then set), else the 7-day average. Also notes how many sell a day when the scans say.
 function ProfessionExporter:FillPriceBaseline(out, itemID)
 	local pe = self
 	local usual, sells = pe:GetItemPriceSignals(itemID)
-	out.baselineLabel, out.rangeLabel = "7-day average", "7-day range"
 	if usual then
-		out.baselineLabel, out.rangeLabel = "Usual price, " .. usual.days .. " days", "Usual range"
+		out.usualDays = usual.days
 		out.average, out.low, out.high = usual.usual, usual.low, usual.high
 	elseif pe.GetItemHistorySeries then
 		sevenDayBaseline(pe, out, itemID)
@@ -201,8 +200,5 @@ function ProfessionExporter:FillPriceBaseline(out, itemID)
 	if out.average and out.price then
 		out.trend = (out.price - out.average) / out.average * 100
 	end
-	if sells then
-		local perDay = sells.perDay >= 10 and math.floor(sells.perDay + 0.5) or string.format("%.1f", sells.perDay)
-		out.listedNote = "  ·  sells about " .. perDay .. " a day"
-	end
+	out.sellsPerDay = sells and sells.perDay or nil
 end

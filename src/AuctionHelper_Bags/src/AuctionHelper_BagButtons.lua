@@ -86,7 +86,7 @@ local function showSavedTooltip(button)
 	if not item then
 		return
 	end
-	local owners, total = pe.BagLogic.Owners(pe:GetItemHoldings(), item.itemID)
+	local owners, total = pe.TooltipLogic.Owners(pe:GetItemHoldings(), item.itemID)
 	local rows = {}
 	for _, owner in ipairs(owners) do
 		rows[#rows + 1] = { owner.name, ownerText(pe, owner) }

@@ -22,7 +22,7 @@ Each item gets "Sells a day, estimated": how many units leave the auction house 
 - `GetSellsPerDay(storageKey)` (AuctionData), cached like the usual price
 - Market tab column `Sells a day`; item details "Sells a day, estimated" and "Listed supply lasts"; "(few sales seen)" when confidence is "few"
 - The player's own sales per day from the ledger are the floor (`GetSalesSummary`, rebuilt at most once a minute); with no scan estimate they stand alone
-- Tooltip: the "Listed" line ends with "sells about N a day"
+- Tooltip: the "Listed" line ends with "~N sold/day"
 - Docs tab: section "Usual price and sells a day" on how both are made and why sells a day runs high
 - Still open:
   - with price steps (F41): count only the drop at or below the next scan's lowest price

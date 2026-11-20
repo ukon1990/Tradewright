@@ -84,11 +84,6 @@ check("Merge: bank only", BL.MergeCounts(bankey, "bank")[1] == 1000)
 check("Merge: missing tables", next(BL.MergeCounts({}, "both")) == nil)
 check("Merge: all characters", BL.MergeAll(characters, "both")[1] == 1480 and BL.MergeAll(characters, "bags")[1] == 440)
 
-local owners, total = BL.Owners(characters, 1)
-check("Owners: largest first", #owners == 3 and owners[1].name == "Bånkey" and owners[2].name == "Maelis")
-check("Owners: split and total", owners[1].bags == 240 and owners[1].bank == 1000 and total == 1480)
-check("Owners: nobody", #BL.Owners(characters, 99) == 0)
-
 -- Gold
 maelis.money, bankey.money = 124986, 12040000
 local gold, goldTotal = BL.GoldByCharacter(characters)
@@ -102,6 +97,42 @@ BL.AdoptHoldings(into, { A = { seenAt = 20, money = 3 }, B = { seenAt = 40, mone
 check("Adopt: newer record wins", into.A.money == 3)
 check("Adopt: older record is ignored", into.B.money == 2)
 check("Adopt: unknown character is added", into.C.money == 5)
+
+-- Cheapest stack to delete
+local drop = BL.CheapestToDrop({
+	{ itemID = 1, name = "Fang", quality = 0, classID = 15, sellPrice = 10, count = 3 },
+	{ itemID = 2, name = "Claw", quality = 0, classID = 15, sellPrice = 4, count = 5 },
+	{ itemID = 3, name = "Linen", quality = 1, classID = 7, sellPrice = 1, count = 1 },
+})
+check("Drop: cheapest junk stack, even when other items are cheaper", drop.item.name == "Claw" and drop.value == 20 and drop.isJunk)
+drop = BL.CheapestToDrop({
+	{ itemID = 1, name = "Fang", quality = 0, classID = 15, sellPrice = 1, count = 1, locked = true },
+	{ itemID = 3, name = "Linen", quality = 1, classID = 7, sellPrice = 5, count = 10 },
+	{ itemID = 4, name = "Silk", quality = 1, classID = 7, sellPrice = 2, count = 4 },
+	{ itemID = 5, name = "Hearthstone", quality = 1, classID = 15, sellPrice = 0, count = 1 },
+	{ itemID = 6, name = "Quest Note", quality = 1, classID = 12, sellPrice = 1, count = 1 },
+	{ itemID = 7, name = "Rare Sword", quality = 3, classID = 2, sellPrice = 1, count = 1 },
+	{ itemID = 8, name = "Small Pouch", quality = 1, classID = 1, sellPrice = 1, count = 1 },
+}, function(itemID) return itemID == 4 and 100 or nil end)
+check("Drop: locked junk is skipped, then the cheapest other stack", drop.item.name == "Linen" and drop.value == 50 and not drop.isJunk,
+	drop.item.name)
+check("Drop: auction price counts when higher", BL.CheapestToDrop({
+	{ itemID = 4, name = "Silk", quality = 1, classID = 7, sellPrice = 2, count = 4 },
+}, function() return 100 end).value == 400)
+check("Drop: no value, quest, rare and bags are never offered", BL.CheapestToDrop({
+	{ itemID = 5, quality = 1, classID = 15, sellPrice = 0 }, { itemID = 6, quality = 1, classID = 12, sellPrice = 1 },
+	{ itemID = 7, quality = 3, classID = 2, sellPrice = 1 }, { itemID = 8, quality = 1, classID = 1, sellPrice = 1 },
+}) == nil)
+check("Drop: worthless junk goes first", BL.CheapestToDrop({
+	{ itemID = 1, quality = 0, classID = 15, sellPrice = 0 }, { itemID = 2, quality = 0, classID = 15, sellPrice = 3 },
+}).value == 0)
+check("Drop: empty bags", BL.CheapestToDrop({}) == nil)
+
+-- Loot worth swapping in
+local lootList = { { slot = 1, name = "Linen", value = 10 }, { slot = 2, name = "Arcanite", value = 5000 }, { slot = 3, name = "Fang", value = 40 } }
+check("Loot swap: most valuable loot above the dropped stack", BL.BestLootSwap(lootList, { value = 30 }).slot == 2)
+check("Loot swap: equal value is not worth it", BL.BestLootSwap({ { slot = 1, value = 30 } }, { value = 30 }) == nil)
+check("Loot swap: nothing to loot", BL.BestLootSwap({}, { value = 0 }) == nil)
 
 -- Totals
 local totals = BL.BagTotals({

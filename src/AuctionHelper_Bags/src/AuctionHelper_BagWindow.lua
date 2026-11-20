@@ -177,8 +177,9 @@ local function buildFooter(pe, f)
 	goldHover:EnableMouse(true)
 	goldHover:SetScript("OnEnter", showGoldTooltip)
 	goldHover:SetScript("OnLeave", GameTooltip_Hide)
+	f.dropButton = pe:CreateBagDropButton(footer)
+	f.dropButton:SetPoint("LEFT", footer, "LEFT", PAD, 0)
 	f.footLeft = pe:CreateText(footer, "GameFontHighlightSmall", "textMuted")
-	f.footLeft:SetPoint("LEFT", footer, "LEFT", PAD, 0)
 	f.footLeft:SetPoint("RIGHT", f.footRight, "LEFT", -PAD, 0)
 end
 
@@ -396,15 +397,27 @@ local function savedFootText(pe, view, record)
 	return record.money and (seen .. "  ·  " .. pe:FormatCopperShort(record.money)) or seen
 end
 
+-- Make room sits left of the footer text once no normal slot is left.
+local function showDropButton(f, full)
+	f.dropButton:SetShown(full)
+	f.footLeft:SetPoint("LEFT", f.footLeft:GetParent(), "LEFT", PAD + (full and f.dropButton:GetWidth() + 8 or 0), 0)
+end
+
+local function freeText(totals, full)
+	local free = full and "Bags full" or string.format("%d free", totals.free)
+	if totals.reagentFree > 0 then
+		free = free .. string.format(" · %d in reagent bag", totals.reagentFree)
+	end
+	return free
+end
+
 -- Header and footer lines. `totals`: BagLogic.BagTotals of the carried bags.
 local function refreshTexts(pe, f, view, totals, itemCount)
+	local full = view.live and totals.free == 0
+	showDropButton(f, full)
 	if view.live then
-		local free = string.format("%d free", totals.free)
-		if totals.reagentFree > 0 then
-			free = free .. string.format(" · %d in reagent bag", totals.reagentFree)
-		end
 		f.meta:SetText(string.format("%d / %d slots", totals.used, totals.slots))
-		f.footLeft:SetText(free)
+		f.footLeft:SetText(freeText(totals, full))
 		f.footRight:SetText(goldText(pe, GetMoney()))
 		return
 	end

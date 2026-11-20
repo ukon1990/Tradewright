@@ -98,6 +98,8 @@ local function auctionHouseSection(pe)
 			options = choices({ 5, 15, 30, 60, 180 }, "%d minutes") },
 		{ kind = "check", label = "Count the lost deposit when cancelling undercut auctions", path = "auction.repostIncludeDeposit",
 			default = true },
+		{ kind = "check", label = "Show prices and what you own on item tooltips (hold Shift for more)", path = "auction.tooltipEnabled",
+			default = true },
 	} }
 end
 
@@ -233,6 +235,8 @@ local function bagsSection()
 			onChange = refreshBags },
 		{ kind = "check", label = "Show the sell value of junk", path = "bags.showJunkValue", default = true, onChange = refreshBags },
 		{ kind = "check", label = "Keep the bag row open", path = "bags.showBagRow", default = false, onChange = refreshBags },
+		{ kind = "check", label = "When loot does not fit, offer to swap it for my cheapest item", path = "bags.lootSwap",
+			default = true },
 		{ kind = "select", label = "Slots per row", path = "bags.columns", default = 10, options = choices({ 8, 10, 12, 14 }, "%d"),
 			onChange = refreshBags },
 		{ kind = "select", label = "Slot size", path = "bags.slotSize", default = 36, onChange = refreshBags,

@@ -926,30 +926,6 @@ function ProfessionExporter:FormatShortTime(ts)
 	return date("%b %d", ts)
 end
 
--- Item tooltip for a table row: anchored to the row's right edge, the game's item tooltip, then
--- AuctionHelper's label/value pairs and a muted hint. `pairs`: { { label, value }, ... }.
-function ProfessionExporter:ShowItemRowTooltip(owner, itemID, pairs, hint)
-	if not owner then
-		return
-	end
-	local theme = self:GetTheme()
-	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
-	if itemID and GameTooltip.SetItemByID then
-		GameTooltip:SetItemByID(itemID)
-	end
-	if pairs and #pairs > 0 then
-		GameTooltip:AddLine(" ")
-		for _, pair in ipairs(pairs) do
-			GameTooltip:AddDoubleLine(pair[1], pair[2] or "-", theme.textMuted.r, theme.textMuted.g, theme.textMuted.b,
-				theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b)
-		end
-	end
-	if hint then
-		GameTooltip:AddLine(hint, theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, true)
-	end
-	GameTooltip:Show()
-end
-
 -- Shift-click links the item in chat. Returns true when the click was used.
 function ProfessionExporter:HandleItemRowModifiedClick(itemID)
 	if not itemID or not IsModifiedClick or not IsModifiedClick("CHATLINK") then
