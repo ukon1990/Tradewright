@@ -280,7 +280,10 @@ local function ensurePanel(pe)
 		return pe.ui.mailReviewPanel
 	end
 	local panel = pe.ui.mailPanel
-	local f = CreateFrame("Frame", addonName .. "MailReviewPanel", panel, "BackdropTemplate")
+	-- Parented to the mailbox, not the mail panel: the mail panel clips its children (StyleWindow),
+	-- which would cut away a panel docked beside it. It still closes with the mail panel.
+	local f = CreateFrame("Frame", addonName .. "MailReviewPanel", panel:GetParent(), "BackdropTemplate")
+	panel:HookScript("OnHide", function() f:Hide() end)
 	f:SetWidth(WIDTH)
 	f:SetPoint("TOPLEFT", panel, "TOPRIGHT", 8, 0)
 	f:SetPoint("BOTTOMLEFT", panel, "BOTTOMRIGHT", 8, 0)
