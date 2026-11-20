@@ -63,7 +63,7 @@ npm run lint         # lint only (luacheck + size/complexity ratchet)
 npm run lint:baseline  # lock in reduced debt after a cleanup
 ```
 
-Lint requires `luacheck` on PATH (`sudo pacman -S luacheck`, or `luarocks install luacheck`; `LUACHECK=/path` overrides).
+Lint requires `luacheck` on PATH (`sudo pacman -S luacheck`, or `luarocks install luacheck`; `LUACHECK=/path` overrides). Full tool setup: [README.md](README.md#setup).
 
 ## Deploy
 
