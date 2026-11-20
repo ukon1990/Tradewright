@@ -123,6 +123,16 @@ local function cachedSignal(pe, kind, storageKey, compute)
 	return cache[storageKey] or nil
 end
 
+local function computeWeekdayPattern(pe, storageKey)
+	return pe.WeekdayPattern.Build(dailyHistory(pe, storageKey)) or false
+end
+
+--- Weekday price pattern of one stored listing (see AuctionHelper_WeekdayPattern.lua), or nil when the
+--- scans do not show one.
+function ProfessionExporter:GetWeekdayPattern(storageKey)
+	return cachedSignal(self, "weekday", storageKey, computeWeekdayPattern)
+end
+
 --- Usual price of one stored listing: `{ usual, mad, low, high, days }`, or nil with fewer than 5 days.
 function ProfessionExporter:GetUsualPrice(storageKey)
 	return cachedSignal(self, "usual", storageKey, computeUsualPrice)

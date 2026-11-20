@@ -22,13 +22,27 @@ The Market item view shows, per weekday, how far an item's price usually sits ab
 - When the function returns nil the strip is replaced by one muted line: "Not enough scans yet to show a weekday pattern."
 - The same function run on daily quantity is kept for F72; not shown here
 
+## Status
+
+Implemented:
+
+- `AuctionHelper_WeekdayPattern.lua` (core, pure): `WeekdayPattern.Build(daily, opts)` with the rules above. The history must span 5 weeks. The gap between the cheapest and dearest weekday must be at least 3% and more than 8 standard errors of a weekday median. That strictness was measured on simulated prices: with pure noise about 2% of items show a false pattern at 6 weeks of daily prices and under 0.5% at 12 weeks, while a 10% weekday bump is found whenever day-to-day noise is 3% or less. A first, looser rule reported a pattern for 71% of pure-noise items and was dropped.
+- `GetWeekdayPattern(storageKey)` (AuctionData), cached like the usual price
+- Item details: one line, "By weekday: Cheapest Wed -6%, dearest Tue +8% (6 weeks)", or "Not enough scans yet"
+
+Differs from the scope:
+
+- One line of text instead of a strip of seven cells: the item view is built by a function that is over the lint limits and may not grow
+- Weekdays are UTC days, as in F40
+- The quantity pattern for F72 is not computed yet; `Build` reads the daily price only
+
 ## Acceptance criteria
 
 - [ ] An item with 6 weeks of daily prices that are 10% higher every Tuesday shows Tuesday near +10% and names it dearest
 - [ ] An item with random daily prices shows the "not enough" line, not a pattern
 - [ ] An item with 2 weeks of history shows the "not enough" line
 - [ ] No weekday pattern is shipped with the addon; nothing appears for an item without its own history
-- [ ] Offline tests: planted weekly pattern, noise only, short history, missing weekdays, a level shift in the middle of the window
+- [x] Offline tests: planted weekly pattern, noise only, short history, missing weekdays, a level shift in the middle of the window
 
 ## Verification
 

@@ -204,6 +204,45 @@ check("A deposit can turn the gain negative", gapWith({ deposit = 200 }) == nil)
 local gapRows = Flip.BuildGapRows({ potion, { itemID = 2, steps = { 100, 50, 200, 9 }, usualHigh = 210, sellsPerDay = 80 } })
 check("Gaps are sorted by gain", #gapRows == 2 and gapRows[1].itemID == 2)
 
+-- Weekday pattern
+local weekdayChunk, weekdayErr = loadfile(root .. "/src/util/AuctionHelper_WeekdayPattern.lua")
+assert(weekdayChunk, weekdayErr)
+weekdayChunk("AuctionHelper", pe)
+local WP = pe.WeekdayPattern
+check("1970-01-01 was a Thursday", WP.Weekday(0) == 4 and WP.Weekday(4 * DAY) == 1)
+local function dailySeries(count, priceOf)
+	local out = {}
+	for index = 0, count - 1 do
+		local at = day1 + index * DAY
+		out[at] = { p = priceOf(at, index) }
+	end
+	return out
+end
+local tuesdays = dailySeries(42, function(at)
+	return WP.Weekday(at) == 2 and 110 or 100
+end)
+local pattern = WP.Build(tuesdays)
+check("A planted Tuesday premium is found", pattern and pattern.dearest == 2 and pattern.byDay[2] > 0.07 and pattern.weeks == 6)
+check("The other days sit just under the trend", pattern and pattern.byDay[4] < 0 and pattern.byDay[4] > -0.03)
+check("Flat prices show no pattern", WP.Build(dailySeries(42, function() return 100 end)) == nil)
+check("Two weeks of history show no pattern", WP.Build(dailySeries(14, function(at) return WP.Weekday(at) == 2 and 110 or 100 end)) == nil)
+local seed = 7
+local noise = dailySeries(42, function()
+	seed = (seed * 1103515245 + 12345) % 2147483648
+	return 100 + (seed % 9) - 4
+end)
+check("Noise alone shows no pattern", WP.Build(noise) == nil)
+local shifted = dailySeries(42, function(_, index) return index < 21 and 100 or 200 end)
+check("A level shift in the middle is not a weekday pattern", WP.Build(shifted) == nil)
+local noSundays = dailySeries(42, function(at) return WP.Weekday(at) == 2 and 110 or 100 end)
+for at in pairs(noSundays) do
+	if WP.Weekday(at) == 7 then
+		noSundays[at] = nil
+	end
+end
+check("A weekday without scans gives no pattern", WP.Build(noSundays) == nil)
+check("No history gives no pattern", WP.Build(nil) == nil and WP.Build({}) == nil)
+
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}
 local auction = { history = { hourly = {}, daily = {} } }

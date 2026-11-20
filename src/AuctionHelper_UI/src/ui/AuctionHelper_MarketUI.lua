@@ -116,6 +116,20 @@ local function priceGapText(pe, rowData)
 		pe:FormatNumberGrouped(gap.belowQty), pe:FormatCopperShort(gap.belowCost))
 end
 
+local WEEKDAYS = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" }
+
+-- "Cheapest Wed -6%, dearest Tue +8% (6 weeks)", from the item's own scans.
+local function weekdayText(pe, rowData)
+	local pattern = pe.GetWeekdayPattern and pe:GetWeekdayPattern(rowData.storageKey)
+	if not pattern then
+		return "Not enough scans yet"
+	end
+	local function part(weekday)
+		return string.format("%s %+d%%", WEEKDAYS[weekday], math.floor(pattern.byDay[weekday] * 100 + 0.5))
+	end
+	return string.format("Cheapest %s, dearest %s (%d weeks)", part(pattern.cheapest), part(pattern.dearest), pattern.weeks)
+end
+
 -- Key facts of one Market row for the item view.
 local function marketFactRows(pe, rowData)
 	return {
@@ -125,6 +139,7 @@ local function marketFactRows(pe, rowData)
 		{ "Usual range", usualRangeText(pe, rowData) },
 		{ "Sells a day, estimated", sellsFactText(pe, rowData) },
 		{ "Listed supply lasts", supplyFactText(pe, rowData) },
+		{ "By weekday", weekdayText(pe, rowData) },
 		{ "Cheapest steps", priceStepsText(pe, rowData) },
 		{ "Biggest price jump", priceGapText(pe, rowData) },
 		{ "Quantity", pe:FormatNumberGrouped(rowData.sampleSize or 0) },
