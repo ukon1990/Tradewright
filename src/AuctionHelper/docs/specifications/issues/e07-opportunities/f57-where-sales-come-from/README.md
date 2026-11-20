@@ -22,13 +22,24 @@ The sells-a-day figure is an estimate from the player's own scans, with the play
 - Sells a day column: a "?" after the number when confidence is "few" or the source is "own".
 - Coverage card (F56) second line, when most items lack sells a day: "Scan twice within a day to see what sells".
 
+## Status
+
+Implemented:
+
+- `MarketSignals.SellsPerDay` returns `source` ("scans", "own", "both")
+- `FlipLogic.SetSells` puts perDay, source, pairs and confidence on a candidate; `FlipLogic.CarryOver` (was `MarkEarly`) copies them onto Flip, Price gap and Sell now rows with the early and usual-range fields; `FlipLogic.SellsUnsure` decides the "?"
+- One shared "Sells a day" column with " ?" when unsure
+- Side pane: "Estimated from: 3 scan pairs / your own sales / 7 scan pairs and your sales", in the warning colour when unsure
+- Risk text ends with the own-sales or few-pairs caveat on all three lists (replaces Flips' "Few sales were seen" line)
+- Coverage card: "Only N know what sells · scan twice within a day" when under half the items with a usual price have sells a day
+
 ## Acceptance criteria
 
 - [ ] A row whose estimate comes from own sales only says so in the side pane
 - [ ] A row with 2 to 4 scan pairs shows "?" and the pair count
 - [ ] A row with 5+ pairs shows no "?"
-- [ ] Offline tests: `SellsPerDay` source for scans only, own only, both
-- [ ] `npm test` passes
+- [x] Offline tests: `SellsPerDay` source for scans only, own only, both
+- [x] `npm test` passes
 
 ## Verification
 

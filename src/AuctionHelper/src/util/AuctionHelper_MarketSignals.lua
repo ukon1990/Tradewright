@@ -195,20 +195,30 @@ local function soldSince(dailyByDay, cutoff)
 	return sold, hours, scanPairs
 end
 
+-- Scans alone, or raised to the player's own sales when those are higher.
+local function salesSource(own, fromScans)
+	if own and own > fromScans then
+		return "both"
+	end
+	return "scans"
+end
+
 --- Estimated units sold per day over the last `windowDays` of daily history, never below `ownPerDay`
---- (the player's own sales): `{ perDay, confidence = "good" | "few", pairs }`. With under 2 scan pairs the
---- own sales stand alone, and without those the result is nil.
+--- (the player's own sales): `{ perDay, confidence = "good" | "few", pairs, source }`. `source` is "scans", "own"
+--- (own sales alone, under 2 scan pairs) or "both" (scans raised to own sales). Without either the result is nil.
 function MarketSignals.SellsPerDay(dailyByDay, now, windowDays, ownPerDay)
 	local cutoff = MarketSignals.DayStart(now) - (tonumber(windowDays) or 14) * DAY
 	local sold, hours, scanPairs = soldSince(dailyByDay, cutoff)
 	local own = positive(ownPerDay)
 	if scanPairs < 2 or hours <= 0 then
-		return own and { perDay = own, confidence = "few", pairs = scanPairs } or nil
+		return own and { perDay = own, confidence = "few", pairs = scanPairs, source = "own" } or nil
 	end
+	local fromScans = sold / hours * 24
 	return {
-		perDay = math.max(sold / hours * 24, own or 0),
+		perDay = math.max(fromScans, own or 0),
 		confidence = scanPairs >= 5 and "good" or "few",
 		pairs = scanPairs,
+		source = salesSource(own, fromScans),
 	}
 end
 

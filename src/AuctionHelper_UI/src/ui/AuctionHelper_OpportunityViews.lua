@@ -17,6 +17,32 @@ local function perDayText(pe, perDay)
 	return string.format("%.1f", perDay)
 end
 
+-- "Sells a day", with a "?" when the estimate rests on few scan pairs or on own sales alone (F57).
+local function sellsColumn(pe, width)
+	return {
+		id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = width, sortable = true, defaultSort = "desc",
+		sortValue = function(row) return row.sellsPerDay or 0 end,
+		getText = function(row) return perDayText(pe, row.sellsPerDay) .. (pe.FlipLogic.SellsUnsure(row) and " ?" or "") end,
+	}
+end
+
+-- Where a row's sells a day comes from.
+local function sellsSourceText(pe, row)
+	local pairsText = string.format("%s scan pairs", pe:FormatNumberGrouped(row.sellsPairs or 0))
+	if row.sellsSource == "own" then
+		return "your own sales"
+	elseif row.sellsSource == "both" then
+		return pairsText .. " and your sales"
+	end
+	return pairsText
+end
+
+-- The two side-pane lines about sales.
+local function sellsLines(pe, row)
+	return { "Sells a day, estimated", perDayText(pe, row.sellsPerDay) },
+		{ "Estimated from", sellsSourceText(pe, row), pe.FlipLogic.SellsUnsure(row) and "warning" or nil }
+end
+
 local function moneyColumn(pe, id, label, field, width)
 	return {
 		id = id, label = label, justifyH = "RIGHT", width = width or 76, sortable = true, defaultSort = "desc",
@@ -54,13 +80,22 @@ local function itemColumn(pe, detail)
 	})
 end
 
--- The risk text of a list, led by a warning on early rows.
-local function withEarlyRisk(riskText)
+-- What the sales estimate cannot tell, when it rests on little (F57).
+local function sellsCaveat(row)
+	if row.sellsSource == "own" then
+		return " Only your own sales are known. Scan at least twice within a day to see the whole market."
+	elseif row.sellsConfidence == "few" then
+		return string.format(" Sales were seen over only %d pairs of scans, and cancelled or expired auctions count as sold,"
+			.. " so it may sell slower.", row.sellsPairs or 0)
+	end
+	return ""
+end
+
+-- The risk text of a list, led by a warning on early rows and followed by one on thin sales data.
+local function withDataWarnings(riskText)
 	return function(pe, row)
-		if not row.early then
-			return riskText(pe, row)
-		end
-		return string.format("Usual price from only %d days, so one odd day moves it a lot. ", row.usualDays or 0) .. riskText(pe, row)
+		local early = row.early and string.format("Usual price from only %d days, so one odd day moves it a lot. ", row.usualDays or 0) or ""
+		return early .. riskText(pe, row) .. sellsCaveat(row)
 	end
 end
 
@@ -79,6 +114,8 @@ local function coverageStat(pe, stat, insights)
 	local note
 	if coverage.full == 0 then
 		note = string.format("Best item has %d of 5 scan days · today's scans count tomorrow", coverage.bestDays)
+	elseif (coverage.withSells or 0) < coverage.full / 2 then
+		note = string.format("Only %s know what sells · scan twice within a day", pe:FormatNumberGrouped(coverage.withSells or 0))
 	elseif coverage.early > 0 then
 		local shown = pe:GetSetting("opportunities.allowEarly", false) and ", shown as Early" or ", hidden in Settings"
 		note = string.format("%s more have 2 to 4 days%s", pe:FormatNumberGrouped(coverage.early), shown)
@@ -127,16 +164,13 @@ local function flipColumns(pe)
 			getText = function(row) return row.buyQty and pe:FormatNumberGrouped(row.buyQty) or "-" end,
 		},
 		signedColumn(pe, "Profit", "profit"),
-		{
-			id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row.sellsPerDay or 0 end,
-			getText = function(row) return perDayText(pe, row.sellsPerDay) end,
-		},
+		sellsColumn(pe, 70),
 	}
 end
 
 local function flipDetailRows(pe, row)
 	local units = row.buyQty or 1
+	local sells, source = sellsLines(pe, row)
 	return {
 		{ "Cheapest now", pe:FormatCopperFull(row.price) },
 		{ string.format("Usual price, %d days", row.usualDays or 0), pe:FormatCopperFull(row.usual) },
@@ -145,7 +179,7 @@ local function flipDetailRows(pe, row)
 		{ "Return", percent(row.roi) },
 		{ "", "" },
 		{ "Listed under " .. pe:FormatCopperShort(row.limitPrice), row.listedUnder and pe:FormatNumberGrouped(row.listedUnder) or "-" },
-		{ "Sells a day, estimated", perDayText(pe, row.sellsPerDay) },
+		sells, source,
 		{ string.format("Buy %s and spend", pe:FormatNumberGrouped(units)), pe:FormatCopperFull(row.cost) },
 		{ "Profit if all sell at the usual price", pe:FormatSignedMoney(row.profit), "success" },
 	}
@@ -155,12 +189,7 @@ local function flipRiskText(pe, row)
 	local range = string.format("Its price stayed between %s and %s on the middle half of the last %d days.",
 		pe:FormatCopperShort(row.usualLow or row.usual), pe:FormatCopperShort(row.usualHigh or row.usual), row.usualDays or 0)
 	local breakEven = string.format(" Below %s you lose gold on each one.", pe:FormatCopperShort(row.breakEven))
-	local caveat = ""
-	if row.fewSales then
-		caveat = " Few sales were seen, so it may sell slower than shown."
-	elseif not row.buyQty then
-		caveat = " No price steps are kept, so the quantity at this price is unknown."
-	end
+	local caveat = row.buyQty and "" or " No price steps are kept, so the quantity at this price is unknown."
 	return range .. breakEven .. caveat
 end
 
@@ -180,7 +209,7 @@ local flips = {
 	getRows = function(pe, onReady) return pe:GetFlipRows(onReady) end,
 	columns = flipColumns,
 	detailRows = flipDetailRows,
-	riskText = withEarlyRisk(flipRiskText),
+	riskText = withDataWarnings(flipRiskText),
 	setStats = flipStats,
 	subtitle = function(_, row) return percent(row.discount) .. " under its usual price" end,
 	tooltipPairs = function(pe, row) return { { "Profit each after the cut", pe:FormatSignedMoney(row and row.profitEach) } } end,
@@ -280,21 +309,18 @@ local function gapColumns(pe)
 		moneyColumn(pe, "nextPrice", "Next price", "nextPrice", 70),
 		moneyColumn(pe, "cost", "To clear", "cost", 74),
 		signedColumn(pe, "Gain if it holds", "gain"),
-		{
-			id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = 66, sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row.sellsPerDay or 0 end,
-			getText = function(row) return perDayText(pe, row.sellsPerDay) end,
-		},
+		sellsColumn(pe, 66),
 	}
 end
 
 -- The sums, then the cheapest price levels with the gap after the ones to buy.
 local function gapDetailRows(pe, row)
+	local sells, source = sellsLines(pe, row)
 	local rows = {
 		{ string.format("Cost to clear, %s", pe:FormatNumberGrouped(row.buyQty)), pe:FormatCopperFull(row.cost) },
 		{ "Relist at", pe:FormatCopperFull(row.nextPrice) },
 		{ "Gain if all sell", pe:FormatSignedMoney(row.gain), "success" },
-		{ "Sells a day, estimated", perDayText(pe, row.sellsPerDay) },
+		sells, source,
 		{ "Already waiting at that price", pe:FormatNumberGrouped(row.waitingAtNext) },
 		{ "", "" },
 	}
@@ -330,7 +356,7 @@ local gaps = {
 	getRows = function(pe, onReady) return pe:GetGapRows(onReady) end,
 	columns = gapColumns,
 	detailRows = gapDetailRows,
-	riskText = withEarlyRisk(gapRiskText),
+	riskText = withDataWarnings(gapRiskText),
 	setStats = gapStats,
 	subtitle = function(_, row) return "Risky · next price is " .. percent(row.gapPct) .. " higher" end,
 	tooltipPairs = function(pe, row) return { { "Cost to clear", pe:FormatCopperFull(row and row.cost) } } end,
@@ -353,10 +379,10 @@ local function sellCandidates(pe, insights)
 		end
 		local sells = usual and pe:GetSellsPerDay(market.storageKey)
 		if sells then
-			items[#items + 1] = {
+			items[#items + 1] = pe.FlipLogic.SetSells({
 				itemID = tonumber(inv.itemID), storageKey = market.storageKey, total = inv.total, bags = inv.bags, bank = inv.bank,
-				price = market.price, usual = usual.usual, sellsPerDay = sells.perDay, early = early or nil, usualDays = usual.days,
-			}
+				price = market.price, usual = usual.usual, early = early or nil, usualDays = usual.days,
+			}, sells)
 		end
 	end
 	return items
@@ -373,7 +399,7 @@ local function sellRows(pe, onReady)
 	local revision = table.concat({ tostring(insights.builtAt), math.floor(time() / 10), tostring(opts.allowEarly) }, ":")
 	if state.sellNowRevision ~= revision then
 		local candidates = sellCandidates(pe, insights)
-		local rows = pe.FlipLogic.MarkEarly(pe.FlipLogic.BuildSellNowRows(candidates, { cut = opts.cut }), candidates)
+		local rows = pe.FlipLogic.CarryOver(pe.FlipLogic.BuildSellNowRows(candidates, { cut = opts.cut }), candidates)
 		for _, row in ipairs(rows) do
 			row._rowIdentity = tostring(row.itemID)
 		end
@@ -408,15 +434,12 @@ local function sellColumns(pe)
 			getText = function(row) return pe:FormatNumberGrouped(row.total) end,
 		},
 		signedColumn(pe, "Worth", "worth"),
-		{
-			id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = 66, sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row.sellsPerDay or 0 end,
-			getText = function(row) return perDayText(pe, row.sellsPerDay) end,
-		},
+		sellsColumn(pe, 66),
 	}
 end
 
 local function sellDetailRows(pe, row)
+	local sells, source = sellsLines(pe, row)
 	return {
 		{ "Lowest price now", pe:FormatCopperFull(row.price) },
 		{ "Usual price", pe:FormatCopperFull(row.usual) },
@@ -426,7 +449,7 @@ local function sellDetailRows(pe, row)
 		{ "Where", whereText(pe, row) },
 		{ "Worth after the cut", pe:FormatCopperFull(row.worth), "success" },
 		{ "", "" },
-		{ "Sells a day, estimated", perDayText(pe, row.sellsPerDay) },
+		sells, source,
 		{ "Your stock is", string.format("%.1f days of sales", row.daysToSell) },
 	}
 end
@@ -455,7 +478,7 @@ local sell = {
 	getRows = sellRows,
 	columns = sellColumns,
 	detailRows = sellDetailRows,
-	riskText = withEarlyRisk(sellRiskText),
+	riskText = withDataWarnings(sellRiskText),
 	setStats = sellStats,
 	subtitle = function(_, row) return percent(row.premium) .. " above its usual price" end,
 	tooltipPairs = function(pe, row) return { { "Worth after the cut", pe:FormatCopperFull(row and row.worth) } } end,

@@ -228,20 +228,37 @@ function FlipLogic.BuildSellNowRows(items, opts)
 	return rows
 end
 
--- ---------- Early rows: items with only a few days of prices (F56) ----------
+-- ---------- How sure a row is: early prices (F56), where sales come from (F57) ----------
 
---- Copy `early` and `usualDays` from the candidates onto the rows built from them, matched by item.
-function FlipLogic.MarkEarly(rows, candidates)
+-- Fields about the data behind a row, copied from its candidate.
+local CARRIED = { "early", "usualDays", "usualLow", "usualHigh", "sellsSource", "sellsPairs", "sellsConfidence" }
+
+--- Set the sells-a-day fields of a candidate from `MarketSignals.SellsPerDay`'s result.
+function FlipLogic.SetSells(item, sells)
+	item.sellsPerDay, item.sellsSource, item.sellsPairs, item.sellsConfidence = sells.perDay, sells.source, sells.pairs, sells.confidence
+	return item
+end
+
+--- Copy the data fields (early, usual range, sales source) from the candidates onto the rows built from them.
+function FlipLogic.CarryOver(rows, candidates)
 	local byItem = {}
 	for _, item in ipairs(candidates or {}) do
 		byItem[item.itemID] = item
 	end
 	for _, row in ipairs(rows or {}) do
-		local item = byItem[row.itemID]
-		row.early = item and item.early or nil
-		row.usualDays = row.usualDays or (item and item.usualDays)
+		local item = byItem[row.itemID] or {}
+		for _, field in ipairs(CARRIED) do
+			if row[field] == nil then
+				row[field] = item[field]
+			end
+		end
 	end
 	return rows
+end
+
+--- True when a row's sells a day rests on little: few scan pairs or the player's own sales alone.
+function FlipLogic.SellsUnsure(row)
+	return row.sellsSource == "own" or row.sellsConfidence == "few"
 end
 
 --- Sum of `field` over the rows that are not early, and how many early rows were left out.

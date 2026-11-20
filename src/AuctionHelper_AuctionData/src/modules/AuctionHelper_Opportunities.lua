@@ -22,16 +22,27 @@ function ProfessionExporter:GetOpportunityUsual(storageKey)
 	return nil, false
 end
 
---- How many items of the last scan have enough days of prices (`FlipLogic.HistoryCoverage`). Cached per scan.
+-- Days of prices behind one item (early ones included), and 1 when it has a full usual price and sells a day.
+local function itemHistory(pe, storageKey)
+	local full = pe:GetUsualPrice(storageKey)
+	local usual = full or (pe.GetEarlyUsualPrice and pe:GetEarlyUsualPrice(storageKey))
+	local sells = full and pe:GetSellsPerDay(storageKey)
+	return usual and usual.days or 0, sells and 1 or 0
+end
+
+--- How many items of the last scan have enough days of prices (`FlipLogic.HistoryCoverage`), plus
+--- `withSells`: those with a full usual price that also have a sells-a-day estimate. Cached per scan.
 function ProfessionExporter:GetHistoryCoverage(insights)
 	local state = self:GetState()
 	if state.historyCoverageAt ~= insights.builtAt then
-		local dayCounts = {}
+		local dayCounts, withSells = {}, 0
 		for _, row in pairs(insights.byItemID or {}) do
-			local usual = self:GetUsualPrice(row.storageKey) or (self.GetEarlyUsualPrice and self:GetEarlyUsualPrice(row.storageKey))
-			dayCounts[#dayCounts + 1] = usual and usual.days or 0
+			local days, sells = itemHistory(self, row.storageKey)
+			dayCounts[#dayCounts + 1] = days
+			withSells = withSells + sells
 		end
 		state.historyCoverage = self.FlipLogic.HistoryCoverage(dayCounts, FULL_DAYS, EARLY_DAYS)
+		state.historyCoverage.withSells = withSells
 		state.historyCoverageAt = insights.builtAt
 	end
 	return state.historyCoverage
@@ -56,11 +67,11 @@ local function flipCandidates(pe, insights)
 		local usual, early = pe:GetOpportunityUsual(row.storageKey)
 		local sells = usual and pe:GetSellsPerDay(row.storageKey)
 		if sells then
-			items[#items + 1] = {
+			items[#items + 1] = pe.FlipLogic.SetSells({
 				itemID = itemID, storageKey = row.storageKey, price = row.price, usual = usual.usual,
 				usualLow = usual.low, usualHigh = usual.high, usualDays = usual.days, early = early or nil,
-				sellsPerDay = sells.perDay, confidence = sells.confidence, steps = pe:GetPriceSteps(itemID),
-			}
+				confidence = sells.confidence, steps = pe:GetPriceSteps(itemID),
+			}, sells)
 		end
 	end
 	return items
@@ -81,16 +92,10 @@ function ProfessionExporter:GetFlipRows(onReady)
 	local opts = self:GetFlipOptions()
 	local revision = tostring(insights.builtAt) .. ":" .. optionsKey(opts)
 	if state.flipRowsRevision ~= revision then
-		local byItem = {}
 		local candidates = flipCandidates(self, insights)
-		for _, item in ipairs(candidates) do
-			byItem[item.itemID] = item
-		end
-		local rows = self.FlipLogic.BuildFlipRows(candidates, opts)
+		local rows = self.FlipLogic.CarryOver(self.FlipLogic.BuildFlipRows(candidates, opts), candidates)
 		for _, row in ipairs(rows) do
-			local item = byItem[row.itemID]
 			row._rowIdentity = tostring(row.itemID)
-			row.usualLow, row.usualHigh, row.usualDays, row.early = item.usualLow, item.usualHigh, item.usualDays, item.early
 		end
 		state.flipRows, state.flipRowsRevision = rows, revision
 	end
@@ -154,10 +159,10 @@ local function gapCandidates(pe, insights)
 		end
 		local sells = usual and pe:GetSellsPerDay(row.storageKey)
 		if sells then
-			items[#items + 1] = {
+			items[#items + 1] = pe.FlipLogic.SetSells({
 				itemID = itemID, storageKey = row.storageKey, steps = steps,
-				usualHigh = usual.high, sellsPerDay = sells.perDay, early = early or nil, usualDays = usual.days,
-			}
+				usualHigh = usual.high, early = early or nil, usualDays = usual.days,
+			}, sells)
 		end
 	end
 	return items
@@ -175,7 +180,7 @@ function ProfessionExporter:GetGapRows(onReady)
 	local revision = table.concat({ tostring(insights.builtAt), opts.maxCost, opts.minSellsPerDay, opts.cut, tostring(allowEarly(self)) }, ":")
 	if state.gapRowsRevision ~= revision then
 		local candidates = gapCandidates(self, insights)
-		local rows = self.FlipLogic.MarkEarly(self.FlipLogic.BuildGapRows(candidates, opts), candidates)
+		local rows = self.FlipLogic.CarryOver(self.FlipLogic.BuildGapRows(candidates, opts), candidates)
 		for _, row in ipairs(rows) do
 			row._rowIdentity = tostring(row.itemID)
 		end

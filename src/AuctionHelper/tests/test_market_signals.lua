@@ -111,6 +111,9 @@ check("Own sales are a floor", MS.SellsPerDay(sellsDaily, now, 14, 55).perDay ==
 check("One scan pair shows nothing", MS.SellsPerDay({ [day1 + 9 * DAY] = { s = 5, g = 3, c = 1 } }, now, 14) == nil)
 local ownOnly = MS.SellsPerDay({ [day1 + 9 * DAY] = { s = 5, g = 3, c = 1 } }, now, 14, 10)
 check("Own sales alone give a figure", ownOnly and ownOnly.perDay == 10 and ownOnly.confidence == "few")
+check("Source: scans only", confident.source == "scans" and MS.SellsPerDay(sellsDaily, now, 14, 5).source == "scans")
+check("Source: own sales alone", ownOnly.source == "own")
+check("Source: scans raised to own sales", MS.SellsPerDay(sellsDaily, now, 14, 55).source == "both")
 check("Days without an estimate are ignored", MS.SellsPerDay({ [day1 + 9 * DAY] = { p = 10 } }, now, 14) == nil)
 check("Days of supply", MS.DaysOfSupply(86, 12) == 86 / 12)
 check("Days of supply needs sales", MS.DaysOfSupply(86, 0) == nil and MS.DaysOfSupply(86, nil) == nil)
@@ -177,11 +180,14 @@ check("A 25s floor drops a 20s flip",
 check("Copper floor between rows", Flip.BuildFlipRow(smallFlip, { minProfit = 270 }) ~= nil and Flip.BuildFlipRow(smallFlip, { minProfit = 271 }) == nil)
 check("Default floor is 1g", Flip.BuildFlipRow({ itemID = 13, price = 5000, usual = 20000, sellsPerDay = 3, steps = { 5000, 1 } }) ~= nil)
 -- Early rows (F56)
-local marked = Flip.MarkEarly({ { itemID = 1, profit = 100 }, { itemID = 2, profit = 40, usualDays = 6 } },
+local marked = Flip.CarryOver({ { itemID = 1, profit = 100 }, { itemID = 2, profit = 40, usualDays = 6 } },
 	{ { itemID = 1, early = true, usualDays = 3 }, { itemID = 2, usualDays = 6 } })
 check("Early flag and days copied from the candidate", marked[1].early == true and marked[1].usualDays == 3 and marked[2].early == nil)
 local settledProfit, earlyLeftOut = Flip.SumSettled(marked, "profit")
 check("Totals leave early rows out", settledProfit == 40 and earlyLeftOut == 1)
+local sourced = Flip.CarryOver({ { itemID = 3 } }, { Flip.SetSells({ itemID = 3 }, { perDay = 4, source = "own", pairs = 0, confidence = "few" }) })[1]
+check("Sales source carried onto the row", sourced.sellsSource == "own" and sourced.sellsPairs == 0 and Flip.SellsUnsure(sourced))
+check("Five pairs from scans are sure", not Flip.SellsUnsure({ sellsSource = "scans", sellsConfidence = "good" }))
 local coverage = Flip.HistoryCoverage({ 0, 1, 2, 4, 5, 9 }, 5, 2)
 check("Coverage counts full, early and best days",
 	coverage.scanned == 6 and coverage.full == 2 and coverage.early == 2 and coverage.bestDays == 9)
