@@ -27,29 +27,33 @@ local function flipQuantity(item, limitPrice, opts)
 	return { units = buyQty, buyQty = buyQty, listedUnder = listedUnder, cost = MS.AverageFill(item.steps, buyQty) * buyQty }
 end
 
-local function isCandidate(item, opts)
+-- Why an item is not a flip candidate: "discount" (not far enough under usual, or no price) or "sells"
+-- (sells too slowly); nil when it is one.
+local function rejectReason(item, opts)
 	local usual, price, sells = tonumber(item.usual), tonumber(item.price), tonumber(item.sellsPerDay)
-	if not (usual and price and sells) or usual <= 0 or price <= 0 then
-		return false
+	if not (usual and price and sells) or usual <= 0 or price <= 0 or (usual - price) / usual < option(opts, "minDiscount") then
+		return "discount"
 	end
-	return (usual - price) / usual >= option(opts, "minDiscount") and sells >= option(opts, "minSellsPerDay")
+	if sells < option(opts, "minSellsPerDay") then
+		return "sells"
+	end
+	return nil
 end
 
 --- One flip row for `item = { itemID, storageKey, price, usual, sellsPerDay, confidence, steps, depositLoss }`,
---- or nil when it is not worth showing. Profit is after the cut and the expected deposit loss.
+--- or nil and the reason ("discount", "sells" or "profit") when it is not worth showing. Profit is after
+--- the cut and the expected deposit loss.
 function FlipLogic.BuildFlipRow(item, opts)
-	if not isCandidate(item, opts) then
-		return nil
+	local reason = rejectReason(item, opts)
+	if reason then
+		return nil, reason
 	end
 	local cut = option(opts, "cut")
 	local limitPrice = item.usual * (1 - option(opts, "minDiscount"))
 	local buy = flipQuantity(item, limitPrice, opts)
-	if not buy then
-		return nil
-	end
-	local profit = buy.units * item.usual * (1 - cut) - buy.cost - (tonumber(item.depositLoss) or 0) * buy.units
-	if profit < option(opts, "minProfit") then
-		return nil
+	local profit = buy and buy.units * item.usual * (1 - cut) - buy.cost - (tonumber(item.depositLoss) or 0) * buy.units
+	if not profit or profit < option(opts, "minProfit") then
+		return nil, "profit"
 	end
 	return {
 		itemID = item.itemID, storageKey = item.storageKey, price = item.price, usual = item.usual,
@@ -63,13 +67,15 @@ function FlipLogic.BuildFlipRow(item, opts)
 	}
 end
 
---- Flip rows for a list of items, most profit first.
-function FlipLogic.BuildFlipRows(items, opts)
+--- Flip rows for a list of items, most profit first. With `drops`, counts the items left out per reason.
+function FlipLogic.BuildFlipRows(items, opts, drops)
 	local rows = {}
 	for _, item in ipairs(items or {}) do
-		local row = FlipLogic.BuildFlipRow(item, opts)
+		local row, reason = FlipLogic.BuildFlipRow(item, opts)
 		if row then
 			rows[#rows + 1] = row
+		elseif drops then
+			drops[reason] = (drops[reason] or 0) + 1
 		end
 	end
 	table.sort(rows, function(a, b)
@@ -254,6 +260,32 @@ function FlipLogic.CarryOver(rows, candidates)
 		end
 	end
 	return rows
+end
+
+-- ---------- Why a list is empty (F58) ----------
+
+--- The flip funnel: how many items are left after each rule, from the candidate counts and the drops
+--- counted by `BuildFlipRows`. A list of `{ key, count }` in the order the rules apply.
+function FlipLogic.FlipFunnel(counts, drops, rowCount)
+	local under = counts.withSells - (drops.discount or 0)
+	return {
+		{ key = "scanned", count = counts.scanned },
+		{ key = "usual", count = counts.withUsual },
+		{ key = "sells", count = counts.withSells },
+		{ key = "under", count = under },
+		{ key = "sellEnough", count = under - (drops.sells or 0) },
+		{ key = "worth", count = rowCount },
+	}
+end
+
+--- The first step of a funnel that nothing passed, or nil when every step kept something.
+function FlipLogic.FirstEmptyStep(funnel)
+	for _, step in ipairs(funnel or {}) do
+		if (tonumber(step.count) or 0) <= 0 then
+			return step
+		end
+	end
+	return nil
 end
 
 --- True when a row's sells a day rests on little: few scan pairs or the player's own sales alone.

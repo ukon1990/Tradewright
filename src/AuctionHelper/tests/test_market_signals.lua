@@ -188,6 +188,23 @@ check("Totals leave early rows out", settledProfit == 40 and earlyLeftOut == 1)
 local sourced = Flip.CarryOver({ { itemID = 3 } }, { Flip.SetSells({ itemID = 3 }, { perDay = 4, source = "own", pairs = 0, confidence = "few" }) })[1]
 check("Sales source carried onto the row", sourced.sellsSource == "own" and sourced.sellsPairs == 0 and Flip.SellsUnsure(sourced))
 check("Five pairs from scans are sure", not Flip.SellsUnsure({ sellsSource = "scans", sellsConfidence = "good" }))
+-- Why a list is empty (F58)
+local drops = {}
+local funnelRows = Flip.BuildFlipRows({
+	{ itemID = 20, price = 90, usual = 100, sellsPerDay = 9 },
+	{ itemID = 21, price = 50, usual = 100, sellsPerDay = 0.1 },
+	{ itemID = 22, price = 50, usual = 100, sellsPerDay = 9 },
+	{ itemID = 23, price = 10000, usual = 20000, sellsPerDay = 9, steps = { 10000, 1 } },
+}, { minProfit = 5000 }, drops)
+check("Drops counted per reason", drops.discount == 1 and drops.sells == 1 and drops.profit == 1 and #funnelRows == 1)
+local funnel = Flip.FlipFunnel({ scanned = 10, withUsual = 6, withSells = 4 }, drops, #funnelRows)
+local funnelCounts = {}
+for index, step in ipairs(funnel) do
+	funnelCounts[index] = step.count
+end
+check("Flip funnel narrows step by step", table.concat(funnelCounts, ",") == "10,6,4,3,2,1", table.concat(funnelCounts, ","))
+check("A full funnel has no empty step", Flip.FirstEmptyStep(funnel) == nil)
+check("First empty step is found", Flip.FirstEmptyStep({ { key = "a", count = 3 }, { key = "b", count = 0 }, { key = "c", count = 0 } }).key == "b")
 local coverage = Flip.HistoryCoverage({ 0, 1, 2, 4, 5, 9 }, 5, 2)
 check("Coverage counts full, early and best days",
 	coverage.scanned == 6 and coverage.full == 2 and coverage.early == 2 and coverage.bestDays == 9)

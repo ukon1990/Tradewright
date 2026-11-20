@@ -60,12 +60,18 @@ function ProfessionExporter:GetFlipOptions()
 	}
 end
 
--- One candidate per scanned item that has a usual price and a sells-a-day estimate.
+-- The funnel of a list that is turned off in Settings: one step nothing passes.
+local TURNED_OFF = { { key = "off", count = 0 } }
+
+-- One candidate per scanned item that has a usual price and a sells-a-day estimate, and how many items
+-- were scanned and had a usual price (for the funnel).
 local function flipCandidates(pe, insights)
-	local items = {}
+	local items, counts = {}, { scanned = 0, withUsual = 0 }
 	for itemID, row in pairs(insights.byItemID or {}) do
 		local usual, early = pe:GetOpportunityUsual(row.storageKey)
 		local sells = usual and pe:GetSellsPerDay(row.storageKey)
+		counts.scanned = counts.scanned + 1
+		counts.withUsual = counts.withUsual + (usual and 1 or 0)
 		if sells then
 			items[#items + 1] = pe.FlipLogic.SetSells({
 				itemID = itemID, storageKey = row.storageKey, price = row.price, usual = usual.usual,
@@ -74,15 +80,17 @@ local function flipCandidates(pe, insights)
 			}, sells)
 		end
 	end
-	return items
+	counts.withSells = #items
+	return items, counts
 end
 
 local function optionsKey(opts)
 	return table.concat({ opts.minDiscount, opts.minProfit, opts.minSellsPerDay, opts.dayShare, opts.cut, tostring(opts.allowEarly) }, ":")
 end
 
---- Flip rows, most profit first, or nil while the market insights are still being built
---- (`onReady` then fires once they are). Cached until the insights or the thresholds change.
+--- Flip rows, most profit first, the insights and the funnel (`FlipLogic.FlipFunnel`), or nil while the
+--- market insights are still being built (`onReady` then fires once they are). Cached until the insights
+--- or the thresholds change.
 function ProfessionExporter:GetFlipRows(onReady)
 	local insights = self:GetMarketInsights(onReady)
 	if not insights then
@@ -92,21 +100,25 @@ function ProfessionExporter:GetFlipRows(onReady)
 	local opts = self:GetFlipOptions()
 	local revision = tostring(insights.builtAt) .. ":" .. optionsKey(opts)
 	if state.flipRowsRevision ~= revision then
-		local candidates = flipCandidates(self, insights)
-		local rows = self.FlipLogic.CarryOver(self.FlipLogic.BuildFlipRows(candidates, opts), candidates)
+		local candidates, counts = flipCandidates(self, insights)
+		local drops = {}
+		local rows = self.FlipLogic.CarryOver(self.FlipLogic.BuildFlipRows(candidates, opts, drops), candidates)
 		for _, row in ipairs(rows) do
 			row._rowIdentity = tostring(row.itemID)
 		end
 		state.flipRows, state.flipRowsRevision = rows, revision
+		state.flipFunnel = self.FlipLogic.FlipFunnel(counts, drops, #rows)
 	end
-	return state.flipRows, insights
+	return state.flipRows, insights, state.flipFunnel
 end
 
--- One candidate per scanned item whose vendor price the client already knows.
+-- One candidate per scanned item listed under the vendor price the client already knows, and the
+-- funnel counts: items scanned, items whose vendor price is known.
 local function vendorCandidates(pe, insights)
-	local items = {}
+	local items, scanned, known = {}, 0, 0
 	for itemID, row in pairs(insights.byItemID or {}) do
 		local vendorSell = pe:GetItemVendorSellCopper(itemID)
+		scanned, known = scanned + 1, known + (vendorSell and 1 or 0)
 		if vendorSell and row.price < vendorSell then
 			items[#items + 1] = {
 				itemID = itemID, storageKey = row.storageKey, price = row.price, vendorSell = vendorSell,
@@ -114,7 +126,7 @@ local function vendorCandidates(pe, insights)
 			}
 		end
 	end
-	return items
+	return items, { { key = "scanned", count = scanned }, { key = "vendorKnown", count = known }, { key = "under", count = #items } }
 end
 
 --- Items listed under their vendor price, most gain first, or nil while the market insights are being
@@ -123,19 +135,21 @@ end
 function ProfessionExporter:GetVendorRows(onReady)
 	local insights = self:GetMarketInsights(onReady)
 	if not insights or not self:GetSetting("opportunities.showVendor", true) then
-		return insights and {} or nil, insights
+		return insights and {} or nil, insights, TURNED_OFF
 	end
 	local state = self:GetState()
 	local stamp = math.floor(time() / 30)
 	local revision = tostring(insights.builtAt) .. ":" .. stamp
 	if state.vendorRowsRevision ~= revision then
-		local rows = self.FlipLogic.BuildVendorRows(vendorCandidates(self, insights), { minGain = 1000 })
+		local candidates, funnel = vendorCandidates(self, insights)
+		local rows = self.FlipLogic.BuildVendorRows(candidates, { minGain = 1000 })
 		for _, row in ipairs(rows) do
 			row._rowIdentity = tostring(row.itemID)
 		end
-		state.vendorRows, state.vendorRowsRevision = rows, revision
+		funnel[#funnel + 1] = { key = "worth", count = #rows }
+		state.vendorRows, state.vendorRowsRevision, state.vendorFunnel = rows, revision, funnel
 	end
-	return state.vendorRows, insights
+	return state.vendorRows, insights, state.vendorFunnel
 end
 
 --- Thresholds for price gaps, from Settings. `maxCost` is in copper.
@@ -150,9 +164,10 @@ end
 
 -- One candidate per scanned item that has price steps, a usual price and a sells-a-day estimate.
 local function gapCandidates(pe, insights)
-	local items = {}
+	local items, scanned, withSteps = {}, 0, 0
 	for itemID, row in pairs(insights.byItemID or {}) do
 		local steps = pe:GetPriceSteps(itemID)
+		scanned, withSteps = scanned + 1, withSteps + (steps and 1 or 0)
 		local usual, early
 		if steps then
 			usual, early = pe:GetOpportunityUsual(row.storageKey)
@@ -165,7 +180,7 @@ local function gapCandidates(pe, insights)
 			}, sells)
 		end
 	end
-	return items
+	return items, { { key = "scanned", count = scanned }, { key = "steps", count = withSteps }, { key = "known", count = #items } }
 end
 
 --- Price gaps, most gain first, or nil while the market insights are being built. Cached until the
@@ -173,18 +188,19 @@ end
 function ProfessionExporter:GetGapRows(onReady)
 	local insights = self:GetMarketInsights(onReady)
 	if not insights or not self:GetSetting("opportunities.showGaps", true) then
-		return insights and {} or nil, insights
+		return insights and {} or nil, insights, TURNED_OFF
 	end
 	local state = self:GetState()
 	local opts = self:GetGapOptions()
 	local revision = table.concat({ tostring(insights.builtAt), opts.maxCost, opts.minSellsPerDay, opts.cut, tostring(allowEarly(self)) }, ":")
 	if state.gapRowsRevision ~= revision then
-		local candidates = gapCandidates(self, insights)
+		local candidates, funnel = gapCandidates(self, insights)
 		local rows = self.FlipLogic.CarryOver(self.FlipLogic.BuildGapRows(candidates, opts), candidates)
 		for _, row in ipairs(rows) do
 			row._rowIdentity = tostring(row.itemID)
 		end
-		state.gapRows, state.gapRowsRevision = rows, revision
+		funnel[#funnel + 1] = { key = "worth", count = #rows }
+		state.gapRows, state.gapRowsRevision, state.gapFunnel = rows, revision, funnel
 	end
-	return state.gapRows, insights
+	return state.gapRows, insights, state.gapFunnel
 end

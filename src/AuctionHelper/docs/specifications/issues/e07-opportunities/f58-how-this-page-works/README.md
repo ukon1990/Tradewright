@@ -24,14 +24,27 @@ Explain the Opportunities tab where the player is looking. With no row selected,
 - Help text for each view lives with the view definition (`help = { … }`) in a new `AuctionHelper_OpportunityHelp.lua` (all four UI TOCs).
 - Docs tab: an Opportunities page with the same text, longer, linked from the side pane.
 
+## Status
+
+Implemented:
+
+- `FlipLogic.BuildFlipRow` returns the reason it drops an item ("discount", "sells", "profit"); `BuildFlipRows(items, opts, drops)` counts them; `FlipLogic.FlipFunnel` and `FlipLogic.FirstEmptyStep`
+- Every list's `getRows` returns `rows, insights, funnel`. Flips: scanned, usual price, sales estimate, under usual, sells enough, profit. Sure things: scanned, vendor price known, under it, gain 10s+. Price gaps: scanned, price steps, usual price and sales, gap that fits. Sell now: owned, in the last scan, usual price and sales, 10%+ above usual. A list turned off in Settings says so.
+- `AuctionHelper_OpportunityHelp.lua` (new, all four UI TOCs): step labels, fixes and "How … work" text per list; `GetOpportunityEmptyText`, `GetOpportunityHelp`, `WarningText`
+- Empty list: steps down to the first that kept nothing (warning colour), then its fix, naming the setting
+- Side pane with no row selected: "How … work" for the active list
+- Docs tab: "Opportunities" page
+
+Not done: a "Settings" button in the side pane; the text names "Settings, Opportunities" instead.
+
 ## Acceptance criteria
 
 - [ ] Flips empty because of the profit floor names the profit step and the setting, not "scan on more days"
 - [ ] Flips empty because no item has 5 days says how many days the best item has
 - [ ] Each of the four lists shows its own "How this list works" with no row selected
 - [ ] The funnel numbers add up: each step is at most the one before it
-- [ ] Offline tests: funnel counts for flips, gaps, sure things and sell now
-- [ ] `npm test` passes; no file over 700 lines
+- [x] Offline tests: flip drop reasons, flip funnel, first empty step (the other lists' counts are plain loops in the WoW-side code)
+- [x] `npm test` passes; no file over 700 lines
 
 ## Verification
 

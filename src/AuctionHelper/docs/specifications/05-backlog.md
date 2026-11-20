@@ -34,7 +34,7 @@
 | [f55-smaller-profit-floor](issues/e07-opportunities/f55-smaller-profit-floor/README.md) | Smaller profit floor | implemented, in-game check pending |
 | [f56-little-history-warning](issues/e07-opportunities/f56-little-history-warning/README.md) | History coverage, and early rows with a warning | implemented, in-game check pending |
 | [f57-where-sales-come-from](issues/e07-opportunities/f57-where-sales-come-from/README.md) | Where "sells a day" comes from and how sure it is | implemented, in-game check pending |
-| [f58-how-this-page-works](issues/e07-opportunities/f58-how-this-page-works/README.md) | How this page works, and why a list is empty | planned |
+| [f58-how-this-page-works](issues/e07-opportunities/f58-how-this-page-works/README.md) | How this page works, and why a list is empty | implemented, in-game check pending |
 | [e08-craft-planning](issues/e08-craft-planning/README.md) | Craft planning: material sources, how many to make, cooldowns | in progress |
 | [f60-cheapest-material-source](issues/e08-craft-planning/f60-cheapest-material-source/README.md) | Cheapest way to get each material | buy-or-craft implemented, in-game check pending; From column and queueing intermediates open |
 | [f61-how-many-to-make](issues/e08-craft-planning/f61-how-many-to-make/README.md) | How many to make | columns implemented, in-game check pending; detail pane, queue default and listed stock open |

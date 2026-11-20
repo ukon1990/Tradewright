@@ -1,6 +1,6 @@
 local ProfessionExporter = select(2, ...)
 
--- The lists of the Opportunities tab. Each view supplies: id, label, getRows(pe, onReady),
+-- The lists of the Opportunities tab. Each view supplies: id, label, getRows(pe, onReady) → rows, insights, funnel,
 -- columns(pe), detailRows(pe, row), riskText(pe, row), subtitle(pe, row), tooltipPairs(pe, row),
 -- setStats(pe, stats, rows, insights), footer(pe, rows, insights), emptyTitle, emptyHint.
 -- Both lists sort on a column with the id "profit", so the table keeps its sort across a switch.
@@ -59,12 +59,6 @@ local function signedColumn(pe, label, field)
 	}
 end
 
--- Text in the theme's warning colour.
-local function warningText(pe, text)
-	local color = pe:GetTheme().warning
-	return string.format("|cff%02x%02x%02x%s|r", math.floor(color.r * 255), math.floor(color.g * 255), math.floor(color.b * 255), text)
-end
-
 -- An early row's second line starts with how few days its usual price rests on (F56).
 local function itemColumn(pe, detail)
 	return pe:CreateItemColumn({
@@ -73,7 +67,7 @@ local function itemColumn(pe, detail)
 		getName = function(row) return pe:GetItemDisplayName(row.itemID) end,
 		getDetail = function(row)
 			if row.early then
-				return warningText(pe, string.format("Early · %d days of prices", row.usualDays or 0)) .. " · " .. detail(pe, row)
+				return pe:WarningText(string.format("Early · %d days of prices", row.usualDays or 0)) .. " · " .. detail(pe, row)
 			end
 			return detail(pe, row)
 		end,
@@ -370,9 +364,10 @@ local gaps = {
 
 -- One candidate per owned item with a scanned price, a usual price and a sells-a-day estimate.
 local function sellCandidates(pe, insights)
-	local items = {}
+	local items, owned, scanned = {}, 0, 0
 	for _, inv in ipairs(pe:BuildInventoryRowsAggregatedByItem(pe.db, {}, "") or {}) do
 		local market = insights.byItemID[tonumber(inv.itemID)]
+		owned, scanned = owned + 1, scanned + (market and 1 or 0)
 		local usual, early
 		if market then
 			usual, early = pe:GetOpportunityUsual(market.storageKey)
@@ -385,7 +380,7 @@ local function sellCandidates(pe, insights)
 			}, sells)
 		end
 	end
-	return items
+	return items, { { key = "owned", count = owned }, { key = "scanned", count = scanned }, { key = "known", count = #items } }
 end
 
 -- Rebuilt at most every 10 seconds: bags change without a new scan.
@@ -398,14 +393,15 @@ local function sellRows(pe, onReady)
 	local opts = pe:GetFlipOptions()
 	local revision = table.concat({ tostring(insights.builtAt), math.floor(time() / 10), tostring(opts.allowEarly) }, ":")
 	if state.sellNowRevision ~= revision then
-		local candidates = sellCandidates(pe, insights)
+		local candidates, funnel = sellCandidates(pe, insights)
 		local rows = pe.FlipLogic.CarryOver(pe.FlipLogic.BuildSellNowRows(candidates, { cut = opts.cut }), candidates)
 		for _, row in ipairs(rows) do
 			row._rowIdentity = tostring(row.itemID)
 		end
-		state.sellNowRows, state.sellNowRevision = rows, revision
+		funnel[#funnel + 1] = { key = "worth", count = #rows }
+		state.sellNowRows, state.sellNowRevision, state.sellNowFunnel = rows, revision, funnel
 	end
-	return state.sellNowRows, insights
+	return state.sellNowRows, insights, state.sellNowFunnel
 end
 
 local function whereText(pe, row)

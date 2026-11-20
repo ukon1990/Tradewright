@@ -27,7 +27,6 @@ local function buildDetail(pe, panel)
 	card:SetWidth(DETAIL_WIDTH)
 	card.empty = pe:CreateEmptyState(card)
 	card.empty:SetAllPoints()
-	card.empty:SetMessage("Select a row", "Click a row to see the sums behind it and what could go wrong.")
 	card.body = CreateFrame("Frame", nil, card)
 	card.body:SetPoint("TOPLEFT", PAD, -PAD)
 	card.body:SetPoint("BOTTOMRIGHT", -PAD, PAD)
@@ -64,6 +63,7 @@ local function showDetail(pe, panel, row)
 	card.empty:SetShown(row == nil)
 	card.body:SetShown(row ~= nil)
 	if not row then
+		card.empty:SetMessage(pe:GetOpportunityHelp(view))
 		return
 	end
 	card.header:SetItem(row.itemID, pe:GetItemDisplayName(row.itemID), view.subtitle(pe, row))
@@ -190,7 +190,7 @@ function OpportunitiesTab:Refresh()
 		return
 	end
 	local view = currentView(pe)
-	local rows, insights = view.getRows(pe, function()
+	local rows, insights, funnel = view.getRows(pe, function()
 		if panel:IsVisible() then
 			self:Refresh()
 		end
@@ -204,6 +204,7 @@ function OpportunitiesTab:Refresh()
 		panel.table:Refresh()
 		return
 	end
+	panel.table:SetEmptyText(pe:GetOpportunityEmptyText(view, funnel, insights))
 	view.setStats(pe, panel.stats, rows, insights)
 	pe:LayoutEvenRow(panel.statsRow, panel.stats, 0, GAP)
 	panel.table:SetRows(rows)

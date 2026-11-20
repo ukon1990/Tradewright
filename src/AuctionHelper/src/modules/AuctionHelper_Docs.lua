@@ -159,6 +159,36 @@ SELLS A DAY, ESTIMATED
 LISTED SUPPLY LASTS
 • Listed quantity divided by sells a day. It counts every listing, also overpriced ones that will not sell.]=],
 	},
+	{
+		id = "opportunities",
+		title = "Opportunities",
+		body = [=[WHAT TO BUY OR SELL RIGHT NOW
+The Opportunities tab has four lists. Each shows the sums behind a row and what could go wrong when you click it.
+• Flips: listed well under the usual price and known to sell. Buy, then list at the usual price.
+• Sure things: listed under what a vendor pays. Buy, then sell to any vendor.
+• Price gaps (risky): a few cheap listings under a much higher next price. Buy them, relist under the next price.
+• Sell now: things you own priced 10% or more above usual that sell.
+
+WHAT THE LISTS NEED
+• One full scan fills Sure things.
+• Flips, Price gaps and Sell now need a usual price: scans on 5 different days. Today's scans count from tomorrow.
+• They also need a sales estimate: two scans of an item within a day, so scan twice on some days.
+• The "Usual price known for" card shows how far along your scans are.
+
+WHEN A LIST IS EMPTY
+The list counts how many items are left after each rule, for example:
+• 7,071 items in the last scan
+• 312 have a usual price
+• 40 are 25% or more under it
+• 3 sell 1 or more a day
+• 0 make 1g or more
+The first step that leaves nothing is marked, with the setting or the scan that gets past it.
+
+HOW SURE A ROW IS
+• Early: its usual price rests on only 2 to 4 days. Shown only when you turn it on in Settings, and left out of the totals.
+• A "?" after Sells a day: the estimate rests on few pairs of scans or only on your own sales.
+• Settings, Opportunities sets how cheap, how busy and how profitable a row must be.]=],
+	},
 }
 
 function ProfessionExporter:GetDocumentationSections()
