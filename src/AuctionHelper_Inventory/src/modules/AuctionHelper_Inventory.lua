@@ -100,8 +100,7 @@ local function countItemInBagsViaContainer(itemID)
 		return 0
 	end
 	local total = 0
-	local maxBag = NUM_BAG_SLOTS or 4
-	for bag = 0, maxBag do
+	for bag = 0, ProfessionExporter:GetLastBagIndex() do
 		local slots = nil
 		if C_Container and C_Container.GetContainerNumSlots then
 			slots = C_Container.GetContainerNumSlots(bag)

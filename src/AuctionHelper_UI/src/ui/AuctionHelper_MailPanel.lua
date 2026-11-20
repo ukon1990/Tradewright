@@ -48,7 +48,7 @@ local function setMailField(box, text)
 end
 
 local function findBagSlotForItem(itemID)
-	for bag = 0, 4 do
+	for bag = 0, ProfessionExporter:GetLastBagIndex() do
 		local slots = C_Container.GetContainerNumSlots(bag)
 		for slot = 1, slots do
 			local info = C_Container.GetContainerItemInfo(bag, slot)

@@ -83,17 +83,7 @@ local function auctionHistoryBucketWeightedSum(bucket)
 end
 
 local function getMaxOwnedBagIndex()
-	local maxBag = 4
-	if Enum and Enum.BagIndex and tonumber(Enum.BagIndex.ReagentBag) then
-		maxBag = math.max(maxBag, tonumber(Enum.BagIndex.ReagentBag))
-	end
-	if C_Container and C_Container.GetContainerNumSlots then
-		local reagentSlots = C_Container.GetContainerNumSlots(5) or 0
-		if reagentSlots > 0 then
-			maxBag = math.max(maxBag, 5)
-		end
-	end
-	return maxBag
+	return ProfessionExporter:GetLastBagIndex()
 end
 
 local function findBagSlotForItemID(itemID)

@@ -39,7 +39,7 @@
  "files": {
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 2587,
   "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": 778,
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5681,
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5671,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": 781,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1331,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1265,
@@ -1047,7 +1047,7 @@
    },
    "countItemInBagsViaContainer": {
     "ccn": [
-     18
+     17
     ]
    }
   },

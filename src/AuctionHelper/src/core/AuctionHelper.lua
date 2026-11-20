@@ -35,3 +35,19 @@ end
 --- The debug log lives in the Professions module, which loads after this one and after Auction
 --- Data. Until it replaces this, log calls made while those modules start up do nothing.
 function AuctionHelper:DebugLog() end
+
+-- The reagent bag's index when this client has one: from Enum.BagIndex, else bag 5 when it has slots.
+local function reagentBagIndex()
+	local reagent = Enum and Enum.BagIndex and tonumber(Enum.BagIndex.ReagentBag)
+	if reagent then
+		return reagent
+	end
+	local slots = C_Container and C_Container.GetContainerNumSlots and C_Container.GetContainerNumSlots(5)
+	return (tonumber(slots) or 0) > 0 and 5 or nil
+end
+
+--- Highest bag index the player carries: backpack 0, bags 1-4, and the reagent bag when the client
+--- has one. Every bag walk (mail, auction, inventory) goes 0..this.
+function AuctionHelper:GetLastBagIndex()
+	return math.max(4, tonumber(NUM_BAG_SLOTS) or 4, reagentBagIndex() or 0)
+end

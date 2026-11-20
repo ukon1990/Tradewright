@@ -78,7 +78,7 @@ end
 function ProfessionExporter:GetBagItems()
 	local questClass = Enum and Enum.ItemClass and Enum.ItemClass.Questitem
 	local items = {}
-	for bag = 0, 4 do
+	for bag = 0, self:GetLastBagIndex() do
 		for slot = 1, C_Container.GetContainerNumSlots(bag) do
 			local info = C_Container.GetContainerItemInfo(bag, slot)
 			local itemID = info and tonumber(info.itemID)
