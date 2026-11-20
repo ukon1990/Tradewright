@@ -26,15 +26,7 @@ local TRACKED_BLIZZARD_FRAMES = {
 	"ScrappingMachineFrame",
 }
 
-local TAB_ORDER = {
-	{ id = "overview", label = "Overview", module = function() return ProfessionExporter.OverviewTab end },
-	{ id = "inventory", label = "Inventory", module = function() return ProfessionExporter.InventoryTab end },
-	{ id = "market", label = "Market", module = function() return ProfessionExporter.MarketTab end },
-	{ id = "crafts", label = "Crafts", module = function() return ProfessionExporter.CraftsTab end },
-	{ id = "export", label = "Export", module = function() return ProfessionExporter.ExportTab end },
-	{ id = "docs", label = "Docs", module = function() return ProfessionExporter.DocsTab end },
-	{ id = "settings", label = "Settings", module = function() return ProfessionExporter.SettingsTab end },
-}
+local TAB_ORDER = ProfessionExporter.DASHBOARD_TABS
 
 local ADDON_ICON = "Interface\\Icons\\INV_Misc_Coin_01"
 

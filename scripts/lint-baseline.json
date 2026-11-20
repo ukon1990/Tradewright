@@ -50,7 +50,7 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": 1041,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": 1194,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": 929,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_UIShell.lua": 835,
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_UIShell.lua": 827,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Widgets.lua": 967
  },
  "functions": {

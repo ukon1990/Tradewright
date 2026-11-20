@@ -140,6 +140,34 @@ check("Largest gap: buy 9 for 26g 40s, next 4g 10s", gap and gap.belowQty == 9 a
 check("No gap under the threshold", MS.FindPriceGap(steps, 0.5) == nil)
 check("A single level has no gap", MS.FindPriceGap(single, 0) == nil)
 
+-- Flips
+local flipChunk, flipErr = loadfile(root .. "/src/util/AuctionHelper_FlipLogic.lua")
+assert(flipChunk, flipErr)
+flipChunk("AuctionHelper", pe)
+local Flip = pe.FlipLogic
+local arcanite = { itemID = 1, price = 260000, usual = 380000, sellsPerDay = 12, steps = { 260000, 4, 300000, 10, 380000, 70 } }
+local flip = Flip.BuildFlipRow(arcanite, { minProfit = 50000 })
+check("Flip buys what is listed under the limit price", flip and flip.buyQty == 4 and flip.listedUnder == 4 and flip.cost == 4 * 260000)
+check("Flip profit is after the cut", flip and flip.profit == 4 * 380000 * 0.95 - 4 * 260000, flip and flip.profit)
+check("Flip profit each and break-even", flip and flip.profitEach == flip.profit / 4 and math.abs(flip.breakEven - 260000 / 0.95) < 1e-6)
+local cappedBuy = Flip.BuildFlipRow({ itemID = 2, price = 31, usual = 48, sellsPerDay = 30, steps = { 31, 500 } }, { minProfit = 0 })
+check("Buy is capped at a third of a day's sales", cappedBuy and cappedBuy.buyQty == 10 and cappedBuy.listedUnder == 500)
+local free = { minProfit = 0 }
+check("Discount just under the threshold is dropped", Flip.BuildFlipRow({ itemID = 3, price = 76, usual = 100, sellsPerDay = 9 }, free) == nil)
+check("Discount at the threshold is kept", Flip.BuildFlipRow({ itemID = 3, price = 75, usual = 100, sellsPerDay = 9 }, free) ~= nil)
+check("Profit floor drops small flips", Flip.BuildFlipRow({ itemID = 4, price = 50, usual = 100, sellsPerDay = 9 }, { minProfit = 1000 }) == nil)
+check("Unknown sells a day is not listed", Flip.BuildFlipRow({ itemID = 5, price = 50, usual = 100 }, { minProfit = 0 }) == nil)
+check("Slow sellers are dropped by the turnover floor", Flip.BuildFlipRow({ itemID = 6, price = 50, usual = 100, sellsPerDay = 0.2 }, { minProfit = 0 }) == nil)
+local noSteps = Flip.BuildFlipRow({ itemID = 7, price = 50, usual = 100, sellsPerDay = 9 }, { minProfit = 0 })
+check("Without price steps the quantity is unknown", noSteps and noSteps.buyQty == nil and noSteps.cost == 50 and noSteps.profit == 45)
+local flagged = Flip.BuildFlipRow({ itemID = 8, price = 50, usual = 100, sellsPerDay = 1, confidence = "few", steps = { 50, 9 } },
+	{ minProfit = 0, dayShare = 5 })
+check("Flags: sells slowly and few sales", flagged and flagged.slow == true and flagged.fewSales == true and flagged.buyQty == 5)
+local withDeposit = Flip.BuildFlipRow({ itemID = 9, price = 50, usual = 100, sellsPerDay = 9, depositLoss = 5 }, { minProfit = 0 })
+check("Expected deposit loss is subtracted", withDeposit and withDeposit.profit == 40)
+local sorted = Flip.BuildFlipRows({ noSteps and { itemID = 7, price = 50, usual = 100, sellsPerDay = 9 }, arcanite }, { minProfit = 0 })
+check("Rows are sorted by profit", #sorted == 2 and sorted[1].itemID == 1 and sorted[2].itemID == 7)
+
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}
 local auction = { history = { hourly = {}, daily = {} } }

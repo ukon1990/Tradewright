@@ -15,3 +15,4 @@ src\modules\AuctionHelper_AuctionPanelBuild.lua
 src\modules\AuctionHelper_PriceSteps.lua
 src\modules\AuctionHelper_PriceHistory.lua
 src\modules\AuctionHelper_MarketInsights.lua
+src\modules\AuctionHelper_Opportunities.lua

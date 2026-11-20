@@ -32,6 +32,24 @@ A new Opportunities tab lists flips: items listed well under their usual price t
 - Settings group "Opportunities": discount, smallest profit, minimum sells a day, share of a day's sales
 - Empty state: "No flips right now. Scan the auction house on a few different days to build usual prices." with a button to the auction house hint
 
+## Status
+
+Implemented:
+
+- `AuctionHelper_FlipLogic.lua` (core, pure): `BuildFlipRow` and `BuildFlipRows` with the rules above
+- `AuctionHelper_Opportunities.lua` (AuctionData): `GetFlipOptions`, `GetFlipRows` from the market insights, cached
+- `AuctionHelper_OpportunitiesTab.lua` (UI): stat row, table, side pane with the sums and "What could go wrong", "Open in auction house"; right-click a row opens the auction house when it is open
+- The tab list moved to `AuctionHelper_TabOrder.lua` (the shell file is over its size limit)
+- Settings group "Opportunities"
+
+Still open:
+
+- The segmented control: with one list there is nothing to switch, so it arrives with F51
+- "Add to cart": the cart is built from the craft queue and has no call to add a single item
+- Gold view "Deals to buy" still uses its own rows
+- Expected deposit loss is 0 until F43 reads deposits and F44 gives the sale chance
+- Left click opens the side pane, not the item details window
+
 ## Acceptance criteria
 
 - [ ] The tab opens from `/ah` with the auction house closed
@@ -41,7 +59,7 @@ A new Opportunities tab lists flips: items listed well under their usual price t
 - [ ] Changing a setting re-filters the list without a reload
 - [ ] With price steps turned off the list still works and `Buy` shows "-"
 - [ ] "Open in auction house" shows the item's buy page; nothing is bought
-- [ ] Offline tests of `BuildFlipRows`: discount edge, profit floor, turnover cap, missing steps, missing sells a day, flags, sort order
+- [x] Offline tests of `BuildFlipRows`: discount edge, profit floor, turnover cap, missing steps, missing sells a day, flags, sort order
 
 ## Verification
 

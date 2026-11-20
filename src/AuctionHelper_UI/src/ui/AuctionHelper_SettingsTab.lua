@@ -50,6 +50,41 @@ local function auctionHouseItems(pe)
 	}
 end
 
+local function refreshOpportunities(pe)
+	if pe.OpportunitiesTab then
+		pe.OpportunitiesTab:Refresh()
+	end
+end
+
+local function opportunityItems()
+	local function choices(values, format, scale)
+		local options = {}
+		for _, value in ipairs(values) do
+			options[#options + 1] = { value = value, label = string.format(format, value * (scale or 1)) }
+		end
+		return options
+	end
+	return {
+		{ kind = "select", label = "Count as a flip when under the usual price by", path = "opportunities.minDiscount", default = 0.25,
+			options = choices({ 0.15, 0.2, 0.25, 0.3, 0.4 }, "%d%% or more", 100), onChange = refreshOpportunities },
+		{ kind = "select", label = "Smallest profit worth showing", path = "opportunities.minProfitGold", default = 5,
+			options = choices({ 1, 5, 10, 25, 50 }, "%dg"), onChange = refreshOpportunities },
+		{ kind = "select", label = "An item must sell at least", path = "opportunities.minSellsPerDay", default = 1,
+			options = choices({ 0.5, 1, 5, 20 }, "%s a day"), onChange = refreshOpportunities },
+		{ kind = "select", label = "Buy no more than", path = "opportunities.dayShare", default = 0.34,
+			options = { { value = 0.1, label = "A tenth of a day's sales" }, { value = 0.34, label = "A third of a day's sales" },
+				{ value = 1, label = "A day's sales" } }, onChange = refreshOpportunities },
+	}
+end
+
+local function opportunitiesSection()
+	return { column = 1, title = "Opportunities", items = opportunityItems() }
+end
+
+local function auctionHouseSection(pe)
+	return { column = 2, title = "Auction house", items = auctionHouseItems(pe) }
+end
+
 -- Every setting on the tab. kind: check | select | note. Sections go in `column` 1 or 2.
 local function buildSections(pe)
 	-- The auction house / bank character is chosen per realm, from the characters known there.
@@ -83,7 +118,7 @@ local function buildSections(pe)
 		{ column = 1, title = "Troubleshooting", items = {
 			{ kind = "check", label = "Write debug messages to chat", path = "debug.enabled", default = false },
 		} },
-		{ column = 2, title = "Auction house", items = auctionHouseItems(pe) },
+		opportunitiesSection(), auctionHouseSection(pe),
 		{ column = 2, title = "Mail", items = {
 			{ kind = "select", label = "Auction house / bank character", path = "mail.sellerByRealm." .. realm, default = "",
 				options = sellerOptions },

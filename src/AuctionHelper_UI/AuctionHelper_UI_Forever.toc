@@ -25,8 +25,10 @@ src\ui\AuctionHelper_InventoryTab.lua
 src\ui\AuctionHelper_MarketUI.lua
 src\ui\AuctionHelper_MarketChart.lua
 src\ui\AuctionHelper_MarketTab.lua
+src\ui\AuctionHelper_OpportunitiesTab.lua
 src\ui\AuctionHelper_CraftsTab.lua
 src\ui\AuctionHelper_ExportTab.lua
 src\ui\AuctionHelper_DocsTab.lua
 src\ui\AuctionHelper_SettingsTab.lua
+src\ui\AuctionHelper_TabOrder.lua
 src\ui\AuctionHelper_UIShell.lua

@@ -23,8 +23,8 @@
 | [f42-sells-a-day](issues/e06-market-signals/f42-sells-a-day/README.md) | Estimated sells per day and days of supply | implemented, in-game check pending; Inventory column open |
 | [f43-fees-from-the-game](issues/e06-market-signals/f43-fees-from-the-game/README.md) | Fees read from the game and measured from sale mail | planned |
 | [f44-ledger-buys-and-misses](issues/e06-market-signals/f44-ledger-buys-and-misses/README.md) | Purchases, expired and cancelled auctions in the ledger | planned |
-| [e07-opportunities](issues/e07-opportunities/README.md) | Opportunities tab: what to buy or sell right now | planned |
-| [f50-opportunities-tab-flips](issues/e07-opportunities/f50-opportunities-tab-flips/README.md) | Opportunities tab and Flips | planned |
+| [e07-opportunities](issues/e07-opportunities/README.md) | Opportunities tab: what to buy or sell right now | in progress |
+| [f50-opportunities-tab-flips](issues/e07-opportunities/f50-opportunities-tab-flips/README.md) | Opportunities tab and Flips | tab and Flips implemented, in-game check pending; cart button, shared Deals card and deposit loss open |
 | [f51-sure-things](issues/e07-opportunities/f51-sure-things/README.md) | Sure things: listed under vendor price | planned |
 | [f52-price-gaps](issues/e07-opportunities/f52-price-gaps/README.md) | Price gaps (risky) | planned |
 | [f53-weekday-pattern](issues/e07-opportunities/f53-weekday-pattern/README.md) | Weekday pattern in the Market item view | planned |
