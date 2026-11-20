@@ -77,6 +77,19 @@ local function attachItemQuantity(itemID, quantity)
 	return true, quantity
 end
 
+-- Largest stack of an item by ID. C_Item.GetItemMaxStackSize wants an item location, not an ID.
+local function itemStackSize(itemID)
+	local size = C_Item and C_Item.GetItemMaxStackSizeByID and C_Item.GetItemMaxStackSizeByID(itemID)
+	if not size and GetItemInfo then
+		size = select(8, GetItemInfo(itemID))
+	end
+	return tonumber(size)
+end
+
+function ProfessionExporter:GetItemStackSize(itemID)
+	return itemStackSize(itemID)
+end
+
 local function buildMailParcels(destinations)
 	local parcels = {}
 	for _, dest in ipairs(destinations or {}) do
@@ -100,12 +113,7 @@ local function buildMailParcels(destinations)
 				if parcelCount >= ATTACHMENTS_MAX then
 					flush()
 				end
-				local attachQty = qtyLeft
-				local maxStack = 200
-				if C_Item and C_Item.GetItemMaxStackSize then
-					maxStack = C_Item.GetItemMaxStackSize(item.itemID) or maxStack
-				end
-				attachQty = math.min(attachQty, maxStack)
+				local attachQty = math.min(qtyLeft, itemStackSize(item.itemID) or 200)
 				parcelItems[#parcelItems + 1] = {
 					itemID = item.itemID,
 					quantity = attachQty,

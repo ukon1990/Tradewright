@@ -48,9 +48,8 @@ local function setKeep(pe, box, amount, keepFocus)
 	pe:RefreshMailPanel()
 end
 
-local function stackSize(itemID)
-	local size = C_Item and C_Item.GetItemMaxStackSize and C_Item.GetItemMaxStackSize(itemID)
-	return math.max(1, tonumber(size) or 1)
+local function stackSize(pe, itemID)
+	return math.max(1, pe:GetItemStackSize(itemID) or 1)
 end
 
 local function createKeepCell(pe, rowFrame)
@@ -74,7 +73,7 @@ local function createKeepCell(pe, rowFrame)
 		end
 	end)
 	box:SetScript("OnMouseWheel", function(self, delta)
-		setKeep(pe, self, (tonumber(self:GetText()) or 0) + delta * stackSize(self.row.itemID), true)
+		setKeep(pe, self, (tonumber(self:GetText()) or 0) + delta * stackSize(pe, self.row.itemID), true)
 	end)
 	box:SetScript("OnMouseDown", function(self)
 		if IsShiftKeyDown() then
