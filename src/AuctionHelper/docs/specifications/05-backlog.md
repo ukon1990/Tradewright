@@ -43,6 +43,12 @@
 | [f80-gold-by-source](issues/e10-income/f80-gold-by-source/README.md) | Gold changes by source | implemented, in-game check pending |
 | [f81-sale-origin](issues/e10-income/f81-sale-origin/README.md) | Where each sold item came from | implemented, in-game check pending |
 | [f82-income-view](issues/e10-income/f82-income-view/README.md) | Income view | implemented, in-game check pending |
+| [e11-bags](issues/e11-bags/README.md) | Bags: an optional bag window grouped by category | implemented, in-game check pending |
+| [f90-bag-logic](issues/e11-bags/f90-bag-logic/README.md) | Bag logic: categories, grouping, layout | done |
+| [f91-module-and-switch](issues/e11-bags/f91-module-and-switch/README.md) | Bags module and its on/off switch | implemented, in-game check pending |
+| [f92-bag-window](issues/e11-bags/f92-bag-window/README.md) | Bag window for the logged-in character | implemented, in-game check pending |
+| [f93-bag-row](issues/e11-bags/f93-bag-row/README.md) | Bag row: equipped bags and the reagent bag | implemented, in-game check pending |
+| [f94-other-characters](issues/e11-bags/f94-other-characters/README.md) | Other characters as tabs, bank, and the All tab | implemented, in-game check pending |
 
 Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E10: F80 first (no dependencies), then F81 and F82.
 

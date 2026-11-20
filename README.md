@@ -1,6 +1,6 @@
 # AuctionHelper
 
-Auction, profession and inventory helper addons for World of Warcraft: **WoW Forever** (`Interface 16001`) and retail. The pack is five addons under `src/` (core, AuctionData, Professions, Inventory, UI).
+Auction, profession and inventory helper addons for World of Warcraft: **WoW Forever** (`Interface 16001`) and retail. The pack is five addons under `src/` (core, AuctionData, Professions, Inventory, UI) plus an optional sixth, `AuctionHelper_Bags`: a bag window grouped by item category, with your other characters as tabs. Turn it off in Settings → Inventory & mail, with `/ah bags`, or by disabling the addon.
 
 Rules for contributors and agents: see [AGENTS.md](AGENTS.md).
 

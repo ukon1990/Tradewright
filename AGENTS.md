@@ -13,6 +13,7 @@
 | Professions | `src/AuctionHelper_Professions/` | Scan, crafts engine (orders stay retail-only) |
 | Inventory | `src/AuctionHelper_Inventory/` | Bags/bank snapshot, ledger |
 | UI | `src/AuctionHelper_UI/` | Dashboard, craft panel, mail |
+| Bags (optional) | `src/AuctionHelper_Bags/` | Bag window grouped by category, other characters as tabs; own on/off switch |
 | Pure Forever helpers | `src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua` | Offline-testable |
 | Tests | `src/AuctionHelper/tests/run_tests.py` | Offline Lua 5.1 (no WoW client) |
 | Lint | `scripts/lint.py`, `.luacheckrc`, `scripts/lint-baseline.json` | luacheck + file/function size + complexity, ratcheted |
@@ -32,7 +33,7 @@
 | Blizzard_Professions | `OptionalDeps` | Soft; Forever may ship a subset of DF profession UI |
 | TradeSkillMaster / Auctionator | `OptionalDeps` | Pricing fallbacks only |
 
-Load order: `AuctionHelper` → `AuctionHelper_AuctionData` + `AuctionHelper_Professions` → `AuctionHelper_Inventory` → `AuctionHelper_UI`.
+Load order: `AuctionHelper` → `AuctionHelper_AuctionData` + `AuctionHelper_Professions` → `AuctionHelper_Inventory` → `AuctionHelper_UI` → `AuctionHelper_Bags` (optional; the pack works without it).
 
 ## Hard rules
 
@@ -43,6 +44,7 @@ Load order: `AuctionHelper` → `AuctionHelper_AuctionData` + `AuctionHelper_Pro
 - KISS / DRY / minimal LOC — see `.agents/skills/wow-addon-issue-work/focus/code-quality.md`.
 - Quality gate (enforced by `npm test`): files ≤ 700 lines, functions ≤ 40 lines, complexity ≤ 10, ≤ 5 params, luacheck clean. Existing debt is frozen in `scripts/lint-baseline.json`; new code must meet the limits and legacy offenders may not grow. Fix failures in code, never by loosening the baseline; run `npm run lint:baseline` only when lint reports debt went down.
 - New WoW API / SavedVariable / slash command → add it to `.luacheckrc` (`read_globals` / `globals`).
+- `AuctionHelper_Bags` must stay optional: nothing outside it may require it (check `pe.ApplyBagTakeover ~= nil`), and it replaces no game global, so its switch works without `/reload`.
 - Each addon ships **four TOCs**: `<Addon>_Mainline.toc` (retail, `120000, 120001` / `standard`), `<Addon>_Forever.toc` + `<Addon>_Camelot.toc` (Forever, `16001…` / `camelot`), and `<Addon>.toc` (fallback, Forever headers). The client loads the flavor-suffixed one. When adding/removing a `.lua` or changing a header, edit **all four** — only `Interface` and `AllowLoadGameType` may differ (`npm test` enforces this).
 - New `.lua` files need a **full client restart**; `/reload` only reloads already-listed TOC files.
 
@@ -76,4 +78,4 @@ npm run deploy:dry       # show what would be replaced
 
 Each deploy deletes and recopies the `AuctionHelper*` folders in the target `Interface/AddOns`. Target paths are in `deploy.config.json`; per-machine overrides go in untracked `deploy.config.local.json` (`{"targets": {"forever": "..."}}`).
 
-In-game: enable all five modules, `/reload` (or restart if TOC changed), `/ah` (or `/auctionhelper`) opens UI, full AH dump with house open fills prices, profession Scan stores recipes/reagents, Crafts tab shows profit.
+In-game: enable the five core modules (and `AuctionHelper_Bags` for the bag window), `/reload` (or restart if TOC changed), `/ah` (or `/auctionhelper`) opens UI, full AH dump with house open fills prices, profession Scan stores recipes/reagents, Crafts tab shows profit.

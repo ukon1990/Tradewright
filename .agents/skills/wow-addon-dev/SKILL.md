@@ -13,7 +13,7 @@ description: WoW Forever addon development basics for AuctionHelper — TOC came
 
 ## TOC & load order
 
-- Five addons: `AuctionHelper`, `AuctionHelper_AuctionData`, `AuctionHelper_Professions`, `AuctionHelper_Inventory`, `AuctionHelper_UI`.
+- Five core addons: `AuctionHelper`, `AuctionHelper_AuctionData`, `AuctionHelper_Professions`, `AuctionHelper_Inventory`, `AuctionHelper_UI`, plus the optional `AuctionHelper_Bags` (bag window; loads last).
 - List every `.lua` in each TOC (all four flavor variants). **New files need a full client restart**; `/reload` only reloads files already in the TOC.
 - `Blizzard_Professions` is **OptionalDeps** so auction modules still load if it is disabled.
 
@@ -40,6 +40,7 @@ Keep Midnight-only hooks on `IS_RETAIL` (crafting orders UI/materials, concentra
 | `AuctionHelperAuctionDB` | AuctionData |
 | `AuctionHelperProfessionsDB` | Professions |
 | `AuctionHelperInventoryDB` | Inventory |
+| `AuctionHelperBagsDB` | Bags |
 
 ## Globals & lint
 

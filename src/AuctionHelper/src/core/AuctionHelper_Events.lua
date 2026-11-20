@@ -7,6 +7,7 @@ function ProfessionExporter:ADDON_LOADED(loadedAddonName)
 		["AuctionHelper_Professions"] = true,
 		["AuctionHelper_Inventory"] = true,
 		["AuctionHelper_UI"] = true,
+		["AuctionHelper_Bags"] = true,
 	}
 	if not tracked[loadedAddonName] then
 		return

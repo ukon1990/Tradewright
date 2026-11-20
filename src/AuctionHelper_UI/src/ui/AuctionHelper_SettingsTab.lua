@@ -214,6 +214,32 @@ local function mailSection(pe)
 	} }
 end
 
+-- The bags module is its own addon; its settings only show when it is loaded.
+local function hasBagsModule(pe)
+	return pe.ApplyBagTakeover ~= nil
+end
+
+local function refreshBags(pe)
+	pe:RefreshBagWindow()
+end
+
+local function bagsSection()
+	return { title = "Bags", visible = hasBagsModule, items = {
+		{ kind = "check", label = "Use AuctionHelper bags instead of the game's bag window", path = "bags.enabled", default = true,
+			onChange = function(pe) pe:ApplyBagTakeover() end },
+		{ kind = "note", text = "Off: the bag key and bag buttons open the game's own bags, or your other bag addon."
+			.. " Applies at once. Also /ah bags, or right-click the Bags title bar." },
+		{ kind = "check", label = "Show my other characters as tabs", path = "bags.showCharacters", default = true,
+			onChange = refreshBags },
+		{ kind = "check", label = "Show the sell value of junk", path = "bags.showJunkValue", default = true, onChange = refreshBags },
+		{ kind = "check", label = "Keep the bag row open", path = "bags.showBagRow", default = false, onChange = refreshBags },
+		{ kind = "select", label = "Slots per row", path = "bags.columns", default = 10, options = choices({ 8, 10, 12, 14 }, "%d"),
+			onChange = refreshBags },
+		{ kind = "select", label = "Slot size", path = "bags.slotSize", default = 36, onChange = refreshBags,
+			options = { { value = 30, label = "Small" }, { value = 36, label = "Normal" }, { value = 42, label = "Large" } } },
+	} }
+end
+
 -- Every setting, grouped into the categories listed on the left. Item kind: check | select | note.
 -- A section or item with `visible(pe)` is hidden when it returns false; empty sections and categories hide too.
 local function buildCategories(pe)
@@ -222,7 +248,7 @@ local function buildCategories(pe)
 		{ key = "prices", label = "Prices", sections = { auctionHouseSection(pe), goldSection(), priceSourcesSection() } },
 		{ key = "opportunities", label = "Opportunities", sections = { opportunitiesSection() } },
 		{ key = "crafting", label = "Crafting", sections = { craftsSection(), professionScanSection(), craftingOrdersSection() } },
-		{ key = "inventory", label = "Inventory & mail", sections = { inventorySection(), mailSection(pe) } },
+		{ key = "inventory", label = "Inventory & mail", sections = { inventorySection(), mailSection(pe), bagsSection() } },
 	}
 end
 

@@ -1,0 +1,17 @@
+## Interface: 16001, 16002, 16100, 16200
+## AllowLoadGameType: camelot
+## Title: AuctionHelper Bags
+## Notes: Optional bag window for AuctionHelper: items grouped by category, other characters as tabs
+## Author: Ukon1990
+## Version: 2.0.0
+## Dependencies: AuctionHelper, AuctionHelper_AuctionData, AuctionHelper_Professions, AuctionHelper_Inventory, AuctionHelper_UI
+## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator
+## SavedVariables: AuctionHelperBagsDB
+
+Bootstrap.lua
+src\AuctionHelper_BagLogic.lua
+src\AuctionHelper_BagData.lua
+src\AuctionHelper_BagSwitch.lua
+src\AuctionHelper_BagButtons.lua
+src\AuctionHelper_BagRow.lua
+src\AuctionHelper_BagWindow.lua

@@ -19,6 +19,7 @@ local modules = {
 	{ "AuctionHelper_Professions", "AuctionHelper_Professions.toc" },
 	{ "AuctionHelper_Inventory", "AuctionHelper_Inventory.toc" },
 	{ "AuctionHelper_UI", "AuctionHelper_UI.toc" },
+	{ "AuctionHelper_Bags", "AuctionHelper_Bags.toc" },
 }
 
 for _, m in ipairs(modules) do
