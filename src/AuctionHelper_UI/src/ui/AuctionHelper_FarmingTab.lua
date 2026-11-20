@@ -90,7 +90,7 @@ local function buildDetailButtons(pe, panel, card)
 			pe:StartFarmRun(panel.selected.name)
 			FarmingTab:Refresh()
 		end
-	end)
+	end, { tooltip = "Starts a new run under this name. Saving it adds it to this farm's totals. It records loot, not a route." })
 	card.start:SetPoint("BOTTOMLEFT")
 	card.delete = pe:CreateButton(card.body, "Delete", function()
 		local row = panel.selected

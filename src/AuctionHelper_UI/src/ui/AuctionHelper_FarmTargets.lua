@@ -13,12 +13,20 @@ local function isTradeGood(itemID)
 	return getInstant ~= nil and select(6, getInstant(itemID)) == TRADE_GOODS_CLASS
 end
 
--- One candidate per scanned trade good with a usual price and a sells-a-day estimate.
+local HELP = "Trade goods ranked by the gold that changes hands in them each day, from your auction house scans."
+	.. " An item needs full scans on 5 different days, about a day apart, before it shows up.\n\n"
+	.. "Your saved farms fill the last two columns: where you looted the item and what that earns an hour."
+	.. " AuctionHelper ships no drop data or routes."
+
+-- One candidate per scanned trade good with a usual price and a sells-a-day estimate, plus how many
+-- trade goods were scanned at all.
 local function targetCandidates(pe, insights)
 	local materials = pe:GetRecipeMaterialSet()
-	local items = {}
+	local items, tradeGoods = {}, 0
 	for itemID, row in pairs(insights.byItemID or {}) do
-		local usual = isTradeGood(itemID) and pe:GetUsualPrice(row.storageKey)
+		local tradeGood = isTradeGood(itemID)
+		tradeGoods = tradeGoods + (tradeGood and 1 or 0)
+		local usual = tradeGood and pe:GetUsualPrice(row.storageKey)
 		local sells = usual and pe:GetSellsPerDay(row.storageKey)
 		if sells then
 			items[#items + 1] = {
@@ -27,10 +35,10 @@ local function targetCandidates(pe, insights)
 			}
 		end
 	end
-	return items
+	return items, tradeGoods
 end
 
---- Rows for "What to farm", or nil while the market insights are being built.
+--- Rows for "What to farm" and the empty-list title and hint, or nil while the market insights are being built.
 function ProfessionExporter:GetFarmTargetRows(onReady)
 	local insights = self:GetMarketInsights(onReady)
 	if not insights then
@@ -39,15 +47,17 @@ function ProfessionExporter:GetFarmTargetRows(onReady)
 	local Farm = self.FarmLogic
 	local ledger = self:InitLedger()
 	local lootIndex = Farm.BuildLootIndex(ledger and ledger.farm and ledger.farm.farms or {})
-	local rows = Farm.BuildFarmTargets(targetCandidates(self, insights), lootIndex, {
+	local candidates, tradeGoods = targetCandidates(self, insights)
+	local opts = {
 		cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05,
 		onlyRecipes = self:GetSetting("farming.onlyRecipes", false),
 		onlyFarmed = self:GetSetting("farming.onlyFarmed", false),
-	})
+	}
+	local rows = Farm.BuildFarmTargets(candidates, lootIndex, opts)
 	for _, row in ipairs(rows) do
 		row._rowIdentity = tostring(row.itemID)
 	end
-	return rows
+	return rows, Farm.FarmTargetsEmptyText({ tradeGoods = tradeGoods, priced = #candidates }, opts)
 end
 
 local function perDayText(pe, perDay)
@@ -103,7 +113,7 @@ local function targetColumns(pe)
 	}
 end
 
--- Two toggle buttons at the top right. Returns the leftmost, for anchoring the note.
+-- Two toggle buttons at the top right.
 local function buildTargetFilters(pe, view)
 	view.filters = {}
 	local previous
@@ -117,7 +127,6 @@ local function buildTargetFilters(pe, view)
 		previous = button
 		view.filters[#view.filters + 1] = button
 	end
-	return previous
 end
 
 --- The "What to farm" view: a note, two filter buttons and the table. Call `:Refresh()` when shown.
@@ -126,13 +135,12 @@ function ProfessionExporter:CreateFarmTargetsView(panel)
 	local view = CreateFrame("Frame", nil, panel)
 	view.note = pe:CreateText(view, "GameFontHighlightSmall", "textMuted")
 	view.note:SetPoint("TOPLEFT")
-	view.note:SetText("Trade goods that move the most gold a day. AuctionHelper does not know where items drop: the last columns come from your own farms.")
-	local lastFilter = buildTargetFilters(pe, view)
-	view.note:SetPoint("RIGHT", lastFilter, "LEFT", -GAP, 0)
+	view.note:SetText("Trade goods that move the most gold a day.")
+	buildTargetFilters(pe, view)
+	view.help = pe:CreateButton(view, "?", nil, { small = true, width = 22, tooltip = HELP })
+	view.help:SetPoint("LEFT", view.note, "RIGHT", 6, 0)
 	view.table = pe:CreateReusableTable(view, {
 		footer = true, rowHeight = 36, autoFitToScroll = true, sortKey = "traded", sortAsc = false,
-		emptyTitle = "Nothing to show yet",
-		emptyHint = "Trade goods appear here once your scans give them a usual price and a sells-a-day estimate.",
 		onRowEnter = function(rowFrame, row)
 			pe:ShowItemRowTooltip(rowFrame, row and row.itemID, nil, "Shift-click to link")
 		end,
@@ -146,7 +154,8 @@ function ProfessionExporter:CreateFarmTargetsView(panel)
 		for _, button in ipairs(self.filters) do
 			pe:StyleShellButton(button, pe:GetSetting(button.setting, false) == true)
 		end
-		local rows = pe:GetFarmTargetRows(function() if self:IsVisible() then self:Refresh() end end)
+		local rows, emptyTitle, emptyHint = pe:GetFarmTargetRows(function() if self:IsVisible() then self:Refresh() end end)
+		self.table:SetEmptyText(emptyTitle or "Reading the last scan…", emptyHint or "")
 		self.table:SetRows(rows or {})
 		self.table:SetFooterText(rows and "Traded a day = usual price times estimated sales, a ranking and not income" or "Reading the last scan…",
 			rows and string.format("%d materials", #rows) or "")

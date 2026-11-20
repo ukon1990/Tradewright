@@ -385,6 +385,13 @@ local farmedOnly = Farm.BuildFarmTargets(targetItems, lootIndex, { onlyFarmed = 
 check("Only farmed before", #farmedOnly == 2 and farmedOnly[1].itemID == 1 and farmedOnly[2].itemID == 3)
 local recipeOnly = Farm.BuildFarmTargets(targetItems, lootIndex, { onlyRecipes = true })
 check("My recipes use it", #recipeOnly == 1 and recipeOnly[1].itemID == 1)
+local emptyTitle = Farm.FarmTargetsEmptyText({ tradeGoods = 0, priced = 0 }, { onlyRecipes = true })
+check("Empty list without trade goods asks for a scan", emptyTitle == "No trade goods scanned yet")
+local historyTitle, historyHint = Farm.FarmTargetsEmptyText({ tradeGoods = 12, priced = 0 }, { onlyRecipes = true })
+check("Empty list without history says 5 days", historyTitle == "Not enough price history yet"
+	and historyHint:find("12 trade goods") and historyHint:find("5 different days"))
+local filterTitle, filterHint = Farm.FarmTargetsEmptyText({ tradeGoods = 12, priced = 4 }, { onlyRecipes = true })
+check("Empty list hidden by a filter names it", filterTitle == "Hidden by filters" and filterHint:find("My recipes use it", 1, true))
 
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}

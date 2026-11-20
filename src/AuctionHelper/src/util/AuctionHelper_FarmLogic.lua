@@ -189,4 +189,30 @@ function FarmLogic.BuildFarmTargets(items, lootIndex, opts)
 	return rows
 end
 
+local function activeFilterNames(opts)
+	local names = {}
+	if opts.onlyRecipes then
+		names[#names + 1] = "\"My recipes use it\""
+	end
+	if opts.onlyFarmed then
+		names[#names + 1] = "\"Only farmed before\""
+	end
+	return names
+end
+
+--- Title and hint for an empty "what to farm" list, saying which step is missing.
+--- `counts = { tradeGoods = scanned trade goods, priced = those with a usual price and sells a day }`.
+function FarmLogic.FarmTargetsEmptyText(counts, opts)
+	local tradeGoods, priced = tonumber(counts.tradeGoods) or 0, tonumber(counts.priced) or 0
+	if tradeGoods == 0 then
+		return "No trade goods scanned yet", "Run a full auction house scan."
+	end
+	local names = activeFilterNames(opts or {})
+	if priced == 0 or #names == 0 then
+		return "Not enough price history yet",
+			string.format("%d trade goods scanned. Each needs full scans on 5 different days.", tradeGoods)
+	end
+	return "Hidden by filters", string.format("%d trade goods hidden by %s.", priced, table.concat(names, " and "))
+end
+
 return FarmLogic
