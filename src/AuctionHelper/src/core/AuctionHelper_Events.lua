@@ -273,6 +273,9 @@ function ProfessionExporter:PLAYER_MONEY()
 	if self.RecordWalletObservation then
 		self:RecordWalletObservation(self:GetCharacterKey(), GetMoney(), time())
 	end
+	if self.RefreshShellStatus then
+		self:RefreshShellStatus()
+	end
 end
 
 function ProfessionExporter:CRAFTINGORDERS_FULFILL_ORDER_RESPONSE(result, orderID)

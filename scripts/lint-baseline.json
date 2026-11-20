@@ -2207,7 +2207,7 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_UIShell.lua": {
    "ProfessionExporter:CreateDashboardFrame": {
     "lines": [
-     169
+     168
     ]
    },
    "ProfessionExporter:EnsureDashboardTabCreated": {

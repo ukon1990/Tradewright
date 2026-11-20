@@ -39,15 +39,6 @@ local function addRule(frame, edge, color)
 	return rule
 end
 
-local function characterLabel()
-	local name = UnitName and UnitName("player") or nil
-	local realm = GetRealmName and GetRealmName() or nil
-	if name and realm and realm ~= "" then
-		return name .. " · " .. realm
-	end
-	return name or ""
-end
-
 -- A tab: text only, muted; selected tab is gold with a 2px gold underline.
 local function createTabButton(parent, label)
 	local theme = ProfessionExporter:GetTheme()
@@ -294,7 +285,6 @@ function ProfessionExporter:CreateDashboardFrame()
 	frame.subtitle:SetJustifyH("RIGHT")
 	frame.subtitle:SetWordWrap(false)
 	frame.subtitle:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
-	frame.subtitle:SetText(characterLabel())
 
 	frame.title = frame.titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 	frame.title:SetPoint("LEFT", frame.icon, "RIGHT", 8, 0)
@@ -404,6 +394,15 @@ function ProfessionExporter:CreateDashboardFrame()
 	return frame
 end
 
+-- Title bar: gold on every stored character (this one live, the others as last seen).
+function ProfessionExporter:AccountGoldLabel()
+	if not self.GetCurrentGoldSummaryForOverview then
+		return ""
+	end
+	local gold = self:GetCurrentGoldSummaryForOverview(self.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__")
+	return gold and ("Gold on all characters " .. self:FormatCopperShort(gold)) or ""
+end
+
 function ProfessionExporter:RefreshShellStatus()
 	local ui = self.ui
 	if not (ui and ui.mainFrame and ui.mainFrame.statusText) then
@@ -432,6 +431,7 @@ function ProfessionExporter:RefreshShellStatus()
 			or " · Professions not scanned yet")
 	end
 	ui.mainFrame.statusRight:SetText(text)
+	ui.mainFrame.subtitle:SetText(self:AccountGoldLabel())
 end
 
 function ProfessionExporter:ApplyThemeToUI()
