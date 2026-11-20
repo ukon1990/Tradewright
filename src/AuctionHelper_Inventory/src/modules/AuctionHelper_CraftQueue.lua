@@ -464,7 +464,6 @@ end
 function ProfessionExporter:BuildShoppingMailSendPlan()
 	local summary = self:BuildCraftQueueSummary()
 	local woSummary = self.BuildCraftingOrderWorkQueueSummary and self:BuildCraftingOrderWorkQueueSummary() or { reagentLines = {} }
-	local currentCharacterKey = tostring(self:GetCharacterKey())
 	local mirroredOrderIDs = {}
 	for _, entry in ipairs(self:GetCraftQueueRows()) do
 		local oid = tonumber(entry and entry.orderID)
@@ -479,7 +478,8 @@ function ProfessionExporter:BuildShoppingMailSendPlan()
 		if not itemID then
 			return
 		end
-		stock[itemID] = stock[itemID] or self:GetCharacterItemTotal(currentCharacterKey, itemID)
+		-- Only bag items can be attached; what sits in the bank shows as missing ("not in bags").
+		stock[itemID] = stock[itemID] or (self:GetItemCountByLocation(itemID))
 		lines[#lines + 1] = {
 			itemID = itemID,
 			name = line.name or self:GetItemDisplayName(itemID),
