@@ -19,12 +19,48 @@ local function numberColumn(id, label, width, format, optional)
 	}
 end
 
-local function createCard(pe, parent, title)
-	local card = pe:CreateInset(parent)
-	card.heading = pe:CreateHeading(card, title)
+-- Shared with the Income view (AuctionHelper_IncomeDashboard.lua).
+ProfessionExporter.DashboardNumberColumn = numberColumn
+
+--- An inset card with a heading at its top left.
+function ProfessionExporter:CreateDashboardCard(parent, title)
+	local card = self:CreateInset(parent)
+	card.heading = self:CreateHeading(card, title)
 	card.heading:SetPoint("TOPLEFT", PAD, -PAD)
 	card.heading:SetPoint("RIGHT", -PAD, 0)
 	return card
+end
+
+--- 7 days / 30 days / 90 days / All time at the card's top right, ending its heading. The choice
+--- is one setting shared by the Sales and Income views; `onChange` redraws the view.
+function ProfessionExporter:CreatePeriodButtons(card, onChange)
+	local buttons, previous = {}, nil
+	for index = #PERIODS, 1, -1 do
+		local days = PERIODS[index][1]
+		local button = self:CreateButton(card, PERIODS[index][2], function()
+			self:SetSetting("sales.periodDays", days)
+			onChange()
+		end, { small = true })
+		button.days = days
+		if previous then
+			button:SetPoint("RIGHT", previous, "LEFT", 1, 0)
+		else
+			button:SetPoint("TOPRIGHT", -PAD, -7)
+		end
+		previous = button
+		buttons[#buttons + 1] = button
+	end
+	card.heading:SetPoint("RIGHT", previous, "LEFT", -8, 0)
+	return buttons
+end
+
+--- Highlights the chosen period and returns its days (0 = all time).
+function ProfessionExporter:StylePeriodButtons(buttons)
+	local days = tonumber(self:GetSetting("sales.periodDays", 30)) or 30
+	for _, button in ipairs(buttons) do
+		self:StyleShellButton(button, button.days == days)
+	end
+	return days
 end
 
 local function attachTable(pe, card, columns, sortKey, tooltipPairs)
@@ -140,28 +176,11 @@ function ProfessionExporter:CreateSalesDashboard(parent)
 	end
 
 	-- Gold per day, with the period switch that drives the whole view.
-	dash.chart = createCard(pe, dash, "Gold from sales, per day")
+	dash.chart = pe:CreateDashboardCard(dash, "Gold from sales, per day")
 	dash.chart:SetPoint("TOPLEFT", dash.statsRow, "BOTTOMLEFT", 0, -GAP)
 	dash.chart:SetPoint("TOPRIGHT", dash.statsRow, "BOTTOMRIGHT", 0, -GAP)
 	dash.chart:SetHeight(CHART_HEIGHT)
-	dash.periodButtons = {}
-	local previous
-	for index = #PERIODS, 1, -1 do
-		local days, label = PERIODS[index][1], PERIODS[index][2]
-		local button = pe:CreateButton(dash.chart, label, function()
-			pe:SetSetting("sales.periodDays", days)
-			dash:Refresh()
-		end, { small = true })
-		button.days = days
-		if previous then
-			button:SetPoint("RIGHT", previous, "LEFT", 1, 0)
-		else
-			button:SetPoint("TOPRIGHT", -PAD, -7)
-		end
-		previous = button
-		dash.periodButtons[#dash.periodButtons + 1] = button
-	end
-	dash.chart.heading:SetPoint("RIGHT", previous, "LEFT", -8, 0)
+	dash.periodButtons = pe:CreatePeriodButtons(dash.chart, function() dash:Refresh() end)
 	dash.graph = pe:CreateTimeSeriesGraph(dash.chart, {
 		showTitle = false,
 		plotHeight = CHART_HEIGHT - 76,
@@ -176,7 +195,7 @@ function ProfessionExporter:CreateSalesDashboard(parent)
 	end)
 
 	-- What sells: one row per item, sortable by how much, how many and how often.
-	dash.items = createCard(pe, dash, "What sells")
+	dash.items = pe:CreateDashboardCard(dash, "What sells")
 	attachTable(pe, dash.items, {
 		itemColumn(),
 		numberColumn("sales", "Sales", 46, count),
@@ -187,7 +206,7 @@ function ProfessionExporter:CreateSalesDashboard(parent)
 	}, "net", function(row) return itemTooltipPairs(pe, row) end)
 
 	-- Latest sales, newest first.
-	dash.recent = createCard(pe, dash, "Latest sales")
+	dash.recent = pe:CreateDashboardCard(dash, "Latest sales")
 	attachTable(pe, dash.recent, {
 		itemColumn(),
 		numberColumn("net", "Earned", 78, money),
@@ -217,10 +236,7 @@ function ProfessionExporter:CreateSalesDashboard(parent)
 	end
 
 	function dash:Refresh()
-		local days = tonumber(pe:GetSetting("sales.periodDays", 30)) or 30
-		for _, button in ipairs(self.periodButtons) do
-			pe:StyleShellButton(button, button.days == days)
-		end
+		local days = pe:StylePeriodButtons(self.periodButtons)
 		-- The ledger lives in the Inventory module; without it the view stays empty.
 		local summary = pe.GetSalesSummary and pe:GetSalesSummary(days > 0 and days or nil)
 			or pe.ForeverLogic.SummarizeSales({}, time(), nil)

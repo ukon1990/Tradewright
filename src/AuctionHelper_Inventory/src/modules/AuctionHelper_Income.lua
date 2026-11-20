@@ -183,9 +183,9 @@ function ProfessionExporter:GetIncomeDays()
 	return L and L.income or {}
 end
 
---- Where each auction sale's units came from (see IncomeLogic.LabelSaleOrigins). Call after
---- GetSalesSummary, which fills in the item ids of sales recorded by name.
+--- Where each auction sale's units came from: { [sale event] = { origin = units } } (see
+--- IncomeLogic.LabelSaleOrigins).
 function ProfessionExporter:GetSaleOrigins()
 	local L = self:InitLedger()
-	return IncomeLogic.LabelSaleOrigins(L and L.events or {}, L and L.acquired or {})
+	return IncomeLogic.LabelSaleOrigins(self:GetLedgerEvents(), L and L.acquired or {})
 end

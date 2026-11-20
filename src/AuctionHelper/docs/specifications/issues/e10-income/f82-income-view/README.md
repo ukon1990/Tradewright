@@ -14,16 +14,16 @@ An Income sub-tab in Overview shows earned, spent and net gold, which sources br
 
 ## Scope
 
-- New `AuctionHelper_IncomeDashboard.lua` in `AuctionHelper_UI` (all four UI TOCs), opened from a new "Income" sub-tab
-- Period buttons (7 / 30 / 90 days / all time, shared setting with Sales) and the account / character choice the Overview already uses
-- Stat row: Earned, Spent, Net, Biggest source (with its share)
-- Chart: gold in per day, one stacked series per source
-- "Where gold comes from" table: Source, In, Out, Net, Share, A day. The Auction house row expands into crafted, resold, farmed, unknown (F81)
-- "What item types earn" table: item class → subclass, Sales, Earned, Share, Sell rate, Time to sell; tooltip lists the top items in that type
-- `IncomeLogic.SummarizeIncome(days, now, since)` → totals, per source, daily series
-- `IncomeLogic.SummarizeItemTypes(sales, classOf, postings, misses)` → rows per type
-- Sell rate = sold ÷ (sold + expired + cancelled) with F44, "-" without it; time to sell is the median, "-" under 3 matches
-- Empty state explains that tracking starts when the feature ships
+- New `AuctionHelper_IncomeDashboard.lua` in `AuctionHelper_UI` (all four UI TOCs), opened from a new "Income" sub-tab; the Overview's dashboard views are now one table (`DASHBOARD_VIEWS` in `AuctionHelper_OverviewTab.lua`)
+- Period buttons (7 / 30 / 90 days / all time, the setting shared with Sales) and a character dropdown (`income.character`, default all)
+- Card, number column and period buttons are shared with the Sales view (`CreateDashboardCard`, `DashboardNumberColumn`, `CreatePeriodButtons`, `StylePeriodButtons`)
+- Stat row: Earned, Spent, Net, Biggest source (with its share of gold in)
+- Chart: gold in and gold out per day (two lines, net in the tooltip)
+- "Where gold comes from" table: Source, In, Out, Net, Share, A day. Hovering Auction house shows the period's auction sales split into crafted, resold, farmed, not known (F81)
+- "What item types earn" table: item class · subclass, Sales, Earned, Share, Sold (sell rate); tooltip lists the three best-earning items of that type
+- `IncomeLogic.SummarizeIncome`, `SourceRows`, `SplitSalesByOrigin`, `SummarizeItemTypes`
+- Sell rate = sold ÷ (sold + expired + cancelled) with F44, "-" while the ledger holds no expired or cancelled auctions
+- Time to sell is left for later: posted auctions are only recorded by the bulk poster today, so it would read "-" almost everywhere (candidate once F44 records postings)
 
 ## Acceptance criteria
 
@@ -31,9 +31,9 @@ An Income sub-tab in Overview shows earned, spent and net gold, which sources br
 - [ ] Switching the period changes every number and the chart
 - [ ] A Heavy Hide sale shows under Trade Goods → Leather
 - [ ] Without F44, Sell rate shows "-" and nothing else breaks
-- [ ] Auction house split sums to the Auction house row
+- [ ] The Auction house tooltip splits the period's auction sales by origin
 - [ ] Choosing one character shows only that character's gold
-- [ ] Offline tests: income summary, item-type rows, median time to sell, empty data
+- [ ] Offline tests: income summary, source rows, sales split, item-type rows, empty data
 
 ## Verification
 

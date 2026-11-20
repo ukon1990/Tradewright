@@ -134,13 +134,19 @@ local function fillMissingItemIDs(events, map)
 	end
 end
 
+--- The ledger's events, with the item ids of sales recorded by name filled in where known.
+function ProfessionExporter:GetLedgerEvents()
+	local L = self:InitLedger()
+	if not L then
+		return {}
+	end
+	fillMissingItemIDs(L.events, itemIDsByName())
+	return L.events
+end
+
 --- Sales statistics for the last `days` days (nil for all time); see ForeverLogic.SummarizeSales.
 function ProfessionExporter:GetSalesSummary(days)
-	local L = self:InitLedger()
-	if L then
-		fillMissingItemIDs(L.events, itemIDsByName())
-	end
-	return self.ForeverLogic.SummarizeSales(L and L.events or {}, time(), days)
+	return self.ForeverLogic.SummarizeSales(self:GetLedgerEvents(), time(), days)
 end
 
 local function iterEvents(L, kind, itemID, characterKey)

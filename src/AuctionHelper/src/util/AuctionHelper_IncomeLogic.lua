@@ -203,3 +203,139 @@ function IncomeLogic.LabelSaleOrigins(events, acquired)
 	end
 	return labels
 end
+
+-- Income view (F82) ------------------------------------------------------------------------------
+
+local function addTo(target, gain, spend)
+	target.gain = (target.gain or 0) + (tonumber(gain) or 0)
+	target.spend = (target.spend or 0) + (tonumber(spend) or 0)
+end
+
+local function addDay(summary, byDay, day, sources)
+	if not byDay[day] then
+		byDay[day] = { day = day, gain = 0, spend = 0 }
+		summary.daily[#summary.daily + 1] = byDay[day]
+	end
+	for source, entry in pairs(sources) do
+		summary.sources[source] = summary.sources[source] or { gain = 0, spend = 0 }
+		addTo(summary.sources[source], entry.gain, entry.spend)
+		addTo(summary, entry.gain, entry.spend)
+		addTo(byDay[day], entry.gain, entry.spend)
+	end
+end
+
+--- Totals from `firstDay` on, for one character or all (characterKey nil).
+--- incomeByCharacter: { [characterKey] = { [day] = { [source] = { gain, spend } } } }.
+--- Returns { gain, spend, sources = { [source] = { gain, spend } }, daily = { { day, gain, spend } } oldest first }.
+function IncomeLogic.SummarizeIncome(incomeByCharacter, characterKey, firstDay)
+	local summary, byDay = { gain = 0, spend = 0, sources = {}, daily = {} }, {}
+	for key, days in pairs(incomeByCharacter or {}) do
+		for day, sources in pairs((not characterKey or key == characterKey) and days or {}) do
+			if tonumber(day) >= firstDay then
+				addDay(summary, byDay, tonumber(day), sources)
+			end
+		end
+	end
+	table.sort(summary.daily, function(a, b)
+		return a.day < b.day
+	end)
+	return summary
+end
+
+--- One row per source with gold in or out: { source, gain, spend, net, share (of all gold in),
+--- perDay }, most gold in first.
+function IncomeLogic.SourceRows(summary, spanDays)
+	local rows = {}
+	for _, source in ipairs(IncomeLogic.SOURCES) do
+		local entry = summary.sources[source]
+		if entry and (entry.gain > 0 or entry.spend > 0) then
+			rows[#rows + 1] = {
+				source = source, gain = entry.gain, spend = entry.spend, net = entry.gain - entry.spend,
+				share = summary.gain > 0 and entry.gain / summary.gain or 0,
+				perDay = (entry.gain - entry.spend) / math.max(1, spanDays),
+			}
+		end
+	end
+	table.sort(rows, function(a, b)
+		return a.gain > b.gain
+	end)
+	return rows
+end
+
+local function inScope(event, since, characterKey)
+	return (tonumber(event.ts) or 0) >= since and (not characterKey or event.characterKey == characterKey)
+end
+
+--- Gold from auction sales split by where the units came from: { crafted = copper, ... }, each
+--- sale's net shared out by its labelled units (see LabelSaleOrigins).
+function IncomeLogic.SplitSalesByOrigin(events, labels, since, characterKey)
+	local split = {}
+	for _, event in ipairs(events) do
+		local label = labels[event]
+		if label and inScope(event, since, characterKey) then
+			local net = tonumber(event.netCopper) or tonumber(event.totalCopper) or 0
+			local units = math.max(1, tonumber(event.quantity) or 1)
+			for origin, count in pairs(label) do
+				split[origin] = (split[origin] or 0) + net * count / units
+			end
+		end
+	end
+	return split
+end
+
+local MISS_KINDS = { expired = true, cancelled = true }
+
+local function typeRow(byType, rows, key, label)
+	if not byType[key] then
+		byType[key] = { key = key, label = label, sales = 0, units = 0, net = 0, misses = 0, items = {} }
+		rows[#rows + 1] = byType[key]
+	end
+	return byType[key]
+end
+
+local function addSale(row, event)
+	local net = tonumber(event.netCopper) or tonumber(event.totalCopper) or 0
+	row.sales, row.units, row.net = row.sales + 1, row.units + (tonumber(event.quantity) or 1), row.net + net
+	local itemKey = event.itemID or event.itemName
+	row.items[itemKey] = (row.items[itemKey] or 0) + net
+end
+
+-- Adds one sale or miss to its type row; returns the sale's net (0 for a miss).
+local function addTypeEvent(byType, rows, event, classOf)
+	local key, label = classOf(event.itemID)
+	local row = typeRow(byType, rows, key or "?", label or "Unknown type")
+	if event.kind ~= "sell" then
+		row.misses = row.misses + 1
+		return 0
+	end
+	addSale(row, event)
+	return tonumber(event.netCopper) or tonumber(event.totalCopper) or 0
+end
+
+local function finishTypeRows(rows, total, tracksMisses)
+	for _, row in ipairs(rows) do
+		row.share = total > 0 and row.net / total or 0
+		local postings = row.sales + row.misses
+		row.sellRate = tracksMisses and postings > 0 and row.sales / postings or nil
+	end
+	table.sort(rows, function(a, b)
+		return a.net > b.net
+	end)
+end
+
+--- Auction sales grouped by item type. classOf(itemID) → key, label (nil when unknown).
+--- Returns rows { key, label, sales, units, net, share, sellRate, items = { [itemID or name] = net } },
+--- most earned first. sellRate = sales / (sales + expired + cancelled), nil while the ledger
+--- holds no expired or cancelled auctions at all (F44 not there yet).
+function IncomeLogic.SummarizeItemTypes(events, since, characterKey, classOf)
+	local byType, rows, total, tracksMisses = {}, {}, 0, false
+	for _, event in ipairs(events) do
+		local isMiss = MISS_KINDS[event.kind] == true
+		tracksMisses = tracksMisses or isMiss
+		if (event.kind == "sell" or isMiss) and inScope(event, since, characterKey) then
+			total = total + addTypeEvent(byType, rows, event, classOf)
+		end
+	end
+	finishTypeRows(rows, total, tracksMisses)
+	return rows
+end

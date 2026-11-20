@@ -29,9 +29,6 @@
    "W431": 1,
    "W542": 1
   },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_OverviewTab.lua": {
-   "W631": 1
-  },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": {
    "W631": 1
   },
@@ -2099,13 +2096,10 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_OverviewTab.lua": {
    "OverviewTab:Create": {
     "lines": [
-     141
+     118
     ]
    },
    "OverviewTab:Refresh": {
-    "lines": [
-     41
-    ],
     "ccn": [
      12
     ]
@@ -2242,15 +2236,15 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_SalesDashboard.lua": {
    "ProfessionExporter:CreateSalesDashboard": {
     "lines": [
-     151
+     131
     ]
    },
    "dash:Refresh": {
     "lines": [
-     44
+     41
     ],
     "ccn": [
-     26
+     24
     ]
    }
   },

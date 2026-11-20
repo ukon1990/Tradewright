@@ -110,6 +110,41 @@ check("Origin: a sale without an item id is unknown", labels[ledger[6]].unknown 
 check("Origin: buys are not labelled", labels[ledger[3]] == nil)
 check("Origin: empty ledger", next(IL.LabelSaleOrigins({}, {})) == nil)
 
+-- Income view
+local income = {
+	A = { [10] = { vendor = { gain = 100, spend = 40 }, quest = { gain = 300, spend = 0 } }, [3] = { loot = { gain = 999, spend = 0 } } },
+	B = { [11] = { vendor = { gain = 50, spend = 0 } } },
+}
+local all = IL.SummarizeIncome(income, nil, 5)
+check("Income: totals from the first day on", all.gain == 450 and all.spend == 40 and all.sources.loot == nil)
+check("Income: one point per day, oldest first", #all.daily == 2 and all.daily[1].day == 10 and all.daily[1].gain == 400)
+local onlyB = IL.SummarizeIncome(income, "B", 0)
+check("Income: one character", onlyB.gain == 50 and onlyB.sources.quest == nil)
+local sourceRows = IL.SourceRows(all, 10)
+check("Income: sources, most gold in first", sourceRows[1].source == "quest" and sourceRows[2].source == "vendor"
+	and sourceRows[2].net == 110 and math.abs(sourceRows[1].share - 300 / 450) < 1e-9 and sourceRows[1].perDay == 30)
+check("Income: empty", #IL.SourceRows(IL.SummarizeIncome({}, nil, 0), 30) == 0)
+
+local sales = {
+	{ kind = "sell", itemID = 7, ts = at(12), quantity = 10, netCopper = 1000, characterKey = "A" },
+	{ kind = "sell", itemID = 8, ts = at(12), quantity = 1, netCopper = 300, characterKey = "B" },
+	{ kind = "expired", itemID = 7, ts = at(12), quantity = 1, characterKey = "A" },
+	{ kind = "sell", itemID = 7, ts = at(1), quantity = 1, netCopper = 50, characterKey = "A" },
+}
+local split = IL.SplitSalesByOrigin(sales, { [sales[1]] = { crafted = 6, farmed = 4 }, [sales[2]] = { unknown = 1 } }, at(10), nil)
+check("Split: sale gold shared by units", split.crafted == 600 and split.farmed == 400 and split.unknown == 300)
+check("Split: one character", IL.SplitSalesByOrigin(sales, { [sales[2]] = { unknown = 1 } }, 0, "A").unknown == nil)
+local function classOf(itemID)
+	if itemID == 7 then return "7:1", "Trade Goods · Leather" end
+	return nil
+end
+local types = IL.SummarizeItemTypes(sales, at(10), nil, classOf)
+check("Types: most earned first, unknown type kept", types[1].label == "Trade Goods · Leather" and types[1].net == 1000
+	and types[2].label == "Unknown type" and math.abs(types[1].share - 1000 / 1300) < 1e-9)
+check("Types: sell rate from sales and misses", types[1].sellRate == 0.5 and types[2].sellRate == 1)
+local noMisses = IL.SummarizeItemTypes({ sales[1] }, 0, nil, classOf)
+check("Types: no sell rate before misses are tracked", noMisses[1].sellRate == nil and noMisses[1].items[7] == 1000)
+
 if failed > 0 then
 	print(failed .. " check(s) failed")
 	os.exit(1)

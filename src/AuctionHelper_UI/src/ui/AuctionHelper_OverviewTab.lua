@@ -5,6 +5,18 @@ local ACCT_KEY = ProfessionExporter.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
 local OverviewTab = {}
 ProfessionExporter.OverviewTab = OverviewTab
 
+-- Overview views drawn by a dashboard: key, button label, constructor, note shown beside the buttons.
+local DASHBOARD_VIEWS = {
+	{ key = "gold", label = "Gold", create = "CreateGoldDashboard", note = function(pe)
+		local source = pe:GetSetting("gold.reference", "best") == "own" and "your scans" or "TSM when installed, else your scans"
+		return "Usual prices come from " .. source .. " · hover a row for details"
+	end },
+	{ key = "sales", label = "Sales", create = "CreateSalesDashboard",
+		note = "Sales are added when you collect auction gold from the mailbox · earned is after the auction house cut" },
+	{ key = "income", label = "Income", create = "CreateIncomeDashboard",
+		note = "Every change of gold, by where it came from · hover a row for details" },
+}
+
 local GAP = 12
 local SIDEBAR_WIDTH = 220
 local GRAPH_HEIGHT = 120
@@ -77,26 +89,22 @@ function OverviewTab:Layout(panel)
 	panel.goldGraph:SetWidth(math.max(80, detailWidth - 20))
 end
 
-function OverviewTab:Create(container, uiState)
-	local pe = ProfessionExporter
-	local panel = CreateFrame("Frame", nil, container)
-	panel:SetAllPoints()
-	uiState.overviewPanel = panel
-
-	-- Gold | Sales | Characters switch. Gold is the money dashboard, Sales the auction sales ledger,
-	-- Characters per-character detail.
+-- Gold | Sales | Income | Characters switch above the views, with a note on the active one.
+local function createViewBar(pe, panel)
 	panel.viewBar = CreateFrame("Frame", nil, panel)
 	panel.viewBar:SetPoint("TOPLEFT")
 	panel.viewBar:SetPoint("TOPRIGHT")
 	panel.viewBar:SetHeight(22)
 	panel.viewButtons = {}
+	local views = { unpack(DASHBOARD_VIEWS) }
+	views[#views + 1] = { key = "characters", label = "Characters" }
 	local previous
-	for _, view in ipairs({ { "gold", "Gold" }, { "sales", "Sales" }, { "characters", "Characters" } }) do
-		local button = pe:CreateButton(panel.viewBar, view[2], function()
-			pe:SetSetting("overview.view", view[1])
+	for _, view in ipairs(views) do
+		local button = pe:CreateButton(panel.viewBar, view.label, function()
+			pe:SetSetting("overview.view", view.key)
 			OverviewTab:Refresh()
 		end, { small = true })
-		button.view = view[1]
+		button.view = view.key
 		if previous then
 			button:SetPoint("LEFT", previous, "RIGHT", -1, 0)
 		else
@@ -108,6 +116,15 @@ function OverviewTab:Create(container, uiState)
 	panel.viewNote = pe:CreateText(panel.viewBar, "GameFontHighlightSmall", "textMuted", "RIGHT")
 	panel.viewNote:SetPoint("RIGHT")
 	panel.viewNote:SetPoint("LEFT", previous, "RIGHT", 12, 0)
+end
+
+function OverviewTab:Create(container, uiState)
+	local pe = ProfessionExporter
+	local panel = CreateFrame("Frame", nil, container)
+	panel:SetAllPoints()
+	uiState.overviewPanel = panel
+
+	createViewBar(pe, panel)
 
 	local function viewHost()
 		local host = CreateFrame("Frame", nil, panel)
@@ -115,10 +132,11 @@ function OverviewTab:Create(container, uiState)
 		host:SetPoint("BOTTOMRIGHT")
 		return host
 	end
-	panel.goldView = viewHost()
-	panel.goldDashboard = pe:CreateGoldDashboard(panel.goldView)
-	panel.salesView = viewHost()
-	panel.salesDashboard = pe:CreateSalesDashboard(panel.salesView)
+	panel.dashboards = {}
+	for _, view in ipairs(DASHBOARD_VIEWS) do
+		local viewFrame = viewHost()
+		panel.dashboards[view.key] = { frame = viewFrame, dashboard = pe[view.create](pe, viewFrame), note = view.note }
+	end
 	panel.charactersView = viewHost()
 	local host = panel.charactersView
 
@@ -371,20 +389,18 @@ function OverviewTab:Refresh()
 	end
 
 	local view = pe:GetSetting("overview.view", "gold")
-	view = (view == "characters" or view == "sales") and view or "gold"
+	view = (view == "characters" or panel.dashboards[view]) and view or "gold"
 	for _, button in ipairs(panel.viewButtons) do
 		pe:StyleShellButton(button, button.view == view)
 	end
-	panel.goldView:SetShown(view == "gold")
-	panel.salesView:SetShown(view == "sales")
 	panel.charactersView:SetShown(view == "characters")
-	if view == "gold" then
-		panel.viewNote:SetText("Usual prices come from " .. (pe:GetSetting("gold.reference", "best") == "own" and "your scans" or "TSM when installed, else your scans") .. " · hover a row for details")
-		panel.goldDashboard:Refresh()
-		return
-	elseif view == "sales" then
-		panel.viewNote:SetText("Sales are added when you collect auction gold from the mailbox · earned is after the auction house cut")
-		panel.salesDashboard:Refresh()
+	for key, entry in pairs(panel.dashboards) do
+		entry.frame:SetShown(key == view)
+	end
+	local active = panel.dashboards[view]
+	if active then
+		panel.viewNote:SetText(type(active.note) == "function" and active.note(pe) or active.note)
+		active.dashboard:Refresh()
 		return
 	end
 	panel.viewNote:SetText("")
