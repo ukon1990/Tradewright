@@ -9,16 +9,35 @@ Adapted from QuestPlanner / Master of Dungeons.
 - Delete dead code; no speculative frameworks
 - Put Forever-pure helpers in `AuctionHelper_ForeverLogic.lua` so tests can load them without the full UI stack
 
+## Enforced limits (`npm run lint`, also part of `npm test`)
+
+`scripts/lint.py` runs luacheck (`.luacheckrc`) and measures hand-written Lua (`src/**`, excluding `tests/` and generated `data/`):
+
+| Check | Limit |
+| --- | --- |
+| File length | 700 lines |
+| Function length | 40 lines |
+| Cyclomatic complexity | 10 per function |
+| Parameters | 5 per function |
+| luacheck | unused vars/args, undefined or written globals, shadowing, empty branches, lines > 160 chars |
+
+Existing debt is frozen in `scripts/lint-baseline.json` (a ratchet). Lint fails only when code is **new or worse** than the baseline:
+
+- New code must meet every limit. Over-limit legacy files and functions may not grow.
+- On failure, **fix the code** (extract helpers, split files, drop unused vars). Never hand-edit or regenerate the baseline to make a failure go away.
+- When lint says debt went down, run `npm run lint:baseline` and commit the smaller baseline with the change.
+- New WoW API or frame global → add it to `read_globals` in `.luacheckrc` (alphabetical). New SavedVariable / slash command → `globals`.
+- Function keys are `file` + name (`M:Foo`, `Outer/<anon>`), so renaming an over-limit function shows up as a new violation: fix it while you're there.
+
 ## File size & responsibility
 
-- Soft threshold ~500–700 LOC per production file; AuctionHelper_Auction.lua and AuctionHelper_Data.lua are legacy monoliths — prefer focused helpers for new Forever paths instead of growing them further without need
+- Aim for ≤ 500 lines; 700 is the hard limit. `AuctionHelper_Auction.lua` and `AuctionHelper_Data.lua` are legacy monoliths — put new Forever paths in focused helpers instead of growing them
 - Keep Midnight-only early returns at the top of order/mail modules
 
 ## Complexity
 
 - Prefer early returns over deep nesting
-- Cyclomatic complexity > ~10 per function → split or justify
-- Long methods (> ~40 lines) → named helpers
+- Over-limit complexity or length → split into named helpers; pass a table instead of 6+ parameters
 
 ## Leftovers
 

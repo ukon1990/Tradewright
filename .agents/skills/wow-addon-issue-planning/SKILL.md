@@ -34,3 +34,6 @@ English sections: `Summary`, `Context`, `Scope`, `Acceptance criteria`, `Verific
 | Inventory | `AuctionHelper_Inventory/.../AuctionHelper_Inventory.lua` |
 | UI | `AuctionHelper_UI/src/ui/*` |
 | Tests | `src/AuctionHelper/tests/` |
+| Lint / quality gate | `scripts/lint.py`, `scripts/lint-baseline.json`, `.luacheckrc` |
+
+When an issue touches an over-limit file or function (see `scripts/lint-baseline.json`), size it to include extracting helpers — lint forbids growing it.

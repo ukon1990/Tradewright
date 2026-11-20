@@ -15,6 +15,7 @@
 | UI | `src/AuctionHelper_UI/` | Dashboard, craft panel, mail |
 | Pure Forever helpers | `src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua` | Offline-testable |
 | Tests | `src/AuctionHelper/tests/run_tests.py` | Offline Lua 5.1 (no WoW client) |
+| Lint | `scripts/lint.py`, `.luacheckrc`, `scripts/lint-baseline.json` | luacheck + file/function size + complexity, ratcheted |
 | Specs | `src/AuctionHelper/docs/specifications/` | Issues / backlog |
 | Deploy | `scripts/deploy.mjs`, `deploy.config.json` | Copies `src/*` into the game AddOns folders |
 
@@ -40,6 +41,8 @@ Load order: `AuctionHelper` → `AuctionHelper_AuctionData` + `AuctionHelper_Pro
 - Midnight-only systems (crafting orders, concentration, commodity auto-buy, warband when API missing) stay behind `IS_RETAIL` / capability checks.
 - No protected API automation (ToS). AH scan and profession craft clicks use public APIs only.
 - KISS / DRY / minimal LOC — see `.agents/skills/wow-addon-issue-work/focus/code-quality.md`.
+- Quality gate (enforced by `npm test`): files ≤ 700 lines, functions ≤ 40 lines, complexity ≤ 10, ≤ 5 params, luacheck clean. Existing debt is frozen in `scripts/lint-baseline.json`; new code must meet the limits and legacy offenders may not grow. Fix failures in code, never by loosening the baseline; run `npm run lint:baseline` only when lint reports debt went down.
+- New WoW API / SavedVariable / slash command → add it to `.luacheckrc` (`read_globals` / `globals`).
 - Each addon ships **four TOCs**: `<Addon>_Mainline.toc` (retail, `120000, 120001` / `standard`), `<Addon>_Forever.toc` + `<Addon>_Camelot.toc` (Forever, `16001…` / `camelot`), and `<Addon>.toc` (fallback, Forever headers). The client loads the flavor-suffixed one. When adding/removing a `.lua` or changing a header, edit **all four** — only `Interface` and `AllowLoadGameType` may differ (`npm test` enforces this).
 - New `.lua` files need a **full client restart**; `/reload` only reloads already-listed TOC files.
 
@@ -55,8 +58,12 @@ Load from `.agents/skills/` (`.claude/skills` is a symlink to the same folder):
 ## Verify
 
 ```bash
-npm test          # = python3 src/AuctionHelper/tests/run_tests.py
+npm test             # offline Lua tests, then lint
+npm run lint         # lint only (luacheck + size/complexity ratchet)
+npm run lint:baseline  # lock in reduced debt after a cleanup
 ```
+
+Lint requires `luacheck` on PATH (`sudo pacman -S luacheck`, or `luarocks install luacheck`; `LUACHECK=/path` overrides).
 
 ## Deploy
 

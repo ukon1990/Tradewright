@@ -21,12 +21,16 @@ description: Implement an AuctionHelper issue from src/AuctionHelper/docs/specif
 2. No surprise commits — commit only when the user asks.
 3. Review against `focus/code-quality.md`, `focus/lua-wow.md`, `focus/auction-forever.md`.
 4. Verify before done.
+5. Lint is a gate: touched code must not add debt. Fix lint failures in the code, never by loosening `scripts/lint-baseline.json`; if lint reports less debt, run `npm run lint:baseline` and include it.
 
 ## Verify
 
 ```bash
-npm test   # from repo root
+npm test        # from repo root: offline Lua tests + lint (luacheck, file/function size, complexity)
+npm run lint    # lint only
 ```
+
+Lint needs `luacheck` on PATH (`sudo pacman -S luacheck`, or `luarocks install luacheck`; or set `LUACHECK=/path`).
 
 In-game checklist (as applicable):
 

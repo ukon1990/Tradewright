@@ -41,6 +41,12 @@ Keep Midnight-only hooks on `IS_RETAIL` (crafting orders UI/materials, concentra
 | `AuctionHelperProfessionsDB` | Professions |
 | `AuctionHelperInventoryDB` | Inventory |
 
+## Globals & lint
+
+- `.luacheckrc` lists every global the code reads (`read_globals`: WoW API, frames, constants, TSM/Auctionator) or writes (`globals`: SavedVariables above, `SLASH_*`, `SlashCmdList`, `UISpecialFrames`).
+- Using a new WoW API or adding a SavedVariable/slash command → add it there, or `npm test` fails with "accessing undefined variable" / "setting non-standard global".
+- Addon-wide state goes on the addon table (`local _, ns = ...`), never a new bare global.
+
 ## Performance
 
 - Chunk full AH dumps and inventory snapshots (`C_Timer`).
