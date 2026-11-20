@@ -24,12 +24,21 @@ local function qualityAndName(pe, itemID, info)
 	return quality or 1, name or pe:GetItemDisplayName(itemID)
 end
 
+-- Words the search also looks in: item type, subtype, equip slot and quality, as the game names them.
+local function keywords(typeName, subtypeName, equipLoc, quality)
+	local words = { typeName or "", subtypeName or "" }
+	words[#words + 1] = equipLoc and equipLoc ~= "" and _G[equipLoc] or nil
+	words[#words + 1] = _G["ITEM_QUALITY" .. quality .. "_DESC"]
+	return table.concat(words, " ")
+end
+
 --- One item of the bag window: what it is and how to draw it. `info` holds what the caller already
 --- knows: count, and for a live slot quality, icon and link.
 function ProfessionExporter:DescribeBagItem(itemID, info)
-	local _, _, _, _, icon, classID, subclassID = C_Item.GetItemInfoInstant(itemID)
+	local _, typeName, subtypeName, equipLoc, icon, classID, subclassID = C_Item.GetItemInfoInstant(itemID)
 	local quality, name = qualityAndName(self, itemID, info)
 	return {
+		keywords = keywords(typeName, subtypeName, equipLoc, quality),
 		itemID = itemID,
 		count = info.count or 1,
 		quality = quality,
@@ -89,10 +98,27 @@ function ProfessionExporter:ScanBags()
 	return scan
 end
 
+ProfessionExporter.BAG_WARBAND_KEY = "warband"
+
+--- Saved holdings for the bag window: every character, and the warband bank (retail) under
+--- BAG_WARBAND_KEY once it has been seen. It has the shape of a character with only a bank.
+function ProfessionExporter:GetBagHoldings()
+	local characters = self:GetItemHoldings()
+	local warband = self:GetWarbandHoldings()
+	if not warband then
+		return characters
+	end
+	local all = { [self.BAG_WARBAND_KEY] = warband }
+	for key, record in pairs(characters) do
+		all[key] = record
+	end
+	return all
+end
+
 --- Read-only items of a saved character, or of all of them (`tabKey` "all"), for `mode`
 --- ("bags", "bank" or "both"): one entry per item with the count added up.
 function ProfessionExporter:GetSavedBagItems(tabKey, mode)
-	local characters = self:GetItemHoldings()
+	local characters = self:GetBagHoldings()
 	local logic = self.BagLogic
 	local counts = tabKey == "all" and logic.MergeAll(characters, mode) or logic.MergeCounts(characters[tabKey] or {}, mode)
 	local items = {}

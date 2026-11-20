@@ -102,7 +102,7 @@ local function buildToolbar(pe, f)
 			pe:RefreshBagWindow()
 		end)
 	end
-	f.search = pe:CreateSearchBox(f.toolbar, "Search bags", function(text)
+	f.search = pe:CreateSearchBox(f.toolbar, "Name, type, quality…", function(text)
 		f.view.query = text
 		pe:RefreshBagWindow()
 	end)
@@ -153,7 +153,7 @@ local function showGoldTooltip(owner)
 	local pe = ProfessionExporter
 	local theme = pe:GetTheme()
 	local muted, text, gold = theme.textMuted, theme.textPrimary, theme.gold
-	local rows, total = pe.BagLogic.GoldByCharacter(pe:GetItemHoldings())
+	local rows, total = pe.BagLogic.GoldByCharacter(pe:GetBagHoldings())
 	GameTooltip:SetOwner(owner, "ANCHOR_TOPRIGHT")
 	GameTooltip:SetText("Gold", gold.r, gold.g, gold.b)
 	for _, row in ipairs(rows) do
@@ -216,13 +216,16 @@ end
 local function currentView(pe, f)
 	local view = f.view
 	view.current = pe:GetCharacterKey()
-	local known = view.tab == "all" or pe:GetItemHoldings()[view.tab] ~= nil
+	local known = view.tab == "all" or pe:GetBagHoldings()[view.tab] ~= nil
 	if not known or not pe:GetSetting("bags.showCharacters", true) then
 		view.tab = view.current
 	end
 	local own = view.tab == view.current
 	if own and view.mode == "both" then
 		view.mode = "bags"
+	end
+	if view.tab == pe.BAG_WARBAND_KEY then
+		view.mode = "bank"
 	end
 	view.live = own and view.mode == "bags"
 	view.columns = pe:GetSetting("bags.columns", 10)
@@ -245,8 +248,8 @@ local function buildGroups(pe, view, scan)
 end
 
 local function tabEntries(pe, view)
-	local characters = pe:GetItemHoldings()
-	local keys = pe.BagLogic.TabOrder(characters, view.current, MAX_TABS)
+	local characters = pe:GetBagHoldings()
+	local keys = pe.BagLogic.TabOrder(characters, view.current, MAX_TABS, pe.BAG_WARBAND_KEY)
 	if #keys < 2 or not pe:GetSetting("bags.showCharacters", true) then
 		return {}
 	end
@@ -304,12 +307,20 @@ local function refreshTabs(pe, f, view)
 	return #entries > 0
 end
 
--- Bags | Bank | Both, right-aligned; the logged-in character has no Both (its bags are live).
+-- The logged-in character has no Both (its bags are live); the warband bank is only a bank.
+local function modeShown(pe, view, key)
+	if view.tab == pe.BAG_WARBAND_KEY then
+		return key == "bank"
+	end
+	return not (view.tab == view.current and key == "both")
+end
+
+-- Bags | Bank | Both, right-aligned.
 local function refreshModes(pe, f, view)
 	local previous
 	for index = #MODES, 1, -1 do
 		local button = f.modeButtons[index]
-		local shown = not (view.tab == view.current and MODES[index].key == "both")
+		local shown = modeShown(pe, view, MODES[index].key)
 		button:SetShown(shown)
 		if shown then
 			button:ClearAllPoints()
@@ -380,7 +391,7 @@ end
 
 -- Footer gold: this character's, and the total when there is more than one character.
 local function goldText(pe, money)
-	local rows, total = pe.BagLogic.GoldByCharacter(pe:GetItemHoldings())
+	local rows, total = pe.BagLogic.GoldByCharacter(pe:GetBagHoldings())
 	if #rows < 2 then
 		return pe:FormatCopperShort(money)
 	end
@@ -390,7 +401,7 @@ end
 -- Right of the footer on a read-only tab: when it was seen, and its gold (All: the total).
 local function savedFootText(pe, view, record)
 	if not record then
-		return "All " .. pe:FormatCopperShort(select(2, pe.BagLogic.GoldByCharacter(pe:GetItemHoldings())))
+		return "All " .. pe:FormatCopperShort(select(2, pe.BagLogic.GoldByCharacter(pe:GetBagHoldings())))
 	end
 	local seenAt = view.mode == "bank" and record.bankSeenAt or record.seenAt
 	local seen = seenAt and ("Seen " .. pe:FormatShortTime(seenAt)) or "Bank not seen yet"
@@ -421,7 +432,7 @@ local function refreshTexts(pe, f, view, totals, itemCount)
 		f.footRight:SetText(goldText(pe, GetMoney()))
 		return
 	end
-	local record = pe:GetItemHoldings()[view.tab]
+	local record = pe:GetBagHoldings()[view.tab]
 	local name = view.tab == "all" and "All characters" or (record and record.name or view.tab)
 	f.meta:SetText(name .. " · read-only")
 	f.footLeft:SetText(string.format("%d items · %s", itemCount, MODE_TEXT[view.mode]))

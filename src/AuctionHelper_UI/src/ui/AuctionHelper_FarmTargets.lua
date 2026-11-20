@@ -185,10 +185,14 @@ function ProfessionExporter:CreateFarmTargetsView(panel)
 	view.table = pe:CreateReusableTable(view, {
 		footer = true, rowHeight = 36, autoFitToScroll = true, sortKey = "traded", sortAsc = false,
 		onRowEnter = function(rowFrame, row)
-			pe:ShowItemRowTooltip(rowFrame, row and row.itemID, nil, "Shift-click to link")
+			pe:ShowItemRowTooltip(rowFrame, row and row.itemID, nil, pe:DealRowHint(true))
 		end,
 		onRowLeave = function() GameTooltip:Hide() end,
-		onRowClick = function(_, row) pe:HandleItemRowModifiedClick(row and row.itemID) end,
+		onRowClick = function(_, row, button)
+			if row and not pe:HandleItemRowModifiedClick(row.itemID) then
+				pe:HandleDealRowClick(row, button, true)
+			end
+		end,
 	})
 	view.table.frame:SetPoint("TOPLEFT", 0, -(22 + GAP))
 	view.table.frame:SetPoint("BOTTOMRIGHT")

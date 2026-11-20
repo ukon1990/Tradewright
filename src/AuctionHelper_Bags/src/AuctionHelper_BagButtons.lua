@@ -44,6 +44,17 @@ local function bagParent(content, bag)
 	return bagParents[bag]
 end
 
+-- The template's own glows (store item, new item, flash). The game hides them per item from its
+-- bag frame code, which never runs for these buttons, so they would stay lit until hovered.
+local function hideGameGlows(button)
+	for _, key in ipairs({ "BattlepayItemTexture", "NewItemTexture", "flash" }) do
+		local glow = button[key] or _G[button:GetName() .. key]
+		if glow then
+			glow:Hide()
+		end
+	end
+end
+
 local function createLiveSlot(pe, content, bag, slot)
 	local name = string.format("AuctionHelperBagSlot%d_%d", bag, slot)
 	local parent = bagParent(content, bag)
@@ -57,6 +68,7 @@ local function createLiveSlot(pe, content, bag, slot)
 		button:SetBagID(bag)
 	end
 	addLook(pe, button)
+	hideGameGlows(button)
 	return button
 end
 
@@ -86,7 +98,7 @@ local function showSavedTooltip(button)
 	if not item then
 		return
 	end
-	local owners, total = pe.TooltipLogic.Owners(pe:GetItemHoldings(), item.itemID)
+	local owners, total = pe.TooltipLogic.Owners(pe:GetBagHoldings(), item.itemID)
 	local rows = {}
 	for _, owner in ipairs(owners) do
 		rows[#rows + 1] = { owner.name, ownerText(pe, owner) }

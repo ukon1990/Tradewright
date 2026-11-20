@@ -44,6 +44,7 @@ read_globals = {
 	"bit",
 	"BuyMerchantItem",
 	"C_AuctionHouse",
+	"C_Bank",
 	"C_Container",
 	"C_CraftingOrders",
 	"C_CurrencyInfo",

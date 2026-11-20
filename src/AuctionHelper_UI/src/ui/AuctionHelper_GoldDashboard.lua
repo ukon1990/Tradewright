@@ -110,24 +110,35 @@ local function canBuyNow(pe, buyable)
 	return buyable and pe.IsAuctionHouseFrameOpen and pe.OpenItemInAuctionHouse and pe:IsAuctionHouseFrameOpen() or false
 end
 
+--- Click on an item row `{ itemID, storageKey }`: details window, auction house buy page or Market (F30).
+--- `buyable` rows go to the auction house on right-click while it is open. Shared with other item lists.
+function ProfessionExporter:HandleDealRowClick(row, button, buyable)
+	local target = self.ForeverLogic.ResolveDealRowClick(button, canBuyNow(self, buyable))
+	if target == "details" then
+		self:ShowItemDetailsWindow(row.itemID, row.storageKey)
+	elseif target == "auction" then
+		self:OpenItemInAuctionHouse(row.itemID)
+	else
+		openMarket(self, row)
+	end
+end
+
+--- The tooltip line naming what a click on such a row does.
+function ProfessionExporter:DealRowHint(buyable)
+	return "Click for price history · Right-click to "
+		.. (canBuyNow(self, buyable) and "buy at the auction house" or "open in Market")
+		.. " · Shift-click to link"
+end
+
 local function rowClickHandler(pe, buyable)
 	return function(row, button)
-		local target = pe.ForeverLogic.ResolveDealRowClick(button, canBuyNow(pe, buyable))
-		if target == "details" then
-			pe:ShowItemDetailsWindow(row.itemID, row.storageKey)
-		elseif target == "auction" then
-			pe:OpenItemInAuctionHouse(row.itemID)
-		else
-			openMarket(pe, row)
-		end
+		pe:HandleDealRowClick(row, button, buyable)
 	end
 end
 
 local function rowHint(pe, buyable)
 	return function()
-		return "Click for price history · Right-click to "
-			.. (canBuyNow(pe, buyable) and "buy at the auction house" or "open in Market")
-			.. " · Shift-click to link"
+		return pe:DealRowHint(buyable)
 	end
 end
 

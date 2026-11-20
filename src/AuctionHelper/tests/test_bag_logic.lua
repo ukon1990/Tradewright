@@ -146,6 +146,12 @@ check("Search: empty matches", BL.Matches({ name = "Runecloth" }, "") and BL.Mat
 check("Search: any case", BL.Matches({ name = "Runecloth" }, "RUNE"))
 check("Search: plain text", not BL.Matches({ name = "Runecloth" }, "r.n"))
 check("Search: no match", not BL.Matches({ name = "Runecloth" }, "silk"))
+local helm = { name = "Wolf Helm", classID = 4, quality = 3, keywords = "Armor Leather Head Rare" }
+check("Search: item type and subtype", BL.Matches(helm, "armor") and BL.Matches(helm, "leather"))
+check("Search: equip slot and quality", BL.Matches(helm, "head") and BL.Matches(helm, "rare"))
+check("Search: category heading", BL.Matches(helm, "gear") and BL.Matches({ name = "Fang", quality = 0 }, "junk"))
+check("Search: every word must fit", BL.Matches(helm, "rare  leather wolf") and not BL.Matches(helm, "rare cloth"))
+check("Search: only spaces matches", BL.Matches(helm, "  "))
 
 local bagItems = {
 	{ name = "Runecloth Bag", classID = 1, subclassID = 0, quality = 1 },
@@ -162,6 +168,11 @@ local tabs = BL.TabOrder(characters, "Maelis-R")
 check("Tabs: current first, then most recently seen", tabs[1] == "Maelis-R" and tabs[2] == "Bankey-R" and tabs[3] == "Thalric-R")
 check("Tabs: limit", #BL.TabOrder(characters, "Maelis-R", 2) == 2)
 check("Tabs: current even when unsaved", BL.TabOrder({}, "New-R")[1] == "New-R")
+characters.warband = { name = "Warband bank", bank = { [1] = 7 }, money = 500 }
+tabs = BL.TabOrder(characters, "Maelis-R", 3, "warband")
+check("Tabs: warband bank right after the current character", tabs[2] == "warband" and tabs[3] == "Bankey-R" and #tabs == 3)
+check("Tabs: no warband tab before it is saved", BL.TabOrder({}, "New-R", 3, "warband")[2] == nil)
+check("Merge: all includes the warband bank", BL.MergeAll(characters, "bank")[1] == 1047 and BL.MergeAll(characters, "bags")[1] == 440)
 
 if failed > 0 then
 	print(string.format("%d failure(s)", failed))

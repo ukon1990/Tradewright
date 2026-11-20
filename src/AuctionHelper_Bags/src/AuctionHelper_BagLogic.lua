@@ -251,11 +251,25 @@ function BagLogic.BestLootSwap(loot, drop)
 end
 
 --- Whether an item matches the search text (any case, plain text). Empty text matches all.
+local CATEGORY_LABEL = {}
+for _, category in ipairs(BagLogic.CATEGORIES) do
+	CATEGORY_LABEL[category.key] = category.label
+end
+
+--- Whether an item fits the search text: every word typed must be found in the item's name, its
+--- category heading or its `keywords` (item type, subtype, equip slot and quality), in any case.
 function BagLogic.Matches(item, query)
 	if not query or query == "" then
 		return true
 	end
-	return string.find(string.lower(item.name or ""), string.lower(query), 1, true) ~= nil
+	local label = CATEGORY_LABEL[BagLogic.CategoryOf(item)]
+	local text = string.lower(table.concat({ item.name or "", item.keywords or "", label }, " "))
+	for word in string.gmatch(string.lower(query), "%S+") do
+		if not string.find(text, word, 1, true) then
+			return false
+		end
+	end
+	return true
 end
 
 --- The bags among `items` that fit a bag slot: reagent bags for the reagent slot, others elsewhere.
@@ -271,12 +285,12 @@ function BagLogic.ReplacementBags(items, forReagentSlot)
 	return bags
 end
 
---- Character keys for the tabs: the logged-in character first, then the most recently seen, at
---- most `limit` in all.
-function BagLogic.TabOrder(characters, currentKey, limit)
+--- Keys for the tabs: the logged-in character first, then `pinnedKey` when it is saved (the
+--- warband bank), then the most recently seen, at most `limit` in all.
+function BagLogic.TabOrder(characters, currentKey, limit, pinnedKey)
 	local keys = {}
 	for key in pairs(characters) do
-		if key ~= currentKey then
+		if key ~= currentKey and key ~= pinnedKey then
 			keys[#keys + 1] = key
 		end
 	end
@@ -287,6 +301,9 @@ function BagLogic.TabOrder(characters, currentKey, limit)
 		end
 		return a < b
 	end)
+	if pinnedKey and characters[pinnedKey] and pinnedKey ~= currentKey then
+		table.insert(keys, 1, pinnedKey)
+	end
 	table.insert(keys, 1, currentKey)
 	for index = #keys, (limit or #keys) + 1, -1 do
 		keys[index] = nil

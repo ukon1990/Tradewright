@@ -6,6 +6,10 @@ local _, ProfessionExporter = ...
 --
 -- holdings[characterKey] = { name, seenAt, money, bags = { [itemID] = count },
 --                            bank = { [itemID] = count }, bankSeenAt }
+--
+-- The warband bank (retail) belongs to the whole account, so it is saved apart from the characters,
+-- in the shape of a character that only has a bank:
+-- AuctionHelperInventoryDB.warbandBank = { name, bank = { [itemID] = count }, bankSeenAt, money }
 
 local BACKPACK = 0
 local BANK_SETTLE_SECONDS = 0.3
@@ -102,6 +106,43 @@ function ProfessionExporter:SaveBankHoldings()
 	own.bankSeenAt = time()
 end
 
+--- The saved warband bank, or nil when it was never seen (always nil on Forever).
+function ProfessionExporter:GetWarbandHoldings()
+	if not self.inventoryDb then
+		self:InitDB()
+	end
+	return self.inventoryDb.warbandBank
+end
+
+-- The warband bank tabs this account has bought; none on a client without a warband bank.
+local function warbandBagIDs()
+	local index, ids = Enum and Enum.BagIndex or {}, {}
+	for tab = 1, 8 do
+		local id = index["AccountBankTab_" .. tab]
+		if id and (C_Container.GetContainerNumSlots(id) or 0) > 0 then
+			ids[#ids + 1] = id
+		end
+	end
+	return ids
+end
+
+local function warbandMoney()
+	local account = Enum and Enum.BankType and Enum.BankType.Account
+	return account and C_Bank and C_Bank.FetchDepositedMoney and tonumber(C_Bank.FetchDepositedMoney(account)) or nil
+end
+
+--- Save the warband bank's contents and gold. Does nothing unless the bank is open and has tabs.
+function ProfessionExporter:SaveWarbandHoldings()
+	local bagIDs = bankOpen and warbandBagIDs() or {}
+	if #bagIDs == 0 then
+		return
+	end
+	self:GetItemHoldings() -- makes sure the database is loaded
+	self.inventoryDb.warbandBank = {
+		name = "Warband bank", bank = countItems(bagIDs), bankSeenAt = time(), money = warbandMoney(),
+	}
+end
+
 local handlers = {}
 
 function handlers.PLAYER_LOGIN(pe)
@@ -111,6 +152,7 @@ end
 function handlers.BAG_UPDATE_DELAYED(pe)
 	pe:SaveBagHoldings()
 	pe:SaveBankHoldings()
+	pe:SaveWarbandHoldings()
 end
 
 function handlers.PLAYER_MONEY(pe)
@@ -122,6 +164,7 @@ function handlers.BANKFRAME_OPENED(pe)
 	-- The bank's slots fill in just after the frame opens.
 	C_Timer.After(BANK_SETTLE_SECONDS, function()
 		pe:SaveBankHoldings()
+		pe:SaveWarbandHoldings()
 		if pe.RequestBagWindowRefresh then
 			pe:RequestBagWindowRefresh()
 		end
@@ -134,6 +177,14 @@ end
 
 function handlers.PLAYERBANKSLOTS_CHANGED(pe)
 	pe:SaveBankHoldings()
+end
+
+function handlers.PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED(pe)
+	pe:SaveWarbandHoldings()
+end
+
+function handlers.ACCOUNT_MONEY(pe)
+	pe:SaveWarbandHoldings()
 end
 
 local events = CreateFrame("Frame")
