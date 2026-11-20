@@ -89,6 +89,8 @@ end
 
 local function craftsSection()
 	return { column = 1, title = "Crafts", items = {
+		{ kind = "select", label = "Make enough for", path = "crafts.restockDays", default = 1,
+			options = numberOptions({ 1, 2, 3, 7 }, "%d days of sales"), onChange = refreshEconomy },
 		{ kind = "check", label = "Use my own recipes when a material is cheaper to craft", path = "crafts.useCheapestSource",
 			default = true, onChange = function(pe)
 				pe:InvalidateCraftOpportunityCaches()

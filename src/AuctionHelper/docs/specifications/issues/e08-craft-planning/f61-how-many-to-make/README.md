@@ -20,6 +20,22 @@ The Crafts tab gains a `Make` number: enough of each profitable craft for a day 
 - Toolbar option "Make enough for" (1, 2, 3, 7 days), stored as `crafts.restockDays`
 - Cooldown crafts (F62) cap `Make` at the uses available
 
+## Status
+
+Implemented:
+
+- `MaterialLogic.RestockQuantity(opts)` (pure, offline-tested)
+- `AuctionHelper_CraftPlanning.lua` (UI): `Sells a day` and `Make` columns appended to the Crafts table through `BuildCraftsTableColumns`; values are recomputed at most every 10 seconds
+- Setting "Make enough for" (1, 2, 3 or 7 days of sales) in the Crafts group
+
+Differs from the scope:
+
+- **Listed stock is not counted.** The addon only knows your own auctions while the auction house is open, so `Make` subtracts what your characters own, not what is listed.
+- **ROI stays where it is**; the new columns are added after the existing ones, and `Sells a day` is optional (dropped first when the table is narrow)
+- **Not done:** the footer text, the "N owned, enough for now" row text, the "How many to make" block in the detail pane, and the queue field defaulting to `Make`. Those sit in `AuctionHelper_CraftsUI.lua`, which is over the file-size limit and may not grow.
+- The "Make enough for" choice is in Settings, not in the Crafts toolbar
+- Cooldown cap: `RestockQuantity` takes a `cap`; nothing passes it until F62
+
 ## Acceptance criteria
 
 - [ ] Sells 8 a day, 2 owned, 0 listed, 1 day → Make 6
@@ -27,7 +43,7 @@ The Crafts tab gains a `Make` number: enough of each profitable craft for a day 
 - [ ] Unknown sells a day → Make shows "-" and the queue default stays 1
 - [ ] A loss-making craft shows Make 0
 - [ ] Changing "Make enough for" updates the column without a reload
-- [ ] Offline tests of `RestockQuantity`: the cases above, rounding, cap, listed counted once
+- [x] Offline tests of `RestockQuantity`: the cases above, rounding, cap, listed counted once
 
 ## Verification
 

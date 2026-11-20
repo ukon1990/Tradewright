@@ -120,7 +120,7 @@ function ProfessionExporter:GetCraftsColumnDefinitions()
 end
 
 function ProfessionExporter:BuildCraftsTableColumns()
-	return self:GetCraftsColumnDefinitions()
+	return self:AddCraftPlanningColumns(self:GetCraftsColumnDefinitions())
 end
 
 --- Among opportunities with this output item, prefer the highest profit (stable tie: first in list order).

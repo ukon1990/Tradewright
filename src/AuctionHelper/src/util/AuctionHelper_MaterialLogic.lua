@@ -41,4 +41,20 @@ function MaterialLogic.UnitCostIndex(rows)
 	return index
 end
 
+--- How many to make: enough for `days` of sales, less what is already owned and listed, capped at `cap`.
+--- `opts = { sellsPerDay, days, owned, listed, cap, profit, minProfit }`. Returns 0 when the craft's
+--- profit is below `minProfit` (default: any loss), and nil when it is not known to sell.
+function MaterialLogic.RestockQuantity(opts)
+	local sells = tonumber(opts.sellsPerDay)
+	if not sells then
+		return nil
+	end
+	if (tonumber(opts.profit) or 0) <= (tonumber(opts.minProfit) or 0) then
+		return 0
+	end
+	local target = math.floor(sells * (tonumber(opts.days) or 1) + 0.5)
+	local make = target - (tonumber(opts.owned) or 0) - (tonumber(opts.listed) or 0)
+	return math.max(0, math.min(make, tonumber(opts.cap) or make))
+end
+
 return MaterialLogic

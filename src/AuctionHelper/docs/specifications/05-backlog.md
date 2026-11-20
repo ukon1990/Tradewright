@@ -31,7 +31,7 @@
 | [f54-sell-now](issues/e07-opportunities/f54-sell-now/README.md) | Sell now | list implemented, in-game check pending; Gold view card still separate |
 | [e08-craft-planning](issues/e08-craft-planning/README.md) | Craft planning: material sources, how many to make, cooldowns | in progress |
 | [f60-cheapest-material-source](issues/e08-craft-planning/f60-cheapest-material-source/README.md) | Cheapest way to get each material | buy-or-craft implemented, in-game check pending; From column and queueing intermediates open |
-| [f61-how-many-to-make](issues/e08-craft-planning/f61-how-many-to-make/README.md) | How many to make | planned |
+| [f61-how-many-to-make](issues/e08-craft-planning/f61-how-many-to-make/README.md) | How many to make | columns implemented, in-game check pending; detail pane, queue default and listed stock open |
 | [f62-cooldown-crafts](issues/e08-craft-planning/f62-cooldown-crafts/README.md) | Cooldown crafts | planned |
 | [e09-farming](issues/e09-farming/README.md) | Farming: farm window, my farms, what to farm | planned |
 | [f70-farm-window](issues/e09-farming/f70-farm-window/README.md) | Farm window and loot log | planned |

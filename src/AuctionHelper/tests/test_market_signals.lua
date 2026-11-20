@@ -285,6 +285,16 @@ check("Unit cost is the full material cost over the output quantity", unitIndex[
 check("Rows with a missing price or a cooldown are left out", unitIndex[11] == nil and unitIndex[12] == nil)
 check("Output quantity defaults to 1", unitIndex[13] and unitIndex[13].cost == 70)
 
+-- How many to make
+check("Sells 8 a day, 2 owned, 1 day: make 6", ML.RestockQuantity({ sellsPerDay = 8, owned = 2, profit = 100 }) == 6)
+check("Sells 35 a day, 60 owned: make 0", ML.RestockQuantity({ sellsPerDay = 35, owned = 60, profit = 100 }) == 0)
+check("Unknown sells a day: nil", ML.RestockQuantity({ owned = 2, profit = 100 }) == nil)
+check("A loss-making craft: make 0", ML.RestockQuantity({ sellsPerDay = 8, owned = 0, profit = -5 }) == 0)
+check("Three days triples the target", ML.RestockQuantity({ sellsPerDay = 8, owned = 2, profit = 100, days = 3 }) == 22)
+check("Sales round to whole items", ML.RestockQuantity({ sellsPerDay = 2.6, owned = 0, profit = 100 }) == 3)
+check("Cap limits the quantity", ML.RestockQuantity({ sellsPerDay = 80, owned = 0, profit = 100, cap = 1 }) == 1)
+check("Listed counts once", ML.RestockQuantity({ sellsPerDay = 8, owned = 2, listed = 3, profit = 100 }) == 3)
+
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}
 local auction = { history = { hourly = {}, daily = {} } }
