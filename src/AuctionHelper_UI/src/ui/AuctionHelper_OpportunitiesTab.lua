@@ -195,6 +195,11 @@ function OpportunitiesTab:Refresh()
 			self:Refresh()
 		end
 	end)
+	if panel.shownView ~= view then
+		-- SetColumns redraws at once: drop the previous list's rows so its columns never draw them.
+		panel.table:SetRows({})
+		panel.shownView = view
+	end
 	panel.table:SetColumns(view.columns(pe))
 	panel.table:SetEmptyText(view.emptyTitle, view.emptyHint)
 	refreshViewButtons(pe, panel, view)
