@@ -427,3 +427,34 @@ function ProfessionExporter:ApplyWindowScale()
 		ui.mainFrame:SetScale(self:GetSetting("appearance.windowScale", 1))
 	end
 end
+
+-- Moves `frame` with the cursor, keeping the exact point grabbed on mouse-down under the cursor.
+-- StartMoving() from OnDragStart only begins after the drag threshold (often a frame late), so the
+-- grab point slipped and the window popped to a new offset; manual moves avoid that and any scale skew.
+local dragDriver
+function ProfessionExporter:MakeWindowDraggable(frame, handle)
+	dragDriver = dragDriver or CreateFrame("Frame")
+	local function stop()
+		dragDriver:SetScript("OnUpdate", nil)
+	end
+	handle:EnableMouse(true)
+	handle:HookScript("OnMouseDown", function(_, button)
+		local left, top = frame:GetLeft(), frame:GetTop()
+		if button ~= "LeftButton" or not left then
+			return
+		end
+		local scale = frame:GetEffectiveScale()
+		local cx, cy = GetCursorPosition()
+		local dx, dy = left - cx / scale, top - cy / scale
+		dragDriver:SetScript("OnUpdate", function()
+			if not IsMouseButtonDown("LeftButton") then
+				return stop()
+			end
+			local x, y = GetCursorPosition()
+			frame:ClearAllPoints()
+			frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x / scale + dx, y / scale + dy)
+		end)
+	end)
+	handle:HookScript("OnMouseUp", stop)
+	handle:HookScript("OnHide", stop)
+end

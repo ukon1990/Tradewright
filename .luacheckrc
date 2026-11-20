@@ -104,6 +104,7 @@ read_globals = {
 	"hooksecurefunc",
 	"IsControlKeyDown",
 	"IsModifiedClick",
+	"IsMouseButtonDown",
 	"IsShiftKeyDown",
 	"ITEM_QUALITY_COLORS",
 	"ItemKeyMixin",
