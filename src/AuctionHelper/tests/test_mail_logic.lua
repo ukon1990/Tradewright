@@ -114,6 +114,11 @@ do
 	check("Surplus items: none from no rows", #ML.SurplusItems({}) == 0)
 end
 
+-- Mail recipient
+check("Recipient: Forever uses first name and surname", ML.MailRecipient("Bånkey-Stinson", true) == "Bånkey Stinson")
+check("Recipient: retail uses the name on the same realm", ML.MailRecipient("Bånkey-Stinson", false) == "Bånkey")
+check("Recipient: a key without a second part stays as it is", ML.MailRecipient("Solo", true) == "Solo")
+
 if failed > 0 then
 	print(failed .. " check(s) failed")
 	os.exit(1)

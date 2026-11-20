@@ -504,7 +504,7 @@ function ProfessionExporter:BuildShoppingMailSendPlan()
 			addLine(line, sources)
 		end
 	end
-	return self.ForeverLogic.BuildMailPlan(lines, stock)
+	return self:SetMailRecipients(self.ForeverLogic.BuildMailPlan(lines, stock))
 end
 
 function ProfessionExporter:FormatMailAllocationsShort(allocations, maxEntries)

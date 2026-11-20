@@ -5,6 +5,17 @@ local _, ProfessionExporter = ...
 local MailLogic = {}
 ProfessionExporter.MailLogic = MailLogic
 
+--- The To line for a character key ("First-Second"). On WoW Forever there are no realms: the
+--- second part is the surname and mail needs the full name, "First Second". On retail it is the
+--- realm, and the name alone reaches a character on the same realm.
+function MailLogic.MailRecipient(characterKey, fullName)
+	local first, second = tostring(characterKey or ""):match("^([^%-]+)%-(.+)$")
+	if not first then
+		return tostring(characterKey or "")
+	end
+	return fullName and (first .. " " .. second) or first
+end
+
 local function listable(bag)
 	return bag.sellable and (tonumber(bag.quality) or 0) >= 1
 end

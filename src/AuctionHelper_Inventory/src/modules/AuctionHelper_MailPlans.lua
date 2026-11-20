@@ -21,6 +21,19 @@ function ProfessionExporter:GetRealmCharacterKeys()
 	return keys, realm
 end
 
+--- The mail To line for a character: first name and surname on Forever (MailLogic.MailRecipient).
+function ProfessionExporter:GetMailRecipient(characterKey)
+	return self.MailLogic.MailRecipient(characterKey, self.IS_FOREVER)
+end
+
+--- Sets each destination's To line from its character key; returns the list.
+function ProfessionExporter:SetMailRecipients(destinations)
+	for _, dest in ipairs(destinations) do
+		dest.mailName = self:GetMailRecipient(dest.characterKey)
+	end
+	return destinations
+end
+
 --- The auction house / bank character of the current realm, or nil when none is set.
 function ProfessionExporter:GetSellerCharacterKey()
 	local known = {}
@@ -135,7 +148,7 @@ local function surplusDestination(pe, plan, bags, seller)
 		row.unitPrice = pe:GetMailItemUnitPrice(row.itemID)
 	end
 	local summary = pe.MailLogic.SummarizeReviewRows(rows)
-	return { kind = "surplus", characterKey = seller, mailName = seller:match("^([^%-]+)") or seller,
+	return { kind = "surplus", characterKey = seller, mailName = pe:GetMailRecipient(seller),
 		items = pe.MailLogic.SurplusItems(rows), totalQuantity = summary.send, reviewRows = rows, summary = summary }
 end
 
@@ -158,7 +171,7 @@ function ProfessionExporter:BuildMailPanelPlan()
 		local held = bags[itemID] and bags[itemID].quantity or 0
 		toSeller[itemID] = held > 0 and math.min(owed, held) or nil
 	end
-	for _, dest in ipairs(self.ForeverLogic.BuildReturnToSellerPlan(toSeller, bags, seller)) do
+	for _, dest in ipairs(self:SetMailRecipients(self.ForeverLogic.BuildReturnToSellerPlan(toSeller, bags, seller))) do
 		plan[#plan + 1] = dest
 	end
 	plan[#plan + 1] = surplusDestination(self, plan, bags, seller)
