@@ -99,6 +99,13 @@ local function craftsSection()
 	} }
 end
 
+local function farmingSection()
+	return { column = 2, title = "Farming", items = {
+		{ kind = "check", label = "Show the farm window when a farm starts", path = "farm.showWindow", default = true },
+		{ kind = "note", text = function() return "Start a farm with /ahfarm start, pause with /ahfarm pause, save with /ahfarm stop." end },
+	} }
+end
+
 local function auctionHouseSection(pe)
 	return { column = 2, title = "Auction house", items = auctionHouseItems(pe) }
 end
@@ -136,7 +143,7 @@ local function buildSections(pe)
 		{ column = 1, title = "Troubleshooting", items = {
 			{ kind = "check", label = "Write debug messages to chat", path = "debug.enabled", default = false },
 		} },
-		opportunitiesSection(), craftsSection(), auctionHouseSection(pe),
+		opportunitiesSection(), craftsSection(), farmingSection(), auctionHouseSection(pe),
 		{ column = 2, title = "Mail", items = {
 			{ kind = "select", label = "Auction house / bank character", path = "mail.sellerByRealm." .. realm, default = "",
 				options = sellerOptions },

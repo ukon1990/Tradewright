@@ -33,4 +33,5 @@ src\ui\AuctionHelper_ExportTab.lua
 src\ui\AuctionHelper_DocsTab.lua
 src\ui\AuctionHelper_SettingsTab.lua
 src\ui\AuctionHelper_TabOrder.lua
+src\ui\AuctionHelper_FarmWindow.lua
 src\ui\AuctionHelper_UIShell.lua

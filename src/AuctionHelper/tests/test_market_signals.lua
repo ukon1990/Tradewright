@@ -307,6 +307,37 @@ check("Cooldown text: minutes, never zero", ML.FormatCooldown(20 * 60) == "20 mi
 check("A ready cooldown caps Make at 1", ML.RestockQuantity({ sellsPerDay = 12, owned = 0, profit = 100, cap = 1 }) == 1)
 check("A waiting cooldown caps Make at 0", ML.RestockQuantity({ sellsPerDay = 12, owned = 0, profit = 100, cap = 0 }) == 0)
 
+-- Farm runs
+local farmChunk, farmErr = loadfile(root .. "/src/util/AuctionHelper_FarmLogic.lua")
+assert(farmChunk, farmErr)
+farmChunk("AuctionHelper", pe)
+local Farm = pe.FarmLogic
+check("Active time leaves out pauses", Farm.ActiveSeconds({ startedAt = 100, endedAt = 4100, pausedSeconds = 400 }, 9999) == 3600)
+check("A pause in progress is not counted", Farm.ActiveSeconds({ startedAt = 100, pausedSeconds = 0, pausedAt = 700 }, 1000) == 600)
+check("A run that has not started counts 0", Farm.ActiveSeconds({}, 500) == 0)
+local value, kind = Farm.ItemValue({ vendor = 10, usual = 100, sellsPerDay = 40 }, { cut = 0.05 })
+check("An item that sells counts at its usual price after the cut", value == 95 and kind == "auction")
+value, kind = Farm.ItemValue({ vendor = 10, usual = 100 }, { cut = 0.05 })
+check("An item with no sells-a-day estimate counts at vendor price", value == 10 and kind == "vendor")
+value, kind = Farm.ItemValue({ vendor = 10, usual = 100, sellsPerDay = 0.2 }, { cut = 0.05 })
+check("An item that rarely sells counts at vendor price", value == 10 and kind == "vendor")
+value, kind = Farm.ItemValue({ vendor = 200, usual = 100, sellsPerDay = 40 }, { cut = 0.05 })
+check("Vendor price wins when it is higher", value == 200 and kind == "vendor")
+value = Farm.ItemValue(nil)
+check("An unknown item counts 0", value == 0)
+local farmPrices = { [1] = { vendor = 10, usual = 100, sellsPerDay = 40 }, [2] = { vendor = 25 } }
+local farmRun = { startedAt = 0, endedAt = 1800, pausedSeconds = 0, coin = 500, vendorSold = 120, items = { [1] = 10, [2] = 4 } }
+local farmSummary = Farm.SummarizeRun(farmRun, function(itemID) return farmPrices[itemID] end, 9999, { cut = 0.05 })
+check("Coin and vendor sales stay separate", farmSummary.coin == 500 and farmSummary.vendorSold == 120)
+check("Vendor value and auction estimate stay separate", farmSummary.vendorValue == 100 and farmSummary.auctionValue == 950)
+check("Total and gold an hour", farmSummary.total == 1670 and farmSummary.perHour == 3340 and farmSummary.activeSeconds == 1800)
+check("Items are listed most valuable first", farmSummary.byItem[1].itemID == 1 and farmSummary.byItem[2].kind == "vendor")
+local emptyRun = Farm.SummarizeRun({ startedAt = 5, endedAt = 5 }, function() return nil end, 5)
+check("An empty run with no time is 0 an hour", emptyRun.total == 0 and emptyRun.perHour == 0)
+check("Selling to a vendor takes items out of the run", Farm.RemoveItems(farmRun, 2, 3) == 3 and farmRun.items[2] == 1)
+check("Selling more than was looted removes only what was looted", Farm.RemoveItems(farmRun, 2, 9) == 1 and farmRun.items[2] == nil)
+check("Selling something not looted in the run changes nothing", Farm.RemoveItems(farmRun, 77, 5) == 0)
+
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}
 local auction = { history = { hourly = {}, daily = {} } }

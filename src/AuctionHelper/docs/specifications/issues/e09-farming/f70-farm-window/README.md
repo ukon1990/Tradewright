@@ -29,6 +29,31 @@ A small farm window records what you loot and the coin you pick up while a farm 
 - Item tooltip: "Vendor pays" and "You looted it in <farm>" lines
 - Settings group "Farming": show the window while a farm runs, count rarely sold items at vendor price, pause when idle, start a farm on entering an instance (off)
 
+## Status
+
+Implemented:
+
+- `AuctionHelper_FarmLogic.lua` (core, pure, offline-tested): `ActiveSeconds`, `ItemValue` (the value rule), `SummarizeRun`, `RemoveItems`
+- `AuctionHelper_Farm.lua` (Inventory): the run in progress lives in `ledger.farm.current` and survives a reload. While a run is active and not paused:
+  - the player's own loot messages add to the run's items
+  - gold gained within a second of a looted-coin message counts as coin
+  - gold gained with a merchant open counts as a vendor sale, and an item sold there leaves the run's items
+  - all other gold (mail, auction house, trade, quests) is ignored
+- `StartFarmRun(name)`, `ToggleFarmPause()`, `StopFarmRun()` (saves the run under its name into `ledger.farm.farms`), `SummarizeFarmRun(run)`
+- `AuctionHelper_FarmWindow.lua` (UI): a 250 px movable window with the farm name, clock, gold an hour, the three value parts, the three latest pickups, Pause and "Stop and save"; its position is saved
+- Slash command `/ahfarm` (toggle the window), `/ahfarm start [name]`, `/ahfarm pause`, `/ahfarm stop`
+- Setting "Show the farm window when a farm starts"
+
+Differs from the scope:
+
+- **Its own slash command, `/ahfarm`,** instead of `/ah farm …`: the `/ah` command table sits in a file that is over the size limit
+- **No "Farm finished" dialog.** Stop saves under the name the run was started with (default: the zone) and prints a chat line; Discard does not exist yet
+- **No automatic pause when idle** and no start on entering an instance
+- **No collapsed one-line form** of the window
+- **Tooltip lines** ("Vendor pays", "You looted it in …") are not added
+- **Vendor sales:** only items sold by using them from the bags with a merchant open are taken out of the run; items sold another way stay counted while their gold is also counted
+- **Storage:** in the ledger table, not a new saved-variables key
+
 ## Acceptance criteria
 
 - [ ] Looting 2 of an item during a run adds 2 to that item; the same loot with no run adds nothing
@@ -39,7 +64,7 @@ A small farm window records what you loot and the coin you pick up while a farm 
 - [ ] An item with no sells-a-day estimate counts at vendor price
 - [ ] The window position is saved per character and stays on screen
 - [ ] Nothing moves, targets, loots or sells for the player
-- [ ] Offline tests of `SummarizeFarmRun`: value rule per item, paused time, zero active time, vendor sales, empty run
+- [x] Offline tests of `SummarizeFarmRun`: value rule per item, paused time, zero active time, vendor sales, empty run
 
 ## Verification
 
