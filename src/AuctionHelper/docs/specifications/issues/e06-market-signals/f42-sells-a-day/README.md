@@ -14,28 +14,29 @@ Each item gets "Sells a day, estimated": how many units leave the auction house 
 
 ## Scope
 
-- `ForeverLogic.EstimateSoldBetween(prev, next)` → units, where `prev` and `next` are snapshot entries:
-  - with price steps on both (F41): the drop in quantity at or below `next`'s lowest price plus levels of `prev` that vanished below it
-  - without steps: `max(0, prev.q - next.q)`
-  - nil when the gap between the two scans is longer than `maxGapHours` (default 26)
-- When a scan replaces an item's snapshot entry, add the estimate and the covered hours to that day's `history.daily` entry as `s` and `g`
-- `ForeverLogic.SellsPerDay(daily, windowDays, ownSalesPerDay)` → `{perDay, confidence}`:
-  - `perDay = max(sum(s) / sum(g) × 24, ownSalesPerDay)`
-  - `confidence` is "good" with 5 or more covered scan pairs in the window, "few" with 2 to 4, nil below that (nothing shown)
-- `ForeverLogic.DaysOfSupply(quantity, perDay)`
-- Market tab column `Sells a day`; Inventory optional column; item details "Sells a day, estimated" and "Listed supply lasts about N days"; tooltip line
-- Rows with confidence "few" carry the note "few sales seen"
-- Docs tab: a short section on how the estimate is made and why it runs high
+- Pure helpers in `AuctionHelper_MarketSignals.lua`:
+  - `MarketSignals.EstimateSoldByDay(hourlyByHour, fromTs, toTs, maxGapHours)` → per day `{s = units, g = hours covered, c = scan pairs}` from drops in listed quantity between consecutive scanned hours no more than `maxGapHours` (26) apart; a rise counts as 0; a drop is counted on the day of the later scan
+  - `MarketSignals.SellsPerDay(daily, now, windowDays, ownSalesPerDay)` → `{perDay, confidence, pairs}`: `perDay = max(sum(s) / sum(g) × 24, ownSalesPerDay)`; `confidence` is "good" with 5 or more scan pairs in the window, "few" with 2 to 4, nil below that (nothing shown)
+  - `MarketSignals.DaysOfSupply(quantity, perDay)`
+- The estimate is made from the hourly history when a day is rolled up (F40's `RollupDailyAuctionHistory`), so no scan code changes and it appears the day after two scans of an item. `s`, `g` and `c` are stored on that day's `history.daily` entry.
+- `GetSellsPerDay(storageKey)` (AuctionData), cached like the usual price
+- Market tab column `Sells a day`; item details "Sells a day, estimated" and "Listed supply lasts"; "(few sales seen)" when confidence is "few"
+- Still open:
+  - with price steps (F41): count only the drop at or below the next scan's lowest price
+  - the own-sales floor from the ledger (the function takes it; nothing passes it yet)
+  - Inventory optional column and the tooltip line
+  - Docs tab: a short section on how the estimate is made and why it runs high
 
 ## Acceptance criteria
 
-- [ ] Two scans 12 hours apart where an item's quantity fell by 30 give 60 a day for that pair
-- [ ] A quantity that rose between scans counts as 0, not as negative
-- [ ] Scans 3 days apart add nothing
-- [ ] An item with one scan shows "-" for sells a day
+- [x] Two scans 12 hours apart where an item's quantity fell by 30 give 60 a day for that pair
+- [x] A quantity that rose between scans counts as 0, not as negative
+- [x] Scans 3 days apart add nothing
+- [x] An item with one scan shows "-" for sells a day
 - [ ] An item you sold 10 of per day never shows less than 10
 - [ ] The word "estimated" appears wherever the figure is explained (details, tooltip, Docs)
-- [ ] Offline tests: with and without steps, restock between scans, long gap, confidence levels, own-sales floor, days of supply with perDay 0 or nil
+- [x] Offline tests: restock between scans, long gap, pair across midnight, confidence levels, own-sales floor, days of supply with perDay 0 or nil
+- [ ] Offline test with price steps (after F41)
 
 ## Verification
 

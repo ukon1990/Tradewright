@@ -11,11 +11,24 @@ local function now()
 	return (GetServerTime and GetServerTime()) or time()
 end
 
+-- Copy each day's fields into `byDay`, keeping fields other rollups already wrote.
+local function mergeDays(byDay, days)
+	for dayTs, entry in pairs(days) do
+		local day = byDay[dayTs] or {}
+		for field, value in pairs(entry) do
+			day[field] = value
+		end
+		byDay[dayTs] = day
+	end
+end
+
 local function rollupFinishedDays(history, MS, from, today)
 	for storageKey, hourly in pairs(history.hourly or {}) do
-		for dayTs, entry in pairs(MS.RollupItemDays(hourly, from, today)) do
-			history.daily[storageKey] = history.daily[storageKey] or {}
-			history.daily[storageKey][dayTs] = entry
+		local byDay = history.daily[storageKey] or {}
+		mergeDays(byDay, MS.RollupItemDays(hourly, from, today))
+		mergeDays(byDay, MS.EstimateSoldByDay(hourly, from, today))
+		if next(byDay) ~= nil then
+			history.daily[storageKey] = byDay
 		end
 	end
 end
@@ -53,30 +66,48 @@ function ProfessionExporter:RollupDailyAuctionHistory()
 	trimDailyHistory(history.daily, today - keepDays * DAY)
 end
 
--- The usual price from saved daily history, or false when an item has fewer than 5 days.
-local function computeUsualPrice(pe, storageKey, window)
+local function dailyHistory(pe, storageKey)
 	local auction = pe:InitAuctionDB()
 	local daily = auction and auction.history.daily
-	local usual = pe.MarketSignals.UsualPrice(daily and daily[storageKey], now(), window)
+	return daily and daily[storageKey]
+end
+
+-- The usual price from saved daily history, or false when an item has fewer than 5 days.
+local function computeUsualPrice(pe, storageKey, window)
+	local usual = pe.MarketSignals.UsualPrice(dailyHistory(pe, storageKey), now(), window)
 	if usual and usual.days >= MIN_USUAL_DAYS then
 		return usual
 	end
 	return false
 end
 
---- Usual price of one stored listing: `{ usual, mad, low, high, days }`, or nil with fewer than 5 days.
---- Cached until the next scan observation or settings change.
-function ProfessionExporter:GetUsualPrice(storageKey)
-	local state = self:GetState()
-	local window = tonumber(self:GetSetting("auction.usualPriceDays", 14)) or 14
+local function computeSellsPerDay(pe, storageKey, window)
+	return pe.MarketSignals.SellsPerDay(dailyHistory(pe, storageKey), now(), window) or false
+end
+
+-- One cached value per stored listing and kind, dropped at the next scan observation or window change.
+local function cachedSignal(pe, kind, storageKey, compute)
+	local state = pe:GetState()
+	local window = tonumber(pe:GetSetting("auction.usualPriceDays", 14)) or 14
 	local revision = (state.auctionDataRevision or 0) .. ":" .. window
-	if state.usualPriceRevision ~= revision then
-		state.usualPriceRevision, state.usualPriceCache = revision, {}
+	if state.priceSignalRevision ~= revision then
+		state.priceSignalRevision, state.priceSignalCache = revision, {}
 	end
-	local cached = state.usualPriceCache[storageKey]
-	if cached == nil then
-		cached = computeUsualPrice(self, storageKey, window)
-		state.usualPriceCache[storageKey] = cached
+	local cache = state.priceSignalCache[kind] or {}
+	state.priceSignalCache[kind] = cache
+	if cache[storageKey] == nil then
+		cache[storageKey] = compute(pe, storageKey, window)
 	end
-	return cached or nil
+	return cache[storageKey] or nil
+end
+
+--- Usual price of one stored listing: `{ usual, mad, low, high, days }`, or nil with fewer than 5 days.
+function ProfessionExporter:GetUsualPrice(storageKey)
+	return cachedSignal(self, "usual", storageKey, computeUsualPrice)
+end
+
+--- Estimated units sold per day of one stored listing: `{ perDay, confidence, pairs }`, or nil when the
+--- scans do not say. Built from finished days, so it appears the day after two scans of an item.
+function ProfessionExporter:GetSellsPerDay(storageKey)
+	return cachedSignal(self, "sells", storageKey, computeSellsPerDay)
 end

@@ -139,4 +139,84 @@ function MarketSignals.DealScore(price, usual, mad)
 	}
 end
 
+-- Listed quantity per scanned hour in `[fromTs, toTs)`, oldest first.
+local function quantityPoints(hourlyByHour, fromTs, toTs)
+	local points = {}
+	if type(hourlyByHour) ~= "table" then
+		return points
+	end
+	for hourKey, bucket in pairs(hourlyByHour) do
+		local at = tonumber(hourKey)
+		if at and at >= fromTs and at < toTs and type(bucket) == "table" then
+			local count = math.max(1, tonumber(bucket.n) or 1)
+			points[#points + 1] = { at = at, qty = (tonumber(bucket.q) or 0) / count }
+		end
+	end
+	table.sort(points, function(a, b)
+		return a.at < b.at
+	end)
+	return points
+end
+
+--- Units that left the auction house, per day, from drops in listed quantity between consecutive scans
+--- no more than `maxGapHours` apart: `{ [dayTs] = { s = units, g = hours covered, c = scan pairs } }`.
+--- A drop is counted on the day of the later scan. Cancels and expiries count too, so this runs high.
+function MarketSignals.EstimateSoldByDay(hourlyByHour, fromTs, toTs, maxGapHours)
+	local maxGap = (tonumber(maxGapHours) or 26) * 3600
+	local points = quantityPoints(hourlyByHour, fromTs - maxGap, toTs)
+	local out = {}
+	for index = 2, #points do
+		local previous, current = points[index - 1], points[index]
+		local gap = current.at - previous.at
+		if current.at >= fromTs and gap <= maxGap then
+			local dayTs = MarketSignals.DayStart(current.at)
+			local day = out[dayTs] or { s = 0, g = 0, c = 0 }
+			day.s = day.s + math.max(0, previous.qty - current.qty)
+			day.g = day.g + gap / 3600
+			day.c = day.c + 1
+			out[dayTs] = day
+		end
+	end
+	return out
+end
+
+local function soldSince(dailyByDay, cutoff)
+	local sold, hours, scanPairs = 0, 0, 0
+	if type(dailyByDay) ~= "table" then
+		return sold, hours, scanPairs
+	end
+	for dayKey, entry in pairs(dailyByDay) do
+		if type(entry) == "table" and entry.g and (tonumber(dayKey) or 0) >= cutoff then
+			sold = sold + (tonumber(entry.s) or 0)
+			hours = hours + (tonumber(entry.g) or 0)
+			scanPairs = scanPairs + (tonumber(entry.c) or 0)
+		end
+	end
+	return sold, hours, scanPairs
+end
+
+--- Estimated units sold per day over the last `windowDays` of daily history, never below `ownPerDay`
+--- (the player's own sales): `{ perDay, confidence = "good" | "few", pairs }`, or nil with under 2 scan pairs.
+function MarketSignals.SellsPerDay(dailyByDay, now, windowDays, ownPerDay)
+	local cutoff = MarketSignals.DayStart(now) - (tonumber(windowDays) or 14) * DAY
+	local sold, hours, scanPairs = soldSince(dailyByDay, cutoff)
+	if scanPairs < 2 or hours <= 0 then
+		return nil
+	end
+	return {
+		perDay = math.max(sold / hours * 24, tonumber(ownPerDay) or 0),
+		confidence = scanPairs >= 5 and "good" or "few",
+		pairs = scanPairs,
+	}
+end
+
+--- Days the listed quantity lasts at `perDay` sales, or nil when nothing is known to sell.
+function MarketSignals.DaysOfSupply(quantity, perDay)
+	quantity, perDay = tonumber(quantity), positive(perDay)
+	if not (quantity and perDay) then
+		return nil
+	end
+	return quantity / perDay
+end
+
 return MarketSignals

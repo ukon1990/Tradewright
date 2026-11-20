@@ -75,6 +75,44 @@ local noSpread = MS.DealScore(60, 100, 0)
 check("MAD 0 gives a percentage and no score", noSpread and noSpread.score == nil and math.abs(noSpread.pct + 0.4) < 1e-9)
 check("No usual price gives nil", MS.DealScore(60, nil, 4) == nil and MS.DealScore(60, 0, 4) == nil)
 
+-- Estimated sales from quantity drops between scans
+local function qtyHours(list)
+	local out = {}
+	for _, pair in ipairs(list) do
+		out[tostring(pair[1])] = { m = 10, l = 10, n = 1, q = pair[2] }
+	end
+	return out
+end
+local sold = MS.EstimateSoldByDay(qtyHours({ { day1 + 2 * HOUR, 100 }, { day1 + 14 * HOUR, 70 } }), day1, day1 + DAY)
+check("A drop of 30 over 12 hours is counted", sold[day1] and sold[day1].s == 30 and sold[day1].g == 12 and sold[day1].c == 1)
+local rose = MS.EstimateSoldByDay(qtyHours({ { day1 + 2 * HOUR, 50 }, { day1 + 6 * HOUR, 90 } }), day1, day1 + DAY)
+check("A rise counts as 0 sold", rose[day1] and rose[day1].s == 0 and rose[day1].g == 4)
+local far = MS.EstimateSoldByDay(qtyHours({ { day1 + HOUR, 100 }, { day1 + 3 * DAY, 10 } }), day1, day1 + 4 * DAY)
+check("Scans 3 days apart add nothing", next(far) == nil)
+local across = MS.EstimateSoldByDay(qtyHours({ { day1 - 2 * HOUR, 80 }, { day1 + 3 * HOUR, 60 } }), day1, day1 + DAY)
+check("A pair across midnight counts on the later day", across[day1] and across[day1].s == 20 and across[day1 - DAY] == nil)
+local averaged = MS.EstimateSoldByDay({
+	[tostring(day1 + HOUR)] = { m = 10, n = 2, q = 200 },
+	[tostring(day1 + 5 * HOUR)] = { m = 10, n = 1, q = 60 },
+}, day1, day1 + DAY)
+check("Quantity is averaged over the scans in an hour", averaged[day1] and averaged[day1].s == 40)
+check("One scan gives no estimate", next(MS.EstimateSoldByDay(qtyHours({ { day1 + HOUR, 5 } }), day1, day1 + DAY)) == nil)
+
+local sellsDaily = {
+	[day1 + 8 * DAY] = { p = 10, s = 30, g = 12, c = 1 },
+	[day1 + 9 * DAY] = { p = 10, s = 10, g = 12, c = 1 },
+}
+local sells = MS.SellsPerDay(sellsDaily, now, 14)
+check("Sells a day scales the covered hours to 24", sells and sells.perDay == 40 and sells.confidence == "few" and sells.pairs == 2)
+sellsDaily[day1 + 7 * DAY] = { p = 10, s = 0, g = 24, c = 3 }
+local confident = MS.SellsPerDay(sellsDaily, now, 14)
+check("Five scan pairs give good confidence", confident and confident.confidence == "good" and confident.perDay == 20)
+check("Own sales are a floor", MS.SellsPerDay(sellsDaily, now, 14, 55).perDay == 55)
+check("One scan pair shows nothing", MS.SellsPerDay({ [day1 + 9 * DAY] = { s = 5, g = 3, c = 1 } }, now, 14) == nil)
+check("Days without an estimate are ignored", MS.SellsPerDay({ [day1 + 9 * DAY] = { p = 10 } }, now, 14) == nil)
+check("Days of supply", MS.DaysOfSupply(86, 12) == 86 / 12)
+check("Days of supply needs sales", MS.DaysOfSupply(86, 0) == nil and MS.DaysOfSupply(86, nil) == nil)
+
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}
 local auction = { history = { hourly = {}, daily = {} } }
@@ -103,6 +141,9 @@ pe:RollupDailyAuctionHistory()
 local rolled = auction.history.daily["k"]
 check("Load rolls up each finished day", rolled and rolled[today - DAY] and rolled[today - 6 * DAY] and rolled[today - DAY].p == 101)
 check("Today is not rolled up yet", rolled and rolled[today] == nil)
+check("Rolled days carry the sold estimate", rolled and rolled[today - DAY].g == 24 and rolled[today - DAY].s == 0 and rolled[today - 6 * DAY].g == nil)
+local glueSells = pe:GetSellsPerDay("k")
+check("Sells a day comes from finished days", glueSells and glueSells.perDay == 0 and glueSells.pairs == 5)
 check("Rollup remembers how far it got", auction.history.dailyThrough == today)
 check("Days past retention are dropped", auction.history.daily["old"] == nil)
 rolled[today - DAY].p = 999

@@ -30,6 +30,47 @@ local function usualRangeText(pe, rowData)
 	return string.format("%s – %s", pe:FormatCopperShort(usual.low), pe:FormatCopperShort(usual.high))
 end
 
+-- Estimated units sold per day for a Market row, or nil when the scans do not say.
+local function sellsPerDay(pe, rowData)
+	local sells = pe.GetSellsPerDay and pe:GetSellsPerDay(rowData.storageKey)
+	return sells and sells.perDay, sells and sells.confidence
+end
+
+-- "12" for a busy item, "0.4" for a slow one.
+local function sellsText(perDay)
+	if perDay >= 10 then
+		return ProfessionExporter:FormatNumberGrouped(math.floor(perDay + 0.5))
+	end
+	return string.format("%.1f", perDay)
+end
+
+local function sellsFactText(pe, rowData)
+	local perDay, confidence = sellsPerDay(pe, rowData)
+	if not perDay then
+		return "Needs two scans a day apart or less"
+	end
+	return sellsText(perDay) .. (confidence == "few" and " (few sales seen)" or "")
+end
+
+local function supplyFactText(pe, rowData)
+	local days = pe.MarketSignals.DaysOfSupply(rowData.sampleSize, (sellsPerDay(pe, rowData)))
+	if not days then
+		return "-"
+	end
+	return days < 1 and "under a day" or string.format("about %d days", math.floor(days + 0.5))
+end
+
+local function sellsColumn(pe)
+	return {
+		id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
+		sortValue = function(row) return sellsPerDay(pe, row) or 0 end,
+		getText = function(row)
+			local perDay = sellsPerDay(pe, row)
+			return perDay and sellsText(perDay) or "-"
+		end,
+	}
+end
+
 -- The Market table's "Usual" and "Vs usual" columns; "-" until an item has 5 days of scans.
 local function usualColumns(pe)
 	local function usualOf(row)
@@ -58,6 +99,8 @@ local function marketFactRows(pe, rowData)
 		{ "Highest", pe:FormatCopperFull(rowData.marketHigh or rowData.price) },
 		{ "Usual price", usualPriceText(pe, rowData) },
 		{ "Usual range", usualRangeText(pe, rowData) },
+		{ "Sells a day, estimated", sellsFactText(pe, rowData) },
+		{ "Listed supply lasts", supplyFactText(pe, rowData) },
 		{ "Quantity", pe:FormatNumberGrouped(rowData.sampleSize or 0) },
 		{ "Listings", (tonumber(rowData.listingCount) or 0) > 0 and pe:FormatNumberGrouped(rowData.listingCount) or "-" },
 		{ "Seen", pe:FormatScanTimestamp(rowData.seenAt) },
@@ -93,7 +136,7 @@ function ProfessionExporter:BuildMarketTableColumns()
 		}),
 		money("price", "Lowest", "price"),
 		money("marketHigh", "Highest", "marketHigh", "price"),
-		usual, vsUsual,
+		usual, vsUsual, sellsColumn(pe),
 		count("sampleSize", "Qty", "sampleSize", 60),
 		count("listingCount", "Listings", "listingCount", 60, true),
 		{
