@@ -17,3 +17,27 @@
 | [e04-ah-shortcuts](issues/e04-ah-shortcuts/README.md) | AH shortcuts: from AuctionHelper lists to the auction house | in progress |
 | [f30-buy-in-ah](issues/e04-ah-shortcuts/f30-buy-in-ah/README.md) | Open a deal's buy page in the auction house | in progress |
 | [e05-table-paging](issues/e05-table-paging/README.md) | Paging in the shared table | implemented, in-game check pending |
+| [e06-market-signals](issues/e06-market-signals/README.md) | Market signals: usual price, price steps, sells a day, real fees, fuller ledger | planned |
+| [f40-usual-price](issues/e06-market-signals/f40-usual-price/README.md) | Daily price history and a robust usual price | planned |
+| [f41-price-steps](issues/e06-market-signals/f41-price-steps/README.md) | Cheapest price steps kept from a full scan | planned |
+| [f42-sells-a-day](issues/e06-market-signals/f42-sells-a-day/README.md) | Estimated sells per day and days of supply | planned |
+| [f43-fees-from-the-game](issues/e06-market-signals/f43-fees-from-the-game/README.md) | Fees read from the game and measured from sale mail | planned |
+| [f44-ledger-buys-and-misses](issues/e06-market-signals/f44-ledger-buys-and-misses/README.md) | Purchases, expired and cancelled auctions in the ledger | planned |
+| [e07-opportunities](issues/e07-opportunities/README.md) | Opportunities tab: what to buy or sell right now | planned |
+| [f50-opportunities-tab-flips](issues/e07-opportunities/f50-opportunities-tab-flips/README.md) | Opportunities tab and Flips | planned |
+| [f51-sure-things](issues/e07-opportunities/f51-sure-things/README.md) | Sure things: listed under vendor price | planned |
+| [f52-price-gaps](issues/e07-opportunities/f52-price-gaps/README.md) | Price gaps (risky) | planned |
+| [f53-weekday-pattern](issues/e07-opportunities/f53-weekday-pattern/README.md) | Weekday pattern in the Market item view | planned |
+| [f54-sell-now](issues/e07-opportunities/f54-sell-now/README.md) | Sell now | planned |
+| [e08-craft-planning](issues/e08-craft-planning/README.md) | Craft planning: material sources, how many to make, cooldowns | planned |
+| [f60-cheapest-material-source](issues/e08-craft-planning/f60-cheapest-material-source/README.md) | Cheapest way to get each material | planned |
+| [f61-how-many-to-make](issues/e08-craft-planning/f61-how-many-to-make/README.md) | How many to make | planned |
+| [f62-cooldown-crafts](issues/e08-craft-planning/f62-cooldown-crafts/README.md) | Cooldown crafts | planned |
+| [e09-farming](issues/e09-farming/README.md) | Farming: farm window, my farms, what to farm | planned |
+| [f70-farm-window](issues/e09-farming/f70-farm-window/README.md) | Farm window and loot log | planned |
+| [f71-my-farms](issues/e09-farming/f71-my-farms/README.md) | My farms, re-valued at today's prices | planned |
+| [f72-what-to-farm](issues/e09-farming/f72-what-to-farm/README.md) | What to farm | planned |
+
+Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09.
+
+Research behind E06 to E09: [WoW gold making market strategies](../../../../../reports/WoW%20gold%20making%20market%20strategies.md). Designs: [AuctionHelper Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnSs5), section "Proposed, not built yet: finding gold".
