@@ -196,7 +196,8 @@ local function inventorySection()
 	} }
 end
 
--- The auction house / bank character is chosen per realm, from the characters known there.
+-- The auction house / bank character is chosen per realm (on Forever, one for all characters), from
+-- the characters known there, by full name on Forever.
 local function mailSection(pe)
 	local sellerOptions = { { value = "", label = "None" } }
 	local realmKeys, realm = {}, "?"
@@ -204,7 +205,7 @@ local function mailSection(pe)
 		realmKeys, realm = pe:GetRealmCharacterKeys()
 	end
 	for _, characterKey in ipairs(realmKeys) do
-		sellerOptions[#sellerOptions + 1] = { value = characterKey, label = characterKey:match("^([^%-]+)") or characterKey }
+		sellerOptions[#sellerOptions + 1] = { value = characterKey, label = pe:GetMailRecipient(characterKey) }
 	end
 	return { title = "Mail", items = {
 		{ kind = "select", label = "Auction house / bank character", path = "mail.sellerByRealm." .. realm, default = "",

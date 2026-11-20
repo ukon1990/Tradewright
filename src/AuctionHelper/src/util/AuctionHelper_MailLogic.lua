@@ -16,6 +16,23 @@ function MailLogic.MailRecipient(characterKey, fullName)
 	return fullName and (first .. " " .. second) or first
 end
 
+--- Forever's bank character used to be saved per surname, read as a realm. The first of those
+--- choices (by surname) that is still a known character, or nil. known[characterKey] = true.
+function MailLogic.EarlierForeverSeller(sellerByRealm, known)
+	local groups = {}
+	for group in pairs(sellerByRealm or {}) do
+		groups[#groups + 1] = group
+	end
+	table.sort(groups)
+	for _, group in ipairs(groups) do
+		local key = sellerByRealm[group]
+		if type(key) == "string" and known[key] then
+			return key
+		end
+	end
+	return nil
+end
+
 local function listable(bag)
 	return bag.sellable and (tonumber(bag.quality) or 0) >= 1
 end

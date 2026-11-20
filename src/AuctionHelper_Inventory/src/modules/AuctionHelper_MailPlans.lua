@@ -3,17 +3,24 @@ local _, ProfessionExporter = ...
 -- Who mails what to whom: the auction house / bank character ("seller") of each realm, and the
 -- plans the mailbox panel sends. The decisions are pure functions in ForeverLogic.
 
-local function realmOf(characterKey)
+-- WoW Forever has no realms: the second part of its character keys is a surname, so all of its
+-- characters are one group and share one auction house / bank character.
+local FOREVER_GROUP = "Forever"
+
+local function realmOf(pe, characterKey)
+	if pe.IS_FOREVER then
+		return FOREVER_GROUP
+	end
 	return tostring(characterKey or ""):match("%-(.+)$")
 end
 
 --- Characters known on the current character's realm (the current one included), sorted.
 function ProfessionExporter:GetRealmCharacterKeys()
 	local current = self:GetCharacterKey()
-	local realm = realmOf(current)
+	local realm = realmOf(self, current)
 	local keys = { current }
 	for characterKey in pairs(self.db and self.db.characters or {}) do
-		if characterKey ~= current and realmOf(characterKey) == realm then
+		if characterKey ~= current and realmOf(self, characterKey) == realm then
 			keys[#keys + 1] = characterKey
 		end
 	end
@@ -34,14 +41,19 @@ function ProfessionExporter:SetMailRecipients(destinations)
 	return destinations
 end
 
---- The auction house / bank character of the current realm, or nil when none is set.
+--- The auction house / bank character of the current realm (all of Forever), or nil when none is set.
+--- A Forever choice saved per surname before is carried over to the one Forever group.
 function ProfessionExporter:GetSellerCharacterKey()
 	local known = {}
 	local keys, realm = self:GetRealmCharacterKeys()
 	for _, characterKey in ipairs(keys) do
 		known[characterKey] = true
 	end
-	return self.ForeverLogic.ResolveSellerCharacter(self:GetSetting("mail.sellerByRealm", {}), realm, known)
+	local sellers = self:GetSetting("mail.sellerByRealm", {})
+	if self.IS_FOREVER and sellers[realm] == nil then
+		sellers[realm] = self.MailLogic.EarlierForeverSeller(sellers, known)
+	end
+	return self.ForeverLogic.ResolveSellerCharacter(sellers, realm, known)
 end
 
 function ProfessionExporter:IsSellerCharacter()

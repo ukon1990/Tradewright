@@ -119,6 +119,15 @@ check("Recipient: Forever uses first name and surname", ML.MailRecipient("Bånke
 check("Recipient: retail uses the name on the same realm", ML.MailRecipient("Bånkey-Stinson", false) == "Bånkey")
 check("Recipient: a key without a second part stays as it is", ML.MailRecipient("Solo", true) == "Solo")
 
+-- Forever bank character saved per surname before
+do
+	local known = { ["Bånkey-Stinson"] = true, ["Theo-Starling"] = true }
+	check("Earlier Forever seller: first known choice by surname", ML.EarlierForeverSeller(
+		{ Stinson = "Bånkey-Stinson", Ashford = "Gone-Ashford" }, known) == "Bånkey-Stinson")
+	check("Earlier Forever seller: none chosen or none known", ML.EarlierForeverSeller({ Stinson = "" }, known) == nil
+		and ML.EarlierForeverSeller({ Ashford = "Gone-Ashford" }, known) == nil and ML.EarlierForeverSeller(nil, known) == nil)
+end
+
 if failed > 0 then
 	print(failed .. " check(s) failed")
 	os.exit(1)
