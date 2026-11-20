@@ -18,10 +18,7 @@ function ProfessionExporter:CraftingOrdersPatronKnowledgeDataReady()
 	if type(t) ~= "table" then
 		return false
 	end
-	for _ in pairs(t) do
-		return true
-	end
-	return false
+	return next(t) ~= nil
 end
 
 function ProfessionExporter:CraftingOrdersRecipeShouldShow(ordersPage, recipeInfo)
@@ -60,7 +57,7 @@ local function collectChildren(node)
 	return list
 end
 
-local function pruneCraftingOrdersRecipeTree(ordersPage, rootNode, shouldRemoveRecipe)
+local function pruneCraftingOrdersRecipeTree(rootNode, shouldRemoveRecipe)
 	if not rootNode or type(shouldRemoveRecipe) ~= "function" then
 		return
 	end
@@ -109,7 +106,7 @@ function ProfessionExporter:OnCraftingOrdersGenerateDataProvider(ordersPage, dat
 		return
 	end
 	local pe = ProfessionExporter
-	pruneCraftingOrdersRecipeTree(ordersPage, root, function(recipeInfo)
+	pruneCraftingOrdersRecipeTree(root, function(recipeInfo)
 		return not pe:CraftingOrdersRecipeShouldShow(ordersPage, recipeInfo)
 	end)
 end

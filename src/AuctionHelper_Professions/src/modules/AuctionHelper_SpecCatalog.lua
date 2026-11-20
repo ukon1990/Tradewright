@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local _, ProfessionExporter = ...
 
 ProfessionExporter.SPEC_CATALOG_VERSION = 1
 ProfessionExporter.EXPANSION_ID_MIDNIGHT = 11
@@ -163,7 +163,7 @@ function ProfessionExporter:GetSpecNodeRank(nodeRanks, nodeID)
 	return math.max(0, tonumber(rank) or 0)
 end
 
-function ProfessionExporter:GetSpecUnlockRankForPerk(perkID, configID)
+function ProfessionExporter:GetSpecUnlockRankForPerk(perkID, _configID)
 	perkID = tonumber(perkID)
 	if not perkID or not C_ProfSpecs or not C_ProfSpecs.GetUnlockRankForPerk then
 		return 0
@@ -424,7 +424,7 @@ function ProfessionExporter:AttachSpecCatalogMetadata(professionData, baseSkillL
 
 	for recipeKey, recipeData in pairs(professionData.recipes) do
 		local recipeSpellID = self:GetRecipeSpellID(recipeData) or tonumber(recipeKey)
-		local expansionID, professionEnum, catalog, tierSkillLineID = self:ResolveSpecCatalogForRecipe(recipeSpellID, baseSkillLineID)
+		local expansionID, recipeProfession, catalog, tierSkillLineID = self:ResolveSpecCatalogForRecipe(recipeSpellID, baseSkillLineID)
 		if catalog and recipeSpellID then
 			local nodeRanks = ranksByTier[tostring(tierSkillLineID)] or {}
 			local configID = nil
@@ -439,7 +439,7 @@ function ProfessionExporter:AttachSpecCatalogMetadata(professionData, baseSkillL
 				breakdown.recipeID = self:GetRecipeExportID(recipeData) or tonumber(recipeKey)
 				breakdown.recipeSpellID = recipeSpellID
 				breakdown.expansionID = expansionID
-				breakdown.profession = professionEnum
+				breakdown.profession = recipeProfession
 				breakdown.tierSkillLineID = tierSkillLineID
 				recipeData.specBreakdown = breakdown
 				if recipeData.crafting and type(recipeData.crafting) == "table" then

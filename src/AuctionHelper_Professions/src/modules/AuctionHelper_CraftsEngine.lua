@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local _, ProfessionExporter = ...
 
 --- Last-resort: profession variant line when output item expansionID is not available yet.
 --- TWW / Midnight IDs from https://wowpedia.fandom.com/wiki/TradeSkillLineID
@@ -197,7 +197,7 @@ local function currentOperationTotalSkill(crafting)
 	return base + bonus
 end
 
-local function targetQualityRequiredSkill(crafting, maxQ, targetQualityIndex)
+local function targetQualityRequiredSkill(crafting, _maxQ, targetQualityIndex)
 	targetQualityIndex = math.max(1, math.floor(tonumber(targetQualityIndex) or 1))
 	if targetQualityIndex <= 1 then
 		return 0
@@ -230,7 +230,7 @@ local function buildBestReagentChoicesPerSlot(slot, unitPriceFn)
 		end
 	end
 	local qualities = {}
-	for quality, entry in pairs(byQuality) do
+	for _, entry in pairs(byQuality) do
 		qualities[#qualities + 1] = entry
 	end
 	table.sort(qualities, function(a, b)
@@ -312,6 +312,58 @@ local function recipeCategoryId(recipeData)
 	return tonumber(info.categoryID or info.recipeCategoryID)
 end
 
+local function categoryInfoName(info)
+	local name = info and (info.name or info.categoryName)
+	if name and tostring(name) ~= "" then
+		return tostring(name)
+	end
+	return nil
+end
+
+local function categoryNodeName(node)
+	return categoryInfoName(node and node.info or nil)
+end
+
+--- Name of entry's subcategory with categoryID (falls back to entry's own name).
+local function subCategoryName(entry, categoryID)
+	for _, subCategory in ipairs((entry and entry.subCategories) or {}) do
+		if tonumber(subCategory and subCategory.categoryID) == tonumber(categoryID) then
+			return categoryNodeName(subCategory) or categoryNodeName(entry)
+		end
+	end
+	return nil
+end
+
+local function subCategoryIdParentName(entry, categoryID)
+	for _, subCategoryID in ipairs((entry and entry.subCategoryIDs) or {}) do
+		if tonumber(subCategoryID) == tonumber(categoryID) then
+			return categoryNodeName(entry)
+		end
+	end
+	return nil
+end
+
+--- Category name from the stored profession category tree; nil when unknown or nameless.
+local function storedCategoryName(professionData, categoryID)
+	for _, entry in ipairs((professionData and professionData.categories) or {}) do
+		if tonumber(entry and entry.categoryID) == tonumber(categoryID) then
+			return categoryNodeName(entry)
+		end
+		local name = subCategoryName(entry, categoryID) or subCategoryIdParentName(entry, categoryID)
+		if name then
+			return name
+		end
+	end
+	return nil
+end
+
+local function liveCategoryName(categoryID)
+	if not (C_TradeSkillUI and C_TradeSkillUI.GetCategoryInfo) then
+		return nil
+	end
+	return categoryInfoName(ProfessionExporter:SafeCall(C_TradeSkillUI.GetCategoryInfo, categoryID))
+end
+
 local function recipeCategoryName(recipeData, professionData)
 	local info = ProfessionExporter:RecipeDataInfo(recipeData)
 	if info then
@@ -320,72 +372,17 @@ local function recipeCategoryName(recipeData, professionData)
 			return tostring(directName)
 		end
 	end
-
 	local categoryID = recipeCategoryId(recipeData)
 	if not categoryID then
 		return nil
 	end
-
-	for _, entry in ipairs((professionData and professionData.categories) or {}) do
-		if tonumber(entry and entry.categoryID) == tonumber(categoryID) then
-			local categoryInfo = entry and entry.info or nil
-			local name = categoryInfo and (categoryInfo.name or categoryInfo.categoryName)
-			if name and tostring(name) ~= "" then
-				return tostring(name)
-			end
-			break
-		end
-		for _, subCategory in ipairs((entry and entry.subCategories) or {}) do
-			if tonumber(subCategory and subCategory.categoryID) == tonumber(categoryID) then
-				local subInfo = subCategory and subCategory.info or nil
-				local subName = subInfo and (subInfo.name or subInfo.categoryName)
-				if subName and tostring(subName) ~= "" then
-					return tostring(subName)
-				end
-				local parentInfo = entry and entry.info or nil
-				local parentName = parentInfo and (parentInfo.name or parentInfo.categoryName)
-				if parentName and tostring(parentName) ~= "" then
-					return tostring(parentName)
-				end
-				break
-			end
-		end
-		for _, subCategoryID in ipairs((entry and entry.subCategoryIDs) or {}) do
-			if tonumber(subCategoryID) == tonumber(categoryID) then
-				local parentInfo = entry and entry.info or nil
-				local parentName = parentInfo and (parentInfo.name or parentInfo.categoryName)
-				if parentName and tostring(parentName) ~= "" then
-					return tostring(parentName)
-				end
-				break
-			end
-		end
-	end
-
-	if C_TradeSkillUI and C_TradeSkillUI.GetCategoryInfo then
-		local liveInfo = ProfessionExporter:SafeCall(C_TradeSkillUI.GetCategoryInfo, categoryID)
-		local liveName = liveInfo and (liveInfo.name or liveInfo.categoryName)
-		if liveName and tostring(liveName) ~= "" then
-			return tostring(liveName)
-		end
-	end
-
-	return nil
+	return storedCategoryName(professionData, categoryID) or liveCategoryName(categoryID)
 end
 
 local function resolveCategoryLabelFromProfessionCategory(categoryEntry, categoryID)
 	if not categoryEntry then
 		return nil
 	end
-	local function nodeName(node)
-		local info = node and node.info or nil
-		local name = info and (info.name or info.categoryName)
-		if name and tostring(name) ~= "" then
-			return tostring(name)
-		end
-		return nil
-	end
-
 	local function joinPath(parts)
 		local out = {}
 		for _, part in ipairs(parts) do
@@ -407,7 +404,7 @@ local function resolveCategoryLabelFromProfessionCategory(categoryEntry, categor
 		for i = 1, #path do
 			nextPath[i] = path[i]
 		end
-		nextPath[#nextPath + 1] = nodeName(node)
+		nextPath[#nextPath + 1] = categoryNodeName(node)
 
 		if tonumber(node.categoryID) == tonumber(targetID) then
 			return joinPath(nextPath)
@@ -452,14 +449,6 @@ end
 
 local function containsText(haystack, needle)
     return string.find(string.lower(tostring(haystack or "")), needle, 1, true) ~= nil
-end
-
-local function craftCharacterName(pe, characterKey)
-    local characterData = pe.db and pe.db.characters and pe.db.characters[characterKey] or nil
-    if characterData and characterData.meta and characterData.meta.name then
-        return tostring(characterData.meta.name)
-    end
-    return tostring(characterKey or "?")
 end
 
 local function craftCharacterLabel(pe, characterKey)
@@ -736,6 +725,21 @@ function ProfessionExporter:BuildAccountItemInventoryTotals(itemID)
 	return totals
 end
 
+local function reagentSlotLabel(slot)
+	return slot.slotInfo and (slot.slotInfo.slotText or slot.slotInfo.label or slot.slotInfo.name) or nil
+end
+
+--- Plan this slot? Mandatory/target slots with reagents always; optional ones only when overridden.
+local function reagentSlotIncluded(qty, slotClass, slot, override)
+	if not (qty > 0 and slotClass and type(slot.reagents) == "table" and #slot.reagents > 0) then
+		return false
+	end
+	if slotClass == "mandatory_base" or slotClass == "required_target" then
+		return true
+	end
+	return slotClass == "optional" and override
+end
+
 --- Build a baseline reagent plan from slot metadata and optional live selections.
 function ProfessionExporter:PickCheapestReagentsPerSlot(recipeData, professionData, unitPriceFn, opts)
 	local slots = self:RecipeDataSlots(recipeData)
@@ -757,36 +761,29 @@ function ProfessionExporter:PickCheapestReagentsPerSlot(recipeData, professionDa
 			-- Shopping/queue: ignore live gear target and always plan for vellum.
 			override = nil
 		end
-		if qty > 0 and slotClass and type(slot.reagents) == "table" and #slot.reagents > 0 then
-			local includeSlot = false
-			if slotClass == "mandatory_base" or slotClass == "required_target" then
-				includeSlot = true
-			elseif slotClass == "optional" and override then
-				includeSlot = true
+		if reagentSlotIncluded(qty, slotClass, slot, override) then
+			local itemID = override and tonumber(override.itemID) or nil
+			if not itemID then
+				local prefer = (enchantRecipe and slotClass == "required_target") and ENCHANTING_VELLUM_ITEM_ID or nil
+				itemID = pickReagentForSlot(slot, unitPriceFn, prefer)
+			elseif enchantRecipe and slotClass == "required_target" and forceVellum then
+				itemID = ENCHANTING_VELLUM_ITEM_ID
 			end
-			if includeSlot then
-				local itemID = override and tonumber(override.itemID) or nil
-				if not itemID then
-					local prefer = (enchantRecipe and slotClass == "required_target") and ENCHANTING_VELLUM_ITEM_ID or nil
-					itemID = pickReagentForSlot(slot, unitPriceFn, prefer)
-				elseif enchantRecipe and slotClass == "required_target" and forceVellum then
-					itemID = ENCHANTING_VELLUM_ITEM_ID
-				end
-				if itemID then
-					plan[#plan + 1] = {
-						itemID = itemID,
-						quantityRequired = qty,
-						slotIndex = slot.slotIndex,
-						slotClass = slotClass,
-						slotRequired = slot.required == true,
-						slotOptional = slot.optional == true,
-						slotLabel = slot.slotInfo and (slot.slotInfo.slotText or slot.slotInfo.label or slot.slotInfo.name) or nil,
-						liveSelected = override and override.liveSelected == true or false,
-						autoSelected = override == nil,
-						autoSelectedTarget = slotClass == "required_target" and override == nil,
-						forcedVellum = enchantRecipe and slotClass == "required_target" and tonumber(itemID) == ENCHANTING_VELLUM_ITEM_ID and (forceVellum or override == nil) or nil,
-					}
-				end
+			if itemID then
+				plan[#plan + 1] = {
+					itemID = itemID,
+					quantityRequired = qty,
+					slotIndex = slot.slotIndex,
+					slotClass = slotClass,
+					slotRequired = slot.required == true,
+					slotOptional = slot.optional == true,
+					slotLabel = reagentSlotLabel(slot),
+					liveSelected = override and override.liveSelected == true or false,
+					autoSelected = override == nil,
+					autoSelectedTarget = slotClass == "required_target" and override == nil,
+					forcedVellum = enchantRecipe and slotClass == "required_target" and tonumber(itemID) == ENCHANTING_VELLUM_ITEM_ID
+						and (forceVellum or override == nil) or nil,
+				}
 			end
 		end
 	end
@@ -797,140 +794,118 @@ function ProfessionExporter:PickCheapestReagentsPerSlot(recipeData, professionDa
 	return plan
 end
 
-function ProfessionExporter:PickCheapestReagentsPerSlotForTargetQuality(recipeData, professionData, unitPriceFn, targetQualityIndex, opts)
-	opts = opts or {}
-	local basePlan = self:PickCheapestReagentsPerSlot(recipeData, professionData, unitPriceFn, opts)
-	local crafting = recipeData and recipeData.crafting or nil
-	local maxQ = schematicMaxQuality(recipeData)
-	local currentQ = reachableQualityIndex(crafting, maxQ)
-	targetQualityIndex = math.max(1, math.min(maxQ, tonumber(targetQualityIndex) or currentQ))
-	local forceVellumFinalize = craftIsEnchantRecipe(professionData, recipeData) and opts.forceEnchantingVellum == true
-	local function finalize(plan, reachable)
-		return ensureEnchantingVellumInPlan(plan, professionData, recipeData, forceVellumFinalize), reachable
+-- Target-quality planning state `st`: recipeData, professionData, unitPriceFn, opts, crafting, maxQ,
+-- targetQualityIndex, basePlan; collectTargetQualitySlots adds qualitySlots, staticPlan, totalWeight.
+local function addQualityChoiceSlot(st, slot, slotClass, qty)
+	local choices = buildBestReagentChoicesPerSlot(slot, st.unitPriceFn)
+	if #choices == 0 then
+		return
 	end
-	if targetQualityIndex <= currentQ then
-		return finalize(basePlan, targetQualityIndex == currentQ)
-	end
-	local currentTotal = currentOperationTotalSkill(crafting)
-	local targetSkill = targetQualityRequiredSkill(crafting, maxQ, targetQualityIndex)
-	local maxExtra = tonumber(crafting and (crafting.requiredReagentSkillDelta or 0)) or 0
+	local maxQuality = tonumber(choices[#choices].quality) or 1
+	st.qualitySlots[#st.qualitySlots + 1] = {
+		slot = slot,
+		slotClass = slotClass,
+		qty = qty,
+		maxQuality = maxQuality,
+		choices = choices,
+		weight = qty,
+	}
+	st.totalWeight = st.totalWeight + qty
+end
 
-	local slots = self:RecipeDataSlots(recipeData)
-	if type(slots) ~= "table" then
-		return finalize(basePlan, false)
+local function staticTargetPlanEntry(slot, slotClass, qty, override, itemID)
+	return {
+		itemID = itemID,
+		quantityRequired = qty,
+		slotIndex = slot.slotIndex,
+		slotClass = slotClass,
+		slotRequired = slot.required == true,
+		slotOptional = slot.optional == true,
+		slotLabel = reagentSlotLabel(slot),
+		liveSelected = override and override.liveSelected == true or false,
+		autoSelected = override == nil,
+		autoSelectedTarget = slotClass == "required_target" and override == nil,
+	}
+end
+
+local function addStaticTargetSlot(st, slot, slotClass, qty, override)
+	local isTarget = slotClass == "required_target"
+	local prefer = (st.enchantRecipe and isTarget) and ENCHANTING_VELLUM_ITEM_ID or nil
+	local itemID = override and tonumber(override.itemID) or pickReagentForSlot(slot, st.unitPriceFn, prefer)
+	if st.forceVellum and isTarget then
+		itemID = ENCHANTING_VELLUM_ITEM_ID
 	end
-	local overrideBySlot = buildPlanIndexBySlot(opts.reagentPlanOverride)
-	local enchantRecipe = craftIsEnchantRecipe(professionData, recipeData)
-	local forceVellum = enchantRecipe and opts.forceEnchantingVellum == true
-	local qualitySlots = {}
-	local staticPlan = {}
-	local totalWeight = 0
+	if itemID then
+		st.staticPlan[#st.staticPlan + 1] = staticTargetPlanEntry(slot, slotClass, qty, override, itemID)
+	end
+end
+
+local function addTargetQualitySlot(st, slot)
+	local qty = tonumber(slot.quantityRequired) or 0
+	local slotClass = classifyCraftReagentSlot(st.professionData, st.recipeData, slot)
+	local override = st.overrideBySlot[tostring(slot.slotIndex)]
+	if st.forceVellum and slotClass == "required_target" then
+		override = nil
+	end
+	if not reagentSlotIncluded(qty, slotClass, slot, override) then
+		return
+	end
+	if slotClass == "mandatory_base" and not override then
+		addQualityChoiceSlot(st, slot, slotClass, qty)
+	else
+		addStaticTargetSlot(st, slot, slotClass, qty, override)
+	end
+end
+
+--- Split slots into quality-choice slots (unpinned basic mats) and a static plan (targets, overrides).
+local function collectTargetQualitySlots(st, slots)
+	st.overrideBySlot = buildPlanIndexBySlot(st.opts.reagentPlanOverride)
+	st.enchantRecipe = craftIsEnchantRecipe(st.professionData, st.recipeData)
+	st.forceVellum = st.enchantRecipe and st.opts.forceEnchantingVellum == true
+	st.qualitySlots, st.staticPlan, st.totalWeight = {}, {}, 0
 	for _, slot in ipairs(slots) do
-		local qty = tonumber(slot.quantityRequired) or 0
-		local slotClass = classifyCraftReagentSlot(professionData, recipeData, slot)
-		local override = overrideBySlot[tostring(slot.slotIndex)]
-		if forceVellum and slotClass == "required_target" then
-			override = nil
-		end
-		if qty > 0 and slotClass and type(slot.reagents) == "table" and #slot.reagents > 0 then
-			local includeSlot = false
-			if slotClass == "mandatory_base" or slotClass == "required_target" then
-				includeSlot = true
-			elseif slotClass == "optional" and override then
-				includeSlot = true
-			end
-			if includeSlot then
-				if slotClass == "mandatory_base" and not override then
-					local choices = buildBestReagentChoicesPerSlot(slot, unitPriceFn)
-					if #choices > 0 then
-						local maxQuality = tonumber(choices[#choices].quality) or 1
-						qualitySlots[#qualitySlots + 1] = {
-							slot = slot,
-							slotClass = slotClass,
-							qty = qty,
-							maxQuality = maxQuality,
-							choices = choices,
-							weight = qty,
-						}
-						totalWeight = totalWeight + qty
-					end
-				else
-					local prefer = (enchantRecipe and slotClass == "required_target") and ENCHANTING_VELLUM_ITEM_ID or nil
-					local itemID = override and tonumber(override.itemID) or pickReagentForSlot(slot, unitPriceFn, prefer)
-					if forceVellum and slotClass == "required_target" then
-						itemID = ENCHANTING_VELLUM_ITEM_ID
-					end
-					if itemID then
-						staticPlan[#staticPlan + 1] = {
-							itemID = itemID,
-							quantityRequired = qty,
-							slotIndex = slot.slotIndex,
-							slotClass = slotClass,
-							slotRequired = slot.required == true,
-							slotOptional = slot.optional == true,
-							slotLabel = slot.slotInfo and (slot.slotInfo.slotText or slot.slotInfo.label or slot.slotInfo.name) or nil,
-							liveSelected = override and override.liveSelected == true or false,
-							autoSelected = override == nil,
-							autoSelectedTarget = slotClass == "required_target" and override == nil,
-						}
-					end
-				end
-			end
-		end
+		addTargetQualitySlot(st, slot)
 	end
-	if totalWeight <= 0 or #qualitySlots == 0 or not targetSkill or maxExtra <= 0 then
-			local maxPlan = clonePlanEntries(staticPlan)
-			for _, slotInfo in ipairs(qualitySlots) do
-				local choice = slotInfo.choices[#slotInfo.choices]
-				if choice then
-					maxPlan[#maxPlan + 1] = {
-						itemID = choice.itemID,
-						quantityRequired = slotInfo.qty,
-						slotIndex = slotInfo.slot.slotIndex,
-						slotClass = slotInfo.slotClass,
-						slotRequired = slotInfo.slot.required == true,
-						slotOptional = slotInfo.slot.optional == true,
-						slotLabel = slotInfo.slot.slotInfo and (slotInfo.slot.slotInfo.slotText or slotInfo.slot.slotInfo.label or slotInfo.slot.slotInfo.name) or nil,
-						qualityChoice = choice.quality,
-						targetQualityPlan = true,
-						autoSelected = true,
-					}
-				end
-			end
-		return finalize((#maxPlan > 0 and maxPlan or basePlan), false)
+end
+
+local function targetQualityPlanEntry(slotInfo, choice)
+	local slot = slotInfo.slot
+	return {
+		itemID = choice.itemID,
+		quantityRequired = slotInfo.qty,
+		slotIndex = slot.slotIndex,
+		slotClass = slotInfo.slotClass,
+		slotRequired = slot.required == true,
+		slotOptional = slot.optional == true,
+		slotLabel = reagentSlotLabel(slot),
+		qualityChoice = choice.quality,
+		targetQualityPlan = true,
+		autoSelected = true,
+	}
+end
+
+local function buildTargetQualityPlan(st, selection)
+	local out = clonePlanEntries(st.staticPlan)
+	for slotIdx, choice in ipairs(selection or {}) do
+		out[#out + 1] = targetQualityPlanEntry(st.qualitySlots[slotIdx], choice)
 	end
-	local needFraction = (targetSkill - currentTotal) / maxExtra
-	local bestPlan = nil
-	local bestCost = math.huge
-	local targetWeightedScore = math.max(0, needFraction) * totalWeight
-	local chosen = {}
-	local function buildChosenPlan(selection)
-		local out = clonePlanEntries(staticPlan)
-		for slotIdx, choice in ipairs(selection or {}) do
-			local slotInfo = qualitySlots[slotIdx]
-			out[#out + 1] = {
-				itemID = choice.itemID,
-				quantityRequired = slotInfo.qty,
-				slotIndex = slotInfo.slot.slotIndex,
-				slotClass = slotInfo.slotClass,
-				slotRequired = slotInfo.slot.required == true,
-				slotOptional = slotInfo.slot.optional == true,
-				slotLabel = slotInfo.slot.slotInfo and (slotInfo.slot.slotInfo.slotText or slotInfo.slot.slotInfo.label or slotInfo.slot.slotInfo.name) or nil,
-				qualityChoice = choice.quality,
-				targetQualityPlan = true,
-				autoSelected = true,
-			}
-		end
-		return out
-	end
-	local maxSelection = {}
+	return out
+end
+
+local function maxQualitySelection(qualitySlots)
+	local selection = {}
 	for idx, slotInfo in ipairs(qualitySlots) do
-		maxSelection[idx] = slotInfo.choices[#slotInfo.choices]
+		selection[idx] = slotInfo.choices[#slotInfo.choices]
 	end
-	local maxPlan = buildChosenPlan(maxSelection)
-	if needFraction > 1 then
-		return finalize(maxPlan, false)
-	end
+	return selection
+end
+
+--- Branch-and-bound: cheapest choice per slot whose weighted quality score reaches needFraction.
+local function searchTargetQualityPlan(st, needFraction)
+	local qualitySlots = st.qualitySlots
+	local bestPlan, bestCost = nil, math.huge
+	local targetWeightedScore = math.max(0, needFraction) * st.totalWeight
+	local chosen = {}
 	local function recurse(idx, weightedScore, weightedCost)
 		if weightedCost >= bestCost then
 			return
@@ -938,7 +913,7 @@ function ProfessionExporter:PickCheapestReagentsPerSlotForTargetQuality(recipeDa
 		if idx > #qualitySlots then
 			if weightedScore + 1e-6 >= targetWeightedScore then
 				bestCost = weightedCost
-				bestPlan = buildChosenPlan(chosen)
+				bestPlan = buildTargetQualityPlan(st, chosen)
 			end
 			return
 		end
@@ -950,9 +925,53 @@ function ProfessionExporter:PickCheapestReagentsPerSlotForTargetQuality(recipeDa
 		end
 		chosen[idx] = nil
 	end
-
 	recurse(1, 0, 0)
-	return finalize((bestPlan or maxPlan or basePlan), bestPlan ~= nil)
+	return bestPlan
+end
+
+local function targetQualitySearchBlocked(st, targetSkill, maxExtra)
+	return st.totalWeight <= 0 or #st.qualitySlots == 0 or not targetSkill or maxExtra <= 0
+end
+
+--- Plan for a rank above the reachable one; returns plan, reachable.
+local function planForHigherTargetQuality(self, st)
+	local crafting = st.crafting
+	local currentTotal = currentOperationTotalSkill(crafting)
+	local targetSkill = targetQualityRequiredSkill(crafting, st.maxQ, st.targetQualityIndex)
+	local maxExtra = tonumber(crafting and (crafting.requiredReagentSkillDelta or 0)) or 0
+	local slots = self:RecipeDataSlots(st.recipeData)
+	if type(slots) ~= "table" then
+		return st.basePlan, false
+	end
+	collectTargetQualitySlots(st, slots)
+	local maxPlan = buildTargetQualityPlan(st, maxQualitySelection(st.qualitySlots))
+	if targetQualitySearchBlocked(st, targetSkill, maxExtra) then
+		return (#maxPlan > 0 and maxPlan or st.basePlan), false
+	end
+	local needFraction = (targetSkill - currentTotal) / maxExtra
+	if needFraction > 1 then
+		return maxPlan, false
+	end
+	local bestPlan = searchTargetQualityPlan(st, needFraction)
+	return (bestPlan or maxPlan), bestPlan ~= nil
+end
+
+function ProfessionExporter:PickCheapestReagentsPerSlotForTargetQuality(recipeData, professionData, unitPriceFn, targetQualityIndex, opts)
+	opts = opts or {}
+	local basePlan = self:PickCheapestReagentsPerSlot(recipeData, professionData, unitPriceFn, opts)
+	local crafting = recipeData and recipeData.crafting or nil
+	local maxQ = schematicMaxQuality(recipeData)
+	local currentQ = reachableQualityIndex(crafting, maxQ)
+	targetQualityIndex = math.max(1, math.min(maxQ, tonumber(targetQualityIndex) or currentQ))
+	local forceVellumFinalize = craftIsEnchantRecipe(professionData, recipeData) and opts.forceEnchantingVellum == true
+	local plan, reachable = basePlan, targetQualityIndex == currentQ
+	if targetQualityIndex > currentQ then
+		plan, reachable = planForHigherTargetQuality(self, {
+			recipeData = recipeData, professionData = professionData, unitPriceFn = unitPriceFn, opts = opts,
+			crafting = crafting, maxQ = maxQ, targetQualityIndex = targetQualityIndex, basePlan = basePlan,
+		})
+	end
+	return ensureEnchantingVellumInPlan(plan, professionData, recipeData, forceVellumFinalize), reachable
 end
 
 function ProfessionExporter:ComputeMatCostForReagentPlan(plan, unitPriceFn, sourceMode, getInventoryTotalsFn)
@@ -1081,235 +1100,279 @@ function ProfessionExporter:ProfessionRecipeIsVendorSourced(recipeID, recipeData
 	return false
 end
 
---- Evaluate one character's learned recipe for a specific quality target.
-function ProfessionExporter:EvaluateCraftScenario(characterKey, professionData, recipeID, recipeData, opts)
-    opts = opts or {}
-    local scenario = opts.scenario or "default"
-    local sourceMode = opts.sourceMode or "owned_first"
-    local costBasis = opts.costBasis or "auto"
-    local useLedgerMats = costBasis == "ledger" or costBasis == "auto"
-
+-- EvaluateCraftScenario helpers share one context table `c` (inputs + intermediate results).
+local function resolveCraftEvalQuality(self, c)
+    local recipeData = c.recipeData
     local info = self:RecipeDataInfo(recipeData)
-    local learned = true
-    if info and info.learned == false then
-        learned = false
+    c.learned = not (info and info.learned == false)
+    c.maxQ = schematicMaxQuality(recipeData)
+    c.crafting = recipeData.crafting
+    c.baseQ = reachableQualityIndex(c.crafting, c.maxQ)
+    c.defaultScenarioQ = c.baseQ
+    if c.scenario == "concentration" and c.baseQ < c.maxQ then
+        c.defaultScenarioQ = math.min(c.maxQ, c.baseQ + 1)
     end
+    c.qualityIndex = math.max(1, math.min(c.maxQ, tonumber(c.opts.targetQualityIndex) or c.defaultScenarioQ))
+end
 
-    local maxQ = schematicMaxQuality(recipeData)
-    local crafting = recipeData.crafting
-    local baseQ = reachableQualityIndex(crafting, maxQ)
-    local defaultScenarioQ = baseQ
-    if scenario == "concentration" and baseQ < maxQ then
-        defaultScenarioQ = math.min(maxQ, baseQ + 1)
-    end
-    local qualityIndex = math.max(1, math.min(maxQ, tonumber(opts.targetQualityIndex) or defaultScenarioQ))
-
-    local outputItemID = select(1, outputItemForQuality(recipeData, qualityIndex))
+local function resolveCraftEvalOutputItem(self, c)
+    local outputItemID = select(1, outputItemForQuality(c.recipeData, c.qualityIndex))
     if not outputItemID then
-        outputItemID = resolveCraftOutputItemID(self, recipeID, recipeData, {
-            forceEnchantingVellum = opts.forceEnchantingVellum == true,
-            professionData = professionData,
+        outputItemID = resolveCraftOutputItemID(self, c.recipeID, c.recipeData, {
+            forceEnchantingVellum = c.opts.forceEnchantingVellum == true,
+            professionData = c.professionData,
         })
     end
-    if not outputItemID and opts.allowMissingOutput then
+    if not outputItemID and c.opts.allowMissingOutput then
         -- Shopping/queue still needs a stable key; recipe spell id is unique per line.
-        outputItemID = tonumber(self:GetRecipeSpellID(recipeData)) or tonumber(recipeID)
+        outputItemID = tonumber(self:GetRecipeSpellID(c.recipeData)) or tonumber(c.recipeID)
     end
-    if not outputItemID then
+    c.outputItemID = outputItemID
+    return outputItemID
+end
+
+local function craftEvalVendorBuyCopper(self, c, id)
+    if not c.vendorRecipe then
         return nil
     end
-
-    local vendorRecipe = self:ProfessionRecipeIsVendorSourced(recipeID, recipeData)
-
-    local outputDesc = self:ResolveItemDescriptor(outputItemID)
-    local st = self.db and self.db.settings or {}
-    local tsmMarket = st.economyTSMMarketString or "dbmarket"
-    local fallbackTsm = st.economyTSMFallbackString or "DBMinBuyout"
-    local tsmMat = st.economyTSMMatString or "Crafting"
-    local usesRequiredTarget = false
-
-    local function saleUnit(id)
-        if vendorRecipe then
-            local vb = self:GetItemVendorPurchaseCopper(id)
-            if vb and vb > 0 then
-                return vb, "Vendor"
-            end
-        end
-        return self:GetMarketEstimateCopper(id, tsmMarket, fallbackTsm)
+    local vb = self:GetItemVendorPurchaseCopper(id)
+    if vb and vb > 0 then
+        return vb
     end
+    return nil
+end
 
-    local function unitPriceForMat(id)
-        if vendorRecipe then
-            local vb = self:GetItemVendorPurchaseCopper(id)
-            if vb and vb > 0 then
-                return vb, "Vendor"
-            end
-        end
-        if useLedgerMats then
-            local ledgerAvg = self:LedgerAverageUnitBuyCopper(id, nil)
-            if ledgerAvg then
-                return ledgerAvg, "Ledger"
-            end
-        end
-        local marketEstimate, marketSource = self:GetMarketEstimateCopper(id, tsmMat, fallbackTsm)
-        if marketEstimate and marketEstimate > 0 then
-            return marketEstimate, marketSource
-        end
-        return nil, nil
+local function craftEvalSaleUnit(self, c, id)
+    local vb = craftEvalVendorBuyCopper(self, c, id)
+    if vb then
+        return vb, "Vendor"
     end
+    return self:GetMarketEstimateCopper(id, c.tsmMarket, c.fallbackTsm)
+end
 
-    local function unitPriceForPick(id)
-        if sourceMode == "market_only" then
-            return saleUnit(id)
-        end
-        return unitPriceForMat(id)
+local function craftEvalMatUnit(self, c, id)
+    local vb = craftEvalVendorBuyCopper(self, c, id)
+    if vb then
+        return vb, "Vendor"
     end
+    if c.useLedgerMats then
+        local ledgerAvg = self:LedgerAverageUnitBuyCopper(id, nil)
+        if ledgerAvg then
+            return ledgerAvg, "Ledger"
+        end
+    end
+    local marketEstimate, marketSource = self:GetMarketEstimateCopper(id, c.tsmMat, c.fallbackTsm)
+    if marketEstimate and marketEstimate > 0 then
+        return marketEstimate, marketSource
+    end
+    return nil, nil
+end
 
-    local inventoryTotalsCache = {}
-    local function getInventoryTotalsCached(itemID)
+local function craftEvalPickUnit(self, c, id)
+    if c.sourceMode == "market_only" then
+        return craftEvalSaleUnit(self, c, id)
+    end
+    return craftEvalMatUnit(self, c, id)
+end
+
+local function newCraftEvalInventoryLookup(self)
+    local cache = {}
+    return function(itemID)
         local id = tonumber(itemID)
         if not id then
             return { bags = 0, bank = 0, warband = 0, total = 0 }
         end
-        local cached = inventoryTotalsCache[id]
+        local cached = cache[id]
         if cached then
             return cached
         end
         local totals = self:BuildAccountItemInventoryTotals(id)
-        inventoryTotalsCache[id] = totals
+        cache[id] = totals
         return totals
     end
+end
 
-    local plan, qualityReachable = self:PickCheapestReagentsPerSlotForTargetQuality(recipeData, professionData, unitPriceForPick, qualityIndex, {
-        reagentPlanOverride = opts.reagentPlanOverride,
-        forceEnchantingVellum = opts.forceEnchantingVellum == true,
-    })
+--- Price/inventory callbacks; pick and cost get separate closures (same rules) like before the split.
+local function bindCraftEvalPricing(self, c)
+    local st = self.db and self.db.settings or {}
+    c.tsmMarket = st.economyTSMMarketString or "dbmarket"
+    c.fallbackTsm = st.economyTSMFallbackString or "DBMinBuyout"
+    c.tsmMat = st.economyTSMMatString or "Crafting"
+    local costBasis = c.opts.costBasis or "auto"
+    c.useLedgerMats = costBasis == "ledger" or costBasis == "auto"
+    c.saleUnitFn = function(id) return craftEvalSaleUnit(self, c, id) end
+    c.pickUnitFn = function(id) return craftEvalPickUnit(self, c, id) end
+    c.costUnitFn = function(id) return craftEvalPickUnit(self, c, id) end
+    c.inventoryFn = newCraftEvalInventoryLookup(self)
+end
+
+local function resolveCraftEvalPlan(self, c)
+    local forceVellum = c.opts.forceEnchantingVellum == true
+    local plan, qualityReachable = self:PickCheapestReagentsPerSlotForTargetQuality(
+        c.recipeData, c.professionData, c.pickUnitFn, c.qualityIndex,
+        { reagentPlanOverride = c.opts.reagentPlanOverride, forceEnchantingVellum = forceVellum }
+    )
     if not plan then
         return nil
     end
-    if opts.forceEnchantingVellum == true then
-        ensureEnchantingVellumInPlan(plan, professionData, recipeData, true)
+    if forceVellum then
+        ensureEnchantingVellumInPlan(plan, c.professionData, c.recipeData, true)
     end
-    usesRequiredTarget = reagentPlanHasRequiredTarget(plan)
+    c.plan, c.qualityReachable = plan, qualityReachable
+    c.usesRequiredTarget = reagentPlanHasRequiredTarget(plan)
+    return plan
+end
 
-    local oopMatCost, matMissingPrice, coverage, fullMatCost = self:ComputeMatCostForReagentPlan(plan, function(id)
-        if sourceMode == "market_only" then
-            return saleUnit(id)
-        end
-        return unitPriceForMat(id)
-    end, sourceMode, getInventoryTotalsCached)
+--- saleBasis ledger/auto: replace a market (not vendor) sale price with the ledger sell average.
+local function applyCraftEvalLedgerSale(self, c, saleGross, saleSrc)
+    local saleBasis = c.opts.saleBasis or "auto"
+    if not (saleGross and saleSrc ~= "Vendor sell" and saleBasis ~= "market" and (saleBasis == "ledger" or saleBasis == "auto")) then
+        return saleGross, saleSrc
+    end
+    local avgs, n = self:LedgerAverageUnitSellCopper(c.outputItemID, nil)
+    if avgs and n and n >= 1 then
+        return avgs, "ledger"
+    end
+    return saleGross, saleSrc
+end
 
-    local outQty = math.max(1, self:GetRecipeOutputQuantityForCost(recipeData))
-    local saleGross, saleSrc = self:GetMarketEstimateCopper(outputItemID, tsmMarket, fallbackTsm)
-    if vendorRecipe then
-        local vs = self:GetItemVendorSellCopper(outputItemID)
+local function resolveCraftEvalSale(self, c)
+    local saleGross, saleSrc = self:GetMarketEstimateCopper(c.outputItemID, c.tsmMarket, c.fallbackTsm)
+    if c.vendorRecipe then
+        local vs = self:GetItemVendorSellCopper(c.outputItemID)
         if vs and vs > 0 then
             saleGross = vs
             saleSrc = "Vendor sell"
         end
     end
-    local saleBasis = opts.saleBasis or "auto"
-    if saleGross and saleSrc ~= "Vendor sell" and saleBasis ~= "market" and (saleBasis == "ledger" or saleBasis == "auto") then
-        local avgs, n = self:LedgerAverageUnitSellCopper(outputItemID, nil)
-        if avgs and n and n >= 1 then
-            saleGross = avgs
-            saleSrc = "ledger"
-        end
-    end
+    saleGross, saleSrc = applyCraftEvalLedgerSale(self, c, saleGross, saleSrc)
+    c.saleGross, c.saleSrc = saleGross, saleSrc
+    c.saleNet = saleGross and self:ApplyAhCutToSaleCopper(saleGross) or nil
+end
 
-    local saleNet = saleGross and self:ApplyAhCutToSaleCopper(saleGross) or nil
-    local matPerCraft = fullMatCost or oopMatCost
-    local profit = (saleNet and matPerCraft) and (saleNet * outQty - matPerCraft) or nil
-    local concCost = tonumber(crafting and crafting.concentrationCost) or nil
-    local concentrationNeeded, concentrationSkillShortfall = nil, nil
-    if qualityReachable == false and qualityIndex > baseQ then
-        concentrationNeeded, concentrationSkillShortfall = estimateConcentrationNeeded(crafting, maxQ, baseQ, qualityIndex, plan)
+local function resolveCraftEvalConcentration(c)
+    c.concCost = tonumber(c.crafting and c.crafting.concentrationCost) or nil
+    if c.qualityReachable == false and c.qualityIndex > c.baseQ then
+        c.concentrationNeeded, c.concentrationSkillShortfall =
+            estimateConcentrationNeeded(c.crafting, c.maxQ, c.baseQ, c.qualityIndex, c.plan)
     end
-    if matMissingPrice or not saleGross or (qualityReachable == false and (scenario ~= "concentration" or not concentrationNeeded)) then
+end
+
+local function craftEvalProfitBlocked(c)
+    if c.matMissingPrice or not c.saleGross then
+        return true
+    end
+    return c.qualityReachable == false and (c.scenario ~= "concentration" or not c.concentrationNeeded)
+end
+
+local function resolveCraftEvalProfit(c)
+    c.matPerCraft = c.fullMatCost or c.oopMatCost
+    local matPerCraft = c.matPerCraft
+    local profit = (c.saleNet and matPerCraft) and (c.saleNet * c.outQty - matPerCraft) or nil
+    resolveCraftEvalConcentration(c)
+    if craftEvalProfitBlocked(c) then
         profit = nil
     end
+    c.profit = profit
+    c.roi = (profit and matPerCraft and matPerCraft > 0) and (profit / matPerCraft) * 100 or nil
+end
 
-    local roi = (profit and matPerCraft and matPerCraft > 0) and (profit / matPerCraft) * 100 or nil
-    local profitPerConc = nil
-    if scenario == "concentration" and concCost and concCost > 0 and baseQ < maxQ then
-        local baseItem = select(1, outputItemForQuality(recipeData, baseQ))
-        local baseSale
-        if baseItem then
-            if vendorRecipe then
-                baseSale = self:GetItemVendorSellCopper(baseItem)
-            end
-            if not baseSale then
-                baseSale = select(1, self:GetMarketEstimateCopper(baseItem, tsmMarket, fallbackTsm))
-            end
-        end
-        local baseNet = baseSale and self:ApplyAhCutToSaleCopper(baseSale)
-        local _, missConc = self:ComputeMatCostForReagentPlan(cloneReagentPlan(plan), saleUnit, sourceMode, getInventoryTotalsCached)
-        if not missConc and saleNet and baseNet then
-            local dProfit = (saleNet - baseNet) * outQty
-            profitPerConc = dProfit / concCost
+local function craftEvalBaseSaleCopper(self, c)
+    local baseItem = select(1, outputItemForQuality(c.recipeData, c.baseQ))
+    if not baseItem then
+        return nil
+    end
+    local baseSale
+    if c.vendorRecipe then
+        baseSale = self:GetItemVendorSellCopper(baseItem)
+    end
+    if not baseSale then
+        baseSale = select(1, self:GetMarketEstimateCopper(baseItem, c.tsmMarket, c.fallbackTsm))
+    end
+    return baseSale
+end
+
+--- Extra profit of the upgraded rank per concentration point (concentration scenario only).
+local function craftEvalProfitPerConcentration(self, c)
+    if not (c.scenario == "concentration" and c.concCost and c.concCost > 0 and c.baseQ < c.maxQ) then
+        return nil
+    end
+    local baseSale = craftEvalBaseSaleCopper(self, c)
+    local baseNet = baseSale and self:ApplyAhCutToSaleCopper(baseSale)
+    local _, missConc = self:ComputeMatCostForReagentPlan(cloneReagentPlan(c.plan), c.saleUnitFn, c.sourceMode, c.inventoryFn)
+    if not missConc and c.saleNet and baseNet then
+        local dProfit = (c.saleNet - baseNet) * c.outQty
+        return dProfit / c.concCost
+    end
+    return nil
+end
+
+--- First required_target entry's item and auto flag (only when the plan has one).
+local function craftEvalRequiredTarget(plan, usesRequiredTarget)
+    if not usesRequiredTarget then
+        return nil, false
+    end
+    for _, entry in ipairs(plan or {}) do
+        if entry.slotClass == "required_target" then
+            return tonumber(entry.itemID), entry.autoSelectedTarget == true
         end
     end
+    return nil, false
+end
 
-    local canCraftNow = learned and qualityReachable ~= false and self:ReagentPlanMeetsInventory(plan, getInventoryTotalsCached)
-
+local function buildCraftEvalResult(self, c)
+    local recipeID, recipeData, professionData, plan = c.recipeID, c.recipeData, c.professionData, c.plan
+    local ck = c.characterKey
     local exportRecipeID = self:GetRecipeExportID(recipeData) or tonumber(recipeID) or recipeID
     local recipeSpellID = self:GetRecipeSpellID(recipeData) or tonumber(recipeID) or recipeID
-
+    local usesTarget = c.usesRequiredTarget
+    local targetItemID, targetAuto = craftEvalRequiredTarget(plan, usesTarget)
     return {
-        characterKey = characterKey,
-        recipeID = exportRecipeID,
-        recipeSpellID = recipeSpellID,
+        characterKey = ck, recipeID = exportRecipeID, recipeSpellID = recipeSpellID,
         recipeName = recipeDisplayName(recipeData),
-        professionName = professionData.professionName,
-        skillLineID = professionData.skillLineID,
-        expansionTag = self:GetCraftExpansionTag(professionData, recipeData, outputItemID),
-        learned = learned,
-        qualityIndex = qualityIndex,
-        baseQualityIndex = baseQ,
-        scenarioBaseQualityIndex = defaultScenarioQ,
-        qualityReachable = qualityReachable ~= false,
-        outputItemID = outputItemID,
-        outputQty = outQty,
-        outputIcon = outputDesc and outputDesc.icon,
-        matCost = matPerCraft,
-        outOfPocketMatCost = oopMatCost,
-        fullMatCost = fullMatCost,
-        matMissingPrice = matMissingPrice,
-        saleGross = saleGross,
-        saleNet = saleNet,
-        saleSource = saleSrc,
-        profit = profit,
-        roi = roi,
-        coverage = coverage,
-        canCraftNow = canCraftNow,
-        reagentPlan = plan,
-        concentrationCost = concCost,
-        concentrationNeeded = concentrationNeeded,
-        concentrationSkillShortfall = concentrationSkillShortfall,
-        profitPerConcentration = profitPerConc,
-        categoryID = recipeCategoryId(recipeData),
-        categoryName = recipeCategoryName(recipeData, professionData),
-        scanAt = self.db.characters[characterKey] and self.db.characters[characterKey].scanFinishedAt,
-        enchantUsesVellum = usesRequiredTarget,
-        requiredTargetReagent = usesRequiredTarget,
-        requiredTargetReagentItemID = usesRequiredTarget and (function()
-            for _, entry in ipairs(plan or {}) do
-                if entry.slotClass == "required_target" then
-                    return tonumber(entry.itemID)
-                end
-            end
-            return nil
-        end)() or nil,
-        requiredTargetReagentAuto = usesRequiredTarget and (function()
-            for _, entry in ipairs(plan or {}) do
-                if entry.slotClass == "required_target" then
-                    return entry.autoSelectedTarget == true
-                end
-            end
-            return false
-        end)() or false,
+        professionName = professionData.professionName, skillLineID = professionData.skillLineID,
+        expansionTag = self:GetCraftExpansionTag(professionData, recipeData, c.outputItemID),
+        learned = c.learned, qualityIndex = c.qualityIndex, baseQualityIndex = c.baseQ,
+        scenarioBaseQualityIndex = c.defaultScenarioQ, qualityReachable = c.qualityReachable ~= false,
+        outputItemID = c.outputItemID, outputQty = c.outQty, outputIcon = c.outputDesc and c.outputDesc.icon,
+        matCost = c.matPerCraft, outOfPocketMatCost = c.oopMatCost, fullMatCost = c.fullMatCost,
+        matMissingPrice = c.matMissingPrice, saleGross = c.saleGross, saleNet = c.saleNet, saleSource = c.saleSrc,
+        profit = c.profit, roi = c.roi, coverage = c.coverage, canCraftNow = c.canCraftNow, reagentPlan = plan,
+        concentrationCost = c.concCost, concentrationNeeded = c.concentrationNeeded,
+        concentrationSkillShortfall = c.concentrationSkillShortfall, profitPerConcentration = c.profitPerConc,
+        categoryID = recipeCategoryId(recipeData), categoryName = recipeCategoryName(recipeData, professionData),
+        scanAt = self.db.characters[ck] and self.db.characters[ck].scanFinishedAt,
+        enchantUsesVellum = usesTarget, requiredTargetReagent = usesTarget,
+        requiredTargetReagentItemID = targetItemID, requiredTargetReagentAuto = targetAuto,
         liveSelectedPlan = reagentPlanContainsLiveSelection(plan),
     }
+end
+
+--- Evaluate one character's learned recipe for a specific quality target.
+function ProfessionExporter:EvaluateCraftScenario(characterKey, professionData, recipeID, recipeData, opts)
+    opts = opts or {}
+    local c = {
+        characterKey = characterKey, professionData = professionData, recipeID = recipeID, recipeData = recipeData,
+        opts = opts, scenario = opts.scenario or "default", sourceMode = opts.sourceMode or "owned_first",
+    }
+    resolveCraftEvalQuality(self, c)
+    if not resolveCraftEvalOutputItem(self, c) then
+        return nil
+    end
+    c.vendorRecipe = self:ProfessionRecipeIsVendorSourced(recipeID, recipeData)
+    c.outputDesc = self:ResolveItemDescriptor(c.outputItemID)
+    bindCraftEvalPricing(self, c)
+    if not resolveCraftEvalPlan(self, c) then
+        return nil
+    end
+    c.oopMatCost, c.matMissingPrice, c.coverage, c.fullMatCost =
+        self:ComputeMatCostForReagentPlan(c.plan, c.costUnitFn, c.sourceMode, c.inventoryFn)
+    c.outQty = math.max(1, self:GetRecipeOutputQuantityForCost(recipeData))
+    resolveCraftEvalSale(self, c)
+    resolveCraftEvalProfit(c)
+    c.profitPerConc = craftEvalProfitPerConcentration(self, c)
+    c.canCraftNow = c.learned and c.qualityReachable ~= false and self:ReagentPlanMeetsInventory(c.plan, c.inventoryFn)
+    return buildCraftEvalResult(self, c)
 end
 
 -- Prefer OrderView schematic when Crafting Orders tab is showing an order.
@@ -1499,7 +1562,7 @@ function ProfessionExporter:BuildCraftEconomyItemIDs(opts)
 	for characterKey, characterData in pairs(self.db.characters or {}) do
 		if not scopeKey or tostring(characterKey) == scopeKey then
 			for _, professionData in pairs(characterData.professions or {}) do
-				for rid, recipeData in pairs(professionData.recipes or {}) do
+				for _, recipeData in pairs(professionData.recipes or {}) do
 					local info = self:RecipeDataInfo(recipeData)
 					if info and info.learned ~= false then
 						local outs = recipeData.outputs
@@ -1635,10 +1698,7 @@ local function finalizeCraftOpportunityRowsFromBuckets(self, settings, byKey, ro
 			end
 		end
 		if not bestChar then
-			for ck in pairs(bucket.perChar) do
-				bestChar = ck
-				break
-			end
+			bestChar = next(bucket.perChar) -- no priced character: any one (first pairs() key)
 		end
 		local ev = bestChar and bucket.perChar[bestChar]
 		if ev then
@@ -1683,7 +1743,8 @@ local function finalizeCraftOpportunityRowsFromBuckets(self, settings, byKey, ro
 			bucket.requiredTargetReagentItemID = ev.requiredTargetReagentItemID
 			bucket.requiredTargetReagentAuto = ev.requiredTargetReagentAuto
 			bucket.sourceRecipeName = bucket.recipeName
-			bucket.freshnessNote = ev.concentrationNeeded and "Needs concentration" or (ev.qualityReachable == false and "Target rank unreachable" or (stale and "No TSM/Auc price" or (thin and "Thin AH history" or "OK")))
+			bucket.freshnessNote = ev.concentrationNeeded and "Needs concentration"
+				or (ev.qualityReachable == false and "Target rank unreachable" or (stale and "No TSM/Auc price" or (thin and "Thin AH history" or "OK")))
 			bucket.confidence = self:ResolveCraftConfidenceState(ev, "scan_row")
 			rows[#rows + 1] = bucket
 		end
@@ -1979,117 +2040,6 @@ function ProfessionExporter:GetCraftCategoryFilterOptions(rows)
 		return tostring(a.label) < tostring(b.label)
 	end)
 	return opts
-end
-
-function ProfessionExporter:BuildCraftDetailText(row)
-    if not row then
-        return "Select a craft row."
-    end
-    local best = row.bestCharacterKey and row.perChar[row.bestCharacterKey] or nil
-    local crafterLabel, crafterReason = self:GetCraftRecommendedCrafter(row)
-    local lines = {}
-    lines[#lines + 1] = "|cffffffff" .. tostring(row.outputName or "?") .. "|r"
-    lines[#lines + 1] = string.format("Source: %s  |  Profession: %s", row.recipeName or "?", row.professionName or "?")
-    lines[#lines + 1] = string.format("Item: #%s  |  Rank %d  |  Expansion: %s", tostring(row.outputItemID), tonumber(row.qualityIndex) or 0, row.expansionTag or "?")
-    if row.qualityReachable == false then
-        if row.concentrationNeeded then
-            lines[#lines + 1] = string.format("|cffffff80+%s conc|r", self:FormatNumberGrouped(row.concentrationNeeded))
-        elseif row.concentrationCost and row.concentrationCost > 0 then
-            lines[#lines + 1] = "|cffffff80+conc|r"
-        else
-            lines[#lines + 1] = "|cffff8080Unreachable|r"
-        end
-    end
-    if crafterLabel then
-        lines[#lines + 1] = string.format("Recommended crafter: %s  |  %s", crafterLabel, crafterReason or "Best available")
-    end
-    lines[#lines + 1] = " "
-    lines[#lines + 1] = best and best.liveSelectedPlan and string.format("|cffffffffMaterials (live selection + required slots for rank %d)|r", tonumber(row.qualityIndex) or 0) or string.format("|cffffffffMaterials (cheapest plan for rank %d)|r", tonumber(row.qualityIndex) or 0)
-    if best and best.reagentPlan then
-        for _, slot in ipairs(best.reagentPlan) do
-            local nm = self:GetItemDisplayName(slot.itemID)
-            local inv = self:BuildAccountItemInventoryTotals(slot.itemID)
-            local flags = {}
-            if slot.slotClass == "required_target" then
-                flags[#flags + 1] = slot.liveSelected and "target selected" or "target auto"
-            elseif slot.slotClass == "optional" then
-                flags[#flags + 1] = "optional selected"
-            end
-            if slot.synthetic then
-                flags[#flags + 1] = "legacy fallback"
-            end
-            if slot.priceUnit and slot.lineCost ~= nil then
-                flags[#flags + 1] = string.format(
-                    "%s each via %s, total %s",
-                    self:FormatCopperShort(slot.priceUnit),
-                    tostring(slot.priceSource or "?"),
-                    self:FormatCopperShort(slot.lineCost)
-                )
-            end
-            if (tonumber(slot.ownedQuantity) or 0) > 0 then
-                flags[#flags + 1] = string.format("owned %s", self:FormatNumberGrouped(slot.ownedQuantity))
-            end
-            local suffix = #flags > 0 and ("  [" .. table.concat(flags, ", ") .. "]") or ""
-            lines[#lines + 1] = string.format(
-                "  %s x%s  (account stock %s)%s",
-                nm,
-                self:FormatNumberGrouped(tonumber(slot.quantityRequired) or 0),
-                self:FormatNumberGrouped(tonumber(inv.total) or 0),
-                suffix
-            )
-        end
-    else
-        lines[#lines + 1] = "  (no plan)"
-    end
-    lines[#lines + 1] = " "
-    lines[#lines + 1] = "|cffffffffEconomics|r"
-    if best then
-        lines[#lines + 1] = string.format("Sale (net est.): %s  |  Mats: %s  |  Profit: %s", best.saleNet and self:FormatCopperShort(best.saleNet) or "-", best.matCost and self:FormatCopperShort(best.matCost) or "-", best.profit and self:FormatCopperShort(best.profit) or "-")
-        if best.outOfPocketMatCost and best.outOfPocketMatCost ~= best.matCost then
-            lines[#lines + 1] = string.format("Out-of-pocket mats in current source mode: %s", self:FormatCopperShort(best.outOfPocketMatCost))
-        end
-        if best.qualityReachable == false then
-            if best.concentrationNeeded then
-                lines[#lines + 1] = string.format("Status: +%s conc", self:FormatNumberGrouped(best.concentrationNeeded))
-            elseif best.concentrationCost and best.concentrationCost > 0 then
-                lines[#lines + 1] = "Status: +conc"
-            else
-                lines[#lines + 1] = "Status: unreachable"
-            end
-        end
-        lines[#lines + 1] = string.format("Output quantity: %s  |  ROI: %s  |  Coverage: %.0f%%", self:FormatNumberGrouped(best.outputQty or 1), best.roi and string.format("%.1f%%", best.roi) or "-", (best.coverage or 0) * 100)
-        if best.scenarioBaseQualityIndex and tonumber(best.scenarioBaseQualityIndex) and tonumber(best.qualityIndex) and tonumber(best.qualityIndex) > tonumber(best.scenarioBaseQualityIndex) then
-            lines[#lines + 1] = string.format("Chosen rank plan: upgraded materials selected to target rank %d (baseline scenario rank %d).", tonumber(best.qualityIndex) or 0, tonumber(best.scenarioBaseQualityIndex) or 0)
-        end
-        if best.concentrationNeeded then
-            local line = string.format("Conc: +%s", self:FormatNumberGrouped(best.concentrationNeeded))
-            if best.concentrationSkillShortfall and best.concentrationSkillShortfall > 0 then
-                line = line .. string.format("  |  skill shortfall %.1f", best.concentrationSkillShortfall)
-            end
-            lines[#lines + 1] = line
-        end
-        if best.profitPerConcentration and tonumber(best.qualityIndex or 0) > tonumber(best.baseQualityIndex or 0) then
-            lines[#lines + 1] = string.format("Profit / concentration: %s", self:FormatCopperShort(best.profitPerConcentration))
-        end
-        if best.requiredTargetReagent and best.requiredTargetReagentItemID then
-            lines[#lines + 1] = string.format(
-                "Required target reagent: %s (%s).",
-                self:GetItemDisplayName(best.requiredTargetReagentItemID),
-                best.requiredTargetReagentAuto and "auto-selected from valid targets" or "taken from the live profession setup"
-            )
-        end
-    end
-    lines[#lines + 1] = " "
-    lines[#lines + 1] = "|cffffffffCharacter comparison|r"
-    for ck, ev in pairs(row.perChar or {}) do
-        lines[#lines + 1] = string.format("%s  |  profit %s  |  Q%d  |  cov %.0f%%", craftCharacterName(self, ck), ev.profit and self:FormatCopperShort(ev.profit) or "-", tonumber(ev.qualityIndex) or 0, (ev.coverage or 0) * 100)
-    end
-    lines[#lines + 1] = " "
-    lines[#lines + 1] = "|cffffffffConfidence|r"
-    lines[#lines + 1] = "Profit uses TSM/Auctionator where available, with ledger averages when enabled and data exists."
-    lines[#lines + 1] = "Mats/profit use full market material cost; owned coverage and out-of-pocket spend are shown separately."
-    lines[#lines + 1] = "Quality reachability is derived from the last profession scan (skill + thresholds), not live reagent swaps."
-    return table.concat(lines, "\n")
 end
 
 function ProfessionExporter:ResolveCraftConfidenceState(eval, dataSource)
@@ -2406,7 +2356,7 @@ function ProfessionExporter:EvaluateSelectedProfessionRecipe()
 	end
 
 	local opportunityRow = self:FindCraftOpportunityRowForRecipe(recipeID, eval.outputItemID)
-	local recommendedLabel, recommendedReason = nil, nil
+	local recommendedLabel, recommendedReason
 	if opportunityRow then
 		recommendedLabel, recommendedReason = self:GetCraftRecommendedCrafter(opportunityRow)
 	else
@@ -2511,7 +2461,7 @@ function ProfessionExporter:BuildProfessionRecipeQueueContext(recipeID, opts)
 	end
 
 	local opportunityRow = self:FindCraftOpportunityRowForRecipe(recipeID, eval.outputItemID)
-	local recommendedLabel = nil
+	local recommendedLabel
 	if opportunityRow then
 		recommendedLabel = select(1, self:GetCraftRecommendedCrafter(opportunityRow))
 	else

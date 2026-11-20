@@ -1,6 +1,5 @@
 local addonName, ProfessionExporter = ...
 
-local DASHBOARD_ACCOUNT_KEY = ProfessionExporter.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
 
 ProfessionExporter.ui = ProfessionExporter.ui or {}
 

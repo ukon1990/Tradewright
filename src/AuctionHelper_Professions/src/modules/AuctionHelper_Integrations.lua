@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local _, ProfessionExporter = ...
 
 local CALLER_ID = "AuctionHelper"
 local MONEY_COLORS = {
@@ -250,17 +250,6 @@ end
 
 function ProfessionExporter:FormatCopperShort(copper)
 	return formatCoins(self, copper, true)
-end
-
-local function formatTooltipTimestamp(ts)
-	ts = tonumber(ts)
-	if not ts or ts <= 0 then
-		return nil
-	end
-	if date then
-		return date("%Y-%m-%d %H:%M", ts)
-	end
-	return tostring(ts)
 end
 
 local function tooltipHasProfessionExporterSection(tooltip)

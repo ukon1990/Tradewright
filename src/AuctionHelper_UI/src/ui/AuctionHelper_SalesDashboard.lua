@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local _, ProfessionExporter = ...
 
 -- Sales ledger (Overview → Sales): what the auction house has paid out. Four headline numbers,
 -- gold earned per day, the items that sell best and the latest sales. The numbers come from the
@@ -11,7 +11,7 @@ local CHART_HEIGHT = 190
 local RECENT_ROWS = 100
 local PERIODS = { { 7, "7 days" }, { 30, "30 days" }, { 90, "90 days" }, { 0, "All time" } }
 
-local function numberColumn(pe, id, label, width, format, optional)
+local function numberColumn(id, label, width, format, optional)
 	return {
 		id = id, label = label, justifyH = "RIGHT", width = width, sortable = true, defaultSort = "desc", optional = optional,
 		sortValue = function(row) return tonumber(row[id]) or -1 end,
@@ -118,11 +118,11 @@ function ProfessionExporter:CreateSalesDashboard(parent)
 	dash.items = createCard(pe, dash, "What sells")
 	attachTable(pe, dash.items, {
 		itemColumn(),
-		numberColumn(pe, "sales", "Sales", 46, count),
-		numberColumn(pe, "units", "Units", 46, count, true),
-		numberColumn(pe, "net", "Earned", 78, money),
-		numberColumn(pe, "avgUnit", "Each", 70, money, true),
-		numberColumn(pe, "perWeek", "A week", 56, function(n) return string.format("%.1f", n) end),
+		numberColumn("sales", "Sales", 46, count),
+		numberColumn("units", "Units", 46, count, true),
+		numberColumn("net", "Earned", 78, money),
+		numberColumn("avgUnit", "Each", 70, money, true),
+		numberColumn("perWeek", "A week", 56, function(n) return string.format("%.1f", n) end),
 	}, "net", function(row)
 		return {
 			{ "Sales", string.format("%s, %s items", count(row.sales), count(row.units)) },
@@ -137,7 +137,7 @@ function ProfessionExporter:CreateSalesDashboard(parent)
 	dash.recent = createCard(pe, dash, "Latest sales")
 	attachTable(pe, dash.recent, {
 		itemColumn(),
-		numberColumn(pe, "net", "Earned", 78, money),
+		numberColumn("net", "Earned", 78, money),
 		{ id = "ts", label = "When", justifyH = "RIGHT", width = 104, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.ts end,
 			getText = function(row) return pe:FormatScanTimestamp(row.ts) end },

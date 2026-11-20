@@ -10,4 +10,6 @@
 
 Bootstrap.lua
 src\modules\AuctionHelper_Auction.lua
+src\modules\AuctionHelper_AuctionPanelRefresh.lua
+src\modules\AuctionHelper_AuctionPanelBuild.lua
 src\modules\AuctionHelper_MarketInsights.lua

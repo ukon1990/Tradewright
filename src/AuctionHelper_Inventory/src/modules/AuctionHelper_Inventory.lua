@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local _, ProfessionExporter = ...
 
 --- Collect distinct item IDs referenced by scanned profession data (reagents + outputs).
 function ProfessionExporter:CollectTrackedItemIdsFromCharacterData(characterData)
@@ -118,7 +118,7 @@ local function countItemInBagsViaContainer(itemID)
 					count = tonumber(info.stackCount or info.quantity)
 				end
 			elseif GetContainerItemInfo then
-				local icon, itemCount, locked, quality, readable, lootable, itemLink, isFiltered, noValue, itemID2 = GetContainerItemInfo(bag, slot)
+				local _, itemCount, _, _, _, _, itemLink, _, _, itemID2 = GetContainerItemInfo(bag, slot)
 				foundID = tonumber(itemID2)
 				count = tonumber(itemCount)
 				if not foundID and type(itemLink) == "string" then
@@ -141,7 +141,7 @@ function ProfessionExporter:GetItemCountByLocation(itemID)
 	end
 
 	if C_Item and C_Item.GetItemCount then
-		local bags, withBank, withWarband = 0, 0, nil
+		local bags, withBank, withWarband
 		local okBags, bagsResult = pcall(C_Item.GetItemCount, itemID, false, false, false, false)
 		if okBags then
 			bags = tonumber(bagsResult) or 0
@@ -161,18 +161,16 @@ function ProfessionExporter:GetItemCountByLocation(itemID)
 			withWarband = tonumber(warbandResult) or bags
 		end
 		local resolve = self.ForeverLogic and self.ForeverLogic.ResolveLocationCounts
-		local bank, warband, total
+		local bank, warband
 		if resolve then
-			bags, bank, warband, total = resolve(bags, withBank, withWarband)
+			bags, bank, warband = resolve(bags, withBank, withWarband)
 		else
 			bank = math.max(0, withBank - bags)
 			warband = withWarband and math.max(0, withWarband - bags) or 0
-			total = bags + bank + warband
 		end
 		local listed = self:GetOwnedActiveAuctionQuantityForItem(itemID)
 		bags, bank, warband = subtractAuctionListedFromSplit(bags, bank, warband, listed)
-		total = bags + bank + warband
-		return bags, bank, warband, total
+		return bags, bank, warband, bags + bank + warband
 	end
 
 	-- Container walk when C_Item is unavailable.

@@ -100,49 +100,6 @@ function ProfessionExporter:JumpToProfessionRecipe(recipeID, skillLineID)
 	return true
 end
 
-local function safeGetObjectType(node)
-	if not node or type(node) ~= "table" or type(node.GetObjectType) ~= "function" then
-		return nil
-	end
-	local ok, objectType = pcall(node.GetObjectType, node)
-	if ok then
-		return objectType
-	end
-	return nil
-end
-
-local function recursiveFindFrameByPred(root, predicate, seen)
-	if not root or type(root) ~= "table" or seen[root] then
-		return nil
-	end
-	seen[root] = true
-	local ok, matches = pcall(predicate, root)
-	if ok and matches then
-		return root
-	end
-	if type(root.GetChildren) == "function" then
-		local childResults = { pcall(root.GetChildren, root) }
-		if childResults[1] then
-			for index = 2, #childResults do
-				local child = childResults[index]
-				local found = recursiveFindFrameByPred(child, predicate, seen)
-				if found then
-					return found
-				end
-			end
-		end
-	end
-	for _, value in pairs(root) do
-		if type(value) == "table" then
-			local found = recursiveFindFrameByPred(value, predicate, seen)
-			if found then
-				return found
-			end
-		end
-	end
-	return nil
-end
-
 function ProfessionExporter:TrySetCurrentProfessionCraftQuantity(amount)
 	amount = math.max(1, math.floor(tonumber(amount) or 0))
 	if amount <= 0 or not self.IS_SUPPORTED then
@@ -187,7 +144,7 @@ function ProfessionExporter:TrySetCurrentProfessionCraftQuantity(amount)
 	return true
 end
 
-function ProfessionExporter:BuildCurrentProfessionCraftingReagentInfo(recipeID)
+function ProfessionExporter:BuildCurrentProfessionCraftingReagentInfo(_recipeID)
 	if not self.IS_SUPPORTED then
 		return nil, false, nil
 	end
@@ -332,7 +289,7 @@ function ProfessionExporter:CraftProfessionQueueRecipe(row)
 end
 
 function ProfessionExporter:OnProfessionRecipeCraftedResult(craftingItemResultData)
-	local craftedQuantity = 0
+	local craftedQuantity
 	local resultItemID = nil
 	if type(craftingItemResultData) ~= "table" then
 		return
@@ -1067,7 +1024,6 @@ end
 local function renderProfessionRecipe(pe, panel, ctx)
 	local host = panel.infoHost
 	local ev = ctx.eval or {}
-	local theme = pe:GetTheme()
 	host.empty:Hide()
 	host.body:Show()
 	host.header:SetItem(ev.outputItemID, (ev.recipeName or pe:GetItemDisplayName(ev.outputItemID)) .. rankMarkup(ev.qualityIndex),

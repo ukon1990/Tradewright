@@ -63,7 +63,7 @@ local function attachItemQuantity(itemID, quantity)
 		local take = math.min(remaining, stack)
 		if take < stack and C_Container.SplitContainerItem then
 			C_Container.SplitContainerItem(bag, slot, take)
-			bag, slot, stack = findBagSlotForItem(itemID)
+			bag, slot = findBagSlotForItem(itemID)
 			if not bag then
 				return false, quantity - remaining
 			end
@@ -407,7 +407,7 @@ function ProfessionExporter:EnsureMailPanel()
 	panel.content = CreateFrame("Frame", nil, scroll)
 	panel.content:SetSize(260, 200)
 	scroll:SetScrollChild(panel.content)
-	scroll:SetScript("OnSizeChanged", function(frame, width)
+	scroll:SetScript("OnSizeChanged", function(_, width)
 		panel.content:SetWidth(width)
 	end)
 	panel.empty = self:CreateEmptyState(panel)

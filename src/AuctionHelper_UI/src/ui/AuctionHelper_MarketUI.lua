@@ -1,6 +1,5 @@
 local addonName, ProfessionExporter = ...
 
-local ROW_H = 24
 local MAX_ROWS = 500
 
 local function trim(s)
@@ -297,7 +296,7 @@ function ProfessionExporter:EnsureMarketPanel(container)
 		onRowLeave = function()
 			GameTooltip:Hide()
 		end,
-		onRowClick = function(rowFrame, rowData, button, tableWidget)
+		onRowClick = function(_, rowData, _, tableWidget)
 			if ProfessionExporter:HandleItemRowModifiedClick(rowData and rowData.itemID) then
 				return
 			end
@@ -377,7 +376,7 @@ function ProfessionExporter:CollectMarketBrowserRows()
 	end
 	local query = trim(ui.marketSearchBox and ui.marketSearchBox:GetText() or "")
 	local sortKey = (ui.marketTable and ui.marketTable.sortKey) or self:GetSetting("market.sortColumn", "name")
-	local sortAsc = true
+	local sortAsc
 	if ui.marketTable and ui.marketTable.sortAsc ~= nil then
 		sortAsc = ui.marketTable.sortAsc
 	else

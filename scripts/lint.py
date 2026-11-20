@@ -44,6 +44,10 @@ TOKEN_RE = re.compile(
     re.S,
 )
 BRANCHES = {"if", "elseif", "for", "while", "repeat", "and", "or"}
+KEYWORDS = {
+    "and", "break", "do", "else", "elseif", "end", "false", "for", "function", "if", "in",
+    "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while",
+}
 NAME_PARTS = {".", ":"}
 
 
@@ -93,7 +97,7 @@ def open_function(toks, i, stack) -> dict:
         k, parts = i - 1, []
         if k >= 0 and toks[k][1] == "=":
             k -= 1
-            while k >= 0 and (toks[k][0] == "name" or toks[k][1] in NAME_PARTS):
+            while k >= 0 and ((toks[k][0] == "name" and toks[k][1] not in KEYWORDS) or toks[k][1] in NAME_PARTS):
                 parts.insert(0, toks[k][1])
                 k -= 1
         name = "".join(parts) or "<anon>"

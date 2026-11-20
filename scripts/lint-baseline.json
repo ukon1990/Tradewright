@@ -1,190 +1,58 @@
 {
  "luacheck": {
-  "src/AuctionHelper/src/core/AuctionHelper.lua": {
-   "W211": 1,
-   "W311": 1
-  },
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": {
-   "W211": 5,
-   "W212": 1,
-   "W512": 1,
-   "W542": 1,
-   "W631": 10
+   "W631": 2
   },
   "src/AuctionHelper/src/core/AuctionHelper_Events.lua": {
    "W631": 1
   },
   "src/AuctionHelper/src/modules/AuctionHelper_Docs.lua": {
-   "W211": 1,
    "W631": 20
-  },
-  "src/AuctionHelper/src/ui/AuctionHelper_Theme.lua": {
-   "W211": 1,
-   "W432": 1
-  },
-  "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": {
-   "W211": 1
-  },
-  "src/AuctionHelper/src/util/AuctionHelper_Util.lua": {
-   "W211": 1
   },
   "src/AuctionHelper/tests/test_forever_logic.lua": {
    "W421": 3,
    "W631": 1
   },
   "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": {
-   "W211": 34,
-   "W212": 3,
-   "W231": 1,
-   "W311": 4,
-   "W421": 1,
-   "W431": 2,
-   "W542": 2,
-   "W581": 3,
-   "W631": 15
-  },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_MarketInsights.lua": {
-   "W211": 1
-  },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": {
-   "W211": 1,
-   "W311": 1
-  },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_Inventory.lua": {
-   "W211": 8,
-   "W311": 4
-  },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_InventoryTable.lua": {
-   "W211": 1,
-   "W542": 1
-  },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": {
-   "W211": 1,
-   "W311": 2,
-   "W631": 2
-  },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_Ledger.lua": {
-   "W211": 1,
-   "W542": 3
-  },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_MailPlans.lua": {
-   "W211": 1
-  },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": {
-   "W211": 1,
-   "W212": 1,
    "W631": 4
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersUI.lua": {
-   "W212": 1,
-   "W432": 4,
-   "W512": 1
+  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": {
+   "W631": 2
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": {
-   "W211": 1,
-   "W212": 1,
-   "W213": 2,
-   "W311": 3,
-   "W512": 1,
-   "W631": 9
-  },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_Debug.lua": {
-   "W211": 1
-  },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_Integrations.lua": {
-   "W211": 2
-  },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_LiveUpdate.lua": {
-   "W211": 1
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": {
+   "W631": 4
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_Scan.lua": {
-   "W211": 1,
    "W631": 1
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_SpecCatalog.lua": {
-   "W211": 1,
-   "W212": 1,
-   "W421": 1,
    "W431": 1,
    "W542": 1
   },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_Chart.lua": {
-   "W211": 1,
-   "W432": 14
-  },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_CraftsUI.lua": {
-   "W211": 1
-  },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_ExportTab.lua": {
-   "W211": 1
-  },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_GoldDashboard.lua": {
-   "W211": 1,
-   "W212": 1,
-   "W432": 5
-  },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": {
-   "W211": 2,
-   "W432": 2
-  },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_MailPanel.lua": {
-   "W212": 1,
-   "W311": 1
-  },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_MarketUI.lua": {
-   "W211": 1,
-   "W212": 2,
-   "W311": 1,
-   "W432": 2
-  },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_OverviewTab.lua": {
-   "W211": 1,
    "W631": 1
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": {
-   "W211": 3,
-   "W212": 1,
-   "W311": 1,
    "W631": 1
-  },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_SalesDashboard.lua": {
-   "W211": 1,
-   "W212": 1,
-   "W432": 2
-  },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_SettingsTab.lua": {
-   "W211": 1
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": {
-   "W211": 2,
    "W631": 1
-  },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_UI.lua": {
-   "W211": 1
-  },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_UIShell.lua": {
-   "W212": 1,
-   "W432": 7
-  },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_Widgets.lua": {
-   "W211": 1,
-   "W432": 17
   }
  },
  "files": {
-  "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 3043,
+  "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 2587,
   "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": 798,
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 6722,
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5754,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": 781,
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1333,
+  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1331,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1265,
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": 2583,
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_Integrations.lua": 733,
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": 2533,
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_Integrations.lua": 722,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_LiveUpdate.lua": 708,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_CraftsUI.lua": 819,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": 1042,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": 1238,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": 955,
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": 1041,
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": 1194,
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": 929,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_UIShell.lua": 835,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Widgets.lua": 967
  },
@@ -264,7 +132,7 @@
    },
    "ProfessionExporter:CollectSpecializationTreesForProfession": {
     "lines": [
-     44
+     43
     ]
    },
    "ProfessionExporter:ComputeCopyBoxPagingSegmentsYielding": {
@@ -324,14 +192,6 @@
      23
     ]
    },
-   "ProfessionExporter:GetExportData": {
-    "lines": [
-     281
-    ],
-    "ccn": [
-     42
-    ]
-   },
    "ProfessionExporter:HandleAuctionSlash": {
     "lines": [
      45
@@ -346,22 +206,6 @@
     ],
     "ccn": [
      27
-    ]
-   },
-   "ProfessionExporter:HandleSlash": {
-    "lines": [
-     162
-    ],
-    "ccn": [
-     71
-    ]
-   },
-   "ProfessionExporter:InitDB": {
-    "lines": [
-     160
-    ],
-    "ccn": [
-     80
     ]
    },
    "ProfessionExporter:LayoutCopyFrameScroll": {
@@ -400,14 +244,6 @@
    "ProfessionExporter:RunComputeCopyBoxPagingAsync": {
     "lines": [
      42
-    ]
-   },
-   "ProfessionExporter:RunLegacyMigrationIfNeeded": {
-    "lines": [
-     67
-    ],
-    "ccn": [
-     49
     ]
    },
    "ProfessionExporter:SaveExportToSavedVariables": {
@@ -642,7 +478,7 @@
    },
    "ProfessionExporter:BuildAuctionCraftCartRows": {
     "lines": [
-     136
+     135
     ],
     "ccn": [
      53
@@ -742,21 +578,6 @@
      19
     ]
    },
-   "ProfessionExporter:EnsureAuctionHousePanel": {
-    "lines": [
-     832
-    ],
-    "ccn": [
-     51
-    ]
-   },
-   "ProfessionExporter:EnsureAuctionHousePanel/onRowEnter": {
-    "ccn": [
-     14,
-     13,
-     12
-    ]
-   },
    "ProfessionExporter:EnsureAuctionReserveWindow": {
     "lines": [
      63
@@ -831,7 +652,7 @@
    },
    "ProfessionExporter:GetLiveAuctionSearchAggregate": {
     "lines": [
-     101
+     100
     ],
     "ccn": [
      52
@@ -953,14 +774,6 @@
    "ProfessionExporter:RecordLiveAuctionObservationsFromAggregate": {
     "ccn": [
      13
-    ]
-   },
-   "ProfessionExporter:RefreshAuctionHousePanel": {
-    "lines": [
-     404
-    ],
-    "ccn": [
-     242
     ]
    },
    "ProfessionExporter:RefreshAuctionPanelRules": {
@@ -1219,7 +1032,7 @@
    },
    "ProfessionExporter:GetItemCountByLocation": {
     "lines": [
-     54
+     52
     ],
     "ccn": [
      20
@@ -1289,7 +1102,7 @@
    },
    "ProfessionExporter:FindBestRecipeForOutputItem": {
     "lines": [
-     50
+     48
     ],
     "ccn": [
      23
@@ -1299,7 +1112,7 @@
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": {
    "ProfessionExporter:ApplyItemDetailTimeSeriesGraph": {
     "lines": [
-     196
+     194
     ],
     "ccn": [
      27
@@ -1597,14 +1410,6 @@
      11
     ]
    },
-   "ProfessionExporter:BuildCraftDetailText": {
-    "lines": [
-     110
-    ],
-    "ccn": [
-     77
-    ]
-   },
    "ProfessionExporter:BuildCraftEconomyItemIDs": {
     "lines": [
      58
@@ -1651,14 +1456,6 @@
     ],
     "ccn": [
      13
-    ]
-   },
-   "ProfessionExporter:EvaluateCraftScenario": {
-    "lines": [
-     229
-    ],
-    "ccn": [
-     77
     ]
    },
    "ProfessionExporter:EvaluateSelectedProfessionRecipe": {
@@ -1715,18 +1512,10 @@
    },
    "ProfessionExporter:PickCheapestReagentsPerSlot": {
     "lines": [
-     59
+     52
     ],
     "ccn": [
-     41
-    ]
-   },
-   "ProfessionExporter:PickCheapestReagentsPerSlotForTargetQuality": {
-    "lines": [
-     157
-    ],
-    "ccn": [
-     60
+     29
     ]
    },
    "ProfessionExporter:ProfessionRecipeIsVendorSourced": {
@@ -1790,10 +1579,10 @@
    },
    "finalizeCraftOpportunityRowsFromBuckets": {
     "lines": [
-     82
+     80
     ],
     "ccn": [
-     38
+     37
     ]
    },
    "pickCheapestReagentForSlot": {
@@ -1806,17 +1595,9 @@
      22
     ]
    },
-   "recipeCategoryName": {
-    "lines": [
-     60
-    ],
-    "ccn": [
-     51
-    ]
-   },
    "resolveCategoryLabelFromProfessionCategory": {
     "lines": [
-     55
+     46
     ]
    },
    "resolveCraftOutputItemID": {
@@ -2444,11 +2225,6 @@
      86
     ]
    },
-   "recursiveFindFrameByPred": {
-    "ccn": [
-     13
-    ]
-   },
    "refreshProfessionQueueCard": {
     "ccn": [
      13
@@ -2456,7 +2232,7 @@
    },
    "renderProfessionRecipe": {
     "lines": [
-     62
+     61
     ],
     "ccn": [
      46
@@ -2475,11 +2251,6 @@
     ],
     "ccn": [
      35
-    ]
-   },
-   "numberColumn": {
-    "params": [
-     6
     ]
    }
   },

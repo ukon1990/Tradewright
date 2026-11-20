@@ -166,7 +166,7 @@ function ProfessionExporter:RecordExternalFrameInteraction(owner, reason)
 	self:UpdateDynamicPanelLayering(reason or "interaction")
 end
 
-function ProfessionExporter:UpdateDynamicPanelLayering(reason)
+function ProfessionExporter:UpdateDynamicPanelLayering(_reason)
 	local ui = self.ui
 	local frame = ui and ui.mainFrame
 	if not frame then

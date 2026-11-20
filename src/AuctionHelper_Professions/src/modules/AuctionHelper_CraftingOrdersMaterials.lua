@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local _, ProfessionExporter = ...
 
 if not ProfessionExporter.IS_RETAIL then
 	return
@@ -197,7 +197,7 @@ local function resolveOrderReagentEntry(entry)
 	}
 end
 
-local function copyReagentsList(reagents, order)
+local function copyReagentsList(reagents)
 	local out = {}
 	if type(reagents) ~= "table" then
 		return out
@@ -363,7 +363,7 @@ local function copyOrderPayload(order)
 	payload.customerName = tostring(payload.customerName or order.customerName or "?")
 	payload.customerNotes = tostring(payload.customerNotes or order.customerNotes or "")
 	payload.npcOrderRewards = type(payload.npcOrderRewards) == "table" and payload.npcOrderRewards or {}
-	payload.reagents = type(payload.reagents) == "table" and payload.reagents or copyReagentsList(order.reagents, order) or {}
+	payload.reagents = type(payload.reagents) == "table" and payload.reagents or copyReagentsList(order.reagents) or {}
 	if payload.orderState == nil and order.orderState ~= nil then
 		payload.orderState = order.orderState
 	end
@@ -393,7 +393,7 @@ local function buildOrderFromWorkQueueEntry(entry)
 	order.customerNotes = tostring(order.customerNotes or "")
 	order.npcOrderRewards = type(order.npcOrderRewards) == "table" and order.npcOrderRewards or {}
 	order.reagents = type(order.reagents) == "table" and order.reagents
-		or copyReagentsList(entry.reagents, entry)
+		or copyReagentsList(entry.reagents)
 		or {}
 	if order.orderState == nil and Enum and Enum.CraftingOrderState then
 		order.orderState = Enum.CraftingOrderState.Created
@@ -440,7 +440,7 @@ function ProfessionExporter:AddCraftingOrderToWorkQueue(order)
 		itemID = tonumber(order.itemID),
 		orderType = order.orderType,
 		isRecraft = order.isRecraft == true,
-		reagents = copyReagentsList(order.reagents, order),
+		reagents = copyReagentsList(order.reagents),
 		orderPayload = copyOrderPayload(order),
 		crafterMatTotals = mats,
 		recipeName = recipeName,
@@ -996,7 +996,7 @@ function ProfessionExporter:CraftingOrderViewRefreshButtons(orderView, order)
 		local stored = self:GetCraftingOrderWorkQueueStorage()[tostring(oid)]
 		if type(stored) == "table" then
 			stored.orderPayload = copyOrderPayload(order)
-			stored.reagents = copyReagentsList(order.reagents, order) or stored.reagents
+			stored.reagents = copyReagentsList(order.reagents) or stored.reagents
 			stored.tipAmount = tonumber(order.tipAmount) or stored.tipAmount
 			stored.spellID = tonumber(order.spellID) or stored.spellID
 			stored.itemID = tonumber(order.itemID) or stored.itemID

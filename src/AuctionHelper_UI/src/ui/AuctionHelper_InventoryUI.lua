@@ -1,7 +1,6 @@
-local addonName, ProfessionExporter = ...
+local _, ProfessionExporter = ...
 
 local INV_MAX_ROWS = 550
-local ACCT_KEY = ProfessionExporter.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
 
 -- Fixed column widths: money columns fit a short amount such as "1,240[g] 35[s]".
 local COL = {

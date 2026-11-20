@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local _, ProfessionExporter = ...
 
 local TableMixin = {}
 
@@ -18,32 +18,6 @@ end
 
 local function normalizeText(value)
 	return string.lower(tostring(value or ""))
-end
-
-local function compareValues(left, right)
-	local leftType = type(left)
-	local rightType = type(right)
-	if leftType == "number" or rightType == "number" then
-		left = tonumber(left) or 0
-		right = tonumber(right) or 0
-		if left < right then
-			return -1
-		end
-		if left > right then
-			return 1
-		end
-		return 0
-	end
-
-	left = normalizeText(left)
-	right = normalizeText(right)
-	if left < right then
-		return -1
-	end
-	if left > right then
-		return 1
-	end
-	return 0
 end
 
 local function isColumnVisible(column, context)

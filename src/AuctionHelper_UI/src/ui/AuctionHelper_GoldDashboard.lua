@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local _, ProfessionExporter = ...
 
 -- Gold dashboard (Overview → Gold): five headline numbers and four cards that answer
 -- "what should I buy, craft and sell right now". Market numbers come from GetMarketInsights,
@@ -31,7 +31,7 @@ local function percent(pe, fraction, invert)
 	return colorize(pe, good and "success" or "danger", text)
 end
 
-local function ageText(pe, ts)
+local function ageText(ts)
 	if not ts then
 		return "never seen"
 	end
@@ -150,7 +150,7 @@ function ProfessionExporter:CreateGoldDashboard(parent)
 	dash.deals = createCard(pe, dash, "Deals to buy", "Market", function() pe:ShowDashboardTab("market") end)
 	attachTable(pe, dash.deals, {
 		itemColumn(pe, function(row)
-			local parts = { "vs " .. (row.refSource or "usual"), ageText(pe, row.seenAt) }
+			local parts = { "vs " .. (row.refSource or "usual"), ageText(row.seenAt) }
 			if dash.materials and dash.materials[row.itemID] then
 				parts[#parts + 1] = colorize(pe, "gold", "your material")
 			end

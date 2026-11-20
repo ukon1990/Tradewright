@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local _, ProfessionExporter = ...
 
 local MAX_EVENTS = 2500
 
@@ -110,13 +110,10 @@ local function iterEvents(L, kind, itemID, characterKey)
 			if not e then
 				return nil
 			end
-			if kind and e.kind ~= kind then
-				-- skip
-			elseif itemID and tonumber(e.itemID) ~= itemID then
-				-- skip
-			elseif characterKey and e.characterKey ~= characterKey then
-				-- skip
-			else
+			local matches = not (kind and e.kind ~= kind)
+				and not (itemID and tonumber(e.itemID) ~= itemID)
+				and not (characterKey and e.characterKey ~= characterKey)
+			if matches then
 				return e
 			end
 		end

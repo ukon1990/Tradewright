@@ -9,6 +9,7 @@ cache = true -- .luacheckcache (gitignored) makes repeat runs fast
 
 ignore = {
 	"212/self", -- WoW callbacks and mixins receive self even when unused
+	"432/self", -- script handlers inside methods name the frame `self` (WoW idiom)
 	"211/_.*", -- underscore-prefixed locals are intentionally unused
 	"212/_.*",
 	"213/_.*",

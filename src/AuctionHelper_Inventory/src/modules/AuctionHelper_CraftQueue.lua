@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local _, ProfessionExporter = ...
 
 function ProfessionExporter:CraftQueueMakeKey(recipeID, outputItemID, characterKey, scenario)
 	return table.concat({
@@ -513,7 +513,7 @@ function ProfessionExporter:FormatMailAllocationsShort(allocations, maxEntries)
 	local parts = {}
 	for i = 1, math.min(#allocations, maxEntries) do
 		local row = allocations[i]
-		local label = row.characterKey
+		local label
 		if self.GetDashboardSidebarCharacterLabel then
 			label = self:GetDashboardSidebarCharacterLabel(
 				row.characterKey,

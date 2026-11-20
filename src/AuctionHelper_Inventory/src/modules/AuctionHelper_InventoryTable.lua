@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local _, ProfessionExporter = ...
 
 --- Per itemID: appears as recipe output and/or reagent in scanned professions.
 function ProfessionExporter:BuildItemRoleMap(characterData)
@@ -267,9 +267,7 @@ function ProfessionExporter:FindBestRecipeForOutputItem(characterData, itemID, e
 			if learned == nil and info then
 				learned = info.learned
 			end
-			if learned == false then
-				-- skip unlearned
-			else
+			if learned ~= false then
 				local outs = recipeData.outputs
 				local match = false
 				if outs then

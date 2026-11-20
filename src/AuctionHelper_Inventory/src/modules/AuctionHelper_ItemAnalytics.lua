@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local _, ProfessionExporter = ...
 
 local RANGE_TO_SECONDS = {
 	["24h"] = 24 * 60 * 60,
@@ -1157,12 +1157,10 @@ function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, 
 	if graphWidget.SetQuantityAccentColor then
 		graphWidget:SetQuantityAccentColor(self:GetTheme().success)
 	end
-	local series = {}
+	local series
 	local secondarySeries = {}
 	local quantitySeries = {}
-	local yFormatter = function(v)
-		return tostring(math.floor(tonumber(v) or 0))
-	end
+	local yFormatter
 	local emptyExtra = "No observations in this range."
 	local tooltipBuilder
 	local function qtyTooltip(tip, pt)

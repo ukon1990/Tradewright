@@ -1,326 +1,5 @@
 local addonName, ProfessionExporter = ...
 
-local LEGACY_SETTING_PATHS_BY_ROOT = {
-	lastActiveTab = "general.lastActiveTab",
-	showMinimapButton = "general.showMinimapButton",
-	windowScale = "appearance.windowScale",
-	captureSpecializationTree = "capture.captureSpecializationTree",
-	specBreakdownPerRecipe = "capture.specBreakdownPerRecipe",
-	includeRecipeOutputItemData = "capture.includeRecipeOutputItemData",
-	inventorySnapshotBatchSize = "capture.inventorySnapshotBatchSize",
-	economyShowColumns = "inventory.economyShowColumns",
-	economyShowMatCost = "inventory.economyShowMatCost",
-	economyShowSaleRate = "inventory.economyShowSaleRate",
-	minimapButtonAngle = "integrations.minimapButtonAngle",
-	economyUseAuctionatorFallback = "integrations.economyUseAuctionatorFallback",
-	economyTSMMarketString = "integrations.economyTSMMarketString",
-	economyTSMMatString = "integrations.economyTSMMatString",
-	economyTSMSaleRateString = "integrations.economyTSMSaleRateString",
-	debugEnabled = "debug.enabled",
-}
-
-local LEGACY_SETTING_ROOTS_BY_PATH = {}
-for rootKey, path in pairs(LEGACY_SETTING_PATHS_BY_ROOT) do
-	LEGACY_SETTING_ROOTS_BY_PATH[path] = rootKey
-end
-
-local function seedNestedSetting(st, rootKey, groupTable, nestedKey, defaultValue)
-	if groupTable[nestedKey] == nil then
-		if st[rootKey] ~= nil then
-			groupTable[nestedKey] = st[rootKey]
-		else
-			groupTable[nestedKey] = defaultValue
-		end
-	end
-	if st[rootKey] == nil then
-		st[rootKey] = groupTable[nestedKey]
-	end
-end
-
-function ProfessionExporter:GetLegacySettingRootKey(path)
-	return LEGACY_SETTING_ROOTS_BY_PATH[tostring(path or "")]
-end
-
-function ProfessionExporter:SyncLegacySettingAlias(path, value)
-	local rootKey = self:GetLegacySettingRootKey(path)
-	if not rootKey then
-		return
-	end
-	local settings = self.db and self.db.settings
-	if type(settings) == "table" then
-		settings[rootKey] = value
-	end
-end
-
-local function currentExpansionTag()
-	local iface = tonumber((select(4, GetBuildInfo()))) or 0
-	return iface >= 120000 and "midnight" or iface >= 110200 and "tww" or iface >= 100000 and "df" or "legacy"
-end
-
-function ProfessionExporter:BuildMergedRuntimeDB(baseDb, professionsDb, inventoryDb, auctionDb)
-	return {
-		schemaVersion = self.SCHEMA_VERSION,
-		addonVersion = self.VERSION,
-		meta = baseDb.meta,
-		settings = baseDb.settings,
-		characters = professionsDb.characters,
-		aggregate = professionsDb.aggregate,
-		history = professionsDb.history,
-		craftQueue = professionsDb.craftQueue,
-		craftingOrderWorkQueue = professionsDb.craftingOrderWorkQueue,
-		itemHistory = inventoryDb.itemHistory,
-		walletHistory = inventoryDb.walletHistory,
-		ledger = inventoryDb.ledger,
-		auction = auctionDb.auction,
-	}
-end
-
-function ProfessionExporter:RunLegacyMigrationIfNeeded(baseDb, professionsDb, inventoryDb, auctionDb)
-	AuctionHelperMigrationDB = AuctionHelperMigrationDB or {}
-	local migration = AuctionHelperMigrationDB
-	if migration.professionExporterImported == true then
-		return false
-	end
-	if type(ProfessionExporterDB) ~= "table" and type(ProfessionExporterLastExport) ~= "table" then
-		return false
-	end
-
-	local legacyDb = type(ProfessionExporterDB) == "table" and ProfessionExporterDB or nil
-	local legacyExport = type(ProfessionExporterLastExport) == "table" and ProfessionExporterLastExport or nil
-	if legacyDb then
-		if next(baseDb.settings or {}) == nil and type(legacyDb.settings) == "table" then
-			baseDb.settings = legacyDb.settings
-		end
-		baseDb.meta = baseDb.meta or {}
-		if type(legacyDb.meta) == "table" then
-			for k, v in pairs(legacyDb.meta) do
-				baseDb.meta[k] = v
-			end
-		end
-		if next(professionsDb.characters or {}) == nil and type(legacyDb.characters) == "table" then
-			professionsDb.characters = legacyDb.characters
-		end
-		if next(professionsDb.aggregate or {}) == nil and type(legacyDb.aggregate) == "table" then
-			professionsDb.aggregate = legacyDb.aggregate
-		end
-		if next(professionsDb.history or {}) == nil and type(legacyDb.history) == "table" then
-			professionsDb.history = legacyDb.history
-		end
-		if next(professionsDb.craftQueue or {}) == nil and type(legacyDb.craftQueue) == "table" then
-			professionsDb.craftQueue = legacyDb.craftQueue
-		end
-		if next(professionsDb.craftingOrderWorkQueue or {}) == nil and type(legacyDb.craftingOrderWorkQueue) == "table" then
-			professionsDb.craftingOrderWorkQueue = legacyDb.craftingOrderWorkQueue
-		end
-		if next(inventoryDb.itemHistory or {}) == nil and type(legacyDb.itemHistory) == "table" then
-			inventoryDb.itemHistory = legacyDb.itemHistory
-		end
-		if next(inventoryDb.walletHistory or {}) == nil and type(legacyDb.walletHistory) == "table" then
-			inventoryDb.walletHistory = legacyDb.walletHistory
-		end
-		if next(inventoryDb.ledger or {}) == nil and type(legacyDb.ledger) == "table" then
-			inventoryDb.ledger = legacyDb.ledger
-		end
-		if type(legacyDb.auction) == "table" and next(auctionDb.auction or {}) == nil then
-			auctionDb.auction = legacyDb.auction
-		end
-	end
-	if legacyExport then
-		AuctionHelperLastExport = AuctionHelperLastExport or {}
-		for k, v in pairs(legacyExport) do
-			AuctionHelperLastExport[k] = v
-		end
-		if AuctionHelperLastExport.json and not AuctionHelperLastExport.payload then
-			AuctionHelperLastExport.payload = AuctionHelperLastExport.json
-			AuctionHelperLastExport.format = AuctionHelperLastExport.format or "legacy-json"
-		end
-	end
-	migration.professionExporterImported = true
-	migration.importedAt = time()
-	migration.importedSchemaVersion = self.SCHEMA_VERSION
-	ProfessionExporterDB = nil
-	ProfessionExporterLastExport = nil
-	return true
-end
-
-function ProfessionExporter:InitDB()
-	AuctionHelperDB = AuctionHelperDB or {}
-	AuctionHelperMigrationDB = AuctionHelperMigrationDB or {}
-	AuctionHelperProfessionsDB = AuctionHelperProfessionsDB or {}
-	AuctionHelperInventoryDB = AuctionHelperInventoryDB or {}
-	AuctionHelperAuctionDB = AuctionHelperAuctionDB or {}
-	AuctionHelperLastExport = AuctionHelperLastExport or {}
-
-	local baseDb = AuctionHelperDB
-	local professionsDb = AuctionHelperProfessionsDB
-	local inventoryDb = AuctionHelperInventoryDB
-	local auctionDb = AuctionHelperAuctionDB
-	local previousSchemaVersion = tonumber(baseDb.schemaVersion) or 0
-	local needsStorageCompaction = previousSchemaVersion < self.SCHEMA_VERSION
-
-	baseDb.schemaVersion = self.SCHEMA_VERSION
-	baseDb.addonVersion = self.VERSION
-	baseDb.meta = baseDb.meta or {}
-	baseDb.settings = baseDb.settings or {}
-
-	professionsDb.schemaVersion = self.SCHEMA_VERSION
-	professionsDb.addonVersion = self.VERSION
-	professionsDb.characters = professionsDb.characters or {}
-	professionsDb.aggregate = professionsDb.aggregate or {}
-	professionsDb.history = professionsDb.history or {}
-	professionsDb.craftQueue = professionsDb.craftQueue or {}
-	professionsDb.craftingOrderWorkQueue = professionsDb.craftingOrderWorkQueue or {}
-
-	inventoryDb.schemaVersion = self.SCHEMA_VERSION
-	inventoryDb.addonVersion = self.VERSION
-	inventoryDb.itemHistory = inventoryDb.itemHistory or {}
-	inventoryDb.walletHistory = inventoryDb.walletHistory or {}
-	inventoryDb.ledger = inventoryDb.ledger or {}
-
-	auctionDb.schemaVersion = self.SCHEMA_VERSION
-	auctionDb.addonVersion = self.VERSION
-	auctionDb.auction = auctionDb.auction or {}
-
-	self:RunLegacyMigrationIfNeeded(baseDb, professionsDb, inventoryDb, auctionDb)
-
-	self.baseDb = baseDb
-	self.professionsDb = professionsDb
-	self.inventoryDb = inventoryDb
-	self.auctionStorageDb = auctionDb
-	self.db = self:BuildMergedRuntimeDB(baseDb, professionsDb, inventoryDb, auctionDb)
-
-	local st = self.db.settings
-	st.general = st.general or {}
-	st.appearance = st.appearance or {}
-	st.capture = st.capture or {}
-	st.inventory = st.inventory or {}
-	st.integrations = st.integrations or {}
-	st.debug = st.debug or {}
-	st.auction = st.auction or {}
-
-	local general = st.general
-	local appearance = st.appearance
-	local capture = st.capture
-	local inventory = st.inventory
-	local integrations = st.integrations
-	local debug = st.debug
-	local auctionSettings = st.auction
-
-	seedNestedSetting(st, "lastActiveTab", general, "lastActiveTab", "overview")
-	seedNestedSetting(st, "showMinimapButton", general, "showMinimapButton", true)
-	seedNestedSetting(st, "windowScale", appearance, "windowScale", 1)
-	seedNestedSetting(st, "captureSpecializationTree", capture, "captureSpecializationTree", true)
-	seedNestedSetting(st, "includeRecipeOutputItemData", capture, "includeRecipeOutputItemData", false)
-	seedNestedSetting(st, "inventorySnapshotBatchSize", capture, "inventorySnapshotBatchSize", 0)
-	seedNestedSetting(st, "economyShowColumns", inventory, "economyShowColumns", true)
-	seedNestedSetting(st, "economyShowMatCost", inventory, "economyShowMatCost", true)
-	seedNestedSetting(st, "economyShowSaleRate", inventory, "economyShowSaleRate", true)
-	inventory.metricRange = inventory.metricRange or "30d"
-	inventory.columnOrder = inventory.columnOrder or {}
-	inventory.hiddenColumns = inventory.hiddenColumns or {}
-	if inventory.detailsOpen == nil then inventory.detailsOpen = true end
-	if inventory.detailsWidth == nil then inventory.detailsWidth = 340 end
-	if inventory.detailsGraphMetric == nil then inventory.detailsGraphMetric = "market" end
-	if inventory.detailsGraphShowQuantity == nil then inventory.detailsGraphShowQuantity = true end
-	if inventory.historyRetentionDays == nil then inventory.historyRetentionDays = 30 end
-	if inventory.selectedExpansions == nil then inventory.selectedExpansions = { [currentExpansionTag()] = true } end
-
-	st.overview = st.overview or {}
-	if st.overview.walletGraphMetric == nil then st.overview.walletGraphMetric = "balance" end
-
-	st.crafts = st.crafts or {}
-	local crafts = st.crafts
-	if crafts.detailsOpen == nil then crafts.detailsOpen = true end
-	if crafts.detailsWidth == nil then crafts.detailsWidth = 340 end
-	if crafts.detailsGraphMetric == nil then crafts.detailsGraphMetric = "market" end
-	if crafts.detailsGraphShowQuantity == nil then crafts.detailsGraphShowQuantity = true end
-	if crafts.defaultExpansionMode == nil then crafts.defaultExpansionMode = "current" end
-	if crafts.scenario == nil then crafts.scenario = "default" end
-	if crafts.reagentSourceMode == nil then crafts.reagentSourceMode = "owned_first" end
-	if crafts.profitState == nil then crafts.profitState = "all" end
-	if crafts.costBasis == nil then crafts.costBasis = "auto" end
-	if crafts.saleBasis == nil then crafts.saleBasis = "auto" end
-	if crafts.sortColumn == nil then crafts.sortColumn = "profit" end
-	if crafts.sortAsc == nil then crafts.sortAsc = false end
-	if crafts.ahCutPercent == nil then crafts.ahCutPercent = 5 end
-	if crafts.selectedExpansions == nil then crafts.selectedExpansions = { [currentExpansionTag()] = true } end
-	crafts.characterFilter = crafts.characterFilter or {}
-	crafts.professionFilter = crafts.professionFilter or {}
-	crafts.categoryFilter = crafts.categoryFilter or {}
-
-	st.craftingOrders = st.craftingOrders or {}
-	local craftingOrders = st.craftingOrders
-	if craftingOrders.hideUnlearned == nil then craftingOrders.hideUnlearned = false end
-	if craftingOrders.patronKnowledgeOnly == nil then craftingOrders.patronKnowledgeOnly = false end
-
-	seedNestedSetting(st, "minimapButtonAngle", integrations, "minimapButtonAngle", 225)
-	seedNestedSetting(st, "economyUseAuctionatorFallback", integrations, "economyUseAuctionatorFallback", true)
-	seedNestedSetting(st, "economyTSMMarketString", integrations, "economyTSMMarketString", "dbmarket")
-	seedNestedSetting(st, "economyTSMFallbackString", integrations, "economyTSMFallbackString", "DBMinBuyout")
-	seedNestedSetting(st, "economyTSMMatString", integrations, "economyTSMMatString", "Crafting")
-	seedNestedSetting(st, "economyTSMSaleRateString", integrations, "economyTSMSaleRateString", "DBRegionSaleRate")
-
-	seedNestedSetting(st, "debugEnabled", debug, "enabled", false)
-	if debug.persistToSavedVariables == nil then debug.persistToSavedVariables = false end
-	debug.lines = debug.lines or {}
-	if debug.maxLines == nil then debug.maxLines = 100 end
-	if general.persistLastExport == nil then general.persistLastExport = true end
-
-	if auctionSettings.enabled == nil then auctionSettings.enabled = true end
-	if auctionSettings.sellPanelEnabled == nil then auctionSettings.sellPanelEnabled = true end
-	if auctionSettings.tabEnabled == nil then auctionSettings.tabEnabled = true end
-	if auctionSettings.minMarginPercent == nil then auctionSettings.minMarginPercent = 5 end
-	if auctionSettings.minMarginCopper == nil then auctionSettings.minMarginCopper = 100 end
-	if auctionSettings.historyRetentionDays == nil then auctionSettings.historyRetentionDays = 14 end
-	if auctionSettings.visibleRefreshThrottleMs == nil then auctionSettings.visibleRefreshThrottleMs = 150 end
-	if auctionSettings.dumpBatchSize == nil then auctionSettings.dumpBatchSize = 50 end
-	if auctionSettings.priceFreshnessMinutes == nil then auctionSettings.priceFreshnessMinutes = 15 end
-	if auctionSettings.autoCraftEconomyRefreshOnOpen == nil then auctionSettings.autoCraftEconomyRefreshOnOpen = false end
-	if auctionSettings.craftScanIncludeOptionalSlots == nil then auctionSettings.craftScanIncludeOptionalSlots = false end
-	if auctionSettings.selectedExpansions == nil then auctionSettings.selectedExpansions = { [currentExpansionTag()] = true } end
-
-	local auction = self.InitAuctionDB and self:InitAuctionDB() or nil
-	if auction then
-		auction.settings = auction.settings or {}
-		auction.settings.enabled = auctionSettings.enabled
-		auction.settings.sellPanelEnabled = auctionSettings.sellPanelEnabled
-		auction.settings.tabEnabled = auctionSettings.tabEnabled
-		auction.settings.minMarginPercent = auctionSettings.minMarginPercent
-		auction.settings.minMarginCopper = auctionSettings.minMarginCopper
-		auction.settings.historyRetentionDays = auctionSettings.historyRetentionDays
-		auction.settings.visibleRefreshThrottleMs = auctionSettings.visibleRefreshThrottleMs
-		auction.settings.dumpBatchSize = auctionSettings.dumpBatchSize
-		auction.settings.priceFreshnessMinutes = auctionSettings.priceFreshnessMinutes
-		auction.settings.autoCraftEconomyRefreshOnOpen = auctionSettings.autoCraftEconomyRefreshOnOpen
-		auction.settings.craftScanIncludeOptionalSlots = auctionSettings.craftScanIncludeOptionalSlots
-		auction.settings.selectedExpansions = auctionSettings.selectedExpansions
-	end
-
-	if ProfessionExporter.InitLedger then
-		ProfessionExporter:InitLedger()
-	end
-	if needsStorageCompaction then
-		self:CompactSavedVariablesStorage()
-	end
-end
-
-function ProfessionExporter:CompactSavedVariablesStorage()
-	if self.db and self.db.debug then
-		self.db.debug.lines = {}
-		self.db.debug.maxLines = math.max(20, math.min(100, tonumber(self.db.debug.maxLines) or 100))
-	end
-	if self.CompactAuctionStorageData then
-		self:CompactAuctionStorageData()
-	end
-	if self.CompactItemHistoryStorage then
-		self:CompactItemHistoryStorage()
-	end
-	if self.baseDb and self.baseDb.meta then
-		self.baseDb.meta.storageCompactedAt = time()
-		self.baseDb.meta.storageCompactedSchema = self.SCHEMA_VERSION
-	end
-end
-
 function ProfessionExporter:GetState()
 	self.state = self.state or {
 		scanInProgress = false,
@@ -582,7 +261,7 @@ function ProfessionExporter:DescribeOperationInfo(recipeID, schematic)
 	return result
 end
 
-function ProfessionExporter:DescribeRecipeOutput(recipeID, recipeInfo, schematic)
+function ProfessionExporter:DescribeRecipeOutput(recipeID, _recipeInfo, schematic)
 	local includeRawOutput = self._includeRecipeOutputItemData == true
 
 	local output = {
@@ -868,15 +547,15 @@ function ProfessionExporter:FinalizeSpecializationTabGraph(tab)
 	local edges = {}
 
 	for _, nodeRecord in ipairs(rawNodes) do
-		if type(nodeRecord) ~= "table" then
-			-- skip
-		elseif nodeRecord.nodeKind == "path" then
-			pathByID[nodeRecord.nodeID] = nodeRecord
-			paths[#paths + 1] = nodeRecord
-		elseif nodeRecord.nodeKind == "milestone" then
-			nodeRecord.childPathIDs = nil
-			milestoneByID[nodeRecord.nodeID] = nodeRecord
-			milestones[#milestones + 1] = nodeRecord
+		if type(nodeRecord) == "table" then
+			if nodeRecord.nodeKind == "path" then
+				pathByID[nodeRecord.nodeID] = nodeRecord
+				paths[#paths + 1] = nodeRecord
+			elseif nodeRecord.nodeKind == "milestone" then
+				nodeRecord.childPathIDs = nil
+				milestoneByID[nodeRecord.nodeID] = nodeRecord
+				milestones[#milestones + 1] = nodeRecord
+			end
 		end
 	end
 
@@ -1085,15 +764,14 @@ function ProfessionExporter:CollectSpecializationTreesForProfession(baseSkillLin
 	local primarySkillLineID = self:PickPrimarySpecializationSkillLineID(candidates, currentLevelName, childInfo)
 	local primary = primarySkillLineID and bySkillLineID[tostring(primarySkillLineID)] or nil
 	if not primary then
-		for _, tree in pairs(bySkillLineID) do
-			primary = tree
-			primarySkillLineID = tree.skillLineID
-			break
-		end
+		local _, tree = next(bySkillLineID)
+		primary = tree
+		primarySkillLineID = tree.skillLineID
 	end
 
 	self:DebugLog("SCAN", "CollectSpecializationTreesForProfession captured", {
-		string.format("baseSkillLineID=%s tierCount=%d primarySkillLineID=%s", tostring(baseSkillLineID), self:TableCount(bySkillLineID), tostring(primarySkillLineID)),
+		string.format("baseSkillLineID=%s tierCount=%d primarySkillLineID=%s",
+			tostring(baseSkillLineID), self:TableCount(bySkillLineID), tostring(primarySkillLineID)),
 	})
 
 	return {
@@ -1142,7 +820,7 @@ function ProfessionExporter:CollectClassicRecipeReagentSlots(recipeSpellID)
 	if C_TradeSkillUI and C_TradeSkillUI.GetRecipeNumReagents and C_TradeSkillUI.GetRecipeReagentInfo then
 		local numReagents = tonumber(C_TradeSkillUI.GetRecipeNumReagents(recipeSpellID)) or 0
 		for i = 1, numReagents do
-			local name, icon, reagentCount, playerCount, itemID = C_TradeSkillUI.GetRecipeReagentInfo(recipeSpellID, i)
+			local _, _, reagentCount, _, itemID = C_TradeSkillUI.GetRecipeReagentInfo(recipeSpellID, i)
 			if not itemID and C_TradeSkillUI.GetRecipeReagentItemLink then
 				local link = C_TradeSkillUI.GetRecipeReagentItemLink(recipeSpellID, i)
 				if type(link) == "string" then
@@ -1184,7 +862,7 @@ function ProfessionExporter:CollectClassicRecipeReagentSlots(recipeSpellID)
 		if skillIndex then
 			local numReagents = tonumber(GetTradeSkillNumReagents(skillIndex)) or 0
 			for i = 1, numReagents do
-				local reagentName, reagentTexture, reagentCount = GetTradeSkillReagentInfo(skillIndex, i)
+				local _, _, reagentCount = GetTradeSkillReagentInfo(skillIndex, i)
 				local itemID = nil
 				if type(GetTradeSkillReagentItemLink) == "function" then
 					local link = GetTradeSkillReagentItemLink(skillIndex, i)
@@ -1882,286 +1560,171 @@ function ProfessionExporter:BuildCompactCraftingCostsExport()
 	return out
 end
 
-function ProfessionExporter:GetExportData(scope, identifier)
-	self:InitDB()
-	local characterKey = self:GetCharacterKey()
-	scope = scope or "character"
+local UNKNOWN_PROFESSION = "Unknown profession identifier. Use a skill line ID or exact profession name."
 
-	if scope == "account" then
-		if self:AggregateNeedsRebuild() then
-			self:BuildAggregate()
-		end
-		return {
-			meta = {
-				scope = "account",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-			},
-			characters = self.db.characters,
-			aggregate = self.db.aggregate,
-		}
+local function exportMeta(self, scope, extra)
+	local meta = { scope = scope, generatedAt = time(), addonVersion = self.VERSION, schemaVersion = self.SCHEMA_VERSION }
+	for k, v in pairs(extra or {}) do
+		meta[k] = v
 	end
+	return meta
+end
 
-	if scope == "account_summary" then
-		if self:AggregateNeedsRebuild() then
-			self:BuildAggregate()
-		end
-		return {
-			meta = {
-				scope = "account_summary",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-			},
-			aggregate = self.db.aggregate,
-		}
+local function rebuildAggregateIfNeeded(self)
+	if self:AggregateNeedsRebuild() then
+		self:BuildAggregate()
 	end
+end
 
-	if scope == "auction_snapshot" then
+local function exportSpecCatalog(self)
+	if not self.BuildSpecCatalogExport then
+		return nil, "Spec catalog module not loaded. Enable AuctionHelper Professions."
+	end
+	local expansionID = self.EXPANSION_ID_MIDNIGHT or 11
+	local catalog = self:BuildSpecCatalogExport(expansionID)
+	if not catalog then
+		return nil, "No bundled spec catalog for expansion " .. tostring(expansionID) .. "."
+	end
+	local meta = exportMeta(self, "spec_catalog", { expansionID = expansionID, catalogVersion = catalog.catalogVersion })
+	return { meta = meta, specCatalog = catalog }
+end
+
+-- Scopes that do not need this character's scan data: scope -> builder(self).
+local ACCOUNT_EXPORTS = {
+	account = function(self)
+		rebuildAggregateIfNeeded(self)
+		return { meta = exportMeta(self, "account"), characters = self.db.characters, aggregate = self.db.aggregate }
+	end,
+	account_summary = function(self)
+		rebuildAggregateIfNeeded(self)
+		return { meta = exportMeta(self, "account_summary"), aggregate = self.db.aggregate }
+	end,
+	auction_snapshot = function(self)
 		local snapshot, err = self:BuildCompactAuctionSnapshotExport()
 		if not snapshot then
 			return nil, err
 		end
-		return {
-			meta = {
-				scope = "auction_snapshot",
-				module = "auction",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-			},
-			keys = { "storageKey", "seenAt", "price", "source", "sampleSize" },
-			snapshot = snapshot,
-		}
-	end
-
-	if scope == "auction_history" then
+		local meta = exportMeta(self, "auction_snapshot", { module = "auction" })
+		return { meta = meta, keys = { "storageKey", "seenAt", "price", "source", "sampleSize" }, snapshot = snapshot }
+	end,
+	auction_history = function(self)
 		local historyRows, err = self:BuildCompactAuctionHistoryExport()
 		if not historyRows then
 			return nil, err
 		end
-		return {
-			meta = {
-				scope = "auction_history",
-				module = "auction",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-			},
-			keys = { "hourTs", "obsCount", "weightedQty", "weightedSum", "last", "min", "max", "lastSeenAt" },
-			history = historyRows,
+		local meta = exportMeta(self, "auction_history", { module = "auction" })
+		local keys = { "hourTs", "obsCount", "weightedQty", "weightedSum", "last", "min", "max", "lastSeenAt" }
+		return { meta = meta, keys = keys, history = historyRows }
+	end,
+	spec_catalog = exportSpecCatalog,
+	spec_catalog_midnight = exportSpecCatalog,
+}
+
+-- ctx = { scope, characterKey, data = character record, identifier }
+local function characterMeta(self, ctx, scope, extra)
+	extra = extra or {}
+	extra.characterKey = ctx.characterKey
+	return exportMeta(self, scope or ctx.scope, extra)
+end
+
+local function professionsSliceExport(slice)
+	return function(self, ctx)
+		local meta = characterMeta(self, ctx)
+		local character = self:GetCharacterExportHeader(ctx.data)
+		return { meta = meta, character = character, professions = self:MapProfessionsExportSlice(ctx.data.professions or {}, slice) }
+	end
+end
+
+local function findExportProfession(self, ctx)
+	local professions = {}
+	for _, professionData in pairs(ctx.data.professions or {}) do
+		table.insert(professions, professionData)
+	end
+	return self:FindProfessionByIdentifier(professions, ctx.identifier)
+end
+
+local function exportProfessionSlice(self, ctx)
+	local profession = findExportProfession(self, ctx)
+	if not profession then
+		return nil, UNKNOWN_PROFESSION
+	end
+	local slice = ctx.scope == "profession_recipes" and "recipes" or "talents"
+	local meta = characterMeta(self, ctx, nil, { professionIdentifier = ctx.identifier })
+	return { meta = meta, character = ctx.data.meta, profession = self:ProfessionExportSliceProfession(profession, slice) }
+end
+
+-- Scopes built from this character's scan data: scope -> builder(self, ctx).
+local CHARACTER_EXPORTS = {
+	professions = function(self, ctx)
+		local meta = characterMeta(self, ctx)
+		return { meta = meta, character = self:GetCharacterExportHeader(ctx.data), professions = ctx.data.professions or {} }
+	end,
+	professions_recipes = professionsSliceExport("recipes"),
+	professions_talents = professionsSliceExport("talents"),
+	inventory = function(self, ctx)
+		local meta = characterMeta(self, ctx)
+		return { meta = meta, character = self:GetCharacterExportHeader(ctx.data), inventorySnapshot = ctx.data.inventorySnapshot }
+	end,
+	inventory_compact = function(self, ctx)
+		local meta = characterMeta(self, ctx, nil, { module = "inventory" })
+		local character = self:GetCompactCharacterHeader(ctx.data)
+		local inventory = self:BuildCompactInventorySnapshot(ctx.data.inventorySnapshot)
+		return { meta = meta, keys = { "itemID", "bags", "bank", "warband", "total" }, character = character, inventory = inventory }
+	end,
+	professions_compact = function(self, ctx)
+		local meta = characterMeta(self, ctx, nil, { module = "professions" })
+		local keys = {
+			profession = { "sid", "name", "skillLevel", "maxSkillLevel", "bonusSkill", "recipeCount", "recipes" },
+			recipe = { "recipeID", "learned", "relativeDifficulty", "categoryID", "output", "outputVariants", "slots" },
+			slot = { "slotIndex", "quantity", "optional", "reagents" },
 		}
-	end
-
-	if scope == "spec_catalog" or scope == "spec_catalog_midnight" then
-		if not self.BuildSpecCatalogExport then
-			return nil, "Spec catalog module not loaded. Enable AuctionHelper Professions."
-		end
-		local expansionID = scope == "spec_catalog_midnight" and (self.EXPANSION_ID_MIDNIGHT or 11) or (self.EXPANSION_ID_MIDNIGHT or 11)
-		local catalog = self:BuildSpecCatalogExport(expansionID)
-		if not catalog then
-			return nil, "No bundled spec catalog for expansion " .. tostring(expansionID) .. "."
-		end
-		return {
-			meta = {
-				scope = "spec_catalog",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-				expansionID = expansionID,
-				catalogVersion = catalog.catalogVersion,
-			},
-			specCatalog = catalog,
-		}
-	end
-
-	local characterData = self.db.characters[characterKey]
-	if not characterData then
-		return nil, "No scan data stored for this character yet. Run /auctionhelper scan first."
-	end
-
-	if scope == "professions" then
-		return {
-			meta = {
-				scope = "professions",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-				characterKey = characterKey,
-			},
-			character = self:GetCharacterExportHeader(characterData),
-			professions = characterData.professions or {},
-		}
-	end
-
-	if scope == "professions_recipes" then
-		return {
-			meta = {
-				scope = "professions_recipes",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-				characterKey = characterKey,
-			},
-			character = self:GetCharacterExportHeader(characterData),
-			professions = self:MapProfessionsExportSlice(characterData.professions or {}, "recipes"),
-		}
-	end
-
-	if scope == "professions_talents" then
-		return {
-			meta = {
-				scope = "professions_talents",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-				characterKey = characterKey,
-			},
-			character = self:GetCharacterExportHeader(characterData),
-			professions = self:MapProfessionsExportSlice(characterData.professions or {}, "talents"),
-		}
-	end
-
-	if scope == "inventory" then
-		return {
-			meta = {
-				scope = "inventory",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-				characterKey = characterKey,
-			},
-			character = self:GetCharacterExportHeader(characterData),
-			inventorySnapshot = characterData.inventorySnapshot,
-		}
-	end
-
-	if scope == "inventory_compact" then
-		return {
-			meta = {
-				scope = "inventory_compact",
-				module = "inventory",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-				characterKey = characterKey,
-			},
-			keys = { "itemID", "bags", "bank", "warband", "total" },
-			character = self:GetCompactCharacterHeader(characterData),
-			inventory = self:BuildCompactInventorySnapshot(characterData.inventorySnapshot),
-		}
-	end
-
-	if scope == "professions_compact" then
-		return {
-			meta = {
-				scope = "professions_compact",
-				module = "professions",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-				characterKey = characterKey,
-			},
-			keys = {
-				profession = { "sid", "name", "skillLevel", "maxSkillLevel", "bonusSkill", "recipeCount", "recipes" },
-				recipe = { "recipeID", "learned", "relativeDifficulty", "categoryID", "output", "outputVariants", "slots" },
-				slot = { "slotIndex", "quantity", "optional", "reagents" },
-			},
-			character = self:GetCompactCharacterHeader(characterData),
-			professions = self:BuildCompactProfessionsExport(characterData),
-		}
-	end
-
-	if scope == "crafting_costs" then
+		local character = self:GetCompactCharacterHeader(ctx.data)
+		return { meta = meta, keys = keys, character = character, professions = self:BuildCompactProfessionsExport(ctx.data) }
+	end,
+	crafting_costs = function(self, ctx)
 		local rows, err = self:BuildCompactCraftingCostsExport()
 		if not rows then
 			return nil, err
 		end
-		return {
-			meta = {
-				scope = "crafting_costs",
-				module = "professions",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-				characterKey = characterKey,
-			},
-			keys = { "recipeID", "outputItemID", "recipeName", "outputName", "skillLineID", "professionName", "bestCharacterKey", "matCost", "saleNet", "profit", "roi", "outputQty", "qualityIndex", "confidence", "badges" },
-			rows = rows,
+		local keys = {
+			"recipeID", "outputItemID", "recipeName", "outputName", "skillLineID", "professionName", "bestCharacterKey",
+			"matCost", "saleNet", "profit", "roi", "outputQty", "qualityIndex", "confidence", "badges",
 		}
-	end
-
-	if scope == "character_meta" then
-		return {
-			meta = {
-				scope = "character_meta",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-				characterKey = characterKey,
-			},
-			character = self:GetCharacterExportHeader(characterData),
-		}
-	end
-
-	if scope == "profession" then
-		local professions = {}
-		for _, professionData in pairs(characterData.professions or {}) do
-			table.insert(professions, professionData)
-		end
-		local profession = self:FindProfessionByIdentifier(professions, identifier)
+		return { meta = characterMeta(self, ctx, nil, { module = "professions" }), keys = keys, rows = rows }
+	end,
+	character_meta = function(self, ctx)
+		return { meta = characterMeta(self, ctx), character = self:GetCharacterExportHeader(ctx.data) }
+	end,
+	profession = function(self, ctx)
+		local profession = findExportProfession(self, ctx)
 		if not profession then
-			return nil, "Unknown profession identifier. Use a skill line ID or exact profession name."
+			return nil, UNKNOWN_PROFESSION
 		end
-		return {
-			meta = {
-				scope = "profession",
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-				characterKey = characterKey,
-				professionIdentifier = identifier,
-			},
-			character = characterData.meta,
-			profession = profession,
-		}
-	end
+		local meta = characterMeta(self, ctx, nil, { professionIdentifier = ctx.identifier })
+		return { meta = meta, character = ctx.data.meta, profession = profession }
+	end,
+	profession_recipes = exportProfessionSlice,
+	profession_talents = exportProfessionSlice,
+}
 
-	if scope == "profession_recipes" or scope == "profession_talents" then
-		local professions = {}
-		for _, professionData in pairs(characterData.professions or {}) do
-			table.insert(professions, professionData)
-		end
-		local profession = self:FindProfessionByIdentifier(professions, identifier)
-		if not profession then
-			return nil, "Unknown profession identifier. Use a skill line ID or exact profession name."
-		end
-		local slice = scope == "profession_recipes" and "recipes" or "talents"
-		return {
-			meta = {
-				scope = scope,
-				generatedAt = time(),
-				addonVersion = self.VERSION,
-				schemaVersion = self.SCHEMA_VERSION,
-				characterKey = characterKey,
-				professionIdentifier = identifier,
-			},
-			character = characterData.meta,
-			profession = self:ProfessionExportSliceProfession(profession, slice),
-		}
-	end
+local function exportCharacter(self, ctx)
+	return { meta = characterMeta(self, ctx, "character"), character = ctx.data }
+end
 
-	return {
-		meta = {
-			scope = "character",
-			generatedAt = time(),
-			addonVersion = self.VERSION,
-			schemaVersion = self.SCHEMA_VERSION,
-			characterKey = characterKey,
-		},
-		character = characterData,
-	}
+function ProfessionExporter:GetExportData(scope, identifier)
+	self:InitDB()
+	local characterKey = self:GetCharacterKey()
+	scope = scope or "character"
+	local accountExport = ACCOUNT_EXPORTS[scope]
+	if accountExport then
+		return accountExport(self)
+	end
+	local characterData = self.db.characters[characterKey]
+	if not characterData then
+		return nil, "No scan data stored for this character yet. Run /auctionhelper scan first."
+	end
+	local build = CHARACTER_EXPORTS[scope] or exportCharacter
+	return build(self, { scope = scope, characterKey = characterKey, data = characterData, identifier = identifier })
 end
 
 function ProfessionExporter:BuildPlainLuaExportPayload(exportData)
@@ -2368,7 +1931,8 @@ function ProfessionExporter:LayoutCopyFrameScroll(copyFrame, useEnvelopePaging)
 	end
 	copyFrame.pageHintStr:SetText(intro)
 	local pages = copyFrame._numPages or 1
-	copyFrame.metaStr:SetText(string.format("%s bytes%s", self.FormatNumberGrouped and self:FormatNumberGrouped(copyFrame._fullLen or 0) or tostring(copyFrame._fullLen or 0),
+	copyFrame.metaStr:SetText(string.format("%s bytes%s",
+		self.FormatNumberGrouped and self:FormatNumberGrouped(copyFrame._fullLen or 0) or tostring(copyFrame._fullLen or 0),
 		useEnvelopePaging and pages > 1 and string.format(" · %d pages", pages) or ""))
 end
 
@@ -2879,165 +2443,145 @@ function ProfessionExporter:HandleAuctionSlash(rest)
 	self:PrintMessage("Usage: /auctionhelper auction [status|enable|disable|refresh [crafts]|dump [visible|all]]")
 end
 
+local SLASH_HELP_LINES = {
+	"Commands: /auctionhelper (window) | /auctionhelper docs | /auctionhelper scan | /auctionhelper full | /auctionhelper status"
+		.. " | /auctionhelper debug [on|off|toggle] | /auctionhelper export … | /auctionhelper settings …"
+		.. " | /auctionhelper auction …  (alias: /profexport)",
+	"Export: character | account | account_summary | professions | professions_recipes | professions_talents"
+		.. " | professions_compact | inventory | inventory_compact | auction_snapshot | auction_history | crafting_costs"
+		.. " | spec_catalog | meta | profession <id|name> | profession_recipes <id|name> | profession_talents <id|name>",
+	"Settings: spectree on|off | recipeoutput on|off | invbatch <n> (0 = sync snapshot). Auction: status|enable|disable|refresh [crafts]|dump.",
+	"Export: data is packed as AHCBOR1 (CBOR + Deflate + Base64). Full payload is written to AuctionHelperLastExport after /reload"
+		.. " — see timing lines when debug is on.",
+}
+
+local EXPORT_USAGE = "Usage: /auctionhelper export [character|account|account_summary|professions|professions_recipes"
+	.. "|professions_talents|professions_compact|inventory|inventory_compact|auction_snapshot|auction_history|crafting_costs"
+	.. "|spec_catalog|meta|profession <id|name>|profession_recipes <id|name>|profession_talents <id|name>]"
+
+-- `/auctionhelper export <arg>` (lower-cased) -> export scope.
+local EXPORT_SCOPE_BY_ARG = {
+	[""] = "character", character = "character",
+	account = "account",
+	account_summary = "account_summary", summary = "account_summary", aggregates = "account_summary", aggregate = "account_summary",
+	professions = "professions",
+	professions_recipes = "professions_recipes",
+	professions_talents = "professions_talents",
+	professions_compact = "professions_compact", profcompact = "professions_compact",
+	inventory = "inventory", items = "inventory",
+	inventory_compact = "inventory_compact", invcompact = "inventory_compact",
+	auction_snapshot = "auction_snapshot", auctionsnapshot = "auction_snapshot",
+	auction_history = "auction_history", auctionhistory = "auction_history",
+	crafting_costs = "crafting_costs", craftcosts = "crafting_costs",
+	spec_catalog = "spec_catalog", speccatalog = "spec_catalog", spec_catalog_midnight = "spec_catalog",
+	meta = "character_meta", charmeta = "character_meta", character_meta = "character_meta",
+}
+
+local function handleExportSlash(self, rest)
+	local scope = EXPORT_SCOPE_BY_ARG[string.lower(rest or "")]
+	if scope then
+		self:Export(scope)
+		return
+	end
+	local sliceScope, identifier = rest:match("^(%S+)%s+(.+)$")
+	sliceScope = string.lower(sliceScope or "")
+	if (sliceScope == "profession_recipes" or sliceScope == "profession_talents") and identifier then
+		self:Export(sliceScope, self:Trim(identifier))
+		return
+	end
+	if sliceScope == "profession" and identifier then
+		self:Export("profession", identifier)
+		return
+	end
+	self:PrintMessage(EXPORT_USAGE)
+end
+
+local function setDebugOn(self)
+	self:SetDebugEnabled(true)
+end
+
+local function setDebugOff(self)
+	self:SetDebugEnabled(false)
+end
+
+local function clearDebugLog(self)
+	self:ClearDebugLog()
+	self:PrintMessage("Persistent debug log cleared.")
+end
+
+local function printDebugLogPath(self)
+	self:PrintMessage("Persistent debug log is stored in AuctionHelperDB.settings.debug.lines and written to"
+		.. " WTF\\Account\\...\\SavedVariables\\AuctionHelper.lua on /reload or logout.")
+end
+
+local function printDebugStatus(self)
+	self:InitDB()
+	local count = self.db and self.db.debug and self.db.debug.lines and #self.db.debug.lines or 0
+	self:PrintMessage(string.format("Debug logging: %s. Persistent lines buffered: %d.", self:IsDebugEnabled() and "on" or "off", count))
+end
+
+local function toggleDebug(self)
+	self:SetDebugEnabled(not self:IsDebugEnabled())
+end
+
+-- `/auctionhelper debug <sub>` (lower-cased); anything else toggles.
+local DEBUG_SUBCOMMANDS = {
+	on = setDebugOn, ["1"] = setDebugOn, ["true"] = setDebugOn,
+	clear = clearDebugLog, reset = clearDebugLog,
+	where = printDebugLogPath, path = printDebugLogPath,
+	status = printDebugStatus,
+	off = setDebugOff, ["0"] = setDebugOff, ["false"] = setDebugOff,
+}
+
+local function handleDebugSlash(self, rest)
+	local handler = DEBUG_SUBCOMMANDS[string.lower(rest or "")] or toggleDebug
+	handler(self)
+	if self.ui and self.ui.mainFrame and self.ui.mainFrame:IsShown() then
+		self:RefreshDashboard(true)
+	end
+end
+
+local function printSlashHelp(self)
+	for _, line in ipairs(SLASH_HELP_LINES) do
+		self:PrintMessage(line)
+	end
+end
+
+local function openDocumentation(self)
+	self:OpenDocumentationTab()
+end
+
+local function handleAuctionSlash(self, rest)
+	self:HandleAuctionSlash(rest)
+end
+
+local function startFullCharacterDump(self)
+	self:StartFullCharacterDump()
+end
+
+-- `/auctionhelper <command> <rest>` (command lower-cased) -> handler(self, rest).
+local SLASH_COMMANDS = {
+	[""] = function(self) self:ToggleDashboard() end,
+	docs = openDocumentation, documentation = openDocumentation,
+	help = printSlashHelp,
+	settings = function(self, rest) self:HandleSettingsSlash(rest) end,
+	auction = handleAuctionSlash, ah = handleAuctionSlash,
+	debug = handleDebugSlash,
+	scan = function(self) self:StartScan() end,
+	full = startFullCharacterDump, dumpfull = startFullCharacterDump,
+	status = function(self) self:PrintStatus() end,
+	export = handleExportSlash,
+}
+
 function ProfessionExporter:HandleSlash(input)
 	input = self:Trim(input)
 	local command, rest = input:match("^(%S+)%s*(.-)$")
 	command = string.lower(command or "")
 	rest = self:Trim(rest)
-
-	if command == "" then
-		self:ToggleDashboard()
+	local handler = SLASH_COMMANDS[command]
+	if handler then
+		handler(self, rest)
 		return
 	end
-
-	if command == "docs" or command == "documentation" then
-		self:OpenDocumentationTab()
-		return
-	end
-
-	if command == "help" then
-		self:PrintMessage("Commands: /auctionhelper (window) | /auctionhelper docs | /auctionhelper scan | /auctionhelper full | /auctionhelper status | /auctionhelper debug [on|off|toggle] | /auctionhelper export … | /auctionhelper settings … | /auctionhelper auction …  (alias: /profexport)")
-		self:PrintMessage("Export: character | account | account_summary | professions | professions_recipes | professions_talents | professions_compact | inventory | inventory_compact | auction_snapshot | auction_history | crafting_costs | spec_catalog | meta | profession <id|name> | profession_recipes <id|name> | profession_talents <id|name>")
-		self:PrintMessage("Settings: spectree on|off | recipeoutput on|off | invbatch <n> (0 = sync snapshot). Auction: status|enable|disable|refresh [crafts]|dump.")
-		self:PrintMessage("Export: data is packed as AHCBOR1 (CBOR + Deflate + Base64). Full payload is written to AuctionHelperLastExport after /reload — see timing lines when debug is on.")
-		return
-	end
-
-	if command == "settings" then
-		self:HandleSettingsSlash(rest)
-		return
-	end
-
-	if command == "auction" or command == "ah" then
-		self:HandleAuctionSlash(rest)
-		return
-	end
-
-	if command == "debug" then
-		local sub = string.lower(rest or "")
-		if sub == "on" or sub == "1" or sub == "true" then
-			self:SetDebugEnabled(true)
-		elseif sub == "clear" or sub == "reset" then
-			self:ClearDebugLog()
-			self:PrintMessage("Persistent debug log cleared.")
-		elseif sub == "where" or sub == "path" then
-			self:PrintMessage("Persistent debug log is stored in AuctionHelperDB.settings.debug.lines and written to WTF\\Account\\...\\SavedVariables\\AuctionHelper.lua on /reload or logout.")
-		elseif sub == "status" then
-			self:InitDB()
-			local count = self.db and self.db.debug and self.db.debug.lines and #self.db.debug.lines or 0
-			self:PrintMessage(string.format("Debug logging: %s. Persistent lines buffered: %d.", self:IsDebugEnabled() and "on" or "off", count))
-		elseif sub == "off" or sub == "0" or sub == "false" then
-			self:SetDebugEnabled(false)
-		else
-			self:SetDebugEnabled(not self:IsDebugEnabled())
-		end
-		if self.ui and self.ui.mainFrame and self.ui.mainFrame:IsShown() then
-			self:RefreshDashboard(true)
-		end
-		return
-	end
-
-	if command == "scan" then
-		self:StartScan()
-		return
-	end
-
-	if command == "full" or command == "dumpfull" then
-		self:StartFullCharacterDump()
-		return
-	end
-
-	if command == "status" then
-		self:PrintStatus()
-		return
-	end
-
-	if command == "export" then
-		local r = string.lower(rest or "")
-		if r == "" or r == "character" then
-			self:Export("character")
-			return
-		end
-
-		if r == "account" then
-			self:Export("account")
-			return
-		end
-
-		if r == "account_summary" or r == "summary" or r == "aggregates" or r == "aggregate" then
-			self:Export("account_summary")
-			return
-		end
-
-		if r == "professions" then
-			self:Export("professions")
-			return
-		end
-
-		if r == "professions_recipes" then
-			self:Export("professions_recipes")
-			return
-		end
-
-		if r == "professions_talents" then
-			self:Export("professions_talents")
-			return
-		end
-
-		if r == "professions_compact" or r == "profcompact" then
-			self:Export("professions_compact")
-			return
-		end
-
-		if r == "inventory" or r == "items" then
-			self:Export("inventory")
-			return
-		end
-
-		if r == "inventory_compact" or r == "invcompact" then
-			self:Export("inventory_compact")
-			return
-		end
-
-		if r == "auction_snapshot" or r == "auctionsnapshot" then
-			self:Export("auction_snapshot")
-			return
-		end
-
-		if r == "auction_history" or r == "auctionhistory" then
-			self:Export("auction_history")
-			return
-		end
-
-		if r == "crafting_costs" or r == "craftcosts" then
-			self:Export("crafting_costs")
-			return
-		end
-
-		if r == "spec_catalog" or r == "speccatalog" or r == "spec_catalog_midnight" then
-			self:Export("spec_catalog")
-			return
-		end
-
-		if r == "meta" or r == "charmeta" or r == "character_meta" then
-			self:Export("character_meta")
-			return
-		end
-
-		local scope, identifier = rest:match("^(%S+)%s+(.+)$")
-		scope = string.lower(scope or "")
-		if (scope == "profession_recipes" or scope == "profession_talents") and identifier then
-			self:Export(scope, self:Trim(identifier))
-			return
-		end
-		if scope == "profession" and identifier then
-			self:Export("profession", identifier)
-			return
-		end
-
-		self:PrintMessage("Usage: /auctionhelper export [character|account|account_summary|professions|professions_recipes|professions_talents|professions_compact|inventory|inventory_compact|auction_snapshot|auction_history|crafting_costs|spec_catalog|meta|profession <id|name>|profession_recipes <id|name>|profession_talents <id|name>]")
-		return
-	end
-
 	self:PrintMessage("Unknown command. Use /auctionhelper help.")
 end

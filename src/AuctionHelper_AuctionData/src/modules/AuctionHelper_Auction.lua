@@ -15,26 +15,6 @@ local KNOWN_AH_SIDE_PANELS = {
 	"AuctionHelper_AuctionDataAuctionPanel",
 }
 
-local function isAuctionHousePanelReady(panel)
-	return panel
-		and panel.__ahAuctionPanelInitialized == true
-		and panel.tabCart
-		and panel.tableHost
-		and panel.cartTableHost
-end
-
-local function wipeFrameChildren(frame)
-	if not frame or not frame.GetNumChildren then
-		return
-	end
-	for i = frame:GetNumChildren(), 1, -1 do
-		local child = select(i, frame:GetChildren())
-		if child and child.SetParent then
-			child:SetParent(nil)
-		end
-	end
-end
-
 local function now()
 	return time()
 end
@@ -100,13 +80,6 @@ end
 
 local function auctionHistoryBucketWeightedSum(bucket)
 	return tonumber(bucket and (bucket.w or bucket.weightedSum)) or 0
-end
-
-local function setFontColor(fontString, color)
-	if not fontString or not color then
-		return
-	end
-	fontString:SetTextColor(color.r or 1, color.g or 1, color.b or 1)
 end
 
 local function getMaxOwnedBagIndex()
@@ -270,6 +243,10 @@ local function formatPercent(value)
 	return string.format("%.1f%%", value)
 end
 
+function ProfessionExporter:FormatPercent(value)
+	return formatPercent(value)
+end
+
 local function containsText(haystack, needle)
 	return string.find(string.lower(tostring(haystack or "")), string.lower(tostring(needle or "")), 1, true) ~= nil
 end
@@ -282,6 +259,10 @@ local function formatDurationShort(seconds)
 		return string.format("%ds", remaining)
 	end
 	return string.format("%dm %02ds", minutes, remaining)
+end
+
+function ProfessionExporter:FormatDurationShort(seconds)
+	return formatDurationShort(seconds)
 end
 
 local function attachSimpleTooltip(widget, title, body)
@@ -300,6 +281,24 @@ local function attachSimpleTooltip(widget, title, body)
 	widget:SetScript("OnLeave", function()
 		GameTooltip:Hide()
 	end)
+end
+
+function ProfessionExporter:AttachSimpleTooltip(widget, title, body)
+	attachSimpleTooltip(widget, title, body)
+end
+
+-- UIPanelButtonTemplate button: size {w, h}, label, five-value anchor and click handler.
+local function panelButton(panel, size, text, point, onClick)
+	local button = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	button:SetSize(size[1], size[2])
+	button:SetPoint(point[1], point[2], point[3], point[4], point[5])
+	button:SetText(text)
+	button:SetScript("OnClick", onClick)
+	return button
+end
+
+function ProfessionExporter:CreateAuctionPanelButton(panel, size, text, point, onClick)
+	return panelButton(panel, size, text, point, onClick)
 end
 
 local function normalizeSearchEventItemID(eventArg)
@@ -508,9 +507,8 @@ function ProfessionExporter:GetLiveAuctionSearchAggregate(itemID, keyFields)
 		local info = C_AuctionHouse.GetItemSearchResultInfo(queryKey, i)
 		if info and info.itemKey then
 			local rowKey = self:SerializeAuctionItemKeyFields(itemID, info.itemKey)
-			if expectedKey and rowKey ~= expectedKey then
-				-- Narrow search: ignore rows that do not match the requested ItemKey.
-			else
+			-- Narrow search: ignore rows that do not match the requested ItemKey.
+			if not expectedKey or rowKey == expectedKey then
 				local g = groups[rowKey]
 				if not g then
 					g = { key = rowKey, itemKey = info.itemKey, totalQuantity = 0, minUnitPrice = nil, maxUnitPrice = nil, listingCount = 0 }
@@ -837,7 +835,7 @@ function ProfessionExporter:SendAuctionPanelSearchQuery(itemID, scanKeyFields)
 	return ok == true
 end
 
-function ProfessionExporter:FinishQueuedAuctionRefreshItem(itemID, priceStateIgnored)
+function ProfessionExporter:FinishQueuedAuctionRefreshItem(itemID, _priceStateIgnored)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return
@@ -1075,7 +1073,7 @@ function ProfessionExporter:ToggleAuctionRefreshPause()
 	if state.auctionRefreshRunning ~= true then
 		return
 	end
-	state.auctionRefreshPaused = not (state.auctionRefreshPaused == true)
+	state.auctionRefreshPaused = state.auctionRefreshPaused ~= true
 	if state.auctionRefreshPaused == true then
 		self:DebugLog("AH", "scan paused", {
 			string.format("mode=%s itemID=%s index=%s", tostring(state.auctionScanMode), tostring(state.auctionActiveItemID), tostring(state.auctionRefreshIndex)),
@@ -1267,8 +1265,8 @@ function ProfessionExporter:PostAuctionBulkCurrent()
 	if not bulk or bulk.running ~= true or bulk.paused == true or bulk.phase ~= "waiting_button" then
 		return
 	end
-	local now = GetTime()
-	if now < (bulk.nextPostAt or 0) then
+	local nowSec = GetTime()
+	if nowSec < (bulk.nextPostAt or 0) then
 		return
 	end
 	local name = self:GetItemDisplayName(bulk.currentItemID)
@@ -1279,7 +1277,7 @@ function ProfessionExporter:PostAuctionBulkCurrent()
 	end
 	local token = bulk.token
 	bulk.phase = "waiting_confirmation"
-	bulk.confirmationStartedAt = now
+	bulk.confirmationStartedAt = nowSec
 	bulk.status = string.format("Waiting for confirmation: %s", name)
 	self:DebugLog("AH", "bulk click post", {
 		string.format("itemID=%s token=%s", tostring(bulk.currentItemID), tostring(token)),
@@ -1314,7 +1312,7 @@ function ProfessionExporter:ToggleAuctionBulkPause()
 	if not bulk or bulk.running ~= true then
 		return
 	end
-	bulk.paused = not (bulk.paused == true)
+	bulk.paused = bulk.paused ~= true
 	if bulk.paused then
 		bulk.status = string.format("Paused: %s", bulk.currentItemID and self:GetItemDisplayName(bulk.currentItemID) or "idle")
 		self:DebugLog("AH", "bulk paused", {
@@ -1661,7 +1659,6 @@ function ProfessionExporter:GetSelectedAuctionPanelItemID()
 end
 
 function ProfessionExporter:RefreshAuctionPanelRules()
-	local state = self:GetState()
 	local selectedItemID = self:GetSelectedAuctionPanelItemID()
 	local rowState = self:GetAuctionRowProtectionState(selectedItemID, 0)
 	local panel = self.ui and self.ui.auctionPanel or nil
@@ -1852,7 +1849,8 @@ function ProfessionExporter:NoteAuctionCartPurchase(itemID, quantity, source)
 	end
 	entry.credit = (tonumber(entry.credit) or 0) + quantity
 	self:DebugLog("AH", "cart purchase credit", {
-		string.format("itemID=%s qty=%s source=%s baseline=%s credit=%s", tostring(itemID), tostring(quantity), tostring(source or "?"), tostring(entry.baseline), tostring(entry.credit)),
+		string.format("itemID=%s qty=%s source=%s baseline=%s credit=%s", tostring(itemID), tostring(quantity),
+			tostring(source or "?"), tostring(entry.baseline), tostring(entry.credit)),
 	})
 	return true
 end
@@ -1940,7 +1938,6 @@ function ProfessionExporter:BuildAuctionCraftCartRows()
 	self:ClearSettledAuctionCartPurchaseCredits()
 	local summary = self:BuildCraftQueueSummary()
 	local workSummary = self.BuildCraftingOrderWorkQueueSummary and self:BuildCraftingOrderWorkQueueSummary() or { reagentLines = {} }
-	local currentCharacterKey = self:GetCharacterKey()
 	local merged = {}
 	-- Order mats are upserted into craftQueue; skip those orderIDs when merging work-order summary.
 	local mirroredOrderIDs = {}
@@ -2078,11 +2075,9 @@ function ProfessionExporter:FilterAuctionCraftCartRows(rows)
 	local text = string.lower(tostring(self.ui.auctionCartFilterText or ""))
 	local out = {}
 	for _, row in ipairs(rows or {}) do
-		if (tonumber(row.quantityToBuy) or 0) <= 0 then
-			-- hide satisfied buy rows
-		elseif text == "" then
-			out[#out + 1] = row
-		elseif containsText(row.itemName, text) or containsText(row.sourceText, text) or containsText(row.mailToText, text) or containsText(row.itemID, text) then
+		local satisfied = (tonumber(row.quantityToBuy) or 0) <= 0 -- hide satisfied buy rows
+		if not satisfied and (text == "" or containsText(row.itemName, text) or containsText(row.sourceText, text)
+			or containsText(row.mailToText, text) or containsText(row.itemID, text)) then
 			out[#out + 1] = row
 		end
 	end
@@ -2215,7 +2210,8 @@ function ProfessionExporter:TryPrefillAuctionBuyQuantity(quantity)
 		return false
 	end
 	local candidates = {
-		ah.CommoditiesBuyFrame and ah.CommoditiesBuyFrame.BuyDisplay and ah.CommoditiesBuyFrame.BuyDisplay.QuantityInput and ah.CommoditiesBuyFrame.BuyDisplay.QuantityInput.InputBox,
+		ah.CommoditiesBuyFrame and ah.CommoditiesBuyFrame.BuyDisplay and ah.CommoditiesBuyFrame.BuyDisplay.QuantityInput
+			and ah.CommoditiesBuyFrame.BuyDisplay.QuantityInput.InputBox,
 		ah.ItemBuyFrame and ah.ItemBuyFrame.QuantityInput and ah.ItemBuyFrame.QuantityInput.InputBox,
 	}
 	for _, input in ipairs(candidates) do
@@ -2447,575 +2443,87 @@ function ProfessionExporter:HideExtraAuctionHousePanels(keepPanel)
 	end
 end
 
-function ProfessionExporter:EnsureAuctionHousePanel()
-	self.ui = self.ui or {}
-	local ui = self.ui
-	local frameName = addonName .. "AuctionPanel"
-	if ui.auctionPanel and ui.auctionPanel:IsObjectType("Frame") then
-		if isAuctionHousePanelReady(ui.auctionPanel) then
-			self:HideExtraAuctionHousePanels(ui.auctionPanel)
-			return ui.auctionPanel
+local function searchSelectedCartRow(panel)
+	local rows = panel.cartTable and panel.cartTable.rows or nil
+	local selected = ProfessionExporter:GetState().auctionCartSelectedItemID
+	if selected then
+		ProfessionExporter:SearchAuctionCartRow({ itemID = selected })
+	elseif type(rows) == "table" and #rows > 0 then
+		ProfessionExporter:SearchAuctionCartRow(rows[1])
+	end
+end
+
+local function priceAllCartRows()
+	local rows = ProfessionExporter:FilterAuctionCraftCartRows(select(1, ProfessionExporter:BuildAuctionCraftCartRows()))
+	ProfessionExporter:SearchAuctionCartRows(rows)
+end
+
+-- Selected cart item, or the first shown cart row when nothing is selected.
+local function selectedOrFirstCartItemID(panel)
+	local selected = ProfessionExporter:GetState().auctionCartSelectedItemID
+	if not selected and panel.cartTable and panel.cartTable.rows then
+		local rows = panel.cartTable.rows or {}
+		selected = rows[1] and rows[1].itemID or nil
+	end
+	return selected
+end
+
+local function buyCheapestCartSelection(panel)
+	local selected = selectedOrFirstCartItemID(panel)
+	if not selected then
+		ProfessionExporter:PrintMessage("Select a shopping-cart row first.")
+		return
+	end
+	local rows = ProfessionExporter:FilterAuctionCraftCartRows(select(1, ProfessionExporter:BuildAuctionCraftCartRows()))
+	for _, row in ipairs(rows) do
+		if tonumber(row.itemID) == tonumber(selected) then
+			ProfessionExporter:TryBuyAuctionCartRow(row)
+			break
 		end
-		ui.auctionPanel = nil
 	end
-	local existing = _G[frameName]
-	if existing and existing.IsObjectType and existing:IsObjectType("Frame") then
-		if isAuctionHousePanelReady(existing) then
-			ui.auctionPanel = existing
-			self:HideExtraAuctionHousePanels(existing)
-			return existing
-		end
-		existing:Hide()
-		existing:SetParent(nil)
-		_G[frameName] = nil
+end
+
+local function removeSelectedCartSources()
+	local selected = ProfessionExporter:GetState().auctionCartSelectedItemID
+	if not selected then
+		ProfessionExporter:PrintMessage("Select a shopping-cart row first.")
+		return
 	end
-	local ah = self:GetAuctionHouseAnchorFrame()
-	if not ah then
-		return nil
+	local pe = ProfessionExporter
+	local removedCrafts = pe.RemoveCraftQueueLinesByReagentItem and pe:RemoveCraftQueueLinesByReagentItem(selected) or 0
+	local removedOrders = pe.RemoveCraftingOrdersByReagentItem and pe:RemoveCraftingOrdersByReagentItem(selected) or 0
+	if (removedCrafts + removedOrders) > 0 then
+		pe:PrintMessage(string.format(
+			"Removed %d craft queue entries and %d crafting orders for item #%s.",
+			removedCrafts, removedOrders, tostring(selected)
+		))
+	else
+		pe:PrintMessage("No shopping-cart sources were removed for the selected item.")
 	end
-	local helperPanel = _G["AuctionHelper_AuctionDataAuctionPanel"]
-	if helperPanel and helperPanel.IsObjectType and helperPanel:IsObjectType("Frame") and frameName ~= "AuctionHelper_AuctionDataAuctionPanel" then
-		ui.auctionPanel = helperPanel
-		self:HideExtraAuctionHousePanels(helperPanel)
-		return helperPanel
+	pe:GetState().auctionCartSelectedItemID = nil
+	pe:RefreshAuctionHousePanel()
+end
+
+local function clearCartSources()
+	if ProfessionExporter.ClearCraftQueue then
+		ProfessionExporter:ClearCraftQueue()
 	end
-	local template = BackdropTemplateMixin and "BackdropTemplate" or nil
-	local panel = template and CreateFrame("Frame", frameName, ah, template) or CreateFrame("Frame", frameName, ah)
-	if isAuctionHousePanelReady(panel) then
-		ui.auctionPanel = panel
-		self:HideExtraAuctionHousePanels(panel)
-		return panel
+	if ProfessionExporter.ClearCraftingOrderWorkQueue then
+		ProfessionExporter:ClearCraftingOrderWorkQueue()
 	end
-	if panel.__ahAuctionPanelInitInProgress then
-		ui.auctionPanel = panel
-		return panel
-	end
-	if panel.GetNumChildren and panel:GetNumChildren() > 0 then
-		wipeFrameChildren(panel)
-	end
-	panel.__ahAuctionPanelInitInProgress = true
-	panel:SetSize(500, 500)
-	panel:SetPoint("TOPLEFT", ah, "TOPRIGHT", 8, -20)
-	panel:SetPoint("BOTTOMLEFT", ah, "BOTTOMRIGHT", 8, 16)
-	panel:SetResizable(true)
-	if panel.SetResizeBounds then
-		panel:SetResizeBounds(380, 320, 760, 900)
-	elseif panel.SetMinResize and panel.SetMaxResize then
-		panel:SetMinResize(380, 320)
-		panel:SetMaxResize(760, 900)
-	end
-	self:StyleWindow(panel)
-	panel:Hide()
+	ProfessionExporter:GetState().auctionCartSelectedItemID = nil
+	ProfessionExporter:PrintMessage("Cleared shopping-cart sources.")
+	ProfessionExporter:RefreshAuctionHousePanel()
+end
 
-	local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	title:SetPoint("TOPLEFT", 10, -10)
-	title:SetPoint("TOPRIGHT", -10, -10)
-	title:SetJustifyH("LEFT")
-	title:SetText("AuctionHelper")
-	panel.title = title
-
-	local tabSell = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	tabSell:SetSize(64, 20)
-	tabSell:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -78, -8)
-	tabSell:SetText("Sell")
-	tabSell:SetScript("OnClick", function()
-		ProfessionExporter:SetAuctionPanelActiveTab("sell", true)
-	end)
-	panel.tabSell = tabSell
-
-	local tabCart = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	tabCart:SetSize(92, 20)
-	tabCart:SetPoint("RIGHT", tabSell, "LEFT", -4, 0)
-	tabCart:SetText("Cart")
-	tabCart:SetScript("OnClick", function()
-		ProfessionExporter:SetAuctionPanelActiveTab("cart", true)
-	end)
-	panel.tabCart = tabCart
-
-	panel.tabAuctions = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	panel.tabAuctions:SetScript("OnClick", function()
-		ProfessionExporter:SetAuctionPanelActiveTab("auctions", true)
-	end)
-
-	local subtitle = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
-	subtitle:SetPoint("TOPRIGHT", -10, -4)
-	subtitle:SetJustifyH("LEFT")
-	subtitle:SetText("Current character sellables")
-	panel.subtitle = subtitle
-
-	local stats = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	stats:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -8)
-	stats:SetPoint("TOPRIGHT", -10, -8)
-	stats:SetJustifyH("LEFT")
-	stats:SetJustifyV("TOP")
-	stats:SetWordWrap(true)
-	panel.stats = stats
-
-	local btnRefresh = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	btnRefresh:SetSize(86, 20)
-	btnRefresh:SetPoint("TOPLEFT", stats, "BOTTOMLEFT", 0, -6)
-	btnRefresh:SetText("Refresh shown")
-	btnRefresh:SetScript("OnClick", function()
-		if not ProfessionExporter:CanStartFullAuctionSideActions(true) then
-			return
-		end
-		local ids = ProfessionExporter:BuildAuctionVisibleItemIDs()
-		ProfessionExporter:QueueVisibleAuctionRefresh(ids)
-		ProfessionExporter:RefreshAuctionHousePanel()
-	end)
-
-	local btnScanCraftPrices = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	btnScanCraftPrices:SetSize(60, 20)
-	btnScanCraftPrices:SetPoint("LEFT", btnRefresh, "RIGHT", 4, 0)
-	btnScanCraftPrices:SetText("Crafts")
-	btnScanCraftPrices:SetScript("OnClick", function()
-		ProfessionExporter:QueueAuctionEconomyScan({ crafts = true })
-	end)
-	attachSimpleTooltip(
-		btnScanCraftPrices,
-		"Craft prices",
-		"Looks up the price of everything your scanned recipes make and use."
-	)
-	panel.btnScanCraftPrices = btnScanCraftPrices
-
-	local btnScanAccountInv = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	btnScanAccountInv:SetSize(64, 20)
-	btnScanAccountInv:SetPoint("LEFT", btnScanCraftPrices, "RIGHT", 4, 0)
-	btnScanAccountInv:SetText("Account")
-	btnScanAccountInv:SetScript("OnClick", function()
-		ProfessionExporter:QueueAuctionEconomyScan({ accountInventory = true })
-	end)
-	attachSimpleTooltip(
-		btnScanAccountInv,
-		"Account items",
-		"Looks up the price of tradable items any of your characters owns."
-	)
-	panel.btnScanAccountInv = btnScanAccountInv
-
-	local btnScanCraftAndAccount = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	btnScanCraftAndAccount:SetSize(46, 20)
-	btnScanCraftAndAccount:SetPoint("LEFT", btnScanAccountInv, "RIGHT", 4, 0)
-	btnScanCraftAndAccount:SetText("Both")
-	btnScanCraftAndAccount:SetScript("OnClick", function()
-		ProfessionExporter:QueueAuctionEconomyScan({ crafts = true, accountInventory = true })
-	end)
-	attachSimpleTooltip(
-		btnScanCraftAndAccount,
-		"Scan crafts + account",
-		"Runs craft economy targets and tradable account inventory targets in one queue (duplicates deduped)."
-	)
-	panel.btnScanCraftAndAccount = btnScanCraftAndAccount
-
-	local btnDump = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	btnDump:SetSize(62, 20)
-	btnDump:SetPoint("LEFT", btnScanCraftAndAccount, "RIGHT", 4, 0)
-	btnDump:SetText("Dump")
-	btnDump:SetScript("OnClick", function()
-		if not ProfessionExporter:CanStartFullAuctionSideActions(true) then
-			return
-		end
-		ProfessionExporter:StartAuctionDump("visible")
-		ProfessionExporter:RefreshAuctionHousePanel()
-	end)
-	panel.btnDumpVisible = btnDump
-
-	local btnDumpFull = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	btnDumpFull:SetSize(72, 20)
-	btnDumpFull:SetPoint("LEFT", btnDump, "RIGHT", 4, 0)
-	btnDumpFull:SetText("Full scan")
-	btnDumpFull:SetScript("OnClick", function()
-		ProfessionExporter:StartAuctionDump("full")
-		ProfessionExporter:RefreshAuctionHousePanel()
-	end)
-	attachSimpleTooltip(
-		btnDumpFull,
-		"Full scan",
-		"Reads every auction in the house and adds an hour to each item's price history."
-	)
-	panel.btnDumpFull = btnDumpFull
-
-	local btnPostProfitable = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	btnPostProfitable:SetSize(96, 20)
-	btnPostProfitable:SetPoint("TOPLEFT", btnRefresh, "BOTTOMLEFT", 0, -4)
-	btnPostProfitable:SetText("Post profitable")
-	btnPostProfitable:SetScript("OnClick", function()
-		ProfessionExporter:RunAuctionPanelBulkAction("post_profitable")
-	end)
-	attachSimpleTooltip(
-		btnPostProfitable,
-		"Post profitable",
-		"Queues every shown item that sells for more than it costs, skipping prices that look dumped. Click Post next once per auction."
-	)
-	panel.btnPostProfitable = btnPostProfitable
-
-	local btnPostAll = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	btnPostAll:SetSize(68, 20)
-	btnPostAll:SetPoint("LEFT", btnPostProfitable, "RIGHT", 4, 0)
-	btnPostAll:SetText("Post all")
-	btnPostAll:SetScript("OnClick", function()
-		ProfessionExporter:RunAuctionPanelBulkAction("post_all")
-	end)
-	attachSimpleTooltip(
-		btnPostAll,
-		"Post all",
-		"Queues every shown item, including low margins and prices that look dumped. Click Post next once per auction."
-	)
-	panel.btnPostAll = btnPostAll
-
-	local btnPauseBulk = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	btnPauseBulk:SetSize(58, 20)
-	btnPauseBulk:SetPoint("LEFT", btnPostAll, "RIGHT", 4, 0)
-	btnPauseBulk:SetText("Pause")
-	btnPauseBulk:SetScript("OnClick", function()
-		ProfessionExporter:ToggleAuctionBulkPause()
-	end)
-	attachSimpleTooltip(
-		btnPauseBulk,
-		"Pause / Resume",
-		"Pauses or resumes the current bulk post worker without clearing its queue position."
-	)
-	btnPauseBulk:Hide()
-	panel.btnPauseBulk = btnPauseBulk
-
-	local btnIgnoreItem = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	btnIgnoreItem:SetSize(58, 20)
-	btnIgnoreItem:SetPoint("LEFT", btnPauseBulk, "RIGHT", 4, 0)
-	btnIgnoreItem:SetText("Ignore")
-	btnIgnoreItem:SetScript("OnClick", function()
-		local itemID = ProfessionExporter:GetSelectedAuctionPanelItemID()
-		if not itemID then
-			ProfessionExporter:PrintMessage("Select an auction row first.")
-			return
-		end
-		local rule = ProfessionExporter:GetAuctionItemRule(itemID) or {}
-		ProfessionExporter:SetAuctionItemRule(itemID, { ignore = rule.ignore == true and nil or true })
-		ProfessionExporter:DebugLog("AH", "rule ignore toggled", {
-			string.format("itemID=%d ignore=%s", itemID, tostring(not (rule.ignore == true))),
-		})
-		ProfessionExporter:PrimeAuctionPanelRows()
-		ProfessionExporter:RefreshAuctionHousePanel()
-	end)
-	attachSimpleTooltip(
-		btnIgnoreItem,
-		"Ignore",
-		"Never post the selected item in bulk."
-	)
-	panel.btnIgnoreItem = btnIgnoreItem
-
-	local btnReserveItem = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	btnReserveItem:SetSize(58, 20)
-	btnReserveItem:SetPoint("LEFT", btnIgnoreItem, "RIGHT", 4, 0)
-	btnReserveItem:SetText("Keep…")
-	btnReserveItem:SetScript("OnClick", function()
-		ProfessionExporter:ShowAuctionReservePrompt(ProfessionExporter:GetSelectedAuctionPanelItemID())
-	end)
-	attachSimpleTooltip(
-		btnReserveItem,
-		"Keep",
-		"Keep a number of the selected item in your bags when posting in bulk."
-	)
-	panel.btnReserveItem = btnReserveItem
-
-	local btnClearRule = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	btnClearRule:SetSize(58, 20)
-	btnClearRule:SetPoint("LEFT", btnReserveItem, "RIGHT", 4, 0)
-	btnClearRule:SetText("Clear rule")
-	btnClearRule:SetScript("OnClick", function()
-		local itemID = ProfessionExporter:GetSelectedAuctionPanelItemID()
-		if not itemID then
-			ProfessionExporter:PrintMessage("Select an auction row first.")
-			return
-		end
-		ProfessionExporter:ClearAuctionItemRule(itemID)
-		ProfessionExporter:DebugLog("AH", "rule cleared", {
-			string.format("itemID=%d", itemID),
-		})
-		ProfessionExporter:PrimeAuctionPanelRows()
-		ProfessionExporter:RefreshAuctionHousePanel()
-	end)
-	attachSimpleTooltip(
-		btnClearRule,
-		"Clear rule",
-		"Remove the ignore or keep rule from the selected item."
-	)
-	panel.btnClearRule = btnClearRule
-
-	local search = CreateFrame("EditBox", nil, panel, "InputBoxTemplate")
-	search:SetSize(118, 20)
-	search:SetAutoFocus(false)
-	search:SetPoint("TOPLEFT", btnPostProfitable, "BOTTOMLEFT", 6, -8)
-	search:SetScript("OnTextChanged", function(box)
-		ui.ahFilterText = box:GetText() or ""
-		ProfessionExporter:RefreshAuctionHousePanel()
-	end)
-	panel.searchBox = search
-
-	local craftedOnly = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
-	craftedOnly:SetPoint("LEFT", search, "RIGHT", 6, -1)
-	local craftedLabel = craftedOnly.Text or (craftedOnly.GetName and craftedOnly:GetName() and _G[craftedOnly:GetName() .. "Text"]) or nil
-	if craftedLabel then
-		craftedLabel:SetText("Crafted only")
-	end
-	craftedOnly:SetScript("OnClick", function(btn)
-		ui.ahCraftedOnly = btn:GetChecked() == true
-		ProfessionExporter:RefreshAuctionHousePanel()
-	end)
-	panel.craftedOnly = craftedOnly
-
-	local profitableOnly = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
-	profitableOnly:SetPoint("LEFT", craftedOnly, "RIGHT", 54, 0)
-	local profitableLabel = profitableOnly.Text or (profitableOnly.GetName and profitableOnly:GetName() and _G[profitableOnly:GetName() .. "Text"]) or nil
-	if profitableLabel then
-		profitableLabel:SetText("Profitable only")
-	end
-	profitableOnly:SetScript("OnClick", function(btn)
-		ui.ahProfitableOnly = btn:GetChecked() == true
-		ProfessionExporter:RefreshAuctionHousePanel()
-	end)
-	panel.profitableOnly = profitableOnly
-
-	ui.ahClassDropdown = self:CreateMultiSelectDropdown(panel, {
-		label = "Class",
-		allLabel = "All classes",
-		width = 114,
-		getSelection = function()
-			return ui.ahClassFilterValues or {}
-		end,
-		setSelection = function(selection)
-			ui.ahClassFilterValues = selection or {}
-		end,
-		onChanged = function()
-			ui.ahSubclassFilterValues = {}
-			ProfessionExporter:RefreshAuctionHousePanel()
-		end,
-	})
-	ui.ahClassDropdown:SetPoint("TOPLEFT", search, "BOTTOMLEFT", 0, -8)
-	panel.classDropdown = ui.ahClassDropdown
-
-	ui.ahSubclassDropdown = self:CreateMultiSelectDropdown(panel, {
-		label = "Subclass",
-		allLabel = "All subclasses",
-		width = 114,
-		getSelection = function()
-			return ui.ahSubclassFilterValues or {}
-		end,
-		setSelection = function(selection)
-			ui.ahSubclassFilterValues = selection or {}
-		end,
-		onChanged = function()
-			ProfessionExporter:RefreshAuctionHousePanel()
-		end,
-	})
-	ui.ahSubclassDropdown:SetPoint("TOPLEFT", ui.ahClassDropdown, "TOPRIGHT", 4, 0)
-	panel.subclassDropdown = ui.ahSubclassDropdown
-
-	local function ahCopyBoolMap(t)
-		local out = {}
-		if type(t) == "table" then
-			for k, v in pairs(t) do
-				if v then
-					out[k] = true
-				end
-			end
-		end
-		return out
-	end
-	ui.ahExpansionFilterValues = ahCopyBoolMap(self:GetSetting("auction.selectedExpansions", {}))
-
-	ui.ahExpansionDropdown = self:CreateMultiSelectDropdown(panel, {
-		label = "Expansion",
-		width = 114,
-		allLabel = "All expansions",
-		getOptions = function()
-			return ProfessionExporter:GetExpansionFilterOptions()
-		end,
-		getSelection = function()
-			return ui.ahExpansionFilterValues or {}
-		end,
-		setSelection = function(selection)
-			ui.ahExpansionFilterValues = selection or {}
-			ProfessionExporter:SetSetting("auction.selectedExpansions", selection)
-		end,
-		onChanged = function()
-			ProfessionExporter:RefreshAuctionHousePanel()
-		end,
-	})
-	ui.ahExpansionDropdown:SetPoint("TOPLEFT", ui.ahSubclassDropdown, "TOPRIGHT", 4, 0)
-	panel.expansionDropdown = ui.ahExpansionDropdown
-
-	local clearBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	clearBtn:SetSize(52, 18)
-	clearBtn:SetPoint("LEFT", profitableOnly, "RIGHT", 48, 0)
-	clearBtn:SetText("Reset filters")
-	clearBtn:SetScript("OnClick", function()
-		ui.ahFilterText = ""
-		ui.ahCraftedOnly = false
-		ui.ahProfitableOnly = false
-		ui.ahClassFilterValues = {}
-		ui.ahSubclassFilterValues = {}
-		ui.ahExpansionFilterValues = {}
-		panel.searchBox:SetText("")
-		panel.craftedOnly:SetChecked(false)
-		panel.profitableOnly:SetChecked(false)
-		ProfessionExporter:SetSetting("auction.selectedExpansions", {})
-		if ui.ahClassDropdown then
-			ui.ahClassDropdown:RefreshText()
-		end
-		if ui.ahSubclassDropdown then
-			ui.ahSubclassDropdown:RefreshText()
-		end
-		if ui.ahExpansionDropdown then
-			ui.ahExpansionDropdown:RefreshText()
-		end
-		ProfessionExporter:RefreshAuctionHousePanel()
-	end)
-	panel.clearBtn = clearBtn
-
-	panel.tableHost = CreateFrame("Frame", nil, panel)
-	panel.tableHost:SetPoint("TOPLEFT", ui.ahClassDropdown, "BOTTOMLEFT", -2, -8)
-	panel.tableHost:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -2, 52)
-	ui.ahSortKey = ui.ahSortKey or "potentialROI"
-	if ui.ahSortAsc == nil then
-		ui.ahSortAsc = false
-	end
-	if ui.ahFilterText == nil then
-		ui.ahFilterText = ""
-	end
-	if ui.ahCraftedOnly == nil then
-		ui.ahCraftedOnly = false
-	end
-	if ui.ahProfitableOnly == nil then
-		ui.ahProfitableOnly = false
-	end
-	ui.ahClassFilterValues = ui.ahClassFilterValues or {}
-	ui.ahSubclassFilterValues = ui.ahSubclassFilterValues or {}
-	ui.ahExpansionFilterValues = ui.ahExpansionFilterValues or {}
-	panel.table = self:CreateReusableTable(panel.tableHost, {
-		rowHeight = 24,
-		autoFitToScroll = true,
-		footer = true,
-		emptyTitle = "Nothing to sell",
-		emptyHint = "No items in your bags match the filters.",
-		isRowSelected = function(rowData)
-			return rowData and rowData.itemID ~= nil and rowData.itemID == ProfessionExporter:GetSelectedAuctionPanelItemID()
-		end,
-		maxRows = 120,
-		sortKey = ui.ahSortKey,
-		sortAsc = ui.ahSortAsc,
-		onSortChanged = function(sortKey, sortAsc)
-			ui.ahSortKey = sortKey
-			ui.ahSortAsc = sortAsc
-		end,
-		onRowEnter = function(rowFrame, rowData)
-			if not rowData or not rowData.itemID then
-				return
-			end
-			local pe = ProfessionExporter
-			local pairs = {}
-			if not (rowData.nativePrice and rowData.nativePrice > 0) then
-				pairs[#pairs + 1] = { "Live price", "not scanned this visit" }
-			end
-			if rowData.fallbackPrice and rowData.fallbackPrice > 0 then
-				pairs[#pairs + 1] = { "Fallback price", pe:FormatCopperFull(rowData.fallbackPrice) .. " · " .. tostring(rowData.fallbackPriceSource or "other addon") }
-			end
-			pairs[#pairs + 1] = { "Return", formatPercent(rowData.potentialROI) }
-			if rowData.isIgnoredByRule then
-				pairs[#pairs + 1] = { "Rule", "never posted in bulk" }
-			elseif (tonumber(rowData.reserveQty) or 0) > 0 then
-				pairs[#pairs + 1] = { "Rule", "keep " .. pe:FormatNumberGrouped(rowData.reserveQty) }
-			end
-			local hint = "Click to put it in the sell slot · Shift-click to link"
-			if rowData.isDumpedLow then
-				hint = "The price looks dumped unusually low. " .. hint
-			end
-			pe:ShowItemRowTooltip(rowFrame, rowData.itemID, pairs, hint)
-		end,
-		onRowLeave = function()
-			GameTooltip:Hide()
-		end,
-		onRowClick = function(_, rowData, _, tableWidget)
-			local id = rowData and rowData.itemID
-			if not id or ProfessionExporter:HandleItemRowModifiedClick(id) then
-				return
-			end
-			ProfessionExporter:GetState().auctionPanelSelectedItemID = id
-			tableWidget:SetSelectedRow(rowData)
-			ProfessionExporter:RefreshAuctionPanelRules()
-			-- Clicking a row should also revalidate this item's current market value.
-			if ProfessionExporter:CanStartFullAuctionSideActions(true) then
-				ProfessionExporter:QueueVisibleAuctionRefresh({ id })
-			end
-			local ok = ProfessionExporter:TrySendItemToAuctionSellFrame(id, rowData and rowData.firstBag, rowData and rowData.firstSlot)
-			if ok then
-				ProfessionExporter:GetState().auctionPanelSelectedItemID = id
-				ProfessionExporter:GetState().auctionLastSellSelectionItemID = id
-				ProfessionExporter:RefreshAuctionPanelRules()
-				ProfessionExporter:PrintMessage(string.format("Selected %s for AH sell.", ProfessionExporter:GetItemDisplayName(id)))
-			else
-				ProfessionExporter:GetState().auctionPanelSelectedItemID = id
-				ProfessionExporter:RefreshAuctionPanelRules()
-				ProfessionExporter:PrintMessage(string.format("Could not put %s in the sell slot (not sellable, or its data is still loading).", ProfessionExporter:GetItemDisplayName(id)))
-			end
-		end,
-	})
-	if panel.table and panel.table.frame then
-		panel.table.frame:ClearAllPoints()
-		panel.table.frame:SetPoint("TOPLEFT", panel.tableHost, "TOPLEFT", 0, 0)
-		panel.table.frame:SetPoint("BOTTOMRIGHT", panel.tableHost, "BOTTOMRIGHT", 0, 0)
-	end
-	panel.table:SetColumns(self:BuildAuctionPanelColumns())
-	panel.searchBox:SetText(ui.ahFilterText or "")
-	panel.craftedOnly:SetChecked(ui.ahCraftedOnly == true)
-	panel.profitableOnly:SetChecked(ui.ahProfitableOnly == true)
-	panel.classDropdown:RefreshText()
-	panel.subclassDropdown:RefreshText()
-	if panel.expansionDropdown then
-		panel.expansionDropdown:RefreshText()
-	end
-	self:RefreshAuctionPanelRules()
-
-	panel.progressText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	panel.progressText:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 44)
-	panel.progressText:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 44)
-	panel.progressText:SetJustifyH("LEFT")
-	panel.progressText:SetText("")
-
-	panel.progressBar = CreateFrame("StatusBar", nil, panel)
-	panel.progressBar:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 24)
-	panel.progressBar:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 24)
-	panel.progressBar:SetHeight(14)
-	self:StyleProgressBar(panel.progressBar)
-	panel.progressBarBg = panel.progressBar.ahTrack
-
-	panel.btnPauseScan = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	panel.btnPauseScan:SetSize(64, 18)
-	panel.btnPauseScan:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -28, 4)
-	panel.btnPauseScan:SetText("Pause")
-	panel.btnPauseScan:SetScript("OnClick", function()
-		ProfessionExporter:ToggleAuctionRefreshPause()
-	end)
-	attachSimpleTooltip(
-		panel.btnPauseScan,
-		"Pause / Resume Scan",
-		"Pauses or resumes the queued auction price scan without clearing its progress."
-	)
-	panel.btnPauseScan:Hide()
-
-	panel.progressTiming = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	panel.progressTiming:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 6)
-	panel.progressTiming:SetPoint("BOTTOMRIGHT", panel.btnPauseScan, "BOTTOMLEFT", -8, 0)
-	panel.progressTiming:SetJustifyH("LEFT")
-	panel.progressTiming:SetText("")
-	panel.progressTiming:Hide()
-
+-- Cart summary line and the search box that filters cart rows.
+local function buildCartHeader(panel, title)
 	panel.cartSummary = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	panel.cartSummary:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
 	panel.cartSummary:SetPoint("RIGHT", panel, "RIGHT", -10, 0)
 	panel.cartSummary:SetJustifyH("LEFT")
 	panel.cartSummary:SetWordWrap(true)
 	panel.cartSummary:Hide()
-
 	panel.cartSearchBox = CreateFrame("EditBox", nil, panel, "InputBoxTemplate")
 	panel.cartSearchBox:SetSize(140, 20)
 	panel.cartSearchBox:SetAutoFocus(false)
@@ -3026,100 +2534,58 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 		ProfessionExporter:RefreshAuctionHousePanel()
 	end)
 	panel.cartSearchBox:Hide()
+end
 
-	panel.btnCartSearch = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	panel.btnCartSearch:SetSize(58, 20)
-	panel.btnCartSearch:SetPoint("LEFT", panel.cartSearchBox, "RIGHT", 4, 0)
-	panel.btnCartSearch:SetText("Find selected")
-	panel.btnCartSearch:SetScript("OnClick", function()
-		local rows = panel.cartTable and panel.cartTable.rows or nil
-		local selected = ProfessionExporter:GetState().auctionCartSelectedItemID
-		if selected then
-			ProfessionExporter:SearchAuctionCartRow({ itemID = selected })
-		elseif type(rows) == "table" and #rows > 0 then
-			ProfessionExporter:SearchAuctionCartRow(rows[1])
-		end
+-- Cart-tab button, hidden until the refresh shows the cart tab.
+local function cartButton(panel, size, text, point, onClick)
+	local button = panelButton(panel, size, text, point, onClick)
+	button:Hide()
+	return button
+end
+
+local function buildCartButtons(panel)
+	panel.btnCartSearch = cartButton(panel, { 58, 20 }, "Find selected", { "LEFT", panel.cartSearchBox, "RIGHT", 4, 0 }, function()
+		searchSelectedCartRow(panel)
 	end)
-	panel.btnCartSearch:Hide()
 	attachSimpleTooltip(panel.btnCartSearch, "Search selected", "Runs an AH search for the selected shopping-cart row and refreshes the live price.")
-
-	panel.btnCartRefresh = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	panel.btnCartRefresh:SetSize(64, 20)
-	panel.btnCartRefresh:SetPoint("LEFT", panel.btnCartSearch, "RIGHT", 4, 0)
-	panel.btnCartRefresh:SetText("Price all")
-	panel.btnCartRefresh:SetScript("OnClick", function()
-		local rows = ProfessionExporter:FilterAuctionCraftCartRows(select(1, ProfessionExporter:BuildAuctionCraftCartRows()))
-		ProfessionExporter:SearchAuctionCartRows(rows)
-	end)
-	panel.btnCartRefresh:Hide()
+	panel.btnCartRefresh = cartButton(panel, { 64, 20 }, "Price all", { "LEFT", panel.btnCartSearch, "RIGHT", 4, 0 }, priceAllCartRows)
 	attachSimpleTooltip(panel.btnCartRefresh, "Scan all cart rows", "Queues AH searches for all shopping-cart rows that still need to be bought.")
-
-	panel.btnCartBuy = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	panel.btnCartBuy:SetSize(86, 20)
-	panel.btnCartBuy:SetPoint("TOPLEFT", panel.cartSearchBox, "BOTTOMLEFT", 0, -6)
-	panel.btnCartBuy:SetText("Buy cheapest")
-	panel.btnCartBuy:SetScript("OnClick", function()
-		local selected = ProfessionExporter:GetState().auctionCartSelectedItemID
-		if not selected and panel.cartTable and panel.cartTable.rows then
-			local rows = panel.cartTable.rows or {}
-			selected = rows[1] and rows[1].itemID or nil
-		end
-		if not selected then
-			ProfessionExporter:PrintMessage("Select a shopping-cart row first.")
-			return
-		end
-		local rows = ProfessionExporter:FilterAuctionCraftCartRows(select(1, ProfessionExporter:BuildAuctionCraftCartRows()))
-		for _, row in ipairs(rows) do
-			if tonumber(row.itemID) == tonumber(selected) then
-				ProfessionExporter:TryBuyAuctionCartRow(row)
-				break
-			end
-		end
+	panel.btnCartBuy = cartButton(panel, { 86, 20 }, "Buy cheapest", { "TOPLEFT", panel.cartSearchBox, "BOTTOMLEFT", 0, -6 }, function()
+		buyCheapestCartSelection(panel)
 	end)
-	panel.btnCartBuy:Hide()
-	attachSimpleTooltip(panel.btnCartBuy, "Buy cheapest", "Attempts a first-pass commodity purchase for the selected shopping-cart row using the current cheapest live result.")
-
-	panel.btnCartRemove = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	panel.btnCartRemove:SetSize(70, 20)
-	panel.btnCartRemove:SetPoint("LEFT", panel.btnCartBuy, "RIGHT", 4, 0)
-	panel.btnCartRemove:SetText("Remove selected")
-	panel.btnCartRemove:SetScript("OnClick", function()
-		local selected = ProfessionExporter:GetState().auctionCartSelectedItemID
-		if not selected then
-			ProfessionExporter:PrintMessage("Select a shopping-cart row first.")
-			return
-		end
-		local removedCrafts = ProfessionExporter.RemoveCraftQueueLinesByReagentItem and ProfessionExporter:RemoveCraftQueueLinesByReagentItem(selected) or 0
-		local removedOrders = ProfessionExporter.RemoveCraftingOrdersByReagentItem and ProfessionExporter:RemoveCraftingOrdersByReagentItem(selected) or 0
-		if (removedCrafts + removedOrders) > 0 then
-			ProfessionExporter:PrintMessage(string.format("Removed %d craft queue entries and %d crafting orders for item #%s.", removedCrafts, removedOrders, tostring(selected)))
-		else
-			ProfessionExporter:PrintMessage("No shopping-cart sources were removed for the selected item.")
-		end
-		ProfessionExporter:GetState().auctionCartSelectedItemID = nil
-		ProfessionExporter:RefreshAuctionHousePanel()
-	end)
-	panel.btnCartRemove:Hide()
-	attachSimpleTooltip(panel.btnCartRemove, "Remove selected item", "Removes queued crafts and queued crafting orders that contribute to the selected shopping-cart item.")
-
-	panel.btnCartClear = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	panel.btnCartClear:SetSize(56, 20)
-	panel.btnCartClear:SetPoint("LEFT", panel.btnCartRemove, "RIGHT", 4, 0)
-	panel.btnCartClear:SetText("Clear cart")
-	panel.btnCartClear:SetScript("OnClick", function()
-		if ProfessionExporter.ClearCraftQueue then
-			ProfessionExporter:ClearCraftQueue()
-		end
-		if ProfessionExporter.ClearCraftingOrderWorkQueue then
-			ProfessionExporter:ClearCraftingOrderWorkQueue()
-		end
-		ProfessionExporter:GetState().auctionCartSelectedItemID = nil
-		ProfessionExporter:PrintMessage("Cleared shopping-cart sources.")
-		ProfessionExporter:RefreshAuctionHousePanel()
-	end)
-	panel.btnCartClear:Hide()
+	attachSimpleTooltip(panel.btnCartBuy, "Buy cheapest",
+		"Attempts a first-pass commodity purchase for the selected shopping-cart row using the current cheapest live result.")
+	panel.btnCartRemove = cartButton(panel, { 70, 20 }, "Remove selected", { "LEFT", panel.btnCartBuy, "RIGHT", 4, 0 }, removeSelectedCartSources)
+	attachSimpleTooltip(panel.btnCartRemove, "Remove selected item",
+		"Removes queued crafts and queued crafting orders that contribute to the selected shopping-cart item.")
+	panel.btnCartClear = cartButton(panel, { 56, 20 }, "Clear cart", { "LEFT", panel.btnCartRemove, "RIGHT", 4, 0 }, clearCartSources)
 	attachSimpleTooltip(panel.btnCartClear, "Clear shopping cart", "Clears queued crafts and queued crafting orders that feed the shopping cart.")
+end
 
+local function appendCartMailLines(pe, lines, mailAllocations)
+	for _, alloc in ipairs(type(mailAllocations) == "table" and mailAllocations or {}) do
+		if (tonumber(alloc.mailQuantity) or 0) > 0 then
+			lines[#lines + 1] = { "Mail to " .. tostring(alloc.characterKey), pe:FormatNumberGrouped(alloc.mailQuantity) }
+		end
+	end
+end
+
+local function showCartRowTooltip(rowFrame, rowData)
+	if not rowData or not rowData.itemID then
+		return
+	end
+	local pe = ProfessionExporter
+	local lines = {
+		{ "Need", pe:FormatNumberGrouped(rowData.quantityNeeded or 0) },
+		{ "Have here", pe:FormatNumberGrouped(rowData.quantityOnCharacter or rowData.quantityHave or 0) },
+		{ "Buy", pe:FormatNumberGrouped(rowData.quantityToBuy or 0) },
+		{ "Cost to buy", rowData.estimatedBuyCost and pe:FormatCopperFull(rowData.estimatedBuyCost) or "no price yet" },
+	}
+	appendCartMailLines(pe, lines, rowData.mailAllocations)
+	pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, "Click to find it at the auction house")
+end
+
+local function buildCartTable(self, panel)
 	panel.cartTableHost = CreateFrame("Frame", nil, panel)
 	panel.cartTableHost:SetPoint("TOPLEFT", panel.btnCartBuy, "BOTTOMLEFT", 0, -8)
 	panel.cartTableHost:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -2, 52)
@@ -3136,24 +2602,7 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 		sortKey = "quantityToBuy",
 		sortAsc = false,
 		autoFitToScroll = true,
-		onRowEnter = function(rowFrame, rowData)
-			if not rowData or not rowData.itemID then
-				return
-			end
-			local pe = ProfessionExporter
-			local pairs = {
-				{ "Need", pe:FormatNumberGrouped(rowData.quantityNeeded or 0) },
-				{ "Have here", pe:FormatNumberGrouped(rowData.quantityOnCharacter or rowData.quantityHave or 0) },
-				{ "Buy", pe:FormatNumberGrouped(rowData.quantityToBuy or 0) },
-				{ "Cost to buy", rowData.estimatedBuyCost and pe:FormatCopperFull(rowData.estimatedBuyCost) or "no price yet" },
-			}
-			for _, alloc in ipairs(type(rowData.mailAllocations) == "table" and rowData.mailAllocations or {}) do
-				if (tonumber(alloc.mailQuantity) or 0) > 0 then
-					pairs[#pairs + 1] = { "Mail to " .. tostring(alloc.characterKey), pe:FormatNumberGrouped(alloc.mailQuantity) }
-				end
-			end
-			pe:ShowItemRowTooltip(rowFrame, rowData.itemID, pairs, "Click to find it at the auction house")
-		end,
+		onRowEnter = showCartRowTooltip,
 		onRowLeave = function()
 			GameTooltip:Hide()
 		end,
@@ -3169,28 +2618,70 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 		panel.cartTable.frame:SetPoint("BOTTOMRIGHT", panel.cartTableHost, "BOTTOMRIGHT", 0, 0)
 		panel.cartTable:SetColumns(self:BuildAuctionCartColumns())
 	end
+end
 
-	-- Auctions tab: totals, a price recheck and the player's own auctions.
+-- Cart tab: reagent summary, search, buy/remove/clear actions and the reagent table (hidden until shown).
+function ProfessionExporter:BuildAuctionPanelCartTab(panel, title)
+	buildCartHeader(panel, title)
+	buildCartButtons(panel)
+	buildCartTable(self, panel)
+end
+
+local OWNED_CANCEL_TIP = "Each click cancels one undercut auction, the most undercut first. "
+	.. "The deposit is not refunded, and the item comes back by mail. Skips auctions with a bid, "
+	.. "and ones where reposting at the lowest price would pay nothing after the cut and deposit."
+local OWNED_CHECK_TIP = "Looks up the current lowest price of every item you have listed, to show which are undercut."
+
+local function recheckOwnedAuctionPrices()
+	local ids = {}
+	for _, row in ipairs(ProfessionExporter:BuildOwnedAuctionRows()) do
+		if not row.sold then
+			ids[#ids + 1] = row.itemID
+		end
+	end
+	ProfessionExporter:QueueVisibleAuctionRefresh(ids)
+end
+
+local function buildOwnedButtons(panel)
 	panel.ownedSummary = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	panel.ownedSummary:SetJustifyH("LEFT")
 	panel.btnOwnedCheck = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.btnOwnedCheck:SetText("Check prices")
-	panel.btnOwnedCheck:SetScript("OnClick", function()
-		local ids = {}
-		for _, row in ipairs(ProfessionExporter:BuildOwnedAuctionRows()) do
-			if not row.sold then
-				ids[#ids + 1] = row.itemID
-			end
-		end
-		ProfessionExporter:QueueVisibleAuctionRefresh(ids)
-	end)
+	panel.btnOwnedCheck:SetScript("OnClick", recheckOwnedAuctionPrices)
 	panel.btnOwnedCancel = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.btnOwnedCancel:SetText("Cancel undercut")
 	panel.btnOwnedCancel:SetScript("OnClick", function()
 		ProfessionExporter:CancelNextUndercutAuction()
 	end)
-	attachSimpleTooltip(panel.btnOwnedCancel, "Cancel undercut", "Each click cancels one undercut auction, the most undercut first. The deposit is not refunded, and the item comes back by mail. Skips auctions with a bid, and ones where reposting at the lowest price would pay nothing after the cut and deposit.")
-	attachSimpleTooltip(panel.btnOwnedCheck, "Check prices", "Looks up the current lowest price of every item you have listed, to show which are undercut.")
+	attachSimpleTooltip(panel.btnOwnedCancel, "Cancel undercut", OWNED_CANCEL_TIP)
+	attachSimpleTooltip(panel.btnOwnedCheck, "Check prices", OWNED_CHECK_TIP)
+end
+
+local function appendOwnedUndercutLines(pe, lines, rowData)
+	lines[4] = { "Undercut by", string.format("%s each (%d%%)", pe:FormatCopperFull(rowData.undercutBy), math.max(1, math.floor(rowData.undercutPct + 0.5))) }
+	if pe:GetSetting("auction.repostIncludeDeposit", true) ~= false then
+		lines[#lines + 1] = { "Deposit lost on cancel", rowData.deposit and pe:FormatCopperFull(rowData.deposit) or "unknown, not counted" }
+	end
+	lines[#lines + 1] = { "If cancelled and reposted at lowest", rowData.repostNet > 0
+		and string.format("%s (%s less)", pe:FormatCopperFull(rowData.repostNet), pe:FormatCopperFull(rowData.net - rowData.repostNet))
+		or "not worth it" }
+end
+
+local function ownedRowTooltipLines(pe, panel, rowData)
+	local lines = {}
+	if not rowData.sold then
+		local cutLabel = string.format("After %d%% cut", math.floor((panel.ownedCut or 0.05) * 100 + 0.5))
+		lines[1] = { "Lowest scanned", rowData.marketPrice and pe:FormatCopperFull(rowData.marketPrice) or "not scanned this visit" }
+		lines[2] = { "Scanned", pe:FormatAuctionScanAge(pe:GetItemLastAuctionScanAt(rowData.itemID)) }
+		lines[3] = { cutLabel, pe:FormatCopperFull(rowData.net) }
+		if rowData.undercut then
+			appendOwnedUndercutLines(pe, lines, rowData)
+		end
+	end
+	return lines
+end
+
+local function buildOwnedTable(self, panel)
 	panel.ownedTableHost = CreateFrame("Frame", nil, panel)
 	panel.ownedTable = self:CreateReusableTable(panel.ownedTableHost, {
 		rowHeight = 24,
@@ -3203,23 +2694,8 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 		autoFitToScroll = true,
 		onRowEnter = function(rowFrame, rowData)
 			local pe = ProfessionExporter
-			local pairs = {}
-			if not rowData.sold then
-				local cutLabel = string.format("After %d%% cut", math.floor((panel.ownedCut or 0.05) * 100 + 0.5))
-				pairs[1] = { "Lowest scanned", rowData.marketPrice and pe:FormatCopperFull(rowData.marketPrice) or "not scanned this visit" }
-				pairs[2] = { "Scanned", pe:FormatAuctionScanAge(pe:GetItemLastAuctionScanAt(rowData.itemID)) }
-				pairs[3] = { cutLabel, pe:FormatCopperFull(rowData.net) }
-				if rowData.undercut then
-					pairs[4] = { "Undercut by", string.format("%s each (%d%%)", pe:FormatCopperFull(rowData.undercutBy), math.max(1, math.floor(rowData.undercutPct + 0.5))) }
-					if pe:GetSetting("auction.repostIncludeDeposit", true) ~= false then
-						pairs[#pairs + 1] = { "Deposit lost on cancel", rowData.deposit and pe:FormatCopperFull(rowData.deposit) or "unknown, not counted" }
-					end
-					pairs[#pairs + 1] = { "If cancelled and reposted at lowest", rowData.repostNet > 0
-						and string.format("%s (%s less)", pe:FormatCopperFull(rowData.repostNet), pe:FormatCopperFull(rowData.net - rowData.repostNet))
-						or "not worth it" }
-				end
-			end
-			pe:ShowItemRowTooltip(rowFrame, rowData.itemID, pairs, not rowData.sold and "Click to recheck its price" or nil)
+			local lines = ownedRowTooltipLines(pe, panel, rowData)
+			pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, not rowData.sold and "Click to recheck its price" or nil)
 		end,
 		onRowLeave = function()
 			GameTooltip:Hide()
@@ -3232,52 +2708,12 @@ function ProfessionExporter:EnsureAuctionHousePanel()
 	})
 	panel.ownedTable.frame:SetAllPoints(panel.ownedTableHost)
 	panel.ownedTable:SetColumns(self:BuildOwnedAuctionColumns())
+end
 
-	panel.sellControls = {
-		btnRefresh,
-		btnScanCraftPrices,
-		btnScanAccountInv,
-		btnScanCraftAndAccount,
-		btnDump,
-		btnDumpFull,
-		btnPostProfitable,
-		btnPostAll,
-		btnPauseBulk,
-		btnIgnoreItem,
-		btnReserveItem,
-		btnClearRule,
-		search,
-		craftedOnly,
-		profitableOnly,
-		ui.ahClassDropdown,
-		ui.ahSubclassDropdown,
-		ui.ahExpansionDropdown,
-		clearBtn,
-		panel.tableHost,
-		panel.table and panel.table.frame or nil,
-	}
-
-	panel.resizeHandle = CreateFrame("Button", nil, panel)
-	panel.resizeHandle:SetSize(18, 18)
-	panel.resizeHandle:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -6, 6)
-	panel.resizeHandle:SetNormalTexture("Interface/ChatFrame/UI-ChatIM-SizeGrabber-Up")
-	panel.resizeHandle:SetHighlightTexture("Interface/ChatFrame/UI-ChatIM-SizeGrabber-Highlight")
-	panel.resizeHandle:SetPushedTexture("Interface/ChatFrame/UI-ChatIM-SizeGrabber-Down")
-	panel.resizeHandle:RegisterForDrag("LeftButton")
-	panel.resizeHandle:SetScript("OnDragStart", function()
-		panel:StartSizing("BOTTOMRIGHT")
-	end)
-	panel.resizeHandle:SetScript("OnDragStop", function()
-		panel:StopMovingOrSizing()
-	end)
-	attachSimpleTooltip(panel.resizeHandle, "Resize", "Drag to resize the auction side panel.")
-
-	self:BuildAuctionPanelLayout(panel)
-	panel.__ahAuctionPanelInitInProgress = nil
-	panel.__ahAuctionPanelInitialized = true
-	ui.auctionPanel = panel
-	self:HideExtraAuctionHousePanels(panel)
-	return panel
+-- Auctions tab: totals, a price recheck and the player's own auctions.
+function ProfessionExporter:BuildAuctionPanelOwnedTab(panel)
+	buildOwnedButtons(panel)
+	buildOwnedTable(self, panel)
 end
 
 local AH_PAD = 12
@@ -3806,8 +3242,8 @@ end
 --- rejects cancels that don't come from a hardware event, so it is one click per auction.
 function ProfessionExporter:CancelNextUndercutAuction()
 	local state = self:GetState()
-	local now = GetTime()
-	if now < (state.auctionNextCancelAt or 0) or not C_AuctionHouse.IsThrottledMessageSystemReady() then
+	local nowSec = GetTime()
+	if nowSec < (state.auctionNextCancelAt or 0) or not C_AuctionHouse.IsThrottledMessageSystemReady() then
 		return
 	end
 	local target = self:GetCancelableUndercutAuctions((self:BuildOwnedAuctionRows()))[1]
@@ -3816,8 +3252,8 @@ function ProfessionExporter:CancelNextUndercutAuction()
 	end
 	C_AuctionHouse.CancelAuction(target.auctionID)
 	state.auctionCancelRequestedAt = state.auctionCancelRequestedAt or {}
-	state.auctionCancelRequestedAt[target.auctionID] = now
-	state.auctionNextCancelAt = now + AUCTION_BULK_MIN_INTERVAL
+	state.auctionCancelRequestedAt[target.auctionID] = nowSec
+	state.auctionNextCancelAt = nowSec + AUCTION_BULK_MIN_INTERVAL
 	self:RefreshAuctionHousePanel()
 	C_Timer.After(AUCTION_BULK_MIN_INTERVAL, function()
 		ProfessionExporter:RefreshAuctionHousePanel()
@@ -4147,411 +3583,6 @@ function ProfessionExporter:RunAuctionPanelBulkAction(mode)
 	C_Timer.After(0.05, function()
 		ProfessionExporter:ContinueAuctionBulkPost()
 	end)
-end
-
-function ProfessionExporter:RefreshAuctionHousePanel()
-	local panel = self:EnsureAuctionHousePanel()
-	if not panel then
-		return
-	end
-	self:HideExtraAuctionHousePanels(panel)
-	self:RefreshAuctionPanelRules()
-	self.ui = self.ui or {}
-	local ui = self.ui
-	local theme = self.GetTheme and self:GetTheme() or nil
-	if theme then
-		setFontColor(panel.title, theme.textPrimary)
-		setFontColor(panel.subtitle, theme.textMuted)
-		if panel.cartSummary then
-			setFontColor(panel.cartSummary, theme.textMuted)
-		end
-	end
-	local refreshState = self:GetState()
-	local cartRows, queueSummary = self:BuildAuctionCraftCartRows()
-	local cartOutstanding = 0
-	local cartQuantityToBuy = 0
-	local cartEstimatedBuyCost = 0
-	local cartEstimatedBuyCostKnown = true
-	for _, row in ipairs(cartRows or {}) do
-		if (tonumber(row.quantityToBuy) or 0) > 0 then
-			cartOutstanding = cartOutstanding + 1
-			cartQuantityToBuy = cartQuantityToBuy + (tonumber(row.quantityToBuy) or 0)
-			if tonumber(row.estimatedBuyCost) then
-				cartEstimatedBuyCost = cartEstimatedBuyCost + (tonumber(row.estimatedBuyCost) or 0)
-			else
-				cartEstimatedBuyCostKnown = false
-			end
-		end
-	end
-	local cartEstimatedBuyCostText = cartEstimatedBuyCost > 0 and self:FormatCopperShort(cartEstimatedBuyCost) or "—"
-	if cartEstimatedBuyCost > 0 and not cartEstimatedBuyCostKnown then
-		cartEstimatedBuyCostText = cartEstimatedBuyCostText .. "+"
-	end
-	if ui.auctionPanelTabManual ~= true then
-		ui.auctionPanelActiveTab = cartOutstanding > 0 and "cart" or "sell"
-	end
-	local activeTab = self:GetAuctionPanelActiveTab(cartOutstanding > 0 and "cart" or "sell")
-	local rows = refreshState.auctionPanelRows
-	if type(rows) ~= "table" then
-		rows = self:PrimeAuctionPanelRows() or {}
-		refreshState.auctionPanelRows = rows
-	end
-	for _, row in ipairs(rows) do
-		local roi = refreshState.auctionRoiCache and refreshState.auctionRoiCache[row.itemID] or nil
-		row.potentialROI = roi and roi.potentialROI or nil
-		row.recipeName = roi and roi.recipeName or nil
-		row.qualityIndex = row.qualityIndex or (roi and roi.qualityIndex or nil)
-		row._isScanning = tonumber(refreshState.auctionActiveItemID) == tonumber(row.itemID)
-		local scanTs = self:GetItemLastAuctionScanAt(row.itemID)
-		row.lastAuctionScanAtTs = scanTs
-		row.auctionScanAgeDisplay = self:FormatAuctionScanAge(scanTs)
-	end
-	local preFilterCount = #rows
-	local classOptions = self:GetAuctionClassFilterOptions(rows)
-	ui.ahClassFilterValues = self:NormalizeFilterSelection(ui.ahClassFilterValues or {}, classOptions)
-	if panel.classDropdown then
-		panel.classDropdown:SetOptions(classOptions)
-	end
-	local subclassOptions = self:GetAuctionSubclassFilterOptions(rows, ui.ahClassFilterValues)
-	ui.ahSubclassFilterValues = self:NormalizeFilterSelection(ui.ahSubclassFilterValues or {}, subclassOptions)
-	if panel.subclassDropdown then
-		panel.subclassDropdown:SetOptions(subclassOptions)
-	end
-	local expOpts = self:GetExpansionFilterOptions()
-	ui.ahExpansionFilterValues = self:NormalizeFilterSelection(ui.ahExpansionFilterValues or {}, expOpts)
-	if panel.expansionDropdown then
-		panel.expansionDropdown:SetOptions(expOpts)
-		panel.expansionDropdown:RefreshText()
-	end
-	rows = self:FilterAuctionPanelRows(rows)
-	refreshState.auctionVisibleRows = rows
-	local queuedCount = 0
-	for _ in pairs(refreshState.auctionRefreshQueue or {}) do
-		queuedCount = queuedCount + 1
-	end
-	local src = refreshState.auctionSourceCounts or {}
-	local dumpState = refreshState.auctionDump
-	local cooldownRemaining = self:GetFullAuctionDumpCooldownRemaining()
-	local lastFullDumpLabel = self:FormatScanTimestamp(self:GetLastFullAuctionScanAt())
-	local fullDumpActive = dumpState and dumpState.mode == "full" and dumpState.running == true
-	local loadingLine = "idle"
-	if refreshState.auctionRefreshRunning then
-		local sm = tostring(refreshState.auctionScanMode or "")
-		if sm == "crafts" then
-			loadingLine = "craft prices..."
-		elseif sm == "account_inv" then
-			loadingLine = "account inventory..."
-		elseif sm == "mixed" then
-			loadingLine = "crafts + account..."
-		else
-			loadingLine = "prices..."
-		end
-	elseif refreshState.auctionRoiRunning then
-		loadingLine = "roi..."
-	end
-	local selID = self:GetSelectedAuctionPanelItemID()
-	local selScanLabel = selID and self:FormatAuctionScanAge(self:GetItemLastAuctionScanAt(selID)) or "n/a"
-	if panel.footerText then
-		local footer = fullDumpActive and "Full scan running"
-			or cooldownRemaining > 0 and ("Full scan ready in " .. formatDurationShort(cooldownRemaining))
-			or "Full scan ready"
-		panel.footerText:SetText(string.format("%s · Last full scan %s", footer, lastFullDumpLabel))
-	end
-	if panel.table and panel.table.SetFooterText then
-		panel.table:SetFooterText(string.format("%d of %d items", #rows, preFilterCount),
-			queuedCount > 0 and string.format("%d prices queued", queuedCount) or "Click a row to put it in the sell slot")
-	end
-	local total = tonumber(refreshState.auctionScanTotal) or 0
-	local done = tonumber(refreshState.auctionScanDone) or 0
-	local activeName = refreshState.auctionActiveItemID and self:GetItemDisplayName(refreshState.auctionActiveItemID) or "idle"
-	local mode = tostring(refreshState.auctionScanMode or "idle")
-	if mode == "crafts" then
-		mode = "craft prices"
-	elseif mode == "account_inv" then
-		mode = "account inv"
-	elseif mode == "mixed" then
-		mode = "crafts+account"
-	end
-	local bulk = refreshState.auctionBulk
-	local scanActive = ((refreshState.auctionRefreshRunning == true) or (refreshState.auctionRoiRunning == true)) and (total <= 0 or done < total)
-		or (total > 0 and done < total)
-	local scanPaused = refreshState.auctionRefreshPaused == true and refreshState.auctionRefreshRunning == true
-	local bulkActive = bulk and bulk.running == true
-	if panel.btnDumpFull then
-		if fullDumpActive then
-			panel.btnDumpFull:SetEnabled(false)
-			panel.btnDumpFull:SetText("Scanning…")
-		elseif cooldownRemaining > 0 then
-			panel.btnDumpFull:SetEnabled(false)
-			panel.btnDumpFull:SetText(formatDurationShort(cooldownRemaining))
-		else
-			panel.btnDumpFull:SetEnabled(true)
-			panel.btnDumpFull:SetText("Full scan")
-		end
-	end
-	if panel.btnDumpVisible then
-		panel.btnDumpVisible:SetEnabled(not fullDumpActive)
-	end
-	if panel.btnScanCraftPrices then
-		local scanBusy = refreshState.auctionRefreshRunning == true
-		panel.btnScanCraftPrices:SetEnabled(not fullDumpActive and not scanBusy)
-	end
-	if panel.btnScanAccountInv then
-		local scanBusy = refreshState.auctionRefreshRunning == true
-		panel.btnScanAccountInv:SetEnabled(not fullDumpActive and not scanBusy)
-	end
-	if panel.btnScanCraftAndAccount then
-		local scanBusy = refreshState.auctionRefreshRunning == true
-		panel.btnScanCraftAndAccount:SetEnabled(not fullDumpActive and not scanBusy)
-	end
-	if panel.btnScanChoice then
-		panel.btnScanChoice:SetEnabled(not fullDumpActive and refreshState.auctionRefreshRunning ~= true)
-	end
-	-- While a bulk job runs, the button that started it posts the item waiting in the sell frame.
-	local bulkPostReady = bulkActive and bulk.paused ~= true and bulk.phase == "waiting_button"
-		and GetTime() >= (bulk.nextPostAt or 0)
-	for mode, button in pairs({ post_profitable = panel.btnPostProfitable, post_all = panel.btnPostAll }) do
-		local isJob = bulkActive and bulk.mode == mode
-		button:SetText(isJob and "Post next" or (mode == "post_all" and "Post all" or "Post profitable"))
-		button:SetEnabled(not bulkActive or (isJob and bulkPostReady))
-	end
-	if panel.btnPauseBulk then
-		if bulkActive then
-			panel.btnPauseBulk:SetText((bulk.paused == true) and "Resume" or "Pause")
-			panel.btnPauseBulk:Show()
-		else
-			panel.btnPauseBulk:Hide()
-		end
-	end
-	if panel.btnPauseScan then
-		if refreshState.auctionRefreshRunning == true or scanPaused then
-			panel.btnPauseScan:SetText(scanPaused and "Resume" or "Pause")
-			panel.btnPauseScan:Show()
-		else
-			panel.btnPauseScan:Hide()
-		end
-	end
-	local displayTotal = total
-	local displayDone = done
-	if panel.progressText then
-		if fullDumpActive then
-			if dumpState.status == "requesting" then
-				panel.progressText:SetText("Full scan: asking the server…")
-			elseif dumpState.persistTotal and dumpState.persistTotal > 0 then
-				panel.progressText:SetText(string.format(
-					"Saving %s of %s",
-					self:FormatNumberGrouped(math.min(tonumber(dumpState.persistDone) or 0, tonumber(dumpState.persistTotal) or 0)),
-					self:FormatNumberGrouped(tonumber(dumpState.persistTotal) or 0)
-				))
-			else
-				panel.progressText:SetText(string.format(
-					"Full scan %s of %s",
-					self:FormatNumberGrouped(math.min(tonumber(dumpState.done) or 0, tonumber(dumpState.total) or 0)),
-					self:FormatNumberGrouped(tonumber(dumpState.total) or 0)
-				))
-			end
-			panel.progressText:Show()
-		elseif bulkActive then
-			displayTotal = tonumber(bulk.total) or 0
-			displayDone = tonumber(bulk.done) or 0
-			panel.progressText:SetText(string.format("Posting %d of %d", math.min(displayDone, displayTotal), displayTotal))
-			if panel.footerText then
-				panel.footerText:SetText(string.format("%s · posted %d, skipped %d, failed %d",
-					tostring(bulk.status or "Posting"), tonumber(bulk.posted) or 0, tonumber(bulk.skippedDumped) or 0, tonumber(bulk.failed) or 0))
-			end
-			panel.progressText:Show()
-		elseif (scanActive or scanPaused) and total > 0 then
-			local verb = scanPaused and "Paused" or "Scanning"
-			panel.progressText:SetText(string.format("%s %d of %d", verb, math.min(done, total), total))
-			panel.progressText:Show()
-		else
-			panel.progressText:SetText("")
-			panel.progressText:Hide()
-		end
-	end
-	if panel.progressBar then
-		if (fullDumpActive and ((tonumber(dumpState.persistTotal) or 0) > 0 or (tonumber(dumpState.total) or 0) > 0))
-			or (bulkActive and displayTotal > 0)
-			or (scanActive and total > 0) then
-			local denom
-			local numer
-			if fullDumpActive then
-				if (tonumber(dumpState.persistTotal) or 0) > 0 then
-					denom = tonumber(dumpState.persistTotal) or 0
-					numer = tonumber(dumpState.persistDone) or 0
-				else
-					denom = tonumber(dumpState.total) or 0
-					numer = tonumber(dumpState.done) or 0
-				end
-			else
-				denom = (bulkActive and displayTotal or total)
-				numer = (bulkActive and displayDone or done)
-			end
-			local frac = math.max(0, math.min(1, numer / denom))
-			panel.progressBar:SetValue(frac)
-			panel.progressBar:Show()
-			if panel.progressBarBg then
-				panel.progressBarBg:Show()
-			end
-		else
-			panel.progressBar:SetValue(0)
-			panel.progressBar:Hide()
-			if panel.progressBarBg then
-				panel.progressBarBg:Hide()
-			end
-		end
-	end
-	if panel.progressTiming then
-		local gt = GetTime and GetTime() or 0
-		if (scanActive or scanPaused) and total > 0 and refreshState.auctionRefreshRunning == true then
-			local started = tonumber(refreshState.auctionRefreshStartedAt) or gt
-			local elapsed = math.max(0, gt - started)
-			if scanPaused then
-				panel.progressTiming:SetText("paused")
-			else
-				local etaStr = "…"
-				if done > 0 and total > done then
-					etaStr = formatDurationShort((elapsed / done) * (total - done))
-				elseif total > 0 and done >= total then
-					etaStr = "0s"
-				end
-				panel.progressTiming:SetText(string.format("about %s left", etaStr))
-			end
-			panel.progressTiming:Show()
-		else
-			panel.progressTiming:Hide()
-		end
-	end
-
-	if panel.tabSell then
-		panel.tabSell:SetEnabled(true)
-		if self.StyleShellButton then
-			self:StyleShellButton(panel.tabSell, activeTab == "sell")
-		end
-		panel.tabSell:SetAlpha(1)
-		panel.tabSell:EnableMouse(true)
-		panel.tabSell:RegisterForClicks("LeftButtonUp")
-	end
-	if panel.tabCart then
-		panel.tabCart:SetEnabled(true)
-		if self.StyleShellButton then
-			self:StyleShellButton(panel.tabCart, activeTab == "cart")
-		end
-		panel.tabCart:SetAlpha(1)
-		panel.tabCart:EnableMouse(true)
-		panel.tabCart:RegisterForClicks("LeftButtonUp")
-		self:SetButtonLabel(panel.tabCart, cartOutstanding > 0 and string.format("Cart (%d)", cartOutstanding) or "Cart", true)
-	end
-	if self.StyleShellButton then
-		self:StyleShellButton(panel.tabAuctions, activeTab == "auctions")
-	end
-	if activeTab == "auctions" then
-		local ownedRows, owned, cut = self:BuildOwnedAuctionRows()
-		panel.ownedCut = cut
-		panel.ownedSummary:SetText(string.format("Sold %s · %d\nListed %s · %d, %s after cut",
-			self:FormatCopperShort(owned.soldValue), owned.soldCount,
-			self:FormatCopperShort(owned.listedValue), owned.listedCount, self:FormatCopperShort(owned.listedNet)))
-		local cancelable = #self:GetCancelableUndercutAuctions(ownedRows)
-		self:SetButtonLabel(panel.btnOwnedCancel, cancelable > 0 and string.format("Cancel undercut (%d)", cancelable) or "Cancel undercut")
-		panel.btnOwnedCancel:SetEnabled(cancelable > 0 and GetTime() >= (refreshState.auctionNextCancelAt or 0))
-		panel.ownedTable:SetRows(ownedRows)
-		panel.ownedTable:SetFooterText(string.format("%d auctions", #ownedRows),
-			queuedCount > 0 and string.format("%d prices queued", queuedCount) or "Click a row to recheck its price")
-	end
-	for _, control in ipairs(panel.sellControls or {}) do
-		if control and control.SetShown then
-			control:SetShown(activeTab == "sell")
-		elseif control and control.Show and control.Hide then
-			if activeTab == "sell" then control:Show() else control:Hide() end
-		end
-	end
-	if panel.subtitle then panel.subtitle:SetShown(activeTab == "sell") end
-	if panel.stats then panel.stats:SetShown(activeTab == "sell") end
-	if panel.progressRow then
-		local progressShown = panel.progressText:IsShown() and panel.progressText:GetText() ~= ""
-		self:LayoutAuctionPanelBody(panel, activeTab, progressShown)
-	end
-	if panel.tableHost then
-		panel.tableHost:SetShown(activeTab == "sell")
-	end
-	if panel.table and panel.table.frame then
-		panel.table.frame:SetShown(activeTab == "sell")
-	end
-	if panel.cartSummary then
-		panel.cartSummary:SetShown(activeTab == "cart")
-		panel.cartSummary:SetText("Reagents for your queued crafts. Buy them on this character; the mailbox panel sends the rest to your other characters.")
-		if panel.cartTable and panel.cartTable.SetFooterText then
-			panel.cartTable:SetFooterText(string.format("%d items, %s to buy", cartOutstanding, self:FormatNumberGrouped(cartQuantityToBuy)),
-				cartEstimatedBuyCost > 0 and ("About " .. cartEstimatedBuyCostText) or nil)
-		end
-	end
-	if panel.cartSearchBox then
-		panel.cartSearchBox:SetShown(activeTab == "cart")
-		local desiredCartText = ui.auctionCartFilterText or ""
-		if panel.cartSearchBox:GetText() ~= desiredCartText then
-			panel.cartSearchBox:SetText(desiredCartText)
-			panel.cartSearchBox:HighlightText(0, 0)
-		end
-	end
-	if panel.btnCartSearch then panel.btnCartSearch:SetShown(activeTab == "cart") end
-	if panel.btnCartRefresh then panel.btnCartRefresh:SetShown(activeTab == "cart") end
-	if panel.btnCartBuy then panel.btnCartBuy:SetShown(activeTab == "cart") end
-	if panel.btnCartRemove then panel.btnCartRemove:SetShown(activeTab == "cart") end
-	if panel.btnCartClear then panel.btnCartClear:SetShown(activeTab == "cart") end
-	if panel.cartTableHost then panel.cartTableHost:SetShown(activeTab == "cart") end
-	if panel.cartTable and panel.cartTable.frame then
-		panel.cartTable.frame:SetShown(activeTab == "cart")
-	end
-
-	panel.table.sortKey = self.ui.ahSortKey or panel.table.sortKey
-	panel.table.sortAsc = self.ui.ahSortAsc
-	panel.table:SetRows(rows)
-	if panel.cartTable then
-		if not panel.__ahCartLayoutV3 then
-			panel.__ahCartLayoutV3 = true
-			panel.cartTable.autoFitToScroll = true
-			panel.cartTable:SetColumns(self:BuildAuctionCartColumns())
-		end
-		local filteredCartRows = self:FilterAuctionCraftCartRows(cartRows)
-		panel.cartTable:SetRows(filteredCartRows)
-		local selectedStillVisible = false
-		for _, row in ipairs(filteredCartRows) do
-			if tonumber(row.itemID) == tonumber(refreshState.auctionCartSelectedItemID) then
-				selectedStillVisible = true
-				break
-			end
-		end
-		if not selectedStillVisible then
-			refreshState.auctionCartSelectedItemID = filteredCartRows[1] and filteredCartRows[1].itemID or nil
-		elseif not refreshState.auctionCartSelectedItemID and filteredCartRows[1] then
-			refreshState.auctionCartSelectedItemID = filteredCartRows[1].itemID
-		end
-		local selectedRow = nil
-		for _, row in ipairs(filteredCartRows) do
-			if tonumber(row.itemID) == tonumber(refreshState.auctionCartSelectedItemID) then
-				selectedRow = row
-				break
-			end
-		end
-		if panel.btnCartBuy then
-			panel.btnCartBuy:SetEnabled(selectedRow ~= nil and (tonumber(selectedRow.quantityToBuy) or 0) > 0)
-		end
-		if panel.btnCartRemove then
-			panel.btnCartRemove:SetEnabled(selectedRow ~= nil)
-		end
-		if panel.btnCartClear then
-			panel.btnCartClear:SetEnabled(#filteredCartRows > 0)
-		end
-		if panel.cartHint then
-			local unpriced = 0
-			for _, row in ipairs(filteredCartRows) do
-				if (tonumber(row.quantityToBuy) or 0) > 0 and not tonumber(row.estimatedBuyCost) then
-					unpriced = unpriced + 1
-				end
-			end
-			panel.cartHint:SetText(unpriced > 0 and string.format("%d %s no price yet. Press Price all.", unpriced, unpriced == 1 and "item has" or "items have") or "")
-		end
-	end
 end
 
 function ProfessionExporter:PrimeAuctionPanelRows()
@@ -5135,8 +4166,7 @@ function ProfessionExporter:EstimateCraftROIForItem(itemID)
 	return best and shallowCopy(best) or nil
 end
 
-function ProfessionExporter:GetCraftCostEstimateForItem(itemID, opts)
-	opts = opts or {}
+function ProfessionExporter:GetCraftCostEstimateForItem(itemID, _opts)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return nil
@@ -5523,7 +4553,7 @@ function ProfessionExporter:BuildPrioritizedAuctionAutoScanTargets(opts)
 	local currentTs = now()
 	local targets = {}
 	local seen = {}
-	local function addTarget(target, sourceKind)
+	local function addTarget(target, _sourceKind)
 		if type(target) ~= "table" then
 			return
 		end
@@ -5905,7 +4935,7 @@ function ProfessionExporter:ProcessFullAuctionDumpChunk(token)
 	local aggregateRow = self.ForeverLogic and self.ForeverLogic.AggregateClassicAuctionRow
 	local last = math.min(total - 1, index + FULL_AH_DUMP_ROW_CHUNK - 1)
 	for i = index, last do
-		local name, texture, count, qualityID, usable, level, levelType, minBid, minIncrement, buyoutPrice, bidAmount, highBidder, bidderFullName, owner, ownerFullName, saleStatus, itemID = C_AuctionHouse.GetReplicateItemInfo(i)
+		local _, _, count, _, _, _, _, _, _, buyoutPrice, _, _, _, _, _, _, itemID = C_AuctionHouse.GetReplicateItemInfo(i)
 		itemID = normalizeItemID(itemID)
 		if aggregateRow then
 			aggregateRow(dump.aggregate, itemID, count, buyoutPrice)
@@ -6249,7 +5279,7 @@ function ProfessionExporter:OnAuctionItemListUpdate()
 	dump.aggregate = dump.aggregate or {}
 	local aggregateRow = self.ForeverLogic and self.ForeverLogic.AggregateClassicAuctionRow
 	for i = 1, numBatch do
-		local name, texture, count, qualityID, usable, level, levelType, minBid, minIncrement, buyoutPrice, bidAmount, highBidder, bidderFullName, owner, ownerFullName, saleStatus, itemID = GetAuctionItemInfo("list", i)
+		local _, _, count, _, _, _, _, _, _, buyoutPrice, _, _, _, _, _, _, itemID = GetAuctionItemInfo("list", i)
 		itemID = normalizeItemID(itemID)
 		if not itemID and type(GetAuctionItemLink) == "function" then
 			local link = GetAuctionItemLink("list", i)
@@ -6563,7 +5593,7 @@ function ProfessionExporter:SaveBrowseResultsToScanEntries()
 	end
 end
 
-function ProfessionExporter:OnAuctionHouseBrowseResultsUpdated(...)
+function ProfessionExporter:OnAuctionHouseBrowseResultsUpdated()
 	local state = self:GetState()
 	self:DebugLog("AH", "event browse results", {
 		string.format("pending=%s", tostring(state and state.auctionPendingBrowseSearch and state.auctionPendingBrowseSearch.itemID)),
@@ -6580,7 +5610,8 @@ end
 function ProfessionExporter:OnCommoditySearchResultsUpdated(itemID)
 	local state = self:GetState()
 	self:DebugLog("AH", "event commodity results", {
-		string.format("arg=%s selected=%s ctx=%s", tostring(normalizeSearchEventItemID(itemID)), tostring(state and state.auctionLastSellSelectionItemID), tostring(state and state.auctionSearchContext and state.auctionSearchContext.itemID)),
+		string.format("arg=%s selected=%s ctx=%s", tostring(normalizeSearchEventItemID(itemID)),
+			tostring(state and state.auctionLastSellSelectionItemID), tostring(state and state.auctionSearchContext and state.auctionSearchContext.itemID)),
 	})
 	local ctx = state and state.auctionSearchContext or nil
 	if ctx and self:DoesAuctionSearchEventMatchItem(ctx.itemID, itemID, ctx.scanKeyFields) then
@@ -6597,7 +5628,8 @@ end
 function ProfessionExporter:OnItemSearchResultsUpdated(itemKey)
 	local state = self:GetState()
 	self:DebugLog("AH", "event item results", {
-		string.format("arg=%s selected=%s ctx=%s", tostring(normalizeSearchEventItemID(itemKey)), tostring(state and state.auctionLastSellSelectionItemID), tostring(state and state.auctionSearchContext and state.auctionSearchContext.itemID)),
+		string.format("arg=%s selected=%s ctx=%s", tostring(normalizeSearchEventItemID(itemKey)),
+			tostring(state and state.auctionLastSellSelectionItemID), tostring(state and state.auctionSearchContext and state.auctionSearchContext.itemID)),
 	})
 	local ctx = state and state.auctionSearchContext or nil
 	if ctx and self:DoesAuctionSearchEventMatchItem(ctx.itemID, itemKey, ctx.scanKeyFields) then
