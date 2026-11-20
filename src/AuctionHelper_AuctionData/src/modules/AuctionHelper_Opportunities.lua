@@ -2,6 +2,41 @@ local _, ProfessionExporter = ...
 
 -- Flip rows for the Opportunities tab (F50), built from the market insights of the last scans.
 
+local FULL_DAYS, EARLY_DAYS = 5, 2
+
+local function allowEarly(pe)
+	return pe:GetSetting("opportunities.allowEarly", false) == true
+end
+
+--- Usual price for the Opportunities lists: the full one (5+ days) or, with early rows allowed in Settings,
+--- one from 2 to 4 days. Returns the usual price, or nil, and whether it is early (F56).
+function ProfessionExporter:GetOpportunityUsual(storageKey)
+	local usual = self:GetUsualPrice(storageKey)
+	if usual or not (allowEarly(self) and self.GetEarlyUsualPrice) then
+		return usual, false
+	end
+	local partial = self:GetEarlyUsualPrice(storageKey)
+	if partial and partial.days >= EARLY_DAYS then
+		return partial, true
+	end
+	return nil, false
+end
+
+--- How many items of the last scan have enough days of prices (`FlipLogic.HistoryCoverage`). Cached per scan.
+function ProfessionExporter:GetHistoryCoverage(insights)
+	local state = self:GetState()
+	if state.historyCoverageAt ~= insights.builtAt then
+		local dayCounts = {}
+		for _, row in pairs(insights.byItemID or {}) do
+			local usual = self:GetUsualPrice(row.storageKey) or (self.GetEarlyUsualPrice and self:GetEarlyUsualPrice(row.storageKey))
+			dayCounts[#dayCounts + 1] = usual and usual.days or 0
+		end
+		state.historyCoverage = self.FlipLogic.HistoryCoverage(dayCounts, FULL_DAYS, EARLY_DAYS)
+		state.historyCoverageAt = insights.builtAt
+	end
+	return state.historyCoverage
+end
+
 --- Thresholds for flips, from Settings. `minProfit` is in copper.
 function ProfessionExporter:GetFlipOptions()
 	return {
@@ -10,6 +45,7 @@ function ProfessionExporter:GetFlipOptions()
 		minSellsPerDay = tonumber(self:GetSetting("opportunities.minSellsPerDay", 1)) or 1,
 		dayShare = tonumber(self:GetSetting("opportunities.dayShare", 0.34)) or 0.34,
 		cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05,
+		allowEarly = allowEarly(self),
 	}
 end
 
@@ -17,12 +53,12 @@ end
 local function flipCandidates(pe, insights)
 	local items = {}
 	for itemID, row in pairs(insights.byItemID or {}) do
-		local usual = pe:GetUsualPrice(row.storageKey)
+		local usual, early = pe:GetOpportunityUsual(row.storageKey)
 		local sells = usual and pe:GetSellsPerDay(row.storageKey)
 		if sells then
 			items[#items + 1] = {
 				itemID = itemID, storageKey = row.storageKey, price = row.price, usual = usual.usual,
-				usualLow = usual.low, usualHigh = usual.high, usualDays = usual.days,
+				usualLow = usual.low, usualHigh = usual.high, usualDays = usual.days, early = early or nil,
 				sellsPerDay = sells.perDay, confidence = sells.confidence, steps = pe:GetPriceSteps(itemID),
 			}
 		end
@@ -31,7 +67,7 @@ local function flipCandidates(pe, insights)
 end
 
 local function optionsKey(opts)
-	return table.concat({ opts.minDiscount, opts.minProfit, opts.minSellsPerDay, opts.dayShare, opts.cut }, ":")
+	return table.concat({ opts.minDiscount, opts.minProfit, opts.minSellsPerDay, opts.dayShare, opts.cut, tostring(opts.allowEarly) }, ":")
 end
 
 --- Flip rows, most profit first, or nil while the market insights are still being built
@@ -54,7 +90,7 @@ function ProfessionExporter:GetFlipRows(onReady)
 		for _, row in ipairs(rows) do
 			local item = byItem[row.itemID]
 			row._rowIdentity = tostring(row.itemID)
-			row.usualLow, row.usualHigh, row.usualDays = item.usualLow, item.usualHigh, item.usualDays
+			row.usualLow, row.usualHigh, row.usualDays, row.early = item.usualLow, item.usualHigh, item.usualDays, item.early
 		end
 		state.flipRows, state.flipRowsRevision = rows, revision
 	end
@@ -112,12 +148,15 @@ local function gapCandidates(pe, insights)
 	local items = {}
 	for itemID, row in pairs(insights.byItemID or {}) do
 		local steps = pe:GetPriceSteps(itemID)
-		local usual = steps and pe:GetUsualPrice(row.storageKey)
+		local usual, early
+		if steps then
+			usual, early = pe:GetOpportunityUsual(row.storageKey)
+		end
 		local sells = usual and pe:GetSellsPerDay(row.storageKey)
 		if sells then
 			items[#items + 1] = {
 				itemID = itemID, storageKey = row.storageKey, steps = steps,
-				usualHigh = usual.high, sellsPerDay = sells.perDay,
+				usualHigh = usual.high, sellsPerDay = sells.perDay, early = early or nil, usualDays = usual.days,
 			}
 		end
 	end
@@ -133,9 +172,10 @@ function ProfessionExporter:GetGapRows(onReady)
 	end
 	local state = self:GetState()
 	local opts = self:GetGapOptions()
-	local revision = table.concat({ tostring(insights.builtAt), opts.maxCost, opts.minSellsPerDay, opts.cut }, ":")
+	local revision = table.concat({ tostring(insights.builtAt), opts.maxCost, opts.minSellsPerDay, opts.cut, tostring(allowEarly(self)) }, ":")
 	if state.gapRowsRevision ~= revision then
-		local rows = self.FlipLogic.BuildGapRows(gapCandidates(self, insights), opts)
+		local candidates = gapCandidates(self, insights)
+		local rows = self.FlipLogic.MarkEarly(self.FlipLogic.BuildGapRows(candidates, opts), candidates)
 		for _, row in ipairs(rows) do
 			row._rowIdentity = tostring(row.itemID)
 		end

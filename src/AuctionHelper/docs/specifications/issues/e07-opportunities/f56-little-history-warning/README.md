@@ -24,6 +24,19 @@ Tell the player how complete the price history is and when it will be enough. A 
   - "Expected profit, all N" and "Gold needed" count only rows that are not early. The second line says "+M early rows not counted".
 - Price steps and sell-now rows behave the same way.
 
+## Status
+
+Implemented:
+
+- `GetOpportunityUsual(storageKey)` (`AuctionHelper_Opportunities.lua`): the full usual price, or with `opportunities.allowEarly` on, one from 2 to 4 days through `GetEarlyUsualPrice` (added for early farming estimates). It replaces the planned `GetUsualPrice(storageKey, minDays)`, and `GetUsualPrice` keeps the 5-day rule for every other caller.
+- `GetHistoryCoverage(insights)`, cached per scan, on `FlipLogic.HistoryCoverage`
+- `FlipLogic.MarkEarly` and `FlipLogic.SumSettled`; Flips, Price gaps and Sell now mark early rows and leave them out of the totals ("· N early not counted")
+- Item line "Early · N days of prices" in the warning colour; risk text led by "Usual price from only N days…"
+- Coverage card "Usual price known for N of M" on Flips (third card) and Sell now (second card). Price gaps keeps its "Risky" card. "Today's scans count tomorrow" shows while no item has 5 days.
+- Setting "Also show items with only 2 to 4 days of prices, marked Early"
+
+Early rows need `GetEarlyUsualPrice` in `AuctionHelper_PriceHistory.lua`; without it the setting does nothing.
+
 ## Acceptance criteria
 
 - [ ] With 3 scan days, the coverage card says how many items have a usual price and that 5 days are needed
@@ -31,8 +44,8 @@ Tell the player how complete the price history is and when it will be enough. A 
 - [ ] With it on, a 3-day item that meets the other rules appears in Flips marked Early, with the warning in the side pane
 - [ ] Early rows are left out of the stat totals and counted on the second line
 - [ ] The Market tab, chart and farm targets still need 5 days
-- [ ] Offline tests: `UsualPrice` with 2 and 4 days; the coverage counts; early flag on flip rows
-- [ ] `npm test` passes
+- [x] Offline tests: the coverage counts; early flag copied onto rows; totals without early rows
+- [x] `npm test` passes
 
 ## Verification
 

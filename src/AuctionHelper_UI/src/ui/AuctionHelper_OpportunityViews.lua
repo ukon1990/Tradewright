@@ -33,13 +33,60 @@ local function signedColumn(pe, label, field)
 	}
 end
 
+-- Text in the theme's warning colour.
+local function warningText(pe, text)
+	local color = pe:GetTheme().warning
+	return string.format("|cff%02x%02x%02x%s|r", math.floor(color.r * 255), math.floor(color.g * 255), math.floor(color.b * 255), text)
+end
+
+-- An early row's second line starts with how few days its usual price rests on (F56).
 local function itemColumn(pe, detail)
 	return pe:CreateItemColumn({
 		label = "Item", defaultSort = "asc",
 		getItemID = function(row) return row.itemID end,
 		getName = function(row) return pe:GetItemDisplayName(row.itemID) end,
-		getDetail = function(row) return detail(pe, row) end,
+		getDetail = function(row)
+			if row.early then
+				return warningText(pe, string.format("Early · %d days of prices", row.usualDays or 0)) .. " · " .. detail(pe, row)
+			end
+			return detail(pe, row)
+		end,
 	})
+end
+
+-- The risk text of a list, led by a warning on early rows.
+local function withEarlyRisk(riskText)
+	return function(pe, row)
+		if not row.early then
+			return riskText(pe, row)
+		end
+		return string.format("Usual price from only %d days, so one odd day moves it a lot. ", row.usualDays or 0) .. riskText(pe, row)
+	end
+end
+
+-- Sum of `field` over the rows that are not early, and a note naming the early rows left out.
+local function settledSum(pe, rows, field, note)
+	local total, early = pe.FlipLogic.SumSettled(rows, field)
+	if early > 0 then
+		note = string.format("%s · %d early not counted", note, early)
+	end
+	return total, note, #rows - early
+end
+
+-- "Usual price known for N of M items", and what is missing.
+local function coverageStat(pe, stat, insights)
+	local coverage = pe:GetHistoryCoverage(insights)
+	local note
+	if coverage.full == 0 then
+		note = string.format("Best item has %d of 5 scan days · today's scans count tomorrow", coverage.bestDays)
+	elseif coverage.early > 0 then
+		local shown = pe:GetSetting("opportunities.allowEarly", false) and ", shown as Early" or ", hidden in Settings"
+		note = string.format("%s more have 2 to 4 days%s", pe:FormatNumberGrouped(coverage.early), shown)
+	else
+		note = string.format("5+ scan days in the last %d days", pe:GetSetting("auction.usualPriceDays", 14))
+	end
+	local value = string.format("%s of %s", pe:FormatNumberGrouped(coverage.full), pe:FormatNumberGrouped(coverage.scanned))
+	stat:SetValues("Usual price known for", value, note, coverage.full == 0 and "warning" or nil)
 end
 
 local function lastScanText(pe, insights)
@@ -119,9 +166,10 @@ end
 
 local function flipStats(pe, stats, rows, insights)
 	local opts = pe:GetFlipOptions()
-	stats[1]:SetValues(string.format("Expected profit, all %d", #rows), pe:FormatSignedMoney(sumOf(rows, "profit")), "After the auction cut", "success")
-	stats[2]:SetValues("Gold needed", pe:FormatCopperShort(sumOf(rows, "cost")), "You have " .. pe:FormatCopperShort(GetMoney()))
-	stats[3]:SetValues("Usual price from", pe:GetSetting("auction.usualPriceDays", 14) .. " days", "Middle price of your scans")
+	local profit, note, settled = settledSum(pe, rows, "profit", "After the auction cut")
+	stats[1]:SetValues(string.format("Expected profit, all %d", settled), pe:FormatSignedMoney(profit), note, "success")
+	stats[2]:SetValues("Gold needed", pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), "You have " .. pe:FormatCopperShort(GetMoney()))
+	coverageStat(pe, stats[3], insights)
 	stats[4]:SetValues("Auction cut", percent(opts.cut), "Last scan " .. lastScanText(pe, insights))
 end
 
@@ -132,7 +180,7 @@ local flips = {
 	getRows = function(pe, onReady) return pe:GetFlipRows(onReady) end,
 	columns = flipColumns,
 	detailRows = flipDetailRows,
-	riskText = flipRiskText,
+	riskText = withEarlyRisk(flipRiskText),
 	setStats = flipStats,
 	subtitle = function(_, row) return percent(row.discount) .. " under its usual price" end,
 	tooltipPairs = function(pe, row) return { { "Profit each after the cut", pe:FormatSignedMoney(row and row.profitEach) } } end,
@@ -268,8 +316,9 @@ local function gapRiskText(pe, row)
 end
 
 local function gapStats(pe, stats, rows, insights)
-	stats[1]:SetValues(string.format("Gain if all %d hold", #rows), pe:FormatSignedMoney(sumOf(rows, "gain")), "After the auction cut", "warning")
-	stats[2]:SetValues("Gold needed", pe:FormatCopperShort(sumOf(rows, "cost")), "You have " .. pe:FormatCopperShort(GetMoney()))
+	local gain, note, settled = settledSum(pe, rows, "gain", "After the auction cut")
+	stats[1]:SetValues(string.format("Gain if all %d hold", settled), pe:FormatSignedMoney(gain), note, "warning")
+	stats[2]:SetValues("Gold needed", pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), "You have " .. pe:FormatCopperShort(GetMoney()))
 	stats[3]:SetValues("Risky", "Read first", "Pays only if nobody lists under you", "warning")
 	stats[4]:SetValues("Last scan", lastScanText(pe, insights), "Listings may have changed since")
 end
@@ -281,7 +330,7 @@ local gaps = {
 	getRows = function(pe, onReady) return pe:GetGapRows(onReady) end,
 	columns = gapColumns,
 	detailRows = gapDetailRows,
-	riskText = gapRiskText,
+	riskText = withEarlyRisk(gapRiskText),
 	setStats = gapStats,
 	subtitle = function(_, row) return "Risky · next price is " .. percent(row.gapPct) .. " higher" end,
 	tooltipPairs = function(pe, row) return { { "Cost to clear", pe:FormatCopperFull(row and row.cost) } } end,
@@ -298,12 +347,15 @@ local function sellCandidates(pe, insights)
 	local items = {}
 	for _, inv in ipairs(pe:BuildInventoryRowsAggregatedByItem(pe.db, {}, "") or {}) do
 		local market = insights.byItemID[tonumber(inv.itemID)]
-		local usual = market and pe:GetUsualPrice(market.storageKey)
+		local usual, early
+		if market then
+			usual, early = pe:GetOpportunityUsual(market.storageKey)
+		end
 		local sells = usual and pe:GetSellsPerDay(market.storageKey)
 		if sells then
 			items[#items + 1] = {
 				itemID = tonumber(inv.itemID), storageKey = market.storageKey, total = inv.total, bags = inv.bags, bank = inv.bank,
-				price = market.price, usual = usual.usual, sellsPerDay = sells.perDay,
+				price = market.price, usual = usual.usual, sellsPerDay = sells.perDay, early = early or nil, usualDays = usual.days,
 			}
 		end
 	end
@@ -317,10 +369,11 @@ local function sellRows(pe, onReady)
 		return nil
 	end
 	local state = pe:GetState()
-	local revision = tostring(insights.builtAt) .. ":" .. math.floor(time() / 10)
+	local opts = pe:GetFlipOptions()
+	local revision = table.concat({ tostring(insights.builtAt), math.floor(time() / 10), tostring(opts.allowEarly) }, ":")
 	if state.sellNowRevision ~= revision then
-		local cut = pe:GetFlipOptions().cut
-		local rows = pe.FlipLogic.BuildSellNowRows(sellCandidates(pe, insights), { cut = cut })
+		local candidates = sellCandidates(pe, insights)
+		local rows = pe.FlipLogic.MarkEarly(pe.FlipLogic.BuildSellNowRows(candidates, { cut = opts.cut }), candidates)
 		for _, row in ipairs(rows) do
 			row._rowIdentity = tostring(row.itemID)
 		end
@@ -388,8 +441,9 @@ local function sellRiskText(pe, row)
 end
 
 local function sellStats(pe, stats, rows, insights)
-	stats[1]:SetValues(string.format("Worth, all %d", #rows), pe:FormatCopperShort(sumOf(rows, "worth")), "After the auction cut", "success")
-	stats[2]:SetValues("Items", tostring(#rows), "Owned and priced above usual")
+	local worth, note, settled = settledSum(pe, rows, "worth", "After the auction cut")
+	stats[1]:SetValues(string.format("Worth, all %d", settled), pe:FormatCopperShort(worth), note, "success")
+	coverageStat(pe, stats[2], insights)
 	stats[3]:SetValues("Counts as above usual", "10% or more", "Against the usual price of your scans")
 	stats[4]:SetValues("Last scan", lastScanText(pe, insights), "Prices may have changed since")
 end
@@ -401,7 +455,7 @@ local sell = {
 	getRows = sellRows,
 	columns = sellColumns,
 	detailRows = sellDetailRows,
-	riskText = sellRiskText,
+	riskText = withEarlyRisk(sellRiskText),
 	setStats = sellStats,
 	subtitle = function(_, row) return percent(row.premium) .. " above its usual price" end,
 	tooltipPairs = function(pe, row) return { { "Worth after the cut", pe:FormatCopperFull(row and row.worth) } } end,

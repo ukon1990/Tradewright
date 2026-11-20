@@ -176,6 +176,16 @@ check("A 25s floor drops a 20s flip",
 	Flip.BuildFlipRow({ itemID = 12, price = 7000, usual = 9500, sellsPerDay = 3, steps = { 7000, 1 } }, floor25s) == nil)
 check("Copper floor between rows", Flip.BuildFlipRow(smallFlip, { minProfit = 270 }) ~= nil and Flip.BuildFlipRow(smallFlip, { minProfit = 271 }) == nil)
 check("Default floor is 1g", Flip.BuildFlipRow({ itemID = 13, price = 5000, usual = 20000, sellsPerDay = 3, steps = { 5000, 1 } }) ~= nil)
+-- Early rows (F56)
+local marked = Flip.MarkEarly({ { itemID = 1, profit = 100 }, { itemID = 2, profit = 40, usualDays = 6 } },
+	{ { itemID = 1, early = true, usualDays = 3 }, { itemID = 2, usualDays = 6 } })
+check("Early flag and days copied from the candidate", marked[1].early == true and marked[1].usualDays == 3 and marked[2].early == nil)
+local settledProfit, earlyLeftOut = Flip.SumSettled(marked, "profit")
+check("Totals leave early rows out", settledProfit == 40 and earlyLeftOut == 1)
+local coverage = Flip.HistoryCoverage({ 0, 1, 2, 4, 5, 9 }, 5, 2)
+check("Coverage counts full, early and best days",
+	coverage.scanned == 6 and coverage.full == 2 and coverage.early == 2 and coverage.bestDays == 9)
+check("Coverage of nothing", Flip.HistoryCoverage({}, 5, 2).scanned == 0)
 
 -- Sure things: listed under vendor price
 local sure = Flip.BuildVendorRow({ itemID = 1, price = 1000, vendorSell = 2500, steps = { 1000, 3, 2000, 2, 2500, 9, 4000, 50 } })

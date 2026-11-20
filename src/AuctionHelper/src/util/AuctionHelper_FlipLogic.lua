@@ -228,4 +228,49 @@ function FlipLogic.BuildSellNowRows(items, opts)
 	return rows
 end
 
+-- ---------- Early rows: items with only a few days of prices (F56) ----------
+
+--- Copy `early` and `usualDays` from the candidates onto the rows built from them, matched by item.
+function FlipLogic.MarkEarly(rows, candidates)
+	local byItem = {}
+	for _, item in ipairs(candidates or {}) do
+		byItem[item.itemID] = item
+	end
+	for _, row in ipairs(rows or {}) do
+		local item = byItem[row.itemID]
+		row.early = item and item.early or nil
+		row.usualDays = row.usualDays or (item and item.usualDays)
+	end
+	return rows
+end
+
+--- Sum of `field` over the rows that are not early, and how many early rows were left out.
+function FlipLogic.SumSettled(rows, field)
+	local total, early = 0, 0
+	for _, row in ipairs(rows or {}) do
+		if row.early then
+			early = early + 1
+		else
+			total = total + (tonumber(row[field]) or 0)
+		end
+	end
+	return total, early
+end
+
+--- How much price history the scanned items have, from one day count per item:
+--- `{ scanned, full = items with minDays or more, early = items with earlyDays to minDays - 1, bestDays }`.
+function FlipLogic.HistoryCoverage(dayCounts, minDays, earlyDays)
+	local out = { scanned = 0, full = 0, early = 0, bestDays = 0 }
+	for _, days in ipairs(dayCounts or {}) do
+		out.scanned = out.scanned + 1
+		out.bestDays = math.max(out.bestDays, days)
+		if days >= minDays then
+			out.full = out.full + 1
+		elseif days >= earlyDays then
+			out.early = out.early + 1
+		end
+	end
+	return out
+end
+
 return FlipLogic

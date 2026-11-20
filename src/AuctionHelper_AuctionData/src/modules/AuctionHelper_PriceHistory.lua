@@ -138,6 +138,13 @@ function ProfessionExporter:GetUsualPrice(storageKey)
 	return cachedSignal(self, "usual", storageKey, computeUsualPrice)
 end
 
+--- The price over however many days of history an item has (fewer than 5 allowed): `{ usual, days, … }`, or nil.
+--- For early estimates only; everything else uses `GetUsualPrice`.
+function ProfessionExporter:GetEarlyUsualPrice(storageKey)
+	local window = tonumber(self:GetSetting("auction.usualPriceDays", 14)) or 14
+	return self.MarketSignals.UsualPrice(dailyHistory(self, storageKey), now(), window)
+end
+
 --- Estimated units sold per day of one stored listing: `{ perDay, confidence, pairs }`, or nil when the
 --- scans do not say. Built from finished days, so it appears the day after two scans of an item.
 function ProfessionExporter:GetSellsPerDay(storageKey)

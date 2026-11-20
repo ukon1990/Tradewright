@@ -152,6 +152,8 @@ local function opportunitiesSection()
 			options = moneyChoices({ 1000, 2500, 5000, 10000, 50000, 100000, 250000, 500000 }), onChange = refreshOpportunities },
 		{ kind = "select", label = "An item must sell at least", path = "opportunities.minSellsPerDay", default = 1,
 			options = choices({ 0.5, 1, 5, 20 }, "%s a day"), onChange = refreshOpportunities },
+		{ kind = "check", label = "Also show items with only 2 to 4 days of prices, marked Early", path = "opportunities.allowEarly",
+			default = false, onChange = refreshOpportunities },
 		{ kind = "check", label = "Show items listed under their vendor price", path = "opportunities.showVendor", default = true,
 			onChange = refreshOpportunities },
 		{ kind = "check", label = "Show price gaps, marked as risky", path = "opportunities.showGaps", default = true,
