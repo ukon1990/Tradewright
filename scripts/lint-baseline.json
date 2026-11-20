@@ -10,7 +10,7 @@
    "W631": 20
   },
   "src/AuctionHelper/tests/test_forever_logic.lua": {
-   "W421": 3,
+   "W421": 2,
    "W631": 1
   },
   "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": {
@@ -38,7 +38,7 @@
  },
  "files": {
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 2587,
-  "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": 798,
+  "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": 778,
   "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5681,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": 781,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1331,
@@ -331,11 +331,6 @@
    "ForeverLogic.BuildReturnToSellerPlan": {
     "ccn": [
      11
-    ]
-   },
-   "ForeverLogic.BuildSurplusPlan": {
-    "ccn": [
-     14
     ]
    },
    "ForeverLogic.ClassifyMarketItem": {
@@ -2006,13 +2001,6 @@
     ]
    }
   },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_MailKeepWindow.lua": {
-   "ensureWindow": {
-    "lines": [
-     72
-    ]
-   }
-  },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_MailPanel.lua": {
    "ProfessionExporter:AdvanceMailSendQueue": {
     "ccn": [
@@ -2021,7 +2009,7 @@
    },
    "ProfessionExporter:EnsureMailPanel": {
     "lines": [
-     132
+     130
     ]
    },
    "ProfessionExporter:ProcessNextMailParcel": {
@@ -2034,10 +2022,10 @@
    },
    "ProfessionExporter:RefreshMailPanel": {
     "lines": [
-     77
+     56
     ],
     "ccn": [
-     36
+     23
     ]
    },
    "buildMailParcels": {

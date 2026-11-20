@@ -300,34 +300,6 @@ do
 		and #FL.BuildReturnToSellerPlan({ [12] = 2 }, bags, "Banker-R") == 0)
 end
 
--- Surplus above keep amounts
-do
-	local function bag(name, quantity, quality, sellable) return { name = name, quantity = quantity, quality = quality, sellable = sellable } end
-	local bags = {
-		[1] = bag("Ore", 100, 1, true), [2] = bag("Herb", 15, 1, true), [3] = bag("Cloth", 40, 1, true),
-		[4] = bag("Junk", 9, 0, true), [5] = bag("Bound", 3, 2, false), [6] = bag("Flux", 30, 1, true), [7] = bag("Bar", 10, 1, true),
-	}
-	local keep = { [1] = 20, [2] = 50, [6] = 5 }
-	local held = { [3] = 10, [6] = 10, [7] = 25 }
-	local function quantities(items)
-		local out = {}
-		for _, item in ipairs(items) do out[item.itemID] = item.quantity end
-		return out
-	end
-	local off = quantities(FL.BuildSurplusPlan(bags, keep, held, false))
-	check("Surplus: keep amount below stock sends the rest", off[1] == 80)
-	check("Surplus: keep amount above stock sends nothing", off[2] == nil)
-	check("Surplus: toggle off leaves items without a keep amount", off[3] == nil and off[7] == nil)
-	check("Surplus: keep amount and queued need both held back", off[6] == 15)
-	local on = quantities(FL.BuildSurplusPlan(bags, keep, held, true))
-	check("Surplus: toggle on sends other items above what is held", on[3] == 30 and on[1] == 80)
-	check("Surplus: queued need larger than stock sends nothing", on[7] == nil)
-	check("Surplus: poor quality and unsellable never go", on[4] == nil and on[5] == nil)
-	local sorted = FL.BuildSurplusPlan(bags, keep, held, true)
-	check("Surplus: sorted by name", sorted[1].name == "Cloth" and sorted[#sorted].name == "Ore")
-	check("Surplus: nothing configured", #FL.BuildSurplusPlan(bags, {}, {}, false) == 0)
-end
-
 -- Deal row click target
 check("Deal click: left click shows details, AH open or not", FL.ResolveDealRowClick("LeftButton", true) == "details" and FL.ResolveDealRowClick("LeftButton", false) == "details")
 check("Deal click: right click with AH open goes to the buy page", FL.ResolveDealRowClick("RightButton", true) == "auction")

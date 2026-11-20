@@ -99,25 +99,6 @@ function ProfessionExporter:SetMailKeepAmount(itemID, quantity)
 	characterStore(self, "keepByCharacter")[tonumber(itemID)] = quantity > 0 and quantity or nil
 end
 
---- Rows for the keep-amounts window: every sellable, non-trash item in the bags, plus items that
---- have a keep amount but are not in the bags right now.
-function ProfessionExporter:BuildMailKeepRows()
-	local keep = characterStore(self, "keepByCharacter")
-	local rows, seen = {}, {}
-	for itemID, bag in pairs(self:GetBagItems()) do
-		if bag.sellable and bag.quality >= 1 then
-			seen[itemID] = true
-			rows[#rows + 1] = { itemID = itemID, name = bag.name, quantity = bag.quantity, keep = keep[itemID] }
-		end
-	end
-	for itemID, quantity in pairs(keep) do
-		if not seen[itemID] then
-			rows[#rows + 1] = { itemID = itemID, name = self:GetItemDisplayName(itemID), quantity = 0, keep = quantity }
-		end
-	end
-	return rows
-end
-
 -- Materials this character still needs for its own queued crafts, plus everything the other mail
 -- rows already take: none of it is surplus.
 local function heldQuantities(pe, plan)
@@ -166,8 +147,8 @@ function ProfessionExporter:BuildMailPanelPlan()
 	for _, dest in ipairs(self.ForeverLogic.BuildReturnToSellerPlan(toSeller, bags, seller)) do
 		plan[#plan + 1] = dest
 	end
-	local surplus = self.ForeverLogic.BuildSurplusPlan(bags, characterStore(self, "keepByCharacter"), heldQuantities(self, plan),
-		self:GetMailSendOthers())
+	local surplus = self.MailLogic.BuildSurplusPlan(bags, characterStore(self, "keepByCharacter"), heldQuantities(self, plan),
+		self:GetMailSendOthers(), self:GetMailSkipped())
 	if #surplus > 0 then
 		local total = 0
 		for _, item in ipairs(surplus) do
@@ -188,5 +169,64 @@ function ProfessionExporter:OnMailParcelSent(parcel)
 	for _, item in ipairs(parcel.items) do
 		local left = (toSeller[item.itemID] or 0) - item.quantity
 		toSeller[item.itemID] = left > 0 and left or nil
+	end
+end
+
+--- Items skipped for this mailbox visit (review panel ticks); forgotten when the mailbox closes.
+function ProfessionExporter:GetMailSkipped()
+	self._mailSkipped = self._mailSkipped or {}
+	return self._mailSkipped
+end
+
+function ProfessionExporter:SetMailSkipped(itemID, skipped)
+	self:GetMailSkipped()[tonumber(itemID)] = skipped and true or nil
+end
+
+function ProfessionExporter:ClearMailSkipped()
+	self._mailSkipped = nil
+end
+
+function ProfessionExporter:GetMailKeepAmount(itemID)
+	return characterStore(self, "keepByCharacter")[tonumber(itemID)]
+end
+
+function ProfessionExporter:ClearMailKeepAmounts()
+	wipe(characterStore(self, "keepByCharacter"))
+end
+
+--- Unit price for the review panel's Worth: the usual price, else the last scanned price.
+function ProfessionExporter:GetMailItemUnitPrice(itemID)
+	local signals = self.GetItemPriceSignals and self:GetItemPriceSignals(itemID)
+	if signals and signals.usual then
+		return signals.usual
+	end
+	return self.GetNativeAhPrice and self:GetNativeAhPrice(itemID) or nil
+end
+
+--- Rows for the surplus review panel (MailLogic.BuildReviewRows) with names and unit prices.
+--- Held counts the same things the surplus row holds back: queued crafts and the other rows of
+--- `panelPlan` (BuildMailPanelPlan, built when not given).
+function ProfessionExporter:BuildMailReviewRows(panelPlan)
+	local plan = {}
+	for _, dest in ipairs(panelPlan or self:BuildMailPanelPlan()) do
+		if dest.kind ~= "surplus" then
+			plan[#plan + 1] = dest
+		end
+	end
+	local rows = self.MailLogic.BuildReviewRows(self:GetBagItems(), characterStore(self, "keepByCharacter"),
+		heldQuantities(self, plan), self:GetMailSendOthers(), self:GetMailSkipped())
+	for _, row in ipairs(rows) do
+		row.name = row.name or self:GetItemDisplayName(row.itemID)
+		row.unitPrice = self:GetMailItemUnitPrice(row.itemID)
+	end
+	return rows
+end
+
+--- Keep everything the bags hold now, so nothing goes until the bags grow.
+function ProfessionExporter:KeepCurrentMailBags()
+	for _, row in ipairs(self:BuildMailReviewRows()) do
+		if row.bags > 0 then
+			self:SetMailKeepAmount(row.itemID, row.bags)
+		end
 	end
 end

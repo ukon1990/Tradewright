@@ -18,6 +18,7 @@ Close the loop between the auction house character and the crafters. Materials b
 - F21: send a crafter's materials automatically when the full set is in the bags
 - F22: remember queued crafts made on a crafter and mail them to the seller
 - F23: per-character keep amounts, and mailing surplus sellable items to the seller
+- F24: review panel for the surplus mail: inline keep amounts, skip this visit
 - Pure helpers in `AuctionHelper_ForeverLogic.lua` with offline Lua 5.1 tests in each feature
 
 ## Acceptance criteria

@@ -13,12 +13,14 @@ local AUTO_SEND_TIMEOUT = 6
 local MAIL_SUBJECT = "AuctionHelper mats"
 local MAIL_BODY = "Materials from AuctionHelper shopping cart."
 
-local function characterLabel(pe, characterKey)
-	if pe.GetDashboardSidebarCharacterLabel then
-		return pe:GetDashboardSidebarCharacterLabel(characterKey, pe.db and pe.db.characters and pe.db.characters[characterKey], pe:GetCharacterKey())
+function ProfessionExporter:GetMailCharacterLabel(characterKey)
+	if self.GetDashboardSidebarCharacterLabel then
+		return self:GetDashboardSidebarCharacterLabel(characterKey, self.db and self.db.characters and self.db.characters[characterKey],
+			self:GetCharacterKey())
 	end
 	return tostring(characterKey or "?"):match("^([^%-]+)") or tostring(characterKey or "?")
 end
+
 
 -- One line saying what this character is in the mail loop.
 local function roleText(pe)
@@ -28,7 +30,7 @@ local function roleText(pe)
 	elseif seller == pe:GetCharacterKey() then
 		return "This is your auction house / bank character."
 	end
-	return "Crafter. Your auction house / bank character is " .. characterLabel(pe, seller) .. "."
+	return "Crafter. Your auction house / bank character is " .. pe:GetMailCharacterLabel(seller) .. "."
 end
 
 local function clearMailAttachments()
@@ -116,6 +118,11 @@ local function buildMailParcels(destinations)
 		flush()
 	end
 	return parcels
+end
+
+--- How many mails the destinations take (12 attachments each, stacks split at their size).
+function ProfessionExporter:CountMailParcels(destinations)
+	return #buildMailParcels(destinations)
 end
 
 function ProfessionExporter:EnsureMailSendQueueState()
@@ -251,7 +258,7 @@ function ProfessionExporter:AutoSendReadyMaterials()
 	for _, dest in ipairs(self:BuildShoppingMailSendPlan()) do
 		if dest.complete then
 			ready[#ready + 1] = dest
-			names[#names + 1] = string.format("%s (%s)", characterLabel(self, dest.characterKey), self:FormatNumberGrouped(dest.totalQuantity))
+			names[#names + 1] = string.format("%s (%s)", self:GetMailCharacterLabel(dest.characterKey), self:FormatNumberGrouped(dest.totalQuantity))
 		end
 	end
 	if self:StartMailSendQueue(ready, true) then
@@ -267,6 +274,30 @@ local MAIL_PAD = 12
 local MAIL_ROW = 48
 local ROW_TITLES = { crafts = "Crafted items to ", surplus = "Surplus to " }
 
+-- Tooltip lines for a list of items: name in `color`, count in `valueColor`, `suffix` after each name.
+local function addItemLines(pe, items, color, valueColor, suffix)
+	for _, it in ipairs(items or {}) do
+		GameTooltip:AddDoubleLine((it.name or "?") .. suffix, pe:FormatNumberGrouped(it.quantity or 0),
+			color.r, color.g, color.b, valueColor.r, valueColor.g, valueColor.b)
+	end
+end
+
+local function showDestTooltip(pe, row)
+	if not row.dest then
+		return
+	end
+	GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
+	GameTooltip:SetText("To " .. pe:GetMailCharacterLabel(row.dest.characterKey), 1, 1, 1)
+	local muted = pe:GetTheme().textMuted
+	local danger = pe:GetTheme().danger
+	addItemLines(pe, row.dest.items, muted, { r = 1, g = 1, b = 1 }, "")
+	addItemLines(pe, row.dest.missing, danger, danger, " (not in bags)")
+	if row.dest.kind == "surplus" then
+		GameTooltip:AddLine("Click to review and change what goes.", muted.r, muted.g, muted.b, true)
+	end
+	GameTooltip:Show()
+end
+
 -- One destination: character and item count, the first items, and a Send button.
 local function createMailRow(pe, parent)
 	local row = pe:CreateInset(parent)
@@ -279,26 +310,54 @@ local function createMailRow(pe, parent)
 	row.items = pe:CreateText(row, "GameFontHighlightSmall", "textMuted")
 	row.items:SetPoint("BOTTOMLEFT", 10, 8)
 	row.items:SetPoint("RIGHT", row.send, "LEFT", -10, 0)
+	-- The surplus row opens the review panel; gold outline while it is open.
+	local gold = pe:GetTheme().gold
+	row.openFill = row:CreateTexture(nil, "BACKGROUND", nil, 1)
+	row.openFill:SetAllPoints()
+	row.openFill:SetColorTexture(gold.r, gold.g, gold.b, 0.07)
 	row:EnableMouse(true)
-	row:SetScript("OnEnter", function(self)
-		if not self.dest then
-			return
+	row:SetScript("OnMouseUp", function(self)
+		if self.dest and self.dest.kind == "surplus" then
+			pe:ToggleMailReviewPanel()
 		end
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:SetText("To " .. characterLabel(pe, self.dest.characterKey), 1, 1, 1)
-		local muted = pe:GetTheme().textMuted
-		for _, it in ipairs(self.dest.items or {}) do
-			GameTooltip:AddDoubleLine(it.name or "?", pe:FormatNumberGrouped(it.quantity or 0), muted.r, muted.g, muted.b, 1, 1, 1)
-		end
-		local danger = pe:GetTheme().danger
-		for _, it in ipairs(self.dest.missing or {}) do
-			GameTooltip:AddDoubleLine((it.name or "?") .. " (not in bags)", pe:FormatNumberGrouped(it.quantity or 0),
-				danger.r, danger.g, danger.b, danger.r, danger.g, danger.b)
-		end
-		GameTooltip:Show()
 	end)
+	row:SetScript("OnEnter", function(self) showDestTooltip(pe, self) end)
 	row:SetScript("OnLeave", GameTooltip_Hide)
 	return row
+end
+
+-- "Surplus to Bånkey · 214 items · ready" with the count muted and the state coloured.
+local function destTitle(pe, dest)
+	local theme = pe:GetTheme()
+	local muted, state = theme.textMuted, dest.complete ~= false and theme.success or theme.warning
+	local title = (ROW_TITLES[dest.kind] or "") .. pe:GetMailCharacterLabel(dest.characterKey)
+	return string.format("%s |cff%02x%02x%02x· %s items|r |cff%02x%02x%02x· %s|r", title,
+		muted.r * 255, muted.g * 255, muted.b * 255, pe:FormatNumberGrouped(dest.totalQuantity or 0),
+		state.r * 255, state.g * 255, state.b * 255, dest.complete ~= false and "ready" or (#dest.missing .. " still missing"))
+end
+
+-- "Runecloth x100, Heavy Leather x60 and 36 more".
+local function destItemsText(pe, items)
+	local parts = {}
+	for j = 1, math.min(3, #items) do
+		parts[#parts + 1] = string.format("%s x%s", items[j].name or "?", pe:FormatNumberGrouped(items[j].quantity or 0))
+	end
+	if #items > 3 then
+		parts[#parts + 1] = string.format("and %d more", #items - 3)
+	end
+	return table.concat(parts, ", ")
+end
+
+-- Fills one destination row: title, count and state, the first three items, and Send.
+local function fillMailRow(pe, row, dest)
+	row.dest = dest
+	row.name:SetText(destTitle(pe, dest))
+	row.items:SetText(destItemsText(pe, dest.items or {}))
+	row.send:SetScript("OnClick", function()
+		ProfessionExporter:StartMailSendQueue({ dest })
+	end)
+	row.openFill:SetShown(dest.kind == "surplus" and pe:IsMailReviewPanelShown())
+	row:Show()
 end
 
 function ProfessionExporter:EnsureMailPanel()
@@ -393,8 +452,6 @@ function ProfessionExporter:EnsureMailPanel()
 	panel.surplusRow = CreateFrame("Frame", nil, panel)
 	panel.surplusRow:SetPoint("TOPLEFT", panel.summary, "BOTTOMLEFT", 0, -8)
 	panel.surplusRow:SetPoint("TOPRIGHT", panel.summary, "BOTTOMRIGHT", 0, -8)
-	panel.keepBtn = self:CreateButton(panel.surplusRow, "Keep…", function() pe:ShowMailKeepWindow() end, { small = true })
-	panel.keepBtn:SetPoint("RIGHT")
 	panel.sendOthers = self:CreateCheckbox(panel.surplusRow, "Send other sellable items", function(checked)
 		pe:SetMailSendOthers(checked)
 		pe:RefreshMailPanel()
@@ -467,26 +524,7 @@ function ProfessionExporter:RefreshMailPanel()
 		row:ClearAllPoints()
 		row:SetPoint("TOPLEFT", panel.content, "TOPLEFT", 0, -((index - 1) * MAIL_ROW))
 		row:SetPoint("TOPRIGHT", panel.content, "TOPRIGHT", 0, -((index - 1) * MAIL_ROW))
-		row.dest = dest
-		local theme = self:GetTheme()
-		local muted, state = theme.textMuted, dest.complete ~= false and theme.success or theme.warning
-		local title = (ROW_TITLES[dest.kind] or "") .. characterLabel(self, dest.characterKey)
-		row.name:SetText(string.format("%s |cff%02x%02x%02x· %s items|r |cff%02x%02x%02x· %s|r", title,
-			muted.r * 255, muted.g * 255, muted.b * 255, self:FormatNumberGrouped(dest.totalQuantity or 0),
-			state.r * 255, state.g * 255, state.b * 255, dest.complete ~= false and "ready" or (#dest.missing .. " still missing")))
-		local parts = {}
-		for j = 1, math.min(3, #(dest.items or {})) do
-			local it = dest.items[j]
-			parts[#parts + 1] = string.format("%s x%s", it.name or "?", self:FormatNumberGrouped(it.quantity or 0))
-		end
-		if #(dest.items or {}) > 3 then
-			parts[#parts + 1] = string.format("and %d more", #dest.items - 3)
-		end
-		row.items:SetText(table.concat(parts, ", "))
-		row.send:SetScript("OnClick", function()
-			ProfessionExporter:StartMailSendQueue({ dest })
-		end)
-		row:Show()
+		fillMailRow(self, row, dest)
 	end
 	for index = #plan + 1, #panel.rows do
 		panel.rows[index]:Hide()
@@ -507,9 +545,7 @@ function ProfessionExporter:RefreshMailPanel()
 	end
 	panel.sendAllBtn:SetEnabled(#plan > 0 and not sending)
 	panel.cancelBtn:SetEnabled(st.running == true)
-	if self.RefreshMailKeepWindow then
-		self:RefreshMailKeepWindow()
-	end
+	self:RefreshMailReviewPanel(plan)
 end
 
 function ProfessionExporter:OnMailFrameShow()
@@ -530,6 +566,10 @@ function ProfessionExporter:OnMailFrameHide()
 	local panel = self.ui and self.ui.mailPanel
 	if panel then
 		panel:Hide()
+	end
+	self:ClearMailSkipped()
+	if panel and self.ui.mailReviewPanel then
+		self.ui.mailReviewPanel:Hide()
 	end
 	if self.CancelMailSendQueue then
 		self:CancelMailSendQueue()

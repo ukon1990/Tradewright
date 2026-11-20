@@ -102,6 +102,7 @@ read_globals = {
 	"GetTradeSkillReagentItemLink",
 	"GetTradeSkillRecipeLink",
 	"hooksecurefunc",
+	"IsControlKeyDown",
 	"IsModifiedClick",
 	"IsShiftKeyDown",
 	"ITEM_QUALITY_COLORS",
