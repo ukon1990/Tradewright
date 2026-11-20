@@ -156,16 +156,27 @@ local function targetWanted(item, source, opts)
 	return not (opts.onlyFarmed and not source)
 end
 
+-- An item ranks only when its usual price and sells a day are both known, unless it is an early estimate.
+local function targetPrices(item)
+	local usual, sells = tonumber(item.usual), tonumber(item.sellsPerDay)
+	sells = sells and sells > 0 and sells or nil
+	if not usual or usual <= 0 or not (sells or item.early) then
+		return nil
+	end
+	return usual, sells
+end
+
 -- One "what to farm" row, or nil when the item is not known to sell or a filter leaves it out.
 local function targetRow(item, source, opts)
-	local usual, sells = tonumber(item.usual), tonumber(item.sellsPerDay)
-	if not (usual and sells) or sells <= 0 or not targetWanted(item, source, opts) then
+	local usual, sells = targetPrices(item)
+	if not usual or not targetWanted(item, source, opts) then
 		return nil
 	end
 	local row = {
 		itemID = item.itemID, storageKey = item.storageKey, usual = usual, sellsPerDay = sells,
-		tradedPerDay = usual * sells, daysOfSupply = number(item.quantity) / sells,
-		supplyChange = item.supplyChange, usedByRecipes = item.usedByRecipes == true,
+		tradedPerDay = sells and usual * sells, daysOfSupply = sells and number(item.quantity) / sells,
+		listedValue = usual * number(item.quantity), supplyChange = item.supplyChange,
+		usedByRecipes = item.usedByRecipes == true, early = item.early == true, days = item.days,
 	}
 	if source then
 		row.source, row.sourcePerHour = source.farm, source.perHour
@@ -174,9 +185,16 @@ local function targetRow(item, source, opts)
 	return row
 end
 
---- "What to farm" rows from `items = { { itemID, usual, sellsPerDay, quantity, supplyChange, usedByRecipes } }`
---- and a loot index, most gold traded a day first. `tradedPerDay` is a ranking, not income: it inherits
---- the upward bias of the sells-a-day estimate. `yoursPerHour` is your own rate at the usual price after the cut.
+--- Sort value of a "what to farm" row: gold traded a day when sales are known. An early estimate without
+--- sales sorts below every such row (a negative value), ordered by the gold listed on the auction house.
+function FarmLogic.TargetRank(row)
+	return row.tradedPerDay or -1 / (1 + (row.listedValue or 0))
+end
+
+--- "What to farm" rows from `items = { { itemID, usual, sellsPerDay, quantity, supplyChange, usedByRecipes,
+--- early, days } }` and a loot index, best `TargetRank` first. `early` items (too little history) may lack
+--- sells a day. `tradedPerDay` is a ranking, not income: it inherits the upward bias of the sells-a-day
+--- estimate. `yoursPerHour` is your own rate at the usual price after the cut.
 function FarmLogic.BuildFarmTargets(items, lootIndex, opts)
 	opts = opts or {}
 	local rows = {}
@@ -184,7 +202,7 @@ function FarmLogic.BuildFarmTargets(items, lootIndex, opts)
 		rows[#rows + 1] = targetRow(item, lootIndex and lootIndex[item.itemID], opts)
 	end
 	table.sort(rows, function(a, b)
-		return a.tradedPerDay > b.tradedPerDay
+		return FarmLogic.TargetRank(a) > FarmLogic.TargetRank(b)
 	end)
 	return rows
 end
@@ -209,8 +227,8 @@ function FarmLogic.FarmTargetsEmptyText(counts, opts)
 	end
 	local names = activeFilterNames(opts or {})
 	if priced == 0 or #names == 0 then
-		return "Not enough price history yet",
-			string.format("%d trade goods scanned. Each needs full scans on 5 different days.", tradeGoods)
+		return "Not enough price history yet", string.format(
+			"%d trade goods scanned. Each needs full scans on 5 different days, or turn on Early estimates.", tradeGoods)
 	end
 	return "Hidden by filters", string.format("%d trade goods hidden by %s.", priced, table.concat(names, " and "))
 end

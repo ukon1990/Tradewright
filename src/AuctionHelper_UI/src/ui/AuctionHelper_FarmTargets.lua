@@ -14,25 +14,42 @@ local function isTradeGood(itemID)
 end
 
 local HELP = "Trade goods ranked by the gold that changes hands in them each day, from your auction house scans."
-	.. " An item needs full scans on 5 different days, about a day apart, before it shows up.\n\n"
+	.. " An item needs full scans on 5 different days, about a day apart, before it shows up."
+	.. " Early estimates lists the rest now, from fewer scans, below the ranked ones.\n\n"
 	.. "Your saved farms fill the last two columns: where you looted the item and what that earns an hour."
 	.. " AuctionHelper ships no drop data or routes."
 
--- One candidate per scanned trade good with a usual price and a sells-a-day estimate, plus how many
--- trade goods were scanned at all.
-local function targetCandidates(pe, insights)
+-- A candidate for one scanned trade good: full when it has a usual price and sells a day, an early estimate
+-- (latest price, sales if known) when `early` is on, otherwise nil.
+local function targetCandidate(pe, itemID, row, early)
+	local usual = pe:GetUsualPrice(row.storageKey)
+	local sells = pe:GetSellsPerDay(row.storageKey)
+	local item = { itemID = itemID, storageKey = row.storageKey, quantity = row.quantity, supplyChange = row.supplyChange }
+	if usual and sells then
+		item.usual, item.sellsPerDay = usual.usual, sells.perDay
+		return item
+	end
+	if not early then
+		return nil
+	end
+	local partial = pe:GetEarlyUsualPrice(row.storageKey)
+	item.usual = partial and partial.usual or row.price
+	item.sellsPerDay, item.early, item.days = sells and sells.perDay, true, partial and partial.days or 0
+	return item
+end
+
+-- Candidates for every scanned trade good, plus how many trade goods were scanned at all.
+local function targetCandidates(pe, insights, early)
 	local materials = pe:GetRecipeMaterialSet()
 	local items, tradeGoods = {}, 0
 	for itemID, row in pairs(insights.byItemID or {}) do
-		local tradeGood = isTradeGood(itemID)
-		tradeGoods = tradeGoods + (tradeGood and 1 or 0)
-		local usual = tradeGood and pe:GetUsualPrice(row.storageKey)
-		local sells = usual and pe:GetSellsPerDay(row.storageKey)
-		if sells then
-			items[#items + 1] = {
-				itemID = itemID, storageKey = row.storageKey, usual = usual.usual, sellsPerDay = sells.perDay,
-				quantity = row.quantity, supplyChange = row.supplyChange, usedByRecipes = materials[itemID] == true,
-			}
+		if isTradeGood(itemID) then
+			tradeGoods = tradeGoods + 1
+			local item = targetCandidate(pe, itemID, row, early)
+			if item then
+				item.usedByRecipes = materials[itemID] == true
+				items[#items + 1] = item
+			end
 		end
 	end
 	return items, tradeGoods
@@ -47,7 +64,7 @@ function ProfessionExporter:GetFarmTargetRows(onReady)
 	local Farm = self.FarmLogic
 	local ledger = self:InitLedger()
 	local lootIndex = Farm.BuildLootIndex(ledger and ledger.farm and ledger.farm.farms or {})
-	local candidates, tradeGoods = targetCandidates(self, insights)
+	local candidates, tradeGoods = targetCandidates(self, insights, self:GetSetting("farming.early", false))
 	local opts = {
 		cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05,
 		onlyRecipes = self:GetSetting("farming.onlyRecipes", false),
@@ -67,12 +84,33 @@ local function perDayText(pe, perDay)
 	return string.format("%.1f", perDay)
 end
 
-local function targetDetail(row)
+local function targetDetail(pe, row)
+	if row.early then
+		local warning = pe:GetTheme().warning
+		local basis = (row.days or 0) > 0 and string.format("%d of 5 days", row.days) or "latest scan only"
+		return string.format("|cff%02x%02x%02xEarly estimate: %s|r", warning.r * 255, warning.g * 255, warning.b * 255, basis)
+	end
 	local supply = row.daysOfSupply < 1 and "Supply lasts under a day" or string.format("Supply lasts %d days", math.floor(row.daysOfSupply + 0.5))
 	return supply .. (row.usedByRecipes and " · used by your recipes" or "")
 end
 
+-- "Sells a day" and "Traded a day"; early estimates may lack both.
+local function salesColumns(pe)
+	local sells = {
+		id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
+		sortValue = function(row) return row.sellsPerDay or -1 end,
+		getText = function(row) return row.sellsPerDay and perDayText(pe, row.sellsPerDay) or "?" end,
+	}
+	local traded = {
+		id = "traded", label = "Traded a day", justifyH = "RIGHT", width = 86, sortable = true, defaultSort = "desc",
+		sortValue = pe.FarmLogic.TargetRank,
+		getText = function(row) return row.tradedPerDay and pe:FormatCopperShort(row.tradedPerDay) or "-" end,
+	}
+	return sells, traded
+end
+
 local function targetColumns(pe)
+	local sells, traded = salesColumns(pe)
 	local function money(id, label, field, width)
 		return {
 			id = id, label = label, justifyH = "RIGHT", width = width, sortable = true, defaultSort = "desc",
@@ -85,15 +123,10 @@ local function targetColumns(pe)
 			label = "Item", defaultSort = "asc",
 			getItemID = function(row) return row.itemID end,
 			getName = function(row) return pe:GetItemDisplayName(row.itemID) end,
-			getDetail = targetDetail,
+			getDetail = function(row) return targetDetail(pe, row) end,
 		}),
 		money("usual", "Usual price", "usual", 80),
-		{
-			id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row.sellsPerDay end,
-			getText = function(row) return perDayText(pe, row.sellsPerDay) end,
-		},
-		money("traded", "Traded a day", "tradedPerDay", 86),
+		sells, traded,
 		{
 			id = "listed", label = "Listed", justifyH = "RIGHT", width = 56, sortable = true, defaultSort = "asc", optional = true,
 			sortValue = function(row) return row.supplyChange or 0 end,
@@ -117,7 +150,9 @@ end
 local function buildTargetFilters(pe, view)
 	view.filters = {}
 	local previous
-	for _, filter in ipairs({ { "farming.onlyFarmed", "Only farmed before" }, { "farming.onlyRecipes", "My recipes use it" } }) do
+	for _, filter in ipairs({
+		{ "farming.onlyFarmed", "Only farmed before" }, { "farming.onlyRecipes", "My recipes use it" }, { "farming.early", "Early estimates" },
+	}) do
 		local button = pe:CreateButton(view, filter[2], function()
 			pe:SetSetting(filter[1], not pe:GetSetting(filter[1], false))
 			view:Refresh()
@@ -127,6 +162,14 @@ local function buildTargetFilters(pe, view)
 		previous = button
 		view.filters[#view.filters + 1] = button
 	end
+end
+
+local function materialCount(rows)
+	local early = 0
+	for _, row in ipairs(rows) do
+		early = early + (row.early and 1 or 0)
+	end
+	return early > 0 and string.format("%d materials · %d early", #rows, early) or string.format("%d materials", #rows)
 end
 
 --- The "What to farm" view: a note, two filter buttons and the table. Call `:Refresh()` when shown.
@@ -158,7 +201,7 @@ function ProfessionExporter:CreateFarmTargetsView(panel)
 		self.table:SetEmptyText(emptyTitle or "Reading the last scan…", emptyHint or "")
 		self.table:SetRows(rows or {})
 		self.table:SetFooterText(rows and "Traded a day = usual price times estimated sales, a ranking and not income" or "Reading the last scan…",
-			rows and string.format("%d materials", #rows) or "")
+			rows and materialCount(rows) or "")
 		self.table:Refresh()
 	end
 	return view

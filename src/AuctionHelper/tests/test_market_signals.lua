@@ -427,6 +427,19 @@ local farmedOnly = Farm.BuildFarmTargets(targetItems, lootIndex, { onlyFarmed = 
 check("Only farmed before", #farmedOnly == 2 and farmedOnly[1].itemID == 1 and farmedOnly[2].itemID == 3)
 local recipeOnly = Farm.BuildFarmTargets(targetItems, lootIndex, { onlyRecipes = true })
 check("My recipes use it", #recipeOnly == 1 and recipeOnly[1].itemID == 1)
+local earlyItems = {
+	{ itemID = 1, usual = 4800, sellsPerDay = 400, quantity = 3200 },
+	{ itemID = 5, usual = 200, quantity = 10, early = true, days = 2 },
+	{ itemID = 6, usual = 100, quantity = 500, early = true, days = 1 },
+	{ itemID = 7, usual = 300, sellsPerDay = 2, quantity = 4, early = true, days = 3 },
+	{ itemID = 8, quantity = 9, early = true },
+}
+local early = Farm.BuildFarmTargets(earlyItems, {}, {})
+check("Early estimates are listed, an item with no price is not", #early == 4)
+check("Known sales rank above early rows without sales", early[1].itemID == 1 and early[2].itemID == 7 and early[2].early)
+check("Early rows without sales rank by gold listed", early[3].itemID == 6 and early[4].itemID == 5)
+check("An early row without sales has no traded or supply figure", early[3].tradedPerDay == nil and early[3].daysOfSupply == nil)
+check("Without the early flag a row needs sales", #Farm.BuildFarmTargets({ { itemID = 5, usual = 200, quantity = 10 } }, {}, {}) == 0)
 local emptyTitle = Farm.FarmTargetsEmptyText({ tradeGoods = 0, priced = 0 }, { onlyRecipes = true })
 check("Empty list without trade goods asks for a scan", emptyTitle == "No trade goods scanned yet")
 local historyTitle, historyHint = Farm.FarmTargetsEmptyText({ tradeGoods = 12, priced = 0 }, { onlyRecipes = true })
