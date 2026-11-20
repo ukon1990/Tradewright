@@ -17,6 +17,29 @@ function MaterialLogic.CheapestSource(candidates)
 	return bestCost, bestSource
 end
 
+--- Covers `missing` units from other characters' stock before buying. `holders` is
+--- { { characterKey, quantity }, … }. Returns fromHolders, toBuy and the holders with stock, the
+--- largest first (ties by character key).
+function MaterialLogic.CoverFromHolders(missing, holders)
+	missing = math.max(0, tonumber(missing) or 0)
+	local sorted, stock = {}, 0
+	for _, holder in ipairs(holders or {}) do
+		local quantity = tonumber(holder.quantity) or 0
+		if quantity > 0 then
+			sorted[#sorted + 1] = holder
+			stock = stock + quantity
+		end
+	end
+	table.sort(sorted, function(a, b)
+		if a.quantity ~= b.quantity then
+			return a.quantity > b.quantity
+		end
+		return tostring(a.characterKey) < tostring(b.characterKey)
+	end)
+	local fromHolders = math.min(missing, stock)
+	return fromHolders, missing - fromHolders, sorted
+end
+
 -- Material cost of one unit of a craft row's output, or nil when the row cannot say.
 local function unitCostOf(row)
 	local cost = tonumber(row.fullMatCost) or tonumber(row.matCost)

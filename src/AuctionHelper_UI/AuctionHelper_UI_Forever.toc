@@ -16,6 +16,7 @@ src\ui\AuctionHelper_InventoryUI.lua
 src\ui\AuctionHelper_CraftsUI.lua
 src\ui\AuctionHelper_CraftPlanning.lua
 src\ui\AuctionHelper_ProfessionCraftPanel.lua
+src\ui\AuctionHelper_ProfessionQueueView.lua
 src\ui\AuctionHelper_MailPanel.lua
 src\ui\AuctionHelper_MailReviewPanel.lua
 src\ui\AuctionHelper_GoldDashboard.lua
@@ -33,6 +34,7 @@ src\ui\AuctionHelper_ExportTab.lua
 src\ui\AuctionHelper_DocsTab.lua
 src\ui\AuctionHelper_SettingsTab.lua
 src\ui\AuctionHelper_TabOrder.lua
+src\ui\AuctionHelper_VendorBuyWindow.lua
 src\ui\AuctionHelper_FarmWindow.lua
 src\ui\AuctionHelper_FarmTargets.lua
 src\ui\AuctionHelper_FarmingTab.lua

@@ -29,6 +29,21 @@ function ProfessionExporter:GetOwnItemHoldings()
 	return holdings[key]
 end
 
+--- The other characters that hold `itemID` in their bags or bank, as saved when each was last
+--- played: { { characterKey, quantity }, … } (unsorted).
+function ProfessionExporter:GetItemHoldersOnOtherCharacters(itemID)
+	itemID = tonumber(itemID)
+	local own = self:GetCharacterKey()
+	local holders = {}
+	for characterKey, held in pairs(self:GetItemHoldings()) do
+		local quantity = (held.bags and held.bags[itemID] or 0) + (held.bank and held.bank[itemID] or 0)
+		if characterKey ~= own and quantity > 0 then
+			holders[#holders + 1] = { characterKey = characterKey, quantity = quantity }
+		end
+	end
+	return holders
+end
+
 local function countItems(bagIDs)
 	local counts = {}
 	for _, bag in ipairs(bagIDs) do

@@ -372,6 +372,73 @@ local function refreshOwnedAuctionsTab(pe, panel, state, queued)
 	panel.ownedTable:SetFooterText(string.format("%d auctions", #ownedRows), queuedHint(queued, "Click a row to recheck its price"))
 end
 
+-- Price checks and cancels the player asks for while a price scan runs. The scan steps aside for
+-- them and then carries on where it was.
+local CANCEL_SCAN_HOLD_SEC = 3
+
+-- Puts the items at position `at` of the scan list, skipping ones already waiting there as
+-- priority checks. Returns how many were added.
+local function insertPriorityChecks(list, at, itemIDs)
+	local seen, added = {}, 0
+	local index = at
+	while list[index] and list[index].priority do
+		seen[list[index].itemID] = true
+		index = index + 1
+	end
+	for _, itemID in ipairs(itemIDs or {}) do
+		local id = tonumber(itemID)
+		if id and id > 0 and not seen[id] then
+			seen[id] = true
+			table.insert(list, at + added, { itemID = id, priority = true })
+			added = added + 1
+		end
+	end
+	return added
+end
+
+--- Price check the player asked for. During a scan it goes to the front of the scan list, so it
+--- is answered next (also while the scan is paused) and the scan then continues.
+function ProfessionExporter:QueuePriorityAuctionRefresh(itemIDs)
+	local state = self:GetState()
+	local list = state.auctionRefreshScanList
+	if state.auctionRefreshRunning ~= true or type(list) ~= "table" then
+		return self:QueueVisibleAuctionRefresh(itemIDs)
+	end
+	-- The item being searched right now keeps its place.
+	local at = (tonumber(state.auctionRefreshIndex) or 1) + (state.auctionSearchContext and 1 or 0)
+	state.auctionScanTotal = (tonumber(state.auctionScanTotal) or 0) + insertPriorityChecks(list, at, itemIDs)
+	self:ContinueQueuedAuctionRefresh()
+	self:RefreshAuctionHousePanel()
+end
+
+--- True while the scan must not send its next search: it waits for a cancel click, or it is
+--- paused. A paused scan still answers priority checks, except during a bulk post.
+function ProfessionExporter:IsAuctionScanHeld(state)
+	local holdLeft = (state.auctionScanHoldUntil or 0) - GetTime()
+	if holdLeft > 0 then
+		if not state.auctionScanHoldTimer then
+			state.auctionScanHoldTimer = true
+			C_Timer.After(holdLeft + 0.05, function()
+				state.auctionScanHoldTimer = nil
+				ProfessionExporter:ContinueQueuedAuctionRefresh()
+			end)
+		end
+		return true
+	end
+	if state.auctionRefreshPaused ~= true then
+		return false
+	end
+	local entry = (state.auctionRefreshScanList or {})[tonumber(state.auctionRefreshIndex) or 1]
+	return not (entry and entry.priority) or state.auctionRefreshPausedForBulk == true
+end
+
+--- Cancel click on the Auctions tab. A running scan keeps the server busy, and the client then
+--- drops the cancel, so the scan waits a moment. A click that came too early works on the next try.
+function ProfessionExporter:CancelUndercutHoldingScan()
+	self:GetState().auctionScanHoldUntil = GetTime() + CANCEL_SCAN_HOLD_SEC
+	self:CancelNextUndercutAuction()
+end
+
 local function syncSearchBoxText(box, text)
 	if box:GetText() ~= text then
 		box:SetText(text)
@@ -465,7 +532,7 @@ local function refreshAuctionCartButtons(panel, rows, selectedRow)
 		panel.btnCartClear:SetEnabled(#rows > 0)
 	end
 	if panel.cartHint then
-		panel.cartHint:SetText(unpricedCartHint(rows))
+		panel.cartHint:SetText(ProfessionExporter:CartVendorHint(rows) .. unpricedCartHint(rows))
 	end
 end
 

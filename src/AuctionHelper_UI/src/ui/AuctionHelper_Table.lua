@@ -104,8 +104,8 @@ end
 function TableMixin:SetRows(rows)
 	self.rows = rows or {}
 	self:RefreshRows()
-	-- The footer shows the page position, so it follows every row change, also for callers that
-	-- set their footer text before the rows.
+	-- The empty text and the footer (page position) follow every row change.
+	self:UpdateEmptyState()
 	self:UpdateFooter()
 end
 

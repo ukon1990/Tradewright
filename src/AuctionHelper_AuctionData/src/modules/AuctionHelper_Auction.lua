@@ -901,7 +901,7 @@ function ProfessionExporter:ContinueQueuedAuctionRefresh()
 	if not state.auctionRefreshRunning or state.auctionSearchContext then
 		return
 	end
-	if state.auctionRefreshPaused == true then
+	if self:IsAuctionScanHeld(state) then
 		return
 	end
 	local scanList = state.auctionRefreshScanList or {}
@@ -2102,13 +2102,7 @@ function ProfessionExporter:BuildAuctionCartColumns()
 			getItemID = function(row) return row and row.itemID end,
 			getIcon = function(row) return row and row.itemIcon end,
 			getName = function(row) return row and row.itemName or "-" end,
-			getDetail = function(row)
-				local detail = row and row.sourceText and row.sourceText ~= "" and ("For " .. row.sourceText) or ""
-				if row and row.mailToText and row.mailToText ~= "" and row.mailToText ~= "-" then
-					detail = detail .. (detail ~= "" and " · " or "") .. "mail to " .. row.mailToText
-				end
-				return detail
-			end,
+			getDetail = function(row) return pe:AuctionCartRowDetail(row) end,
 			sortValue = function(row) return row and row.itemName end,
 		}),
 		have,
@@ -2572,7 +2566,7 @@ local function showCartRowTooltip(rowFrame, rowData)
 		{ "Cost to buy", rowData.estimatedBuyCost and pe:FormatCopperFull(rowData.estimatedBuyCost) or "no price yet" },
 	}
 	appendCartMailLines(pe, lines, rowData.mailAllocations)
-	pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, "Click to find it at the auction house")
+	pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, pe:AppendCartVendorLines(lines, rowData, "Click to find it at the auction house"))
 end
 
 local function buildCartTable(self, panel)
@@ -2596,9 +2590,13 @@ local function buildCartTable(self, panel)
 		onRowLeave = function()
 			GameTooltip:Hide()
 		end,
-		onRowClick = function(_, rowData)
+		onRowClick = function(_, rowData, button)
 			ProfessionExporter:GetState().auctionCartSelectedItemID = rowData and rowData.itemID or nil
-			ProfessionExporter:SearchAuctionCartRow(rowData)
+			if button == "RightButton" and rowData then
+				ProfessionExporter:ShowVendorWaypoint(rowData.itemID)
+			else
+				ProfessionExporter:SearchAuctionCartRow(rowData)
+			end
 			ProfessionExporter:RefreshAuctionHousePanel()
 		end,
 	})
@@ -2629,7 +2627,7 @@ local function recheckOwnedAuctionPrices()
 			ids[#ids + 1] = row.itemID
 		end
 	end
-	ProfessionExporter:QueueVisibleAuctionRefresh(ids)
+	ProfessionExporter:QueuePriorityAuctionRefresh(ids)
 end
 
 local function buildOwnedButtons(panel)
@@ -2641,7 +2639,7 @@ local function buildOwnedButtons(panel)
 	panel.btnOwnedCancel = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.btnOwnedCancel:SetText("Cancel undercut")
 	panel.btnOwnedCancel:SetScript("OnClick", function()
-		ProfessionExporter:CancelNextUndercutAuction()
+		ProfessionExporter:CancelUndercutHoldingScan()
 	end)
 	attachSimpleTooltip(panel.btnOwnedCancel, "Cancel undercut", OWNED_CANCEL_TIP)
 	attachSimpleTooltip(panel.btnOwnedCheck, "Check prices", OWNED_CHECK_TIP)
@@ -2692,7 +2690,7 @@ local function buildOwnedTable(self, panel)
 		end,
 		onRowClick = function(_, rowData)
 			if not rowData.sold then
-				ProfessionExporter:QueueVisibleAuctionRefresh({ rowData.itemID })
+				ProfessionExporter:QueuePriorityAuctionRefresh({ rowData.itemID })
 			end
 		end,
 	})

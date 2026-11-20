@@ -29,9 +29,6 @@
    "W431": 1,
    "W542": 1
   },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": {
-   "W631": 1
-  },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": {
    "W631": 1
   }
@@ -39,7 +36,7 @@
  "files": {
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 2587,
   "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": 778,
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5671,
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5669,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": 781,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1331,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1265,
@@ -47,7 +44,7 @@
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_LiveUpdate.lua": 708,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_CraftsUI.lua": 819,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": 1041,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": 1194,
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": 890,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": 929,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_UIShell.lua": 809,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Widgets.lua": 942
@@ -460,11 +457,6 @@
    "ProfessionExporter:BuildAuctionBulkRows": {
     "ccn": [
      16
-    ]
-   },
-   "ProfessionExporter:BuildAuctionCartColumns/getDetail": {
-    "ccn": [
-     11
     ]
    },
    "ProfessionExporter:BuildAuctionCraftCartRows": {
@@ -2085,14 +2077,6 @@
      56
     ]
    },
-   "ProfessionExporter:JumpToProfessionRecipe": {
-    "lines": [
-     58
-    ],
-    "ccn": [
-     14
-    ]
-   },
    "ProfessionExporter:OnProfessionRecipeCraftedResult": {
     "lines": [
      84
@@ -2125,29 +2109,9 @@
      23
     ]
    },
-   "buildProfessionQueueReagentRows": {
-    "ccn": [
-     14
-    ]
-   },
-   "buildProfessionQueueRecipeRows": {
-    "ccn": [
-     28
-    ]
-   },
-   "createQueueView": {
-    "lines": [
-     177
-    ]
-   },
    "createRecipeView": {
     "lines": [
      86
-    ]
-   },
-   "refreshProfessionQueueCard": {
-    "ccn": [
-     13
     ]
    },
    "renderProfessionRecipe": {

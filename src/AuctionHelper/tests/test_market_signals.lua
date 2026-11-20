@@ -479,6 +479,22 @@ auction.priceSteps[5] = { t = today - 400 * DAY, l = { 1, 1 } }
 pe:TrimPriceSteps()
 check("Old steps are trimmed", pe:GetPriceSteps(5) == nil)
 
+-- Shopping list: other characters' stock is used before buying
+do
+	local alts = { { characterKey = "Mule-R", quantity = 5 }, { characterKey = "Bank-R", quantity = 20 },
+		{ characterKey = "Empty-R", quantity = 0 } }
+	local fromAlts, toBuy, ranked = ML.CoverFromHolders(30, alts)
+	check("Holders: stock covers part, rest is bought", fromAlts == 25 and toBuy == 5)
+	check("Holders: largest stock first, empty ones dropped",
+		#ranked == 2 and ranked[1].characterKey == "Bank-R" and ranked[2].characterKey == "Mule-R")
+	fromAlts, toBuy = ML.CoverFromHolders(12, alts)
+	check("Holders: stock covers everything", fromAlts == 12 and toBuy == 0)
+	fromAlts, toBuy, ranked = ML.CoverFromHolders(7, nil)
+	check("Holders: nobody has it", fromAlts == 0 and toBuy == 7 and #ranked == 0)
+	local _, _, tied = ML.CoverFromHolders(1, { { characterKey = "B", quantity = 3 }, { characterKey = "A", quantity = 3 } })
+	check("Holders: equal stock sorts by character", tied[1].characterKey == "A")
+end
+
 if failed > 0 then
 	print(failed .. " check(s) failed")
 	os.exit(1)

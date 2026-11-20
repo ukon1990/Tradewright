@@ -475,7 +475,7 @@ local function onSellRowClick(_, rowData, _, tableWidget)
 	ProfessionExporter:RefreshAuctionPanelRules()
 	-- Clicking a row should also revalidate this item's current market value.
 	if ProfessionExporter:CanStartFullAuctionSideActions(true) then
-		ProfessionExporter:QueueVisibleAuctionRefresh({ id })
+		ProfessionExporter:QueuePriorityAuctionRefresh({ id })
 	end
 	local ok = ProfessionExporter:TrySendItemToAuctionSellFrame(id, rowData and rowData.firstBag, rowData and rowData.firstSlot)
 	ProfessionExporter:GetState().auctionPanelSelectedItemID = id

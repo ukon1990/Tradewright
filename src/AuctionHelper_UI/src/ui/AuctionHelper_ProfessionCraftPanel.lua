@@ -41,62 +41,46 @@ function ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(delaySeco
 	end)
 end
 
+-- Selects a recipe in the open profession window. On Forever the crafting page is told directly:
+-- C_TradeSkillUI.OpenRecipe alone returns without selecting anything there.
+local function selectProfessionRecipe(recipeID)
+	local page = not ProfessionExporter.IS_RETAIL and _G.ProfessionsFrame and _G.ProfessionsFrame.CraftingPage
+	local info = C_TradeSkillUI.GetRecipeInfo and C_TradeSkillUI.GetRecipeInfo(recipeID)
+	if page and info and type(page.SelectRecipe) == "function" and pcall(page.SelectRecipe, page, info) then
+		return true
+	end
+	return C_TradeSkillUI.OpenRecipe ~= nil and pcall(C_TradeSkillUI.OpenRecipe, recipeID)
+end
+
+local function openProfessionSkillLine(skillLineID)
+	local api = C_TradeSkillUI
+	if not (skillLineID and api and api.OpenTradeSkill and api.GetBaseProfessionInfo) then
+		return false
+	end
+	local info = api.GetBaseProfessionInfo()
+	if tonumber(info and (info.professionID or info.profession or info.skillLineID)) == skillLineID then
+		return false
+	end
+	return pcall(api.OpenTradeSkill, skillLineID)
+end
+
+--- Shows a recipe in the profession window, switching profession first when it belongs to another.
 function ProfessionExporter:JumpToProfessionRecipe(recipeID, skillLineID)
 	recipeID = tonumber(recipeID)
-	skillLineID = tonumber(skillLineID)
-	if not self.IS_SUPPORTED or not recipeID then
+	if not self.IS_SUPPORTED or not recipeID or not C_TradeSkillUI then
 		return false
 	end
-
-	local function selectRecipeNow()
-		if C_TradeSkillUI and C_TradeSkillUI.OpenRecipe then
-			local ok = pcall(C_TradeSkillUI.OpenRecipe, recipeID)
-			if ok then
-				return true
-			end
-		end
-		local pf = _G.ProfessionsFrame
-		local page = pf and pf.CraftingPage
-		if not page then
-			return false
-		end
-		if type(rawget(page, "SetSelectedRecipeID")) == "function" then
-			local ok = pcall(page.SetSelectedRecipeID, page, recipeID)
-			if ok then
-				return true
-			end
-		end
-		if type(page.SelectRecipe) == "function" then
-			local ok = pcall(page.SelectRecipe, page, recipeID)
-			if ok then
-				return true
-			end
-		end
-		return false
+	local function retry()
+		selectProfessionRecipe(recipeID)
 	end
-
-	local currentSkillLineID = nil
-	if C_TradeSkillUI and C_TradeSkillUI.GetBaseProfessionInfo then
-		local info = C_TradeSkillUI.GetBaseProfessionInfo()
-		currentSkillLineID = tonumber(info and (info.professionID or info.profession or info.skillLineID))
-	end
-
-	if skillLineID and currentSkillLineID ~= skillLineID and C_TradeSkillUI and C_TradeSkillUI.OpenTradeSkill then
-		local ok = pcall(C_TradeSkillUI.OpenTradeSkill, skillLineID)
-		if not ok then
-			return false
+	if openProfessionSkillLine(tonumber(skillLineID)) then
+		-- The other profession's recipe list loads over the next frames.
+		for _, delay in ipairs({ 0.10, 0.25, 0.45 }) do
+			C_Timer.After(delay, retry)
 		end
-		C_Timer.After(0.10, function() selectRecipeNow() end)
-		C_Timer.After(0.25, function() selectRecipeNow() end)
-		C_Timer.After(0.45, function() selectRecipeNow() end)
-		return true
+	elseif not selectProfessionRecipe(recipeID) then
+		C_Timer.After(0.10, retry)
 	end
-
-	if selectRecipeNow() then
-		return true
-	end
-	C_Timer.After(0.05, function() selectRecipeNow() end)
-	C_Timer.After(0.20, function() selectRecipeNow() end)
 	return true
 end
 
@@ -538,7 +522,6 @@ end
 
 local PANEL_WIDTH = 400
 local PAD = 12
-local TALL_ROW = 36
 
 local function rankMarkup(rankIndex)
 	return ProfessionExporter:GetRankMarkup(rankIndex)
@@ -647,198 +630,6 @@ local function createRecipeView(pe, f)
 	return host
 end
 
-local function stepperCell(pe)
-	return function(rowFrame)
-		local cell = CreateFrame("Frame", nil, rowFrame)
-		cell.minus = pe:CreateButton(cell, "-", nil, { small = true, width = 22 })
-		cell.minus:SetPoint("LEFT", 5, 0)
-		cell.value = pe:CreateText(cell, "NumberFontNormalSmall", "textPrimary", "CENTER")
-		cell.value:SetPoint("LEFT", cell.minus, "RIGHT", 0, 0)
-		cell.value:SetWidth(26)
-		cell.plus = pe:CreateButton(cell, "+", nil, { small = true, width = 22 })
-		cell.plus:SetPoint("LEFT", cell.value, "RIGHT", 0, 0)
-		return cell
-	end
-end
-
-local function createQueueView(pe, f)
-	local host = CreateFrame("Frame", nil, f)
-	host:SetPoint("TOPLEFT", f.infoHost, "TOPLEFT")
-	host:SetPoint("BOTTOMRIGHT", f.infoHost, "BOTTOMRIGHT")
-	host:Hide()
-	f.queueHost = host
-
-	-- Crafting order navigation (retail): placed by the crafting orders module.
-	local orderNav = CreateFrame("Frame", nil, host)
-	orderNav:SetPoint("TOPLEFT")
-	orderNav:SetPoint("TOPRIGHT")
-	orderNav:SetHeight(48)
-	orderNav:Hide()
-	f.orderNav = orderNav
-	f.peAddWorkOrderBtn = pe:CreateButton(orderNav, "Add to shopping", nil, { tooltip = "Adds this order's crafter-supplied reagents to the cart without starting the order." })
-	f.peAddWorkOrderBtn:SetPoint("TOPLEFT")
-	f.peAddWorkOrderBtn:Hide()
-	f.peRemoveWorkOrderBtn = pe:CreateButton(orderNav, "Remove")
-	f.peRemoveWorkOrderBtn:SetPoint("LEFT", f.peAddWorkOrderBtn, "RIGHT", 8, 0)
-	f.peRemoveWorkOrderBtn:Hide()
-	f.pePrevOrderBtn = pe:CreateButton(orderNav, "Previous", nil, { small = true })
-	f.pePrevOrderBtn:SetPoint("TOPLEFT", f.peAddWorkOrderBtn, "BOTTOMLEFT", 0, -4)
-	f.pePrevOrderBtn:Hide()
-	f.peNextOrderBtn = pe:CreateButton(orderNav, "Next", nil, { small = true })
-	f.peNextOrderBtn:SetPoint("LEFT", f.pePrevOrderBtn, "RIGHT", 8, 0)
-	f.peNextOrderBtn:Hide()
-	f.peQueueStatusText = pe:CreateText(orderNav, "GameFontHighlightSmall", "textMuted")
-	f.peQueueStatusText:SetPoint("LEFT", f.peNextOrderBtn, "RIGHT", 8, 0)
-	f.peQueueStatusText:Hide()
-
-	local card = CreateFrame("Frame", nil, host)
-	card:SetPoint("TOPLEFT")
-	card:SetPoint("TOPRIGHT")
-	card:SetPoint("BOTTOMLEFT", host, "BOTTOMLEFT", 0, 30)
-	f.queueCard = card
-
-	f.queueOverviewText = pe:CreateParagraph(card)
-	f.queueOverviewText:SetPoint("TOPLEFT")
-	f.queueOverviewText:SetPoint("TOPRIGHT")
-	f.recipeTitle = pe:CreateHeading(card, "To craft")
-	f.recipeTitle:SetPoint("TOPLEFT", f.queueOverviewText, "BOTTOMLEFT", 0, -8)
-	f.recipeTitle:SetPoint("TOPRIGHT", f.queueOverviewText, "BOTTOMRIGHT", 0, -8)
-	f.recipeTable = pe:CreateReusableTable(card, {
-		rowHeight = TALL_ROW,
-		autoFitToScroll = true,
-		emptyTitle = "Nothing queued",
-		emptyHint = "Pick a recipe and press Add to queue.",
-		onRowClick = function(_, row)
-			if not row then
-				return
-			end
-			local orderID = tonumber(row.orderID)
-			if orderID and pe.OpenCraftingOrderWorkQueueEntry then
-				local storage = pe.GetCraftingOrderWorkQueueStorage and pe:GetCraftingOrderWorkQueueStorage() or {}
-				pe:OpenCraftingOrderWorkQueueEntry(type(storage[tostring(orderID)]) == "table" and storage[tostring(orderID)]
-					or { orderID = orderID, spellID = row.recipeID, itemID = row.outputItemID })
-				return
-			end
-			pe:JumpToProfessionRecipe(row.recipeID, row.skillLineID)
-		end,
-	})
-	f.recipeTable.frame:SetPoint("TOPLEFT", f.recipeTitle, "BOTTOMLEFT", 0, -6)
-	f.recipeTable.frame:SetPoint("TOPRIGHT", f.recipeTitle, "BOTTOMRIGHT", 0, -6)
-	f.recipeTable:SetColumns({
-		{ id = "recipe", label = "Recipe", width = 100, flex = 1, minWidth = 90,
-			createCell = function(rowFrame)
-				local cell = CreateFrame("Frame", nil, rowFrame)
-				cell.name = pe:CreateText(cell, "GameFontHighlightSmall")
-				cell.name:SetPoint("BOTTOMLEFT", cell, "LEFT", 5, 1)
-				cell.name:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
-				cell.detail = pe:CreateText(cell, "GameFontHighlightSmall", "textMuted")
-				cell.detail:SetPoint("TOPLEFT", cell, "LEFT", 5, -1)
-				cell.detail:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
-				return cell
-			end,
-			updateCell = function(cell, row)
-				cell.name:SetText(row.recipeLabel .. rankMarkup(row.qualityIndex))
-				cell.detail:SetText(row.detailText)
-			end },
-		{ id = "qty", label = "Qty", width = 80, createCell = stepperCell(pe),
-			updateCell = function(cell, row)
-				cell.value:SetText(tostring(row.quantity))
-				cell.minus:SetScript("OnClick", function() pe:UpdateCraftQueueQuantity(row.queueKey, row.quantity - 1) end)
-				cell.plus:SetScript("OnClick", function() pe:UpdateCraftQueueQuantity(row.queueKey, row.quantity + 1) end)
-			end },
-		{ id = "craft", label = "", width = 56,
-			createCell = function(rowFrame)
-				local cell = CreateFrame("Frame", nil, rowFrame)
-				cell.button = pe:CreateButton(cell, "Craft", nil, { small = true, width = 46 })
-				cell.button:SetPoint("CENTER")
-				return cell
-			end,
-			updateCell = function(cell, row)
-				cell.button:SetScript("OnClick", function() pe:CraftProfessionQueueRecipe(row) end)
-				cell.button:SetEnabled(row.recipeID ~= nil and row.canCraftNow == true)
-				pe:SetButtonPrimary(cell.button, row.canCraftNow == true)
-			end },
-		{ id = "remove", label = "", width = 30,
-			createCell = function(rowFrame)
-				local cell = CreateFrame("Frame", nil, rowFrame)
-				cell.button = CreateFrame("Button", nil, cell, "UIPanelCloseButton")
-				cell.button:ClearAllPoints()
-				cell.button:SetPoint("CENTER")
-				pe:SkinCloseButton(cell.button)
-				return cell
-			end,
-			updateCell = function(cell, row)
-				cell.button:SetScript("OnClick", function() pe:RemoveCraftFromQueue(row.queueKey) end)
-			end },
-	})
-
-	f.reagentTitle = pe:CreateHeading(card, "To buy")
-	f.reagentTitle:SetPoint("TOPLEFT", f.recipeTable.frame, "BOTTOMLEFT", 0, -10)
-	f.reagentTitle:SetPoint("TOPRIGHT", f.recipeTable.frame, "BOTTOMRIGHT", 0, -10)
-	f.reagentTable = pe:CreateReusableTable(card, {
-		autoFitToScroll = true,
-		footer = true,
-		sortKey = "totalCost",
-		sortAsc = false,
-		emptyTitle = "Nothing to buy",
-		emptyHint = "This character has every material the queue needs.",
-		onRowEnter = function(rowFrame, row)
-			if row then
-				pe:ShowItemRowTooltip(rowFrame, row.itemID, {
-					{ "Buy", pe:FormatNumberGrouped(row.quantity) },
-					{ "Each", row.unitPrice and pe:FormatCopperFull(row.unitPrice) or "-" },
-					{ "Used by", table.concat(row.recipeRefs or {}, ", ") },
-				}, "Click to find it at the auction house")
-			end
-		end,
-		onRowLeave = function()
-			GameTooltip:Hide()
-		end,
-		onRowClick = function(_, row)
-			local itemID = row and tonumber(row.itemID)
-			if not itemID then
-				return
-			end
-			pe:GetState().auctionCartSelectedItemID = itemID
-			if pe.SetAuctionPanelActiveTab then
-				pe:SetAuctionPanelActiveTab("cart", true)
-			end
-			if pe.SearchAuctionCartRow and pe:SearchAuctionCartRow({ itemID = itemID, quantity = row.quantity }) then
-				pe:PrintMessage(string.format("Searching AH for %s.", pe:GetItemDisplayName(itemID)))
-			elseif not (_G.AuctionHouseFrame and _G.AuctionHouseFrame:IsShown()) and not (_G.AuctionFrame and _G.AuctionFrame:IsShown()) then
-				pe:PrintMessage("Open the auction house to find reagents from the cart.")
-			end
-		end,
-	})
-	f.reagentTable.frame:SetPoint("TOPLEFT", f.reagentTitle, "BOTTOMLEFT", 0, -6)
-	f.reagentTable.frame:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", 0, 0)
-	f.reagentTable:SetColumns({
-		pe:CreateItemColumn({ label = "Reagent", sortable = true,
-			getItemID = function(row) return row.itemID end,
-			getName = function(row) return row.name .. rankMarkup(row.qualityIndex) end }),
-		{ id = "quantity", label = "Buy", width = 40, justifyH = "RIGHT", sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row.quantity end, getText = function(row) return pe:FormatNumberGrouped(row.quantity) end },
-		{ id = "unitPrice", label = "Each", width = 70, justifyH = "RIGHT", optional = true, sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row.unitPrice or -1 end,
-			getText = function(row) return row.unitPrice and pe:FormatCopperShort(row.unitPrice) or "-" end },
-		{ id = "totalCost", label = "Total", width = 76, justifyH = "RIGHT", sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row.totalCost or -1 end,
-			getText = function(row) return row.totalCost and pe:FormatCopperShort(row.totalCost) or "-" end },
-	})
-
-	local actions = CreateFrame("Frame", nil, host)
-	actions:SetPoint("BOTTOMLEFT")
-	actions:SetPoint("BOTTOMRIGHT")
-	actions:SetHeight(26)
-	local open = pe:CreateButton(actions, "Open in dashboard", function() pe:OpenCraftsTabWithQueueFocus() end)
-	open:SetPoint("LEFT")
-	f.clearQueueButton = pe:CreateButton(actions, "Clear queue", function() pe:ClearCraftQueue() end)
-	f.clearQueueButton:SetPoint("RIGHT")
-	local danger = pe:GetTheme().danger
-	f.clearQueueButton:GetFontString():SetTextColor(danger.r, danger.g, danger.b)
-	return host
-end
-
 function ProfessionExporter:EnsureProfessionCraftEconomyPanel()
 	if self._professionCraftPanel then
 		self:LayoutProfessionCraftEconomyPanel(self._professionCraftPanel)
@@ -917,107 +708,12 @@ function ProfessionExporter:EnsureProfessionCraftEconomyPanel()
 	f.panelToggleBtn = panelToggle
 
 	createRecipeView(self, f)
-	createQueueView(self, f)
+	self:CreateProfessionQueueView(f)
 	self:SkinTree(f)
 
 	self._professionCraftPanel = f
 	self:SetProfessionPanelActiveTab(self:GetSetting("professions.sidePanelTab", "info"), false)
 	return f
-end
-
-local function buildProfessionQueueRecipeRows(pe, queueSummary)
-	local rows = {}
-	for index, entry in ipairs(queueSummary and queueSummary.lines or {}) do
-		local perProfit = tonumber(entry.snapshot and entry.snapshot.profit)
-		local quantity = tonumber(entry.quantity) or 0
-		local totalProfit = perProfit and perProfit * quantity or nil
-		local orderID = tonumber(entry.orderID)
-		local recipeName = entry.recipeName
-		if (not recipeName or recipeName == "" or recipeName == "?") and tonumber(entry.recipeID) and C_TradeSkillUI and C_TradeSkillUI.GetRecipeInfo then
-			local info = C_TradeSkillUI.GetRecipeInfo(tonumber(entry.recipeID))
-			recipeName = info and info.name or recipeName
-		end
-		if (not recipeName or recipeName == "" or recipeName == "?") and tonumber(entry.outputItemID) then
-			recipeName = pe:GetItemDisplayName(entry.outputItemID)
-		end
-		local detail = {}
-		if orderID then
-			detail[#detail + 1] = "Order #" .. orderID
-		end
-		detail[#detail + 1] = "Profit " .. (totalProfit and pe:FormatSignedMoney(totalProfit) or "unknown")
-		if entry.snapshot and entry.snapshot.canCraftNow then
-			detail[#detail + 1] = "ready"
-		end
-		rows[#rows + 1] = {
-			_rowIdentity = index,
-			queueKey = entry.queueKey,
-			orderID = orderID,
-			recipeID = tonumber(entry.recipeID),
-			outputItemID = tonumber(entry.outputItemID),
-			skillLineID = tonumber(entry.skillLineID),
-			recipeLabel = tostring(recipeName or "?"),
-			qualityIndex = tonumber(entry.qualityIndex),
-			quantity = quantity,
-			scenario = tostring(entry.scenario or "default"),
-			canCraftNow = entry.snapshot and entry.snapshot.canCraftNow == true,
-			detailText = table.concat(detail, " · "),
-		}
-	end
-	return rows
-end
-
-local function buildProfessionQueueReagentRows(pe, queueSummary)
-	local rows = {}
-	for _, reagent in ipairs(queueSummary and queueSummary.reagentLines or {}) do
-		local qty = tonumber(reagent.quantityToBuy) or 0
-		if qty > 0 then
-			local refs, seen = {}, {}
-			for _, src in ipairs(reagent.sources or {}) do
-				local label = tostring(src and src.recipeName or "")
-				if label ~= "" and not seen[label] then
-					seen[label] = true
-					refs[#refs + 1] = label
-				end
-			end
-			table.sort(refs)
-			rows[#rows + 1] = {
-				_rowIdentity = reagent.itemID,
-				itemID = tonumber(reagent.itemID),
-				name = reagent.name or pe:GetItemDisplayName(reagent.itemID),
-				qualityIndex = pe:GetItemDisplayProfessionQualityRank(reagent.itemID),
-				quantity = qty,
-				unitPrice = tonumber(reagent.estimatedUnitPrice) or tonumber(reagent.priceUnit),
-				totalCost = tonumber(reagent.estimatedBuyCost),
-				recipeRefs = refs,
-			}
-		end
-	end
-	return rows
-end
-
-local function refreshProfessionQueueCard(pe, panel)
-	if not panel or not panel.recipeTable then
-		return
-	end
-	local summary = pe:BuildCraftQueueSummary()
-	local recipeRows = buildProfessionQueueRecipeRows(pe, summary)
-	local reagentRows = buildProfessionQueueReagentRows(pe, summary)
-	local crafts = 0
-	for _, row in ipairs(recipeRows) do
-		crafts = crafts + row.quantity
-	end
-	pe:SetButtonLabel(panel.tabQueue, #recipeRows > 0 and string.format("Queue (%d)", #recipeRows) or "Queue", true)
-	panel.queueOverviewText:SetText(#recipeRows == 0 and "The queue is empty." or string.format(
-		"%d crafts of %d recipes · potential profit %s · %d reagents to buy",
-		crafts, #recipeRows, summary.totalProfit and pe:FormatSignedMoney(summary.totalProfit) or "unknown", #reagentRows))
-	panel.recipeTable:SetRows(recipeRows)
-	panel.recipeTable:Refresh()
-	panel.recipeTable.frame:SetHeight(22 + 2 + TALL_ROW * math.max(1, math.min(#recipeRows, 3)))
-	panel.reagentTable:SetRows(reagentRows)
-	panel.reagentTable:Refresh()
-	panel.reagentTable:SetFooterText("Click a reagent to find it at the auction house",
-		summary.totalCurrentCharacterBuyCostKnown and pe:FormatCopperShort(summary.totalCurrentCharacterBuyCostValue or 0) or nil)
-	panel.clearQueueButton:SetEnabled(#recipeRows > 0)
 end
 
 -- Fills the Recipe view from the selected recipe's evaluation.
@@ -1133,7 +829,7 @@ function ProfessionExporter:RefreshProfessionCraftEconomyPanel(force)
 	self:UpdateProfessionPanelToggleButton(expanded)
 	if not expanded then
 		panel:Hide()
-		refreshProfessionQueueCard(self, panel)
+		self:RefreshProfessionQueueCard(panel)
 		if self.CraftingOrderViewRefreshButtons then
 			self:CraftingOrderViewRefreshButtons()
 		end
@@ -1173,7 +869,7 @@ function ProfessionExporter:RefreshProfessionCraftEconomyPanel(force)
 			return
 		end
 		renderProfessionEmpty(panel, msg)
-		refreshProfessionQueueCard(self, panel)
+		self:RefreshProfessionQueueCard(panel)
 		panel.addButton:SetEnabled(false)
 		if self.CraftingOrderViewRefreshButtons then
 			self:CraftingOrderViewRefreshButtons()
@@ -1185,7 +881,7 @@ function ProfessionExporter:RefreshProfessionCraftEconomyPanel(force)
 	panel.addButton:SetEnabled(true)
 	renderProfessionRecipe(self, panel, ctx)
 
-	refreshProfessionQueueCard(self, panel)
+	self:RefreshProfessionQueueCard(panel)
 	if self.CraftingOrderViewRefreshButtons then
 		self:CraftingOrderViewRefreshButtons()
 	end
