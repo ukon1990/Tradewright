@@ -27,7 +27,6 @@ globals = {
 	"ProfessionExporterLastExport",
 	"SLASH_PROFESSIONEXPORTER1",
 	"SLASH_PROFESSIONEXPORTER2",
-	"SLASH_PROFESSIONEXPORTER3",
 	"SlashCmdList",
 	"UISpecialFrames",
 }

@@ -4676,9 +4676,9 @@ function ProfessionExporter:QueueAuctionEconomyScan(opts)
 	})
 	if #merged == 0 then
 		if wantCrafts and not wantInv then
-			self:PrintMessage("No remaining craft targets to scan in this AH session. Run /profexport scan first if needed.")
+			self:PrintMessage("No remaining craft targets to scan in this AH session. Run /ah scan first if needed.")
 		elseif wantInv and not wantCrafts then
-			self:PrintMessage("No remaining tradable account inventory items to scan in this AH session. Run /profexport scan on your characters if needed.")
+			self:PrintMessage("No remaining tradable account inventory items to scan in this AH session. Run /ah scan on your characters if needed.")
 		else
 			self:PrintMessage("Nothing left to scan in this AH session for the requested craft/account targets.")
 		end

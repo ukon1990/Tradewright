@@ -2446,7 +2446,7 @@ end
 local SLASH_HELP_LINES = {
 	"Commands: /auctionhelper (window) | /auctionhelper docs | /auctionhelper scan | /auctionhelper full | /auctionhelper status"
 		.. " | /auctionhelper debug [on|off|toggle] | /auctionhelper export … | /auctionhelper settings …"
-		.. " | /auctionhelper auction …  (alias: /profexport)",
+		.. " | /auctionhelper auction …  (short: /ah)",
 	"Export: character | account | account_summary | professions | professions_recipes | professions_talents"
 		.. " | professions_compact | inventory | inventory_compact | auction_snapshot | auction_history | crafting_costs"
 		.. " | spec_catalog | meta | profession <id|name> | profession_recipes <id|name> | profession_talents <id|name>",

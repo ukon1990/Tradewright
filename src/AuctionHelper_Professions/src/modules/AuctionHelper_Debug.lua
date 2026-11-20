@@ -50,7 +50,7 @@ function ProfessionExporter:SetDebugEnabled(enabled)
 			self:GetSetting("debug.persistToSavedVariables", false) == true
 				and "Persistent debug ring buffer is stored in SavedVariables under AuctionHelperDB.settings.debug.lines."
 				or "Persistent debug storage is disabled by default; debug output is chat-only unless you enable SavedVariables persistence.",
-			"Toggle: dashboard checkbox or |cffffffff/profexport debug|r (on|off|toggle).",
+			"Toggle: dashboard checkbox or |cffffffff/ah debug|r (on|off|toggle).",
 		})
 	else
 		self:PrintMessage("Debug logging disabled.")

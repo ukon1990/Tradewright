@@ -53,4 +53,4 @@ npm run deploy:dry
 npm run deploy
 ```
 
-`deploy:forever` and `deploy:retail` deploy a single target. In game, `/reload` picks up changed files. New `.lua` files or TOC changes need a full client restart. `/auctionhelper` opens the UI.
+`deploy:forever` and `deploy:retail` deploy a single target. In game, `/reload` picks up changed files. New `.lua` files or TOC changes need a full client restart. `/ah` (or `/auctionhelper`) opens the UI.

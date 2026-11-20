@@ -76,4 +76,4 @@ npm run deploy:dry       # show what would be replaced
 
 Each deploy deletes and recopies the `AuctionHelper*` folders in the target `Interface/AddOns`. Target paths are in `deploy.config.json`; per-machine overrides go in untracked `deploy.config.local.json` (`{"targets": {"forever": "..."}}`).
 
-In-game: enable all five modules, `/reload` (or restart if TOC changed), `/auctionhelper` opens UI, full AH dump with house open fills prices, profession Scan stores recipes/reagents, Crafts tab shows profit.
+In-game: enable all five modules, `/reload` (or restart if TOC changed), `/ah` (or `/auctionhelper`) opens UI, full AH dump with house open fills prices, profession Scan stores recipes/reagents, Crafts tab shows profit.

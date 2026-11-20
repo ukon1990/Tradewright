@@ -32,9 +32,8 @@ function ProfessionExporter:PLAYER_LOGIN()
 			ProfessionExporter:RecordWalletObservation(ProfessionExporter:GetCharacterKey(), GetMoney(), time())
 		end)
 	end
-	SLASH_PROFESSIONEXPORTER1 = "/profexport"
-	SLASH_PROFESSIONEXPORTER2 = "/professionexporter"
-	SLASH_PROFESSIONEXPORTER3 = "/auctionhelper"
+	SLASH_PROFESSIONEXPORTER1 = "/ah"
+	SLASH_PROFESSIONEXPORTER2 = "/auctionhelper"
 	SlashCmdList.PROFESSIONEXPORTER = function(input)
 		ProfessionExporter:HandleSlash(input)
 	end
@@ -54,7 +53,7 @@ function ProfessionExporter:PLAYER_LOGIN()
 	if self.InitMailPanelHooks then
 		self:InitMailPanelHooks()
 	end
-	self:PrintMessage("Loaded. /auctionhelper or /profexport opens the main window. Exports are compact AuctionHelper packages and can be written to AuctionHelperLastExport on /reload.")
+	self:PrintMessage("Loaded. /ah (or /auctionhelper) opens the main window. Exports are compact AuctionHelper packages and can be written to AuctionHelperLastExport on /reload.")
 end
 
 function ProfessionExporter:TRADE_SKILL_SHOW()

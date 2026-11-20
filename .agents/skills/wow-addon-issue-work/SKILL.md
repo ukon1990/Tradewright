@@ -35,7 +35,7 @@ Lint needs `luacheck` on PATH (`sudo pacman -S luacheck`, or `luarocks install l
 In-game checklist (as applicable):
 
 - All five AuctionHelper* modules enabled; no load errors
-- `/auctionhelper` opens the dashboard
+- `/ah` (or `/auctionhelper`) opens the dashboard
 - Full AH dump with house open → prices in snapshot / crafts
 - Profession Scan → recipes + reagents stored
 - Crafts tab shows profit from AH snapshot
