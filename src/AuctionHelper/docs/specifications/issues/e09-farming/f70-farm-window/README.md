@@ -52,6 +52,7 @@ In-game on Forever (restart the client: new files): `/ah farm start` → kill an
 ## Dependencies
 
 - F40, F42, F43 for the value rule (falls back to vendor price and the lowest price without them)
+- F80: read coin and vendor gold from its money listener instead of a second one; F81 shares the loot-message parsing
 
 ## Out of scope
 

@@ -88,6 +88,7 @@ function ProfessionExporter:GetItemDisplayName(itemID, noRequest)
 	local desc = self:ResolveItemDescriptor(id)
 	if desc and desc.name and desc.name ~= "" then
 		itemNameCache[id] = desc.name
+		self:LearnItemName(id, desc.name)
 		return desc.name
 	end
 	if not noRequest and type(id) == "number" and not itemNameRequested[id] and C_Item and C_Item.RequestLoadItemDataByID then

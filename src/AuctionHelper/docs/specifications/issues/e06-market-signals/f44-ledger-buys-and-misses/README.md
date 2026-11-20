@@ -47,5 +47,5 @@ In-game on Forever: buy one item, post one item at a price that will not sell fo
 
 ## Out of scope
 
-- Vendor sales, trades, quest gold (E09 covers coin and loot during a farm)
+- Vendor sales, trades, quest gold (E10 F80 covers them; E09 covers coin and loot during a farm)
 - Reading mail the player has not opened

@@ -65,7 +65,7 @@ function ProfessionExporter:OnMailInboxUpdate()
 			pendingSales[index] = {
 				kind = "sell",
 				ts = time() - math.max(0, math.min(AUCTION_MAIL_DAYS * 86400, age)),
-				itemID = (C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant)(itemName),
+				itemID = ProfessionExporter:ResolveItemIDByName(itemName),
 				itemName = itemName,
 				quantity = quantity,
 				unitCopper = bid / quantity,
@@ -91,9 +91,55 @@ if hooksecurefunc and TakeInboxMoney and AutoLootMailItem then
 	hooksecurefunc("AutoLootMailItem", recordCollectedSale)
 end
 
+local function itemIDsByName()
+	local L = ProfessionExporter:InitLedger()
+	if L then
+		L.itemIDsByName = L.itemIDsByName or {}
+		return L.itemIDsByName
+	end
+end
+
+local function lookupItemID(name)
+	local getInstant = C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant
+	return getInstant and tonumber((getInstant(name)))
+end
+
+--- Remembers the name of an item the addon has shown, so a sale of it (whose mail names the item
+--- but carries no id) still finds its icon after the item has left the client's cache.
+function ProfessionExporter:LearnItemName(itemID, name)
+	local map = itemIDsByName()
+	itemID = tonumber(itemID)
+	if map and itemID and type(name) == "string" and name ~= "" then
+		map[name] = itemID
+	end
+end
+
+function ProfessionExporter:ResolveItemIDByName(name)
+	local map = itemIDsByName()
+	return map and map[name] or lookupItemID(name)
+end
+
+-- Sale mails name the item but carry no id. Sales that have both teach the name map; the rest
+-- take their id from it, or from the client when it still has the item cached.
+local function fillMissingItemIDs(events, map)
+	for _, event in ipairs(events) do
+		if event.itemID and event.itemName then
+			map[event.itemName] = map[event.itemName] or event.itemID
+		end
+	end
+	for _, event in ipairs(events) do
+		if not event.itemID and event.itemName then
+			event.itemID = map[event.itemName] or lookupItemID(event.itemName)
+		end
+	end
+end
+
 --- Sales statistics for the last `days` days (nil for all time); see ForeverLogic.SummarizeSales.
 function ProfessionExporter:GetSalesSummary(days)
 	local L = self:InitLedger()
+	if L then
+		fillMissingItemIDs(L.events, itemIDsByName())
+	end
 	return self.ForeverLogic.SummarizeSales(L and L.events or {}, time(), days)
 end
 

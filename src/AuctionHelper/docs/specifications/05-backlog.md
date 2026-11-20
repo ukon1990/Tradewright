@@ -37,7 +37,11 @@
 | [f70-farm-window](issues/e09-farming/f70-farm-window/README.md) | Farm window and loot log | planned |
 | [f71-my-farms](issues/e09-farming/f71-my-farms/README.md) | My farms, re-valued at today's prices | planned |
 | [f72-what-to-farm](issues/e09-farming/f72-what-to-farm/README.md) | What to farm | planned |
+| [e10-income](issues/e10-income/README.md) | Income: where gold comes from, what earns, how fast it sells | planned |
+| [f80-gold-by-source](issues/e10-income/f80-gold-by-source/README.md) | Gold changes by source | planned |
+| [f81-sale-origin](issues/e10-income/f81-sale-origin/README.md) | Where each sold item came from | planned |
+| [f82-income-view](issues/e10-income/f82-income-view/README.md) | Income view | planned |
 
-Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09.
+Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E10: F80 first (no dependencies), then F81 and F82.
 
 Research behind E06 to E09: [WoW gold making market strategies](../../../../../reports/WoW%20gold%20making%20market%20strategies.md). Designs: [AuctionHelper Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnSs5), section "Proposed, not built yet: finding gold".
