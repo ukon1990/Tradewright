@@ -266,6 +266,14 @@ local function applyDebugDefaults(debug, general)
 	if general.persistLastExport == nil then general.persistLastExport = true end
 end
 
+-- The profit floor moved from whole gold to copper (F55); keep a floor the player already picked.
+local function migrateMinProfit(st)
+	local opportunities = st.opportunities
+	if type(opportunities) == "table" and opportunities.minProfitCopper == nil and tonumber(opportunities.minProfitGold) then
+		opportunities.minProfitCopper = tonumber(opportunities.minProfitGold) * 10000
+	end
+end
+
 local function applySettingDefaults(st)
 	ensureTables(st, SETTING_GROUPS)
 	local general, inventory, debug, auctionSettings = st.general, st.inventory, st.debug, st.auction
@@ -274,6 +282,7 @@ local function applySettingDefaults(st)
 	applyCraftsDefaults(st)
 	seedSettings(st, LATE_SEEDS)
 	applyDebugDefaults(debug, general)
+	migrateMinProfit(st)
 	applyNilDefaults(auctionSettings, AUCTION_SETTING_DEFAULTS)
 	ensureExpansionSelection(auctionSettings)
 	return auctionSettings

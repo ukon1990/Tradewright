@@ -61,6 +61,16 @@ local function choices(values, format, scale)
 	return options
 end
 
+-- Copper amounts as plain "25s" / "1g" labels.
+local function moneyChoices(values)
+	local options = {}
+	for _, copper in ipairs(values) do
+		local label = copper >= 10000 and string.format("%dg", copper / 10000) or string.format("%ds", copper / 100)
+		options[#options + 1] = { value = copper, label = label }
+	end
+	return options
+end
+
 local function generalSection(pe)
 	return { title = "General", items = {
 		{ kind = "check", label = "Show minimap button", path = "general.showMinimapButton", default = true,
@@ -138,8 +148,8 @@ local function opportunitiesSection()
 	return { title = "Opportunities", items = {
 		{ kind = "select", label = "Count as a flip when under the usual price by", path = "opportunities.minDiscount", default = 0.25,
 			options = choices({ 0.15, 0.2, 0.25, 0.3, 0.4 }, "%d%% or more", 100), onChange = refreshOpportunities },
-		{ kind = "select", label = "Smallest profit worth showing", path = "opportunities.minProfitGold", default = 5,
-			options = choices({ 1, 5, 10, 25, 50 }, "%dg"), onChange = refreshOpportunities },
+		{ kind = "select", label = "Smallest profit worth showing", path = "opportunities.minProfitCopper", default = 10000,
+			options = moneyChoices({ 1000, 2500, 5000, 10000, 50000, 100000, 250000, 500000 }), onChange = refreshOpportunities },
 		{ kind = "select", label = "An item must sell at least", path = "opportunities.minSellsPerDay", default = 1,
 			options = choices({ 0.5, 1, 5, 20 }, "%s a day"), onChange = refreshOpportunities },
 		{ kind = "check", label = "Show items listed under their vendor price", path = "opportunities.showVendor", default = true,

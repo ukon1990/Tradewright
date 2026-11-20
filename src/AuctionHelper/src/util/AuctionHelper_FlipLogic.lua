@@ -4,7 +4,7 @@ local _, ProfessionExporter = ...
 local FlipLogic = {}
 ProfessionExporter.FlipLogic = FlipLogic
 
-local DEFAULTS = { minDiscount = 0.25, minProfit = 50000, minSellsPerDay = 1, dayShare = 1 / 3, cut = 0.05 }
+local DEFAULTS = { minDiscount = 0.25, minProfit = 10000, minSellsPerDay = 1, dayShare = 1 / 3, cut = 0.05 }
 
 local function option(opts, key)
 	local value = opts and tonumber(opts[key])

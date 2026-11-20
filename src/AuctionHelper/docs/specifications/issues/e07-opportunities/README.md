@@ -19,10 +19,14 @@ One tab that answers "what should I buy or sell right now": flips priced after f
 - F52: Price gaps
 - F53: Weekday pattern in the Market item view
 - F54: Sell now
+- F55: Smaller profit floor
+- F56: Show how much history there is, and allow rows with little of it
+- F57: Say where "sells a day" comes from and how sure it is
+- F58: How this page works, and why a list is empty
 
 ## Acceptance criteria
 
-- [ ] F50 to F54 done
+- [ ] F50 to F58 done
 - [ ] Every profit shown is after the auction cut in use (F43) and names the quantity it assumes
 - [ ] An item with no sells-a-day estimate is never ranked as if it sold
 - [ ] Nothing is bought, bid on, posted or cancelled without the player's click on the game's own button

@@ -6,7 +6,7 @@ local _, ProfessionExporter = ...
 function ProfessionExporter:GetFlipOptions()
 	return {
 		minDiscount = tonumber(self:GetSetting("opportunities.minDiscount", 0.25)) or 0.25,
-		minProfit = (tonumber(self:GetSetting("opportunities.minProfitGold", 5)) or 5) * 10000,
+		minProfit = tonumber(self:GetSetting("opportunities.minProfitCopper", 10000)) or 10000,
 		minSellsPerDay = tonumber(self:GetSetting("opportunities.minSellsPerDay", 1)) or 1,
 		dayShare = tonumber(self:GetSetting("opportunities.dayShare", 0.34)) or 0.34,
 		cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05,

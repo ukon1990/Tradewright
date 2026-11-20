@@ -31,6 +31,10 @@
 | [f52-price-gaps](issues/e07-opportunities/f52-price-gaps/README.md) | Price gaps (risky) | implemented, in-game check pending |
 | [f53-weekday-pattern](issues/e07-opportunities/f53-weekday-pattern/README.md) | Weekday pattern in the Market item view | implemented as one line of text, in-game check pending |
 | [f54-sell-now](issues/e07-opportunities/f54-sell-now/README.md) | Sell now | list implemented, in-game check pending; Gold view card still separate |
+| [f55-smaller-profit-floor](issues/e07-opportunities/f55-smaller-profit-floor/README.md) | Smaller profit floor | implemented, in-game check pending |
+| [f56-little-history-warning](issues/e07-opportunities/f56-little-history-warning/README.md) | History coverage, and early rows with a warning | planned |
+| [f57-where-sales-come-from](issues/e07-opportunities/f57-where-sales-come-from/README.md) | Where "sells a day" comes from and how sure it is | planned |
+| [f58-how-this-page-works](issues/e07-opportunities/f58-how-this-page-works/README.md) | How this page works, and why a list is empty | planned |
 | [e08-craft-planning](issues/e08-craft-planning/README.md) | Craft planning: material sources, how many to make, cooldowns | in progress |
 | [f60-cheapest-material-source](issues/e08-craft-planning/f60-cheapest-material-source/README.md) | Cheapest way to get each material | buy-or-craft implemented, in-game check pending; From column and queueing intermediates open |
 | [f61-how-many-to-make](issues/e08-craft-planning/f61-how-many-to-make/README.md) | How many to make | columns implemented, in-game check pending; detail pane, queue default and listed stock open |
@@ -51,6 +55,6 @@
 | [f94-other-characters](issues/e11-bags/f94-other-characters/README.md) | Other characters as tabs, bank, and the All tab | implemented, in-game check pending |
 | [f95-make-room](issues/e11-bags/f95-make-room/README.md) | Make room: delete the cheapest stack, or swap it for loot | implemented, in-game check pending |
 
-Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E10: F80 first (no dependencies), then F81 and F82.
+Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E07 follow-ups: F55, then F56 → F57 → F58. E10: F80 first (no dependencies), then F81 and F82.
 
 Research behind E06 to E09: [WoW gold making market strategies](../../../../../reports/WoW%20gold%20making%20market%20strategies.md). Designs: [AuctionHelper Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnSs5), section "Proposed, not built yet: finding gold".

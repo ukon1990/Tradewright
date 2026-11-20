@@ -167,6 +167,15 @@ local withDeposit = Flip.BuildFlipRow({ itemID = 9, price = 50, usual = 100, sel
 check("Expected deposit loss is subtracted", withDeposit and withDeposit.profit == 40)
 local sorted = Flip.BuildFlipRows({ noSteps and { itemID = 7, price = 50, usual = 100, sellsPerDay = 9 }, arcanite }, { minProfit = 0 })
 check("Rows are sorted by profit", #sorted == 2 and sorted[1].itemID == 1 and sorted[2].itemID == 7)
+-- Profit floor under 1g (F55): buy 2 at 1s 50c, usual 3s, 5% cut → 2 × 285 - 300 = 270 copper
+local smallFlip = { itemID = 10, price = 150, usual = 300, sellsPerDay = 9, steps = { 150, 2 } }
+local floor25s = { minProfit = 2500 }
+check("A 25s floor keeps a 45s flip",
+	Flip.BuildFlipRow({ itemID = 11, price = 5000, usual = 10000, sellsPerDay = 3, steps = { 5000, 1 } }, floor25s) ~= nil)
+check("A 25s floor drops a 20s flip",
+	Flip.BuildFlipRow({ itemID = 12, price = 7000, usual = 9500, sellsPerDay = 3, steps = { 7000, 1 } }, floor25s) == nil)
+check("Copper floor between rows", Flip.BuildFlipRow(smallFlip, { minProfit = 270 }) ~= nil and Flip.BuildFlipRow(smallFlip, { minProfit = 271 }) == nil)
+check("Default floor is 1g", Flip.BuildFlipRow({ itemID = 13, price = 5000, usual = 20000, sellsPerDay = 3, steps = { 5000, 1 } }) ~= nil)
 
 -- Sure things: listed under vendor price
 local sure = Flip.BuildVendorRow({ itemID = 1, price = 1000, vendorSell = 2500, steps = { 1000, 3, 2000, 2, 2500, 9, 4000, 50 } })
