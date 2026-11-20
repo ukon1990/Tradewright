@@ -6,18 +6,20 @@ Each character you have logged in with is a tab. Another character's tab is a re
 
 ## Context
 
-- Counts are kept per character in `AuctionHelperBagsDB.characters[characterKey] = { name, seenAt, money, bags = { [itemID] = count }, bank = { [itemID] = count }, bankSeenAt }`.
+- Counts are kept per character in the inventory database: `AuctionHelperInventoryDB.holdings[characterKey] = { name, seenAt, money, bags = { [itemID] = count }, bank = { [itemID] = count }, bankSeenAt }`, written by `AuctionHelper_Inventory/src/modules/AuctionHelper_Holdings.lua`. `inventorySnapshot` keeps its meaning (recipe items, auctions subtracted) for the crafts engine and exports.
+- The first version saved these in `AuctionHelperBagsDB`; on login the bags module copies that into the holdings once (`BagLogic.AdoptHoldings`) and clears it.
 - Bags are saved on `BAG_UPDATE_DELAYED`; the bank can only be read while it is open (`BANKFRAME_OPENED`, `PLAYERBANKSLOTS_CHANGED`), over the classic bank bags and the bank tabs (`Enum.BagIndex.CharacterBankTab_*`), whichever the client has.
-- Tracking starts when the module first loads on a character.
+- Tracking starts when the inventory module first loads on a character with this version.
 
 ## Scope
 
-- Save the bag counts and gold on bag changes; save the bank counts while the bank is open
+- Inventory module: save the bag counts and gold on bag changes; save the bank counts while the bank is open
 - Tabs: the logged-in character first, then the most recently seen, as many as fit, then "All" (setting `bags.showCharacters`)
 - Own tab: Bags is the live view (F92); Bank is the saved list. Other tabs and All: Bags, Bank or Both, read-only
 - Read-only slots: icon, summed count, quality outline; shift-click links the item; no drag, no use
 - Tooltip on a read-only slot: the item, each character's bags and bank count, the total, the auction price when known
 - Header shows "Name · read-only"; footer shows the item count and when the character was last seen
+- Footer gold: the logged-in character's gold and, with more than one character, the total ("All"); hovering it lists every character's gold, richest first, and the total (`BagLogic.GoldByCharacter`)
 
 ## Acceptance criteria
 

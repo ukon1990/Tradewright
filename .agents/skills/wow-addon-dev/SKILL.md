@@ -40,7 +40,7 @@ Keep Midnight-only hooks on `IS_RETAIL` (crafting orders UI/materials, concentra
 | `AuctionHelperAuctionDB` | AuctionData |
 | `AuctionHelperProfessionsDB` | Professions |
 | `AuctionHelperInventoryDB` | Inventory |
-| `AuctionHelperBagsDB` | Bags |
+| `AuctionHelperBagsDB` | Bags (legacy; adopted into `AuctionHelperInventoryDB.holdings` and cleared on login) |
 
 ## Globals & lint
 

@@ -151,6 +151,36 @@ function BagLogic.Owners(characters, itemID)
 	return owners, total
 end
 
+--- Copy saved characters from `from` into `into`, keeping whichever record of a character was
+--- seen last (a record never seen loses).
+function BagLogic.AdoptHoldings(into, from)
+	for key, record in pairs(from) do
+		local existing = into[key]
+		if not existing or (record.seenAt or 0) > (existing.seenAt or 0) then
+			into[key] = record
+		end
+	end
+end
+
+--- Gold per character: { { key, name, money } } with the richest first, and the total, in copper.
+--- Characters whose gold was never saved are left out.
+function BagLogic.GoldByCharacter(characters)
+	local rows, total = {}, 0
+	for key, snapshot in pairs(characters) do
+		if snapshot.money then
+			rows[#rows + 1] = { key = key, name = snapshot.name or key, money = snapshot.money }
+			total = total + snapshot.money
+		end
+	end
+	table.sort(rows, function(a, b)
+		if a.money ~= b.money then
+			return a.money > b.money
+		end
+		return a.name < b.name
+	end)
+	return rows, total
+end
+
 --- Slot totals of the carried bags: { slots, used, free, reagentFree }. `free` counts normal bags
 --- only, since only reagents fit in the reagent bag. `bags`: { { slots, free, isReagent } }.
 function BagLogic.BagTotals(bags)

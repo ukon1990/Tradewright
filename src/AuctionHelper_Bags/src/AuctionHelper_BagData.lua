@@ -1,26 +1,9 @@
 local _, ProfessionExporter = ...
 
--- Bag data (E11): reads the carried bags for the bag window, and keeps per-character item counts
--- in AuctionHelperBagsDB so other characters can be shown (F94).
+-- Bag data (E11): reads the carried bags for the bag window, and turns the per-character holdings
+-- of the inventory database (AuctionHelper_Holdings.lua) into items for the read-only tabs (F94).
 
 local BACKPACK = 0
-local BANK_SETTLE_SECONDS = 0.3
-local bankOpen = false
-
-function ProfessionExporter:GetBagsDB()
-	AuctionHelperBagsDB = AuctionHelperBagsDB or {}
-	AuctionHelperBagsDB.characters = AuctionHelperBagsDB.characters or {}
-	return AuctionHelperBagsDB
-end
-
---- The logged-in character's saved record, created on first use.
-function ProfessionExporter:GetOwnBagRecord()
-	local characters = self:GetBagsDB().characters
-	local key = self:GetCharacterKey()
-	characters[key] = characters[key] or { bags = {}, bank = {} }
-	characters[key].name = UnitName("player") or key
-	return characters[key]
-end
 
 function ProfessionExporter:GetReagentBagIndex()
 	return Enum and Enum.BagIndex and tonumber(Enum.BagIndex.ReagentBag) or nil
@@ -106,68 +89,10 @@ function ProfessionExporter:ScanBags()
 	return scan
 end
 
-local function countItems(bagIDs)
-	local counts = {}
-	for _, bag in ipairs(bagIDs) do
-		for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
-			local info = C_Container.GetContainerItemInfo(bag, slot)
-			local itemID = info and tonumber(info.itemID)
-			if itemID then
-				counts[itemID] = (counts[itemID] or 0) + (tonumber(info.stackCount) or 1)
-			end
-		end
-	end
-	return counts
-end
-
--- The bank's containers: the classic bank and its bags, or the bank tabs, whichever the client has.
-local function bankBagIDs(pe)
-	local index = Enum and Enum.BagIndex or {}
-	local ids = {}
-	if index.Bank then
-		ids[#ids + 1] = index.Bank
-	end
-	for tab = 1, 8 do
-		local id = index["CharacterBankTab_" .. tab]
-		if id then
-			ids[#ids + 1] = id
-		end
-	end
-	if not index.CharacterBankTab_1 then
-		local first = pe:GetLastBagIndex() + 1
-		for bag = first, first + (tonumber(NUM_BANKBAGSLOTS) or 7) - 1 do
-			ids[#ids + 1] = bag
-		end
-	end
-	return ids
-end
-
---- Save what the logged-in character carries, and its gold.
-function ProfessionExporter:SaveBagSnapshot()
-	local record = self:GetOwnBagRecord()
-	local bagIDs = {}
-	for bag = BACKPACK, self:GetLastBagIndex() do
-		bagIDs[#bagIDs + 1] = bag
-	end
-	record.bags = countItems(bagIDs)
-	record.money = GetMoney()
-	record.seenAt = time()
-end
-
---- Save the bank's contents. Only meaningful while the bank is open.
-function ProfessionExporter:SaveBankSnapshot()
-	if not bankOpen then
-		return
-	end
-	local record = self:GetOwnBagRecord()
-	record.bank = countItems(bankBagIDs(self))
-	record.bankSeenAt = time()
-end
-
 --- Read-only items of a saved character, or of all of them (`tabKey` "all"), for `mode`
 --- ("bags", "bank" or "both"): one entry per item with the count added up.
 function ProfessionExporter:GetSavedBagItems(tabKey, mode)
-	local characters = self:GetBagsDB().characters
+	local characters = self:GetItemHoldings()
 	local logic = self.BagLogic
 	local counts = tabKey == "all" and logic.MergeAll(characters, mode) or logic.MergeCounts(characters[tabKey] or {}, mode)
 	local items = {}
@@ -177,47 +102,31 @@ function ProfessionExporter:GetSavedBagItems(tabKey, mode)
 	return items
 end
 
+-- Counts saved by this module before they moved to the inventory database: copied over once.
+local function adoptOldBagCounts(pe)
+	local old = AuctionHelperBagsDB
+	if type(old) == "table" and type(old.characters) == "table" then
+		pe.BagLogic.AdoptHoldings(pe:GetItemHoldings(), old.characters)
+	end
+	AuctionHelperBagsDB = nil
+end
+
 local function refreshWindow(pe)
 	pe:RequestBagWindowRefresh()
 end
 
+-- Holdings are saved by the inventory module on the same events; the redraw runs a frame later.
 local handlers = {
+	BAG_UPDATE_DELAYED = refreshWindow,
+	PLAYER_MONEY = refreshWindow,
 	ITEM_LOCK_CHANGED = refreshWindow,
 	BAG_UPDATE_COOLDOWN = refreshWindow,
 	GET_ITEM_INFO_RECEIVED = refreshWindow,
 }
 
 function handlers.PLAYER_LOGIN(pe)
-	pe:SaveBagSnapshot()
+	adoptOldBagCounts(pe)
 	pe:ApplyBagTakeover()
-end
-
-function handlers.BAG_UPDATE_DELAYED(pe)
-	pe:SaveBagSnapshot()
-	pe:SaveBankSnapshot()
-	pe:RequestBagWindowRefresh()
-end
-
-function handlers.PLAYER_MONEY(pe)
-	pe:GetOwnBagRecord().money = GetMoney()
-	pe:RequestBagWindowRefresh()
-end
-
-function handlers.BANKFRAME_OPENED(pe)
-	bankOpen = true
-	-- The bank's slots fill in just after the frame opens.
-	C_Timer.After(BANK_SETTLE_SECONDS, function()
-		pe:SaveBankSnapshot()
-		pe:RequestBagWindowRefresh()
-	end)
-end
-
-function handlers.BANKFRAME_CLOSED()
-	bankOpen = false
-end
-
-function handlers.PLAYERBANKSLOTS_CHANGED(pe)
-	pe:SaveBankSnapshot()
 end
 
 local events = CreateFrame("Frame")

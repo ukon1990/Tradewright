@@ -89,6 +89,20 @@ check("Owners: largest first", #owners == 3 and owners[1].name == "Bånkey" and 
 check("Owners: split and total", owners[1].bags == 240 and owners[1].bank == 1000 and total == 1480)
 check("Owners: nobody", #BL.Owners(characters, 99) == 0)
 
+-- Gold
+maelis.money, bankey.money = 124986, 12040000
+local gold, goldTotal = BL.GoldByCharacter(characters)
+check("Gold: richest first, unsaved left out", #gold == 2 and gold[1].name == "Bånkey" and gold[2].money == 124986)
+check("Gold: total", goldTotal == 12164986)
+check("Gold: nobody", select(2, BL.GoldByCharacter({})) == 0)
+
+-- Adopting counts saved under the old database
+local into = { A = { seenAt = 10, money = 1 }, B = { seenAt = 50, money = 2 } }
+BL.AdoptHoldings(into, { A = { seenAt = 20, money = 3 }, B = { seenAt = 40, money = 4 }, C = { money = 5 } })
+check("Adopt: newer record wins", into.A.money == 3)
+check("Adopt: older record is ignored", into.B.money == 2)
+check("Adopt: unknown character is added", into.C.money == 5)
+
 -- Totals
 local totals = BL.BagTotals({
 	{ slots = 16, free = 0 }, { slots = 14, free = 7 }, { slots = 6, free = 2 }, { slots = 32, free = 18, isReagent = true },

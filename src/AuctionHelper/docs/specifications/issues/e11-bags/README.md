@@ -9,7 +9,7 @@ Designs: [AuctionHelper Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnS
 ## Context
 
 - The Forever client has the modern bag code: `C_Container`, `ContainerFrameCombinedBags`, a reagent bag (`Enum.BagIndex.ReagentBag`) and bank tabs (`Enum.BagIndex.CharacterBankTab_*`).
-- The inventory snapshot (`AuctionHelper_Inventory.lua`) only counts tracked items, so it cannot fill a bag view. The bags module keeps its own per-character counts of everything in `AuctionHelperBagsDB`.
+- The inventory snapshot (`inventorySnapshot`) only counts items of scanned recipes, so it cannot fill a bag view. The inventory module therefore also saves every item each character carries and banks, and its gold, as `AuctionHelperInventoryDB.holdings` (`AuctionHelper_Holdings.lua`). The bags module only reads it, so there is one source for what the characters own, collected even when the bags module is off.
 - Items must be used, dragged and split by the game's own secure button code. The window therefore builds its slots from `ContainerFrameItemButtonTemplate`; it never calls `UseContainerItem` itself.
 - The game's bag frames are kept and only hidden (reparented to a hidden frame). They stay the source of truth for "are the bags open", so merchants, mail and the bag key keep working, and switching back needs no reload.
 - The game's bottom bag bar is not changed. The bag row in the window mirrors the same slots.

@@ -11,7 +11,7 @@
 
 ## Scope
 
-- `src/AuctionHelper_Bags/`: four TOCs, `Bootstrap.lua`, SavedVariable `AuctionHelperBagsDB`; depends on the other five addons
+- `src/AuctionHelper_Bags/`: four TOCs, `Bootstrap.lua`, depends on the other five addons. Its SavedVariable `AuctionHelperBagsDB` is only read once, to move counts saved by the first version into the inventory database
 - `AuctionHelper_BagSwitch.lua`: `IsBagWindowEnabled`, `SetBagWindowEnabled`, `ApplyBagTakeover`
   - on: the game's bag frames are reparented to a hidden frame; after each bag function the window is shown or hidden to match them
   - off: the frames get their parents back and the window hides

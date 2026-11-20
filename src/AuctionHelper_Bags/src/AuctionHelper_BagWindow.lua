@@ -2,7 +2,7 @@ local _, ProfessionExporter = ...
 
 -- Bag window (E11 F92, F94): header, character tabs, search, category headings with item slots, an
 -- optional bag row and a footer. The logged-in character's bags are live; everything else is a
--- read-only list from AuctionHelperBagsDB.
+-- read-only list from the holdings in the inventory database.
 
 local FRAME_NAME = "AuctionHelperBagsWindow"
 local PAD = 12
@@ -148,6 +148,22 @@ local function buildBody(pe, f)
 	f.bagRow:SetPoint("BOTTOMRIGHT", -PAD, theme.size.footer + PAD)
 end
 
+-- Tooltip of the gold in the footer: every character's gold, richest first, and the total.
+local function showGoldTooltip(owner)
+	local pe = ProfessionExporter
+	local theme = pe:GetTheme()
+	local muted, text, gold = theme.textMuted, theme.textPrimary, theme.gold
+	local rows, total = pe.BagLogic.GoldByCharacter(pe:GetItemHoldings())
+	GameTooltip:SetOwner(owner, "ANCHOR_TOPRIGHT")
+	GameTooltip:SetText("Gold", gold.r, gold.g, gold.b)
+	for _, row in ipairs(rows) do
+		GameTooltip:AddDoubleLine(row.name, pe:FormatCopperShort(row.money), muted.r, muted.g, muted.b, text.r, text.g, text.b)
+	end
+	GameTooltip:AddLine(" ")
+	GameTooltip:AddDoubleLine("All characters", pe:FormatCopperShort(total), gold.r, gold.g, gold.b, gold.r, gold.g, gold.b)
+	GameTooltip:Show()
+end
+
 local function buildFooter(pe, f)
 	local footer = CreateFrame("Frame", nil, f)
 	footer:SetPoint("BOTTOMLEFT")
@@ -156,6 +172,11 @@ local function buildFooter(pe, f)
 	addDivider(pe, footer, "TOP")
 	f.footRight = pe:CreateText(footer, "GameFontHighlightSmall", "textMuted", "RIGHT")
 	f.footRight:SetPoint("RIGHT", footer, "RIGHT", -PAD, 0)
+	local goldHover = CreateFrame("Frame", nil, footer)
+	goldHover:SetAllPoints(f.footRight)
+	goldHover:EnableMouse(true)
+	goldHover:SetScript("OnEnter", showGoldTooltip)
+	goldHover:SetScript("OnLeave", GameTooltip_Hide)
 	f.footLeft = pe:CreateText(footer, "GameFontHighlightSmall", "textMuted")
 	f.footLeft:SetPoint("LEFT", footer, "LEFT", PAD, 0)
 	f.footLeft:SetPoint("RIGHT", f.footRight, "LEFT", -PAD, 0)
@@ -194,7 +215,7 @@ end
 local function currentView(pe, f)
 	local view = f.view
 	view.current = pe:GetCharacterKey()
-	local known = view.tab == "all" or pe:GetBagsDB().characters[view.tab] ~= nil
+	local known = view.tab == "all" or pe:GetItemHoldings()[view.tab] ~= nil
 	if not known or not pe:GetSetting("bags.showCharacters", true) then
 		view.tab = view.current
 	end
@@ -223,7 +244,7 @@ local function buildGroups(pe, view, scan)
 end
 
 local function tabEntries(pe, view)
-	local characters = pe:GetBagsDB().characters
+	local characters = pe:GetItemHoldings()
 	local keys = pe.BagLogic.TabOrder(characters, view.current, MAX_TABS)
 	if #keys < 2 or not pe:GetSetting("bags.showCharacters", true) then
 		return {}
@@ -356,12 +377,23 @@ local function drawSlots(pe, f, layout, view, freeCount)
 	f.empty:SetShown(#layout.slots == 0)
 end
 
-local function seenText(pe, view, record)
+-- Footer gold: this character's, and the total when there is more than one character.
+local function goldText(pe, money)
+	local rows, total = pe.BagLogic.GoldByCharacter(pe:GetItemHoldings())
+	if #rows < 2 then
+		return pe:FormatCopperShort(money)
+	end
+	return string.format("%s  ·  All %s", pe:FormatCopperShort(money), pe:FormatCopperShort(total))
+end
+
+-- Right of the footer on a read-only tab: when it was seen, and its gold (All: the total).
+local function savedFootText(pe, view, record)
 	if not record then
-		return ""
+		return "All " .. pe:FormatCopperShort(select(2, pe.BagLogic.GoldByCharacter(pe:GetItemHoldings())))
 	end
 	local seenAt = view.mode == "bank" and record.bankSeenAt or record.seenAt
-	return seenAt and ("Seen " .. pe:FormatShortTime(seenAt)) or "Bank not seen yet"
+	local seen = seenAt and ("Seen " .. pe:FormatShortTime(seenAt)) or "Bank not seen yet"
+	return record.money and (seen .. "  ·  " .. pe:FormatCopperShort(record.money)) or seen
 end
 
 -- Header and footer lines. `totals`: BagLogic.BagTotals of the carried bags.
@@ -373,14 +405,14 @@ local function refreshTexts(pe, f, view, totals, itemCount)
 		end
 		f.meta:SetText(string.format("%d / %d slots", totals.used, totals.slots))
 		f.footLeft:SetText(free)
-		f.footRight:SetText(pe:FormatCopperShort(GetMoney()))
+		f.footRight:SetText(goldText(pe, GetMoney()))
 		return
 	end
-	local record = pe:GetBagsDB().characters[view.tab]
+	local record = pe:GetItemHoldings()[view.tab]
 	local name = view.tab == "all" and "All characters" or (record and record.name or view.tab)
 	f.meta:SetText(name .. " · read-only")
 	f.footLeft:SetText(string.format("%d items · %s", itemCount, MODE_TEXT[view.mode]))
-	f.footRight:SetText(seenText(pe, view, record))
+	f.footRight:SetText(savedFootText(pe, view, record))
 end
 
 -- Sizes the window around the content: `parts` = { hasTabs, showRow, contentHeight, bags }.
