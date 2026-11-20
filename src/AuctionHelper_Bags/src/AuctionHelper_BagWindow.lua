@@ -1,8 +1,9 @@
 local _, ProfessionExporter = ...
 
--- Bag window (E11 F92, F94): header, character tabs, search, category headings with item slots, an
--- optional bag row and a footer. The logged-in character's bags are live; everything else is a
--- read-only list from the holdings in the inventory database.
+-- Bag window (E11 F92, F94; E12 F101): header, character tabs, search, category headings with item
+-- slots, an optional bag row and a footer. The logged-in character's bags are live, and with the
+-- bank open so are its bank and the warband bank; everything else is a read-only list from the
+-- holdings in the inventory database.
 
 local FRAME_NAME = "AuctionHelperBagsWindow"
 local PAD = 12
@@ -143,6 +144,8 @@ local function buildBody(pe, f)
 	f.empty:SetPoint("TOPRIGHT")
 	f.empty:SetText(EMPTY_TEXT)
 	f.headings = {}
+	f.placed = {}
+	f.selectBar = pe:CreateBagSelectBar(f)
 	f.bagRow = pe:CreateBagRow(f)
 	f.bagRow:SetPoint("BOTTOMLEFT", PAD, theme.size.footer + PAD)
 	f.bagRow:SetPoint("BOTTOMRIGHT", -PAD, theme.size.footer + PAD)
@@ -212,6 +215,29 @@ local function ensureWindow(pe)
 	return f
 end
 
+-- Which containers the view shows live: "bags", or with the bank open "bank" (the logged-in
+-- character's Bank view) or "warband" (the Warband bank tab). nil: a saved, read-only list.
+local function livePlace(pe, view)
+	local bankOpen = pe:IsBankOpen()
+	if view.tab == pe.BAG_WARBAND_KEY then
+		return bankOpen and "warband" or nil
+	elseif view.tab ~= view.current then
+		return nil
+	elseif view.mode == "bags" then
+		return "bags"
+	end
+	return bankOpen and "bank" or nil
+end
+
+local function scanView(pe, view)
+	if view.place == "bank" then
+		return pe:ScanBags(pe:GetBankBagIDs())
+	elseif view.place == "warband" then
+		return pe:ScanBags(pe:GetWarbandBagIDs())
+	end
+	return pe:ScanBags()
+end
+
 -- Settles what is being shown: falls back to the logged-in character and to modes that exist.
 local function currentView(pe, f)
 	local view = f.view
@@ -227,7 +253,8 @@ local function currentView(pe, f)
 	if view.tab == pe.BAG_WARBAND_KEY then
 		view.mode = "bank"
 	end
-	view.live = own and view.mode == "bags"
+	view.place = livePlace(pe, view)
+	view.live = view.place ~= nil
 	view.columns = pe:GetSetting("bags.columns", 10)
 	view.slot = pe:GetSetting("bags.slotSize", 36)
 	view.innerWidth = view.columns * view.slot + (view.columns - 1) * GAP
@@ -367,11 +394,13 @@ local function slotLook(pe, view, item)
 	return {
 		dim = otherBag or not pe.BagLogic.Matches(item, view.query),
 		glow = view.hoverBag ~= nil and not otherBag,
+		selected = pe:IsBagSlotSelected(item),
 	}
 end
 
 local function drawSlots(pe, f, layout, view, freeCount)
 	pe:HideBagSlots()
+	f.placed = {}
 	for index, placed in ipairs(layout.slots) do
 		local item = placed.item
 		local button = view.live and pe:AcquireLiveBagSlot(f.content, item.bag, item.slot)
@@ -385,6 +414,7 @@ local function drawSlots(pe, f, layout, view, freeCount)
 			pe:SetBagSlotItem(button, item, slotLook(pe, view, item))
 		end
 		button:Show()
+		f.placed[index] = { button = button, item = item }
 	end
 	f.empty:SetShown(#layout.slots == 0)
 end
@@ -424,7 +454,7 @@ end
 
 -- Header and footer lines. `totals`: BagLogic.BagTotals of the carried bags.
 local function refreshTexts(pe, f, view, totals, itemCount)
-	local full = view.live and totals.free == 0
+	local full = view.place == "bags" and totals.free == 0
 	showDropButton(f, full)
 	if view.live then
 		f.meta:SetText(string.format("%d / %d slots", totals.used, totals.slots))
@@ -439,7 +469,7 @@ local function refreshTexts(pe, f, view, totals, itemCount)
 	f.footRight:SetText(savedFootText(pe, view, record))
 end
 
--- Sizes the window around the content: `parts` = { hasTabs, showRow, contentHeight, bags }.
+-- Sizes the window around the content: `parts` = { hasTabs, hasBar, showRow, contentHeight, bags }.
 local function applyLayout(pe, f, view, parts)
 	local size = pe:GetTheme().size
 	local top = size.header + (parts.hasTabs and size.tabs or 0) + PAD
@@ -447,6 +477,12 @@ local function applyLayout(pe, f, view, parts)
 	f.toolbar:SetPoint("TOPLEFT", f, "TOPLEFT", PAD, -top)
 	f.toolbar:SetPoint("TOPRIGHT", f, "TOPRIGHT", -PAD, -top)
 	top = top + size.control + SECTION_GAP
+	if parts.hasBar then
+		f.selectBar:ClearAllPoints()
+		f.selectBar:SetPoint("TOPLEFT", f, "TOPLEFT", PAD, -top)
+		f.selectBar:SetPoint("TOPRIGHT", f, "TOPRIGHT", -PAD, -top)
+		top = top + size.control + SECTION_GAP
+	end
 	local bottom = size.footer + PAD + (parts.showRow and (pe.BAG_ROW_HEIGHT + SECTION_GAP) or 0)
 	local room = UIParent:GetHeight() * MAX_SCREEN_SHARE - top - bottom
 	local bodyHeight = math.max(view.slot, math.min(parts.contentHeight, room))
@@ -473,22 +509,27 @@ function ProfessionExporter:RefreshBagWindow()
 		return
 	end
 	local view = currentView(self, f)
-	local scan = self:ScanBags()
+	local scan = scanView(self, view)
+	self:SyncBagSelection(view, scan.items)
 	local totals = self.BagLogic.BagTotals(scan.bags)
 	local groups, itemCount = buildGroups(self, view, scan)
 	local layout = self.BagLogic.Layout(groups, {
 		columns = view.columns, slot = view.slot, gap = GAP, heading = HEADING, headingGap = HEADING_GAP, groupGap = GROUP_GAP,
 	})
-	local showRow = view.live and self:GetSetting("bags.showBagRow", false) == true
+	local showRow = view.place == "bags" and self:GetSetting("bags.showBagRow", false) == true
 	f:SetWidth(view.innerWidth + 2 * PAD)
 	local hasTabs = refreshTabs(self, f, view)
 	refreshModes(self, f, view)
 	drawHeadings(self, f, layout, view)
 	drawSlots(self, f, layout, view, totals.free)
 	refreshTexts(self, f, view, totals, itemCount)
-	f.rowButton:SetEnabled(view.live)
+	f.rowButton:SetEnabled(view.place == "bags")
 	self:SetButtonPrimary(f.rowButton, showRow)
-	applyLayout(self, f, view, { hasTabs = hasTabs, showRow = showRow, contentHeight = layout.height, bags = scan.bags })
+	applyLayout(self, f, view, {
+		hasTabs = hasTabs, hasBar = self:RefreshBagSelectBar(f.selectBar), showRow = showRow, contentHeight = layout.height,
+		bags = scan.bags,
+	})
+	self:UpdateBagCatcher()
 end
 
 --- Redraw on the next frame, once, however many events asked for it.
@@ -520,6 +561,24 @@ function ProfessionExporter:SetBagWindowShown(shown)
 		f:Show()
 	end
 	self:RefreshBagWindow()
+end
+
+--- The bank was opened: show the window on the logged-in character's Bank view.
+function ProfessionExporter:ShowBagBank()
+	self:SetBagWindowShown(true)
+	local f = self.ui.bagWindow
+	f.view.tab, f.view.mode = self:GetCharacterKey(), "bank"
+	f.scroll:SetVerticalScroll(0)
+	self:RefreshBagWindow()
+end
+
+--- The bank was closed: a view of the bank goes back to the bags.
+function ProfessionExporter:LeaveBagBank()
+	local f = self.ui.bagWindow
+	if f and f.view.place ~= "bags" and f.view.live then
+		f.view.tab, f.view.mode = self:GetCharacterKey(), "bags"
+	end
+	self:RequestBagWindowRefresh()
 end
 
 --- Light the items of one bag (the bag row is hovered), or none with nil.

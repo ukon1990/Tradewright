@@ -134,6 +134,47 @@ check("Loot swap: most valuable loot above the dropped stack", BL.BestLootSwap(l
 check("Loot swap: equal value is not worth it", BL.BestLootSwap({ { slot = 1, value = 30 } }, { value = 30 }) == nil)
 check("Loot swap: nothing to loot", BL.BestLootSwap({}, { value = 0 }) == nil)
 
+-- Selecting
+local selection = {}
+local stackA = { itemID = 1, bag = 0, slot = 3, sellPrice = 5, count = 4, quality = 1, classID = 7 }
+local stackB = { itemID = 2, bag = -1, slot = 3, sellPrice = 0, count = 1, quality = 1, classID = 7 }
+check("Select: slot keys differ per bag", BL.SlotKey(0, 3) ~= BL.SlotKey(-1, 3) and BL.SlotKey(1, 3) ~= BL.SlotKey(0, 3))
+check("Select: toggle on", BL.ToggleSelected(selection, stackA) and BL.ToggleSelected(selection, stackB))
+check("Select: picked in item order", #BL.SelectedItems(selection, { stackB, stackA }) == 2
+	and BL.SelectedItems(selection, { stackB, stackA })[1] == stackB)
+check("Select: toggle off", not BL.ToggleSelected(selection, stackB) and #BL.SelectedItems(selection, { stackB, stackA }) == 1)
+local replaced = { itemID = 9, bag = 0, slot = 3 }
+check("Select: a slot holding another item is dropped", #BL.SelectedItems(selection, { replaced }) == 0 and next(selection) == nil)
+check("Select: saved items have no slot", #BL.SelectedItems({ [3] = 1 }, { { itemID = 1 } }) == 0)
+
+-- Where a stack can go
+local function targetKeys(place, state)
+	local keys = {}
+	for _, target in ipairs(BL.MoveTargets(place, state)) do
+		keys[#keys + 1] = target.key
+	end
+	return table.concat(keys, ",")
+end
+check("Move: nowhere while the bank is closed", targetKeys("bags", { hasWarband = true }) == "")
+check("Move: bags to bank only without a warband bank", targetKeys("bags", { bankOpen = true }) == "bank")
+check("Move: bags to bank or warband", targetKeys("bags", { bankOpen = true, hasWarband = true }) == "bank,warband")
+check("Move: warband to bags or bank", targetKeys("warband", { bankOpen = true, hasWarband = true }) == "bags,bank")
+check("Move: label", BL.MoveTargets("bank", { bankOpen = true })[1].label == "Move to bags")
+local moves, left = BL.PlanMoves({ stackA, stackB, replaced }, { { bag = 5, slot = 1 }, { bag = 5, slot = 2 } })
+check("Move: a free slot per stack", #moves == 2 and moves[2].item == stackB and moves[2].bag == 5 and moves[2].slot == 2)
+check("Move: the rest is reported", left == 1 and select(2, BL.PlanMoves({}, {})) == 0)
+
+-- Selling and destroying several
+local sellQueue, sellTotal = BL.SellQueue({ stackA, stackB, { itemID = 3, sellPrice = 9, count = 1, locked = true } })
+check("Sell: only unlocked stacks a vendor buys", #sellQueue == 1 and sellTotal == 20)
+local destroyQueue, destroyTotal, refused = BL.DestroyQueue({
+	stackA, stackB,
+	{ itemID = 6, quality = 1, classID = 12, sellPrice = 1 }, { itemID = 7, quality = 3, classID = 2, sellPrice = 1 },
+	{ itemID = 8, quality = 1, classID = 1, sellPrice = 1 }, { itemID = 9, quality = 0, classID = 15, locked = true },
+}, function(itemID) return itemID == 1 and 50 or nil end)
+check("Destroy: quest, rare, bags and locked are refused", #destroyQueue == 2 and refused == 4)
+check("Destroy: valued at the higher of vendor and auction", destroyTotal == 200, destroyTotal)
+
 -- Totals
 local totals = BL.BagTotals({
 	{ slots = 16, free = 0 }, { slots = 14, free = 7 }, { slots = 6, free = 2 }, { slots = 32, free = 18, isReagent = true },

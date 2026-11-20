@@ -126,6 +126,19 @@ local function warbandBagIDs()
 	return ids
 end
 
+function ProfessionExporter:IsBankOpen()
+	return bankOpen
+end
+
+--- The containers of the logged-in character's bank, and of the warband bank (none on Forever).
+function ProfessionExporter:GetBankBagIDs()
+	return bankBagIDs(self)
+end
+
+function ProfessionExporter:GetWarbandBagIDs()
+	return warbandBagIDs()
+end
+
 local function warbandMoney()
 	local account = Enum and Enum.BankType and Enum.BankType.Account
 	return account and C_Bank and C_Bank.FetchDepositedMoney and tonumber(C_Bank.FetchDepositedMoney(account)) or nil

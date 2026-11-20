@@ -13,7 +13,7 @@
 | Professions | `src/AuctionHelper_Professions/` | Scan, crafts engine (orders stay retail-only) |
 | Inventory | `src/AuctionHelper_Inventory/` | Bags/bank snapshot, ledger |
 | UI | `src/AuctionHelper_UI/` | Dashboard, craft panel, mail |
-| Bags (optional) | `src/AuctionHelper_Bags/` | Bag window grouped by category, other characters as tabs; own on/off switch |
+| Bags (optional) | `src/AuctionHelper_Bags/` | Bag and bank window grouped by category, other characters as tabs, multi-select; own on/off switches |
 | Pure Forever helpers | `src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua` | Offline-testable |
 | Tests | `src/AuctionHelper/tests/run_tests.py` | Offline Lua 5.1 (no WoW client) |
 | Lint | `scripts/lint.py`, `.luacheckrc`, `scripts/lint-baseline.json` | luacheck + file/function size + complexity, ratcheted |

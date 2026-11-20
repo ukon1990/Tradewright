@@ -45,7 +45,7 @@ In-game on Forever (full restart, the module adds new files): enable AuctionHelp
 
 ## Out of scope
 
-- A live bank window (the game's bank stays; the bank shows here as a saved, read-only list)
+- A live bank window (done later in E12)
 - Changing the order of the categories (the "Category order" row of the design)
 - Sorting or auto-stacking bags, selling junk at a vendor with one click
 - Item sets, item level or new-item markers on slots

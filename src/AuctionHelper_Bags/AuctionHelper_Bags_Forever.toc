@@ -16,4 +16,7 @@ src\AuctionHelper_BagButtons.lua
 src\AuctionHelper_BagDrop.lua
 src\AuctionHelper_BagLootSwap.lua
 src\AuctionHelper_BagRow.lua
+src\AuctionHelper_BagBank.lua
+src\AuctionHelper_BagActions.lua
+src\AuctionHelper_BagSelect.lua
 src\AuctionHelper_BagWindow.lua

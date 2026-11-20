@@ -243,6 +243,10 @@ local function bagsSection()
 			onChange = function(pe) pe:ApplyBagTakeover() end },
 		{ kind = "note", text = "Off: the bag key and bag buttons open the game's own bags, or your other bag addon."
 			.. " Applies at once. Also /ah bags, or right-click the Bags title bar." },
+		{ kind = "check", label = "Use AuctionHelper for the bank too", path = "bags.bank", default = true,
+			onChange = function(pe) pe:ApplyBankTakeover() end },
+		{ kind = "note", text = "At a banker the bag window opens on its Bank view. Off: the game's bank window opens."
+			.. " Use that one to buy bank tabs or deposit gold." },
 		{ kind = "check", label = "Show my other characters as tabs", path = "bags.showCharacters", default = true,
 			onChange = refreshBags },
 		{ kind = "check", label = "Show the sell value of junk", path = "bags.showJunkValue", default = true, onChange = refreshBags },

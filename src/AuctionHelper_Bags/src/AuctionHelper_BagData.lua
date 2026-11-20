@@ -74,12 +74,21 @@ local function readSlot(pe, bag, slot)
 	return item
 end
 
---- The carried bags as they are now: `items` (one per filled slot), `bags`
---- ({ bag, slots, free, isReagent }) and `firstFree` ({ bag, slot } in a normal bag, or nil).
-function ProfessionExporter:ScanBags()
+local function carriedBagIDs(pe)
+	local ids = {}
+	for bag = BACKPACK, pe:GetLastBagIndex() do
+		ids[#ids + 1] = bag
+	end
+	return ids
+end
+
+--- The containers `bagIDs` (default: the carried bags) as they are now: `items` (one per filled
+--- slot), `bags` ({ bag, slots, free, isReagent }) and `firstFree` ({ bag, slot } in a normal
+--- bag, or nil).
+function ProfessionExporter:ScanBags(bagIDs)
 	local scan = { items = {}, bags = {} }
 	local reagentBag = self:GetReagentBagIndex()
-	for bag = BACKPACK, self:GetLastBagIndex() do
+	for _, bag in ipairs(bagIDs or carriedBagIDs(self)) do
 		local slots = C_Container.GetContainerNumSlots(bag) or 0
 		local entry = { bag = bag, slots = slots, free = 0, isReagent = bag == reagentBag }
 		scan.bags[#scan.bags + 1] = entry
@@ -148,6 +157,8 @@ local handlers = {
 	ITEM_LOCK_CHANGED = refreshWindow,
 	BAG_UPDATE_COOLDOWN = refreshWindow,
 	GET_ITEM_INFO_RECEIVED = refreshWindow,
+	PLAYERBANKSLOTS_CHANGED = refreshWindow,
+	PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED = refreshWindow,
 }
 
 function handlers.PLAYER_LOGIN(pe)

@@ -250,7 +250,98 @@ function BagLogic.BestLootSwap(loot, drop)
 	return best
 end
 
---- Whether an item matches the search text (any case, plain text). Empty text matches all.
+-- Selecting stacks and acting on several at once (E12 F100).
+
+function BagLogic.SlotKey(bag, slot)
+	return bag * 1000 + slot
+end
+
+--- Select a stack, or unselect it when it was selected. `selection` maps SlotKey to item ID.
+--- Returns whether the stack is selected now.
+function BagLogic.ToggleSelected(selection, item)
+	local key = BagLogic.SlotKey(item.bag, item.slot)
+	selection[key] = not selection[key] and item.itemID or nil
+	return selection[key] ~= nil
+end
+
+--- The selected stacks among `items`, in their order. A selected stack that is gone, or whose
+--- slot now holds another item, is dropped from `selection`.
+function BagLogic.SelectedItems(selection, items)
+	local found, picked = {}, {}
+	for _, item in ipairs(items) do
+		local key = item.bag and BagLogic.SlotKey(item.bag, item.slot)
+		if key and selection[key] == item.itemID then
+			found[key] = true
+			picked[#picked + 1] = item
+		end
+	end
+	for key in pairs(selection) do
+		if not found[key] then
+			selection[key] = nil
+		end
+	end
+	return picked
+end
+
+local PLACE_LABEL = { bags = "bags", bank = "bank", warband = "warband bank" }
+
+--- Where a stack in `place` ("bags", "bank" or "warband") can be moved: { { key, label } }.
+--- `state`: bankOpen, hasWarband. Nothing moves while the bank is closed.
+function BagLogic.MoveTargets(place, state)
+	local targets = {}
+	if not state.bankOpen then
+		return targets
+	end
+	for _, key in ipairs({ "bags", "bank", "warband" }) do
+		if key ~= place and (key ~= "warband" or state.hasWarband) then
+			targets[#targets + 1] = { key = key, label = "Move to " .. PLACE_LABEL[key] }
+		end
+	end
+	return targets
+end
+
+--- One free slot ({ bag, slot }) per stack: { { item, bag, slot } }, and how many did not fit.
+function BagLogic.PlanMoves(items, freeSlots)
+	local moves = {}
+	for index = 1, math.min(#items, #freeSlots) do
+		moves[index] = { item = items[index], bag = freeSlots[index].bag, slot = freeSlots[index].slot }
+	end
+	return moves, #items - #moves
+end
+
+--- The stacks a vendor buys, and what they pay for all of them.
+function BagLogic.SellQueue(items)
+	local queue, total = {}, 0
+	for _, item in ipairs(items) do
+		local value = (item.sellPrice or 0) * (item.count or 1)
+		if value > 0 and not item.locked then
+			queue[#queue + 1] = item
+			total = total + value
+		end
+	end
+	return queue, total
+end
+
+-- Never destroyed in bulk: locked stacks, quest items, bags, and anything rare or better.
+local function mayDestroy(item)
+	return not item.locked and (item.quality or 1) <= MAX_DROP_QUALITY and item.classID ~= CLASS.container
+		and BagLogic.CategoryOf(item) ~= "quest"
+end
+
+--- The stacks that may be destroyed, what they are worth (the higher of vendor and auction price),
+--- and how many of `items` are refused.
+function BagLogic.DestroyQueue(items, auctionPriceOf)
+	local queue, total = {}, 0
+	for _, item in ipairs(items) do
+		if mayDestroy(item) then
+			local each = math.max(item.sellPrice or 0, auctionPriceOf and auctionPriceOf(item.itemID) or 0)
+			queue[#queue + 1] = item
+			total = total + each * (item.count or 1)
+		end
+	end
+	return queue, total, #items - #queue
+end
+
 local CATEGORY_LABEL = {}
 for _, category in ipairs(BagLogic.CATEGORIES) do
 	CATEGORY_LABEL[category.key] = category.label

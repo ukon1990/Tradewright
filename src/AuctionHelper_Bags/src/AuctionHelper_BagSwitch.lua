@@ -99,6 +99,7 @@ function ProfessionExporter:ApplyBagTakeover()
 		showGameBags()
 		self:SetBagWindowShown(false)
 	end
+	self:ApplyBankTakeover()
 end
 
 function ProfessionExporter:SetBagWindowEnabled(enabled)
@@ -112,8 +113,9 @@ function ProfessionExporter:SetBagWindowEnabled(enabled)
 end
 
 --- The window was closed by its button or Escape: close the game's parked bags too, so the next
---- press of the bag key opens again.
+--- press of the bag key opens again. It also ends the bank session it stood in for.
 function ProfessionExporter:OnBagWindowClosed()
+	self:CloseBagBank()
 	if self:IsBagWindowEnabled() and anyGameBagOpen() and CloseAllBags then
 		CloseAllBags()
 	end

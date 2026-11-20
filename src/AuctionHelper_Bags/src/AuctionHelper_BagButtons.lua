@@ -5,6 +5,7 @@ local _, ProfessionExporter = ...
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local DIM_ALPHA = 0.22
+local SELECT_ALPHA = 0.35
 
 local live = {} -- [bag][slot] = button; a button keeps its bag and slot for life
 local bagParents = {} -- [bag] = frame whose ID is the bag, as the item button template expects
@@ -32,6 +33,10 @@ local function addLook(pe, button)
 	button.ahCount = button.Count or (name and _G[name .. "Count"]) or button:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
 	button.ahCount:ClearAllPoints()
 	button.ahCount:SetPoint("BOTTOMRIGHT", -2, 2)
+	button.ahSelect = button:CreateTexture(nil, "OVERLAY")
+	button.ahSelect:SetAllPoints()
+	button.ahSelect:SetColorTexture(theme.gold.r, theme.gold.g, theme.gold.b, SELECT_ALPHA)
+	button.ahSelect:Hide()
 end
 
 local function bagParent(content, bag)
@@ -154,13 +159,14 @@ local function updateCooldown(button, item)
 end
 
 --- Draw an item on a slot. `look.dim`: a search miss or an item of another bag than the hovered
---- one; `look.glow`: an item of the hovered bag.
+--- one; `look.glow`: an item of the hovered bag; `look.selected`: a selected stack.
 function ProfessionExporter:SetBagSlotItem(button, item, look)
 	local theme = self:GetTheme()
 	local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[item.quality] or theme.borderStrong
-	if look.glow then
+	if look.glow or look.selected then
 		color = theme.gold
 	end
+	button.ahSelect:SetShown(look.selected == true)
 	button.ahItem = item
 	button.ahBorder:SetColorTexture(color.r, color.g, color.b, 1)
 	button.ahFill:Show()
@@ -178,6 +184,7 @@ end
 function ProfessionExporter:SetBagSlotFree(button, freeCount)
 	local theme = self:GetTheme()
 	button.ahItem = nil
+	button.ahSelect:Hide()
 	button.ahBorder:SetColorTexture(theme.borderStrong.r, theme.borderStrong.g, theme.borderStrong.b, 1)
 	button.ahFill:Show()
 	button.ahIcon:Hide()
