@@ -495,6 +495,18 @@ do
 	check("Holders: equal stock sorts by character", tied[1].characterKey == "A")
 end
 
+-- Queue: how many crafts the bags cover right now
+do
+	local bags = { [1] = 107, [2] = 5, [3] = 2 }
+	local function have(itemID) return bags[itemID] end
+	local plan = { { itemID = 1, quantityRequired = 4 }, { itemID = 2, quantityRequired = 2 }, { itemID = 3, quantityRequired = 2 } }
+	check("Craftable: the scarcest material decides", ML.CraftableCount(plan, have) == 1)
+	check("Craftable: a missing material means none", ML.CraftableCount({ { itemID = 9, quantityRequired = 1 } }, have) == 0)
+	check("Craftable: optional slots do not count",
+		ML.CraftableCount({ { itemID = 2, quantityRequired = 1 }, { itemID = 9, quantityRequired = 1, slotOptional = true } }, have) == 5)
+	check("Craftable: no required material, cannot tell", ML.CraftableCount({}, have) == nil and ML.CraftableCount(nil, have) == nil)
+end
+
 if failed > 0 then
 	print(failed .. " check(s) failed")
 	os.exit(1)

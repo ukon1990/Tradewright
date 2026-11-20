@@ -40,6 +40,21 @@ function MaterialLogic.CoverFromHolders(missing, holders)
 	return fromHolders, missing - fromHolders, sorted
 end
 
+--- How many times a recipe can be made from what `have(itemID)` returns. `plan` is a queued craft's
+--- reagent plan: `{ { itemID, quantityRequired, slotOptional }, … }`. Optional slots do not count.
+--- Returns nil when the plan names no required material, so the caller cannot tell.
+function MaterialLogic.CraftableCount(plan, have)
+	local count
+	for _, slot in ipairs(plan or {}) do
+		local required = tonumber(slot.quantityRequired) or 0
+		if slot.itemID and required > 0 and not slot.slotOptional then
+			local times = math.floor((tonumber(have(slot.itemID)) or 0) / required)
+			count = math.min(count or times, times)
+		end
+	end
+	return count
+end
+
 -- Material cost of one unit of a craft row's output, or nil when the row cannot say.
 local function unitCostOf(row)
 	local cost = tonumber(row.fullMatCost) or tonumber(row.matCost)

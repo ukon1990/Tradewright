@@ -299,6 +299,23 @@ local function queueRecipeName(pe, entry)
 	return tostring(name or "?")
 end
 
+-- Whether a queued craft can be started now, from what is in this character's bags at this moment
+-- (the queue's saved snapshot is from when the craft was added). Returns ready and a note for the row.
+local function craftReadiness(pe, entry, quantity)
+	local characterKey = pe:GetCharacterKey()
+	local craftable = pe.MaterialLogic.CraftableCount(entry.reagentPlan, function(itemID)
+		return pe:GetCharacterItemTotal(characterKey, itemID)
+	end)
+	if craftable == nil then
+		local ready = (entry.snapshot or {}).canCraftNow == true
+		return ready, ready and "ready" or nil
+	end
+	if craftable >= quantity then
+		return true, "ready"
+	end
+	return craftable > 0, craftable > 0 and string.format("materials for %d of %d", craftable, quantity) or nil
+end
+
 local function queueRecipeRow(pe, entry, index)
 	local snapshot = entry.snapshot or {}
 	local quantity = tonumber(entry.quantity) or 0
@@ -309,9 +326,8 @@ local function queueRecipeRow(pe, entry, index)
 		detail[#detail + 1] = "Order #" .. orderID
 	end
 	detail[#detail + 1] = "Profit " .. (perProfit and pe:FormatSignedMoney(perProfit * quantity) or "unknown")
-	if snapshot.canCraftNow then
-		detail[#detail + 1] = "ready"
-	end
+	local ready, readyNote = craftReadiness(pe, entry, quantity)
+	detail[#detail + 1] = readyNote
 	return {
 		_rowIdentity = index,
 		queueKey = entry.queueKey,
@@ -323,7 +339,7 @@ local function queueRecipeRow(pe, entry, index)
 		qualityIndex = tonumber(entry.qualityIndex),
 		quantity = quantity,
 		scenario = tostring(entry.scenario or "default"),
-		canCraftNow = snapshot.canCraftNow == true,
+		canCraftNow = ready,
 		detailText = table.concat(detail, " · "),
 	}
 end
