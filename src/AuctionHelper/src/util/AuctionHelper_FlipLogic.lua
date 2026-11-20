@@ -127,4 +127,70 @@ function FlipLogic.BuildVendorRows(items, opts)
 	return rows
 end
 
+-- Units already listed at exactly `price` in flat price steps.
+local function quantityAt(steps, price)
+	for index = 1, #steps, 2 do
+		if steps[index] == price then
+			return steps[index + 1]
+		end
+	end
+	return 0
+end
+
+local function gapOption(opts, key, default)
+	return opts and tonumber(opts[key]) or default
+end
+
+-- A gap is worth showing when the item sells, clearing it is affordable and the next price is one the
+-- item has really traded near (at or under the top of its usual range).
+local function gapQualifies(item, gap, opts)
+	local sells, usualHigh = tonumber(item.sellsPerDay), tonumber(item.usualHigh)
+	if not (gap and sells and usualHigh) then
+		return false
+	end
+	return sells >= gapOption(opts, "minSellsPerDay", 5)
+		and gap.belowCost <= gapOption(opts, "maxCost", 1000000)
+		and gap.nextPrice <= usualHigh
+end
+
+--- One price-gap row for `item = { itemID, storageKey, steps, usualHigh, sellsPerDay, deposit }`: a few
+--- cheap listings under a much higher next price, or nil. Gain assumes all of them resell at the next price.
+function FlipLogic.BuildGapRow(item, opts)
+	if not (item.steps and #item.steps >= 4) then
+		return nil
+	end
+	local gap = ProfessionExporter.MarketSignals.FindPriceGap(item.steps, gapOption(opts, "minGapPct", 0.25))
+	if not gapQualifies(item, gap, opts) then
+		return nil
+	end
+	local cut = gapOption(opts, "cut", 0.05)
+	local deposit = (tonumber(item.deposit) or 0) * gap.belowQty
+	local gain = gap.belowQty * gap.nextPrice * (1 - cut) - gap.belowCost - deposit
+	if gain <= 0 then
+		return nil
+	end
+	return {
+		itemID = item.itemID, storageKey = item.storageKey, steps = item.steps,
+		price = gap.floorPrice, nextPrice = gap.nextPrice, gapPct = gap.gapPct,
+		buyQty = gap.belowQty, cost = gap.belowCost, gain = gain, deposit = deposit,
+		sellsPerDay = item.sellsPerDay, daysToSell = gap.belowQty / item.sellsPerDay,
+		waitingAtNext = quantityAt(item.steps, gap.nextPrice),
+	}
+end
+
+--- Price-gap rows for a list of items, most gain first.
+function FlipLogic.BuildGapRows(items, opts)
+	local rows = {}
+	for _, item in ipairs(items or {}) do
+		local row = FlipLogic.BuildGapRow(item, opts)
+		if row then
+			rows[#rows + 1] = row
+		end
+	end
+	table.sort(rows, function(a, b)
+		return a.gain > b.gain
+	end)
+	return rows
+end
+
 return FlipLogic

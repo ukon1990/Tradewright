@@ -24,14 +24,29 @@ A "Price gaps" list shows items where a few cheap listings sit under a much high
 - Buttons: "Open in auction house", "Add N to cart"
 - Setting "Show price gaps, marked as risky" (on) with cost limit and minimum sells a day
 
+## Status
+
+Implemented:
+
+- `FlipLogic.BuildGapRow` and `BuildGapRows` (pure, offline-tested) with the rules above; a gap also needs a positive gain
+- `GetGapOptions` and `GetGapRows` (AuctionData), cached until the insights or thresholds change
+- "Price gaps" list in the Opportunities tab: columns as above, the side pane shows the sums and the cheapest price levels marked "Buy at" or "Stays at", and how many already wait at the next price
+- Settings: "Show price gaps, marked as risky" and the cost limit
+
+Differs from the scope:
+
+- The risk text sits in the stat row ("Risky") and the side pane, not in a line above the table; the list has no separate badge
+- Minimum sells a day for gaps is fixed at 5 (no setting yet); the deposit is 0 until F43
+- No "Add N to cart" button (see F50)
+
 ## Acceptance criteria
 
-- [ ] Steps 2g 80s ×3, 2g 95s ×4, 3g 10s ×2, 4g 10s ×22 give Buy 9, To clear 26g 40s, Next price 4g 10s
+- [x] Steps 2g 80s ×3, 2g 95s ×4, 3g 10s ×2, 4g 10s ×22 give Buy 9, To clear 26g 40s, Next price 4g 10s
 - [ ] An item whose next price is far above its usual range is not listed
 - [ ] An item without a sells-a-day estimate is not listed
 - [ ] Gain subtracts the cut and one deposit
 - [ ] The risk line and the "Risky" badge are always visible on this list
-- [ ] Offline tests of `BuildGapRows`: the example above, cost limit, turnover floor, usual-range guard, single-level items
+- [x] Offline tests of `BuildGapRows`: the example above, cost limit, turnover floor, usual-range guard, single-level items
 
 ## Verification
 

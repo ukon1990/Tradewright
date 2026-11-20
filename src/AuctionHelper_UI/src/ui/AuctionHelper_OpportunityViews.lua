@@ -212,4 +212,83 @@ local vendor = {
 	end,
 }
 
-ProfessionExporter.OpportunityViews = { flips, vendor }
+-- ---------- Price gaps: a few cheap listings under a much higher next price ----------
+
+local function daysText(days)
+	if days <= 1 then
+		return "sells out in under a day"
+	end
+	return string.format("takes about %d days to sell", math.floor(days + 0.5))
+end
+
+local function gapDetail(pe, row)
+	return string.format("Buy %s · %s", pe:FormatNumberGrouped(row.buyQty), daysText(row.daysToSell))
+end
+
+local function gapColumns(pe)
+	return {
+		itemColumn(pe, gapDetail),
+		moneyColumn(pe, "price", "Cheapest", "price", 70),
+		moneyColumn(pe, "nextPrice", "Next price", "nextPrice", 70),
+		moneyColumn(pe, "cost", "To clear", "cost", 74),
+		signedColumn(pe, "Gain if it holds", "gain"),
+		{
+			id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = 66, sortable = true, defaultSort = "desc",
+			sortValue = function(row) return row.sellsPerDay or 0 end,
+			getText = function(row) return perDayText(pe, row.sellsPerDay) end,
+		},
+	}
+end
+
+-- The sums, then the cheapest price levels with the gap after the ones to buy.
+local function gapDetailRows(pe, row)
+	local rows = {
+		{ string.format("Cost to clear, %s", pe:FormatNumberGrouped(row.buyQty)), pe:FormatCopperFull(row.cost) },
+		{ "Relist at", pe:FormatCopperFull(row.nextPrice) },
+		{ "Gain if all sell", pe:FormatSignedMoney(row.gain), "success" },
+		{ "Sells a day, estimated", perDayText(pe, row.sellsPerDay) },
+		{ "Already waiting at that price", pe:FormatNumberGrouped(row.waitingAtNext) },
+		{ "", "" },
+	}
+	for index = 1, math.min(#row.steps, 8), 2 do
+		local price = row.steps[index]
+		local label = price < row.nextPrice and "Buy at " or "Stays at "
+		rows[#rows + 1] = { label .. pe:FormatCopperShort(price), "x" .. pe:FormatNumberGrouped(row.steps[index + 1]) }
+	end
+	return rows
+end
+
+local function gapRiskText(pe, row)
+	local text = "Anyone can list under you before these sell, and the listings come from your last scan."
+	if row.waitingAtNext > 0 then
+		text = text .. string.format(" %s already wait at %s, so yours may sell after them unless you list lower.",
+			pe:FormatNumberGrouped(row.waitingAtNext), pe:FormatCopperShort(row.nextPrice))
+	end
+	return text
+end
+
+local function gapStats(pe, stats, rows, insights)
+	stats[1]:SetValues(string.format("Gain if all %d hold", #rows), pe:FormatSignedMoney(sumOf(rows, "gain")), "After the auction cut", "warning")
+	stats[2]:SetValues("Gold needed", pe:FormatCopperShort(sumOf(rows, "cost")), "You have " .. pe:FormatCopperShort(GetMoney()))
+	stats[3]:SetValues("Risky", "Read first", "Pays only if nobody lists under you", "warning")
+	stats[4]:SetValues("Last scan", lastScanText(pe, insights), "Listings may have changed since")
+end
+
+local gaps = {
+	id = "gaps", label = "Price gaps",
+	emptyTitle = "No price gaps",
+	emptyHint = "No item in the last full scan has a few cheap listings under a much higher price.",
+	getRows = function(pe, onReady) return pe:GetGapRows(onReady) end,
+	columns = gapColumns,
+	detailRows = gapDetailRows,
+	riskText = gapRiskText,
+	setStats = gapStats,
+	subtitle = function(_, row) return "Risky · next price is " .. percent(row.gapPct) .. " higher" end,
+	tooltipPairs = function(pe, row) return { { "Cost to clear", pe:FormatCopperFull(row and row.cost) } } end,
+	footer = function(pe, rows, insights)
+		return string.format("%d price gaps from %s items", #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
+			"Risky: gain counts the cut, not undercuts"
+	end,
+}
+
+ProfessionExporter.OpportunityViews = { flips, vendor, gaps }

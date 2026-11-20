@@ -96,3 +96,50 @@ function ProfessionExporter:GetVendorRows(onReady)
 	end
 	return state.vendorRows, insights
 end
+
+--- Thresholds for price gaps, from Settings. `maxCost` is in copper.
+function ProfessionExporter:GetGapOptions()
+	return {
+		minGapPct = 0.25,
+		maxCost = (tonumber(self:GetSetting("opportunities.gapMaxCostGold", 100)) or 100) * 10000,
+		minSellsPerDay = tonumber(self:GetSetting("opportunities.gapMinSellsPerDay", 5)) or 5,
+		cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05,
+	}
+end
+
+-- One candidate per scanned item that has price steps, a usual price and a sells-a-day estimate.
+local function gapCandidates(pe, insights)
+	local items = {}
+	for itemID, row in pairs(insights.byItemID or {}) do
+		local steps = pe:GetPriceSteps(itemID)
+		local usual = steps and pe:GetUsualPrice(row.storageKey)
+		local sells = usual and pe:GetSellsPerDay(row.storageKey)
+		if sells then
+			items[#items + 1] = {
+				itemID = itemID, storageKey = row.storageKey, steps = steps,
+				usualHigh = usual.high, sellsPerDay = sells.perDay,
+			}
+		end
+	end
+	return items
+end
+
+--- Price gaps, most gain first, or nil while the market insights are being built. Cached until the
+--- insights or the thresholds change.
+function ProfessionExporter:GetGapRows(onReady)
+	local insights = self:GetMarketInsights(onReady)
+	if not insights or not self:GetSetting("opportunities.showGaps", true) then
+		return insights and {} or nil, insights
+	end
+	local state = self:GetState()
+	local opts = self:GetGapOptions()
+	local revision = table.concat({ tostring(insights.builtAt), opts.maxCost, opts.minSellsPerDay, opts.cut }, ":")
+	if state.gapRowsRevision ~= revision then
+		local rows = self.FlipLogic.BuildGapRows(gapCandidates(self, insights), opts)
+		for _, row in ipairs(rows) do
+			row._rowIdentity = tostring(row.itemID)
+		end
+		state.gapRows, state.gapRowsRevision = rows, revision
+	end
+	return state.gapRows, insights
+end

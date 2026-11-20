@@ -181,6 +181,29 @@ check("Without steps one unit at the lowest price", oneUnit and oneUnit.qty == 1
 local sureRows = Flip.BuildVendorRows({ { itemID = 5, price = 100, vendorSell = 5000 }, { itemID = 6, price = 100, vendorSell = 90000 } })
 check("Sure things are sorted by gain", #sureRows == 2 and sureRows[1].itemID == 6)
 
+-- Price gaps
+local potion = { itemID = 1, steps = { 280, 3, 295, 4, 310, 2, 410, 22, 425, 31, 440, 40 }, usualHigh = 420, sellsPerDay = 14 }
+local gapRow = Flip.BuildGapRow(potion, { cut = 0.05 })
+check("Gap: buy 9 for 26g 40s, next 4g 10s", gapRow and gapRow.buyQty == 9 and gapRow.cost == 2640 and gapRow.nextPrice == 410)
+check("Gap gain is after the cut", gapRow and math.abs(gapRow.gain - (9 * 410 * 0.95 - 2640)) < 1e-6)
+check("Gap knows who already waits at the next price", gapRow and gapRow.waitingAtNext == 22 and gapRow.daysToSell == 9 / 14)
+local function gapWith(changes, opts)
+	local copy = { itemID = 1, steps = potion.steps, usualHigh = potion.usualHigh, sellsPerDay = potion.sellsPerDay }
+	for key, value in pairs(changes) do
+		copy[key] = value
+	end
+	return Flip.BuildGapRow(copy, opts)
+end
+check("Next price far above the usual range is ignored", gapWith({ usualHigh = 300 }) == nil)
+check("No usual range, no row", Flip.BuildGapRow({ itemID = 1, steps = potion.steps, sellsPerDay = 14 }) == nil)
+check("Unknown turnover is not listed", Flip.BuildGapRow({ itemID = 1, steps = potion.steps, usualHigh = 420 }) == nil)
+check("Slow turnover is not listed", gapWith({ sellsPerDay = 2 }) == nil)
+check("Cost limit drops dear gaps", gapWith({}, { maxCost = 2000 }) == nil)
+check("A single level has no gap", gapWith({ steps = { 280, 3 } }) == nil)
+check("A deposit can turn the gain negative", gapWith({ deposit = 200 }) == nil)
+local gapRows = Flip.BuildGapRows({ potion, { itemID = 2, steps = { 100, 50, 200, 9 }, usualHigh = 210, sellsPerDay = 80 } })
+check("Gaps are sorted by gain", #gapRows == 2 and gapRows[1].itemID == 2)
+
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}
 local auction = { history = { hourly = {}, daily = {} } }

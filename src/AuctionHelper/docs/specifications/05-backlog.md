@@ -26,7 +26,7 @@
 | [e07-opportunities](issues/e07-opportunities/README.md) | Opportunities tab: what to buy or sell right now | in progress |
 | [f50-opportunities-tab-flips](issues/e07-opportunities/f50-opportunities-tab-flips/README.md) | Opportunities tab and Flips | tab and Flips implemented, in-game check pending; cart button, shared Deals card and deposit loss open |
 | [f51-sure-things](issues/e07-opportunities/f51-sure-things/README.md) | Sure things: listed under vendor price | implemented, in-game check pending |
-| [f52-price-gaps](issues/e07-opportunities/f52-price-gaps/README.md) | Price gaps (risky) | planned |
+| [f52-price-gaps](issues/e07-opportunities/f52-price-gaps/README.md) | Price gaps (risky) | implemented, in-game check pending |
 | [f53-weekday-pattern](issues/e07-opportunities/f53-weekday-pattern/README.md) | Weekday pattern in the Market item view | planned |
 | [f54-sell-now](issues/e07-opportunities/f54-sell-now/README.md) | Sell now | planned |
 | [e08-craft-planning](issues/e08-craft-planning/README.md) | Craft planning: material sources, how many to make, cooldowns | planned |
