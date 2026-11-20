@@ -295,6 +295,18 @@ check("Sales round to whole items", ML.RestockQuantity({ sellsPerDay = 2.6, owne
 check("Cap limits the quantity", ML.RestockQuantity({ sellsPerDay = 80, owned = 0, profit = 100, cap = 1 }) == 1)
 check("Listed counts once", ML.RestockQuantity({ sellsPerDay = 8, owned = 2, listed = 3, profit = 100 }) == 3)
 
+-- Cooldowns
+check("No cooldown on record", ML.CooldownState(nil, 1000).state == "none")
+check("A cooldown in the past is ready", ML.CooldownState(900, 1000).state == "ready")
+local waiting = ML.CooldownState(1000 + 28 * 3600, 1000)
+check("A cooldown in the future is waiting", waiting.state == "waiting" and waiting.secondsLeft == 28 * 3600)
+check("Cooldown text: days and hours", ML.FormatCooldown(28 * 3600) == "1 day 4 hours")
+check("Cooldown text: whole days", ML.FormatCooldown(48 * 3600) == "2 days")
+check("Cooldown text: hours", ML.FormatCooldown(3 * 3600) == "3 hours" and ML.FormatCooldown(3600) == "1 hour")
+check("Cooldown text: minutes, never zero", ML.FormatCooldown(20 * 60) == "20 minutes" and ML.FormatCooldown(5) == "1 minute")
+check("A ready cooldown caps Make at 1", ML.RestockQuantity({ sellsPerDay = 12, owned = 0, profit = 100, cap = 1 }) == 1)
+check("A waiting cooldown caps Make at 0", ML.RestockQuantity({ sellsPerDay = 12, owned = 0, profit = 100, cap = 0 }) == 0)
+
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}
 local auction = { history = { hourly = {}, daily = {} } }

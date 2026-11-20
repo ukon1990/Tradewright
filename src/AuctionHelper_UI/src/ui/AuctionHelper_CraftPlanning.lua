@@ -1,8 +1,20 @@
 local ProfessionExporter = select(2, ...)
 
--- Crafts tab columns for planning (F61): how many of an item sell a day, and how many to make.
+-- Crafts tab columns for planning (F61, F62): sells a day, how many to make, and recipe cooldowns.
 
--- Sells a day and the restock quantity for one output item, recomputed at most every 10 seconds.
+-- A cooldown recipe can be made once when ready and not at all while waiting.
+local COOLDOWN_CAP = { ready = 1, waiting = 0 }
+
+local function cooldownText(pe, cooldown)
+	if cooldown.state == "ready" then
+		return "Ready"
+	elseif cooldown.state == "waiting" then
+		return pe.MaterialLogic.FormatCooldown(cooldown.secondsLeft)
+	end
+	return ""
+end
+
+-- Sells a day, restock quantity and cooldown for one craft row, recomputed at most every 10 seconds.
 local function planFor(pe, row)
 	local itemID = tonumber(row.outputItemID)
 	if not itemID then
@@ -13,16 +25,19 @@ local function planFor(pe, row)
 	if state.craftPlanStamp ~= stamp then
 		state.craftPlanStamp, state.craftPlans = stamp, {}
 	end
-	local plan = state.craftPlans[itemID]
+	local key = row.rowKey or itemID
+	local plan = state.craftPlans[key]
 	if not plan then
 		local _, sells = pe:GetItemPriceSignals(itemID)
 		local owned = pe:BuildAccountItemInventoryTotals(itemID).total
-		plan = { sellsPerDay = sells and sells.perDay, owned = owned }
+		local cooldown = pe:GetCraftRowCooldown(row)
+		plan = { sellsPerDay = sells and sells.perDay, owned = owned, cooldown = cooldown }
 		plan.make = pe.MaterialLogic.RestockQuantity({
 			sellsPerDay = plan.sellsPerDay, owned = owned, profit = row.profit,
 			days = tonumber(pe:GetSetting("crafts.restockDays", 1)) or 1,
+			cap = COOLDOWN_CAP[cooldown.state],
 		})
-		state.craftPlans[itemID] = plan
+		state.craftPlans[key] = plan
 	end
 	return plan
 end
@@ -35,7 +50,7 @@ local function perDayText(pe, perDay)
 	return string.format("%.1f", perDay)
 end
 
---- Append "Sells a day" and "Make" to the Crafts table columns.
+--- Append "Sells a day", "Make" and "Cooldown" to the Crafts table columns.
 function ProfessionExporter:AddCraftPlanningColumns(columns)
 	local pe = self
 	columns[#columns + 1] = {
@@ -57,6 +72,20 @@ function ProfessionExporter:AddCraftPlanningColumns(columns)
 		getText = function(row)
 			local make = planFor(pe, row).make
 			return make and pe:FormatNumberGrouped(make) or "-"
+		end,
+	}
+	columns[#columns + 1] = {
+		id = "cooldown", label = "Cooldown", justifyH = "RIGHT", width = 96, sortable = true, defaultSort = "asc", optional = true,
+		tooltipTitle = "Cooldown",
+		tooltipText = "For the best crafter, from the last time that character's profession window was open. "
+			.. "Empty for recipes that have not been seen on cooldown.",
+		sortValue = function(row)
+			local cooldown = planFor(pe, row).cooldown
+			return cooldown and cooldown.state ~= "none" and cooldown.secondsLeft or 1e15
+		end,
+		getText = function(row)
+			local cooldown = planFor(pe, row).cooldown
+			return cooldown and cooldownText(pe, cooldown) or ""
 		end,
 	}
 	return columns

@@ -23,6 +23,23 @@ Recipes with a cooldown show whether they are ready or how long is left, per cha
 - Setting "Tell me when a cooldown craft is ready" (on): one chat line at login naming the recipe and character
 - F60 reads `hasCooldown` to keep these recipes out of the craft branch
 
+## Status
+
+Implemented:
+
+- `AuctionHelper_Cooldowns.lua` (Professions): while a profession window is open, the cooldown of every recipe of that profession is read from `C_TradeSkillUI.GetRecipeCooldown` (shortly after profession events) and stored per character as `db.characters[characterKey].recipeCooldowns[recipeID] = readyAt`. It listens on its own event frame and does not touch the scan code.
+- `MaterialLogic.CooldownState` and `FormatCooldown` (pure, offline-tested)
+- Crafts tab: an optional `Cooldown` column ("Ready", "1 day 4 hours", or empty) for the row's best crafter; `Make` is capped at 1 when ready and 0 while waiting
+- F60 leaves recipes that any character has on record as a cooldown recipe out of the craft-cost index
+
+Differs from the scope:
+
+- **A recipe is known to have a cooldown only after the client has reported one for it.** A cooldown recipe that has never been on cooldown while the addon was watching shows nothing. The client reports no cooldown for a ready recipe, so the addon cannot tell "ready" from "has none" until then.
+- **Only the modern profession API is read** (`GetAllRecipeIDs` and `GetRecipeCooldown`). The classic `GetTradeSkillCooldown` path is not implemented; on a client without the modern calls nothing is stored.
+- **Shared cooldowns** (`BestCooldownUse`) are not handled: each recipe stands alone
+- **Not done:** the row's second-line text, the "Cooldowns" filter value, the footer line and the login chat line. The first three sit in `AuctionHelper_CraftsUI.lua`, which is over the file-size limit.
+- The stored key is the recipe ID the client lists; a craft row is matched on its recipe ID, then its spell ID. Whether these line up on Forever needs the in-game check.
+
 ## Acceptance criteria
 
 - [ ] Using a cooldown recipe and rescanning shows "cooldown in …" with the client's time
@@ -30,7 +47,8 @@ Recipes with a cooldown show whether they are ready or how long is left, per cha
 - [ ] Another character's cooldown shows from that character's last scan and flips to ready when its time passes
 - [ ] A recipe without a cooldown shows nothing
 - [ ] A client lacking both cooldown calls shows no cooldown text and no error
-- [ ] Offline tests: ready, waiting, no cooldown, time in the past, best use among several
+- [x] Offline tests: ready, waiting, no cooldown, time in the past, time text, Make cap
+- [ ] Best use among recipes that share a cooldown (not implemented)
 
 ## Verification
 

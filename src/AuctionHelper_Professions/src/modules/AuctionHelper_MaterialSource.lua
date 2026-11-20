@@ -8,12 +8,23 @@ local _, ProfessionExporter = ...
 -- cheaper to craft is priced that way from the evaluation after the one that first priced its recipe.
 -- The index is kept across cache invalidation so a rebuild can read the previous results.
 
+-- A cooldown's output is capped, so its recipe is not a way to get a material in bulk.
+local function withoutCooldowns(pe, rows)
+	local kept = {}
+	for _, row in ipairs(rows) do
+		if not (pe:IsCooldownRecipe(row.recipeID) or pe:IsCooldownRecipe(row.recipeSpellID)) then
+			kept[#kept + 1] = row
+		end
+	end
+	return kept
+end
+
 local function craftUnitCostIndex(pe)
 	local state = pe:GetState()
 	local rows = state.craftOpportunityRows or state.craftOpportunityRowsStale
 	if rows and rows ~= state.craftUnitCostRows then
 		state.craftUnitCostRows = rows
-		state.craftUnitCostIndex = pe.MaterialLogic.UnitCostIndex(rows)
+		state.craftUnitCostIndex = pe.MaterialLogic.UnitCostIndex(withoutCooldowns(pe, rows))
 	end
 	return state.craftUnitCostIndex or {}
 end
