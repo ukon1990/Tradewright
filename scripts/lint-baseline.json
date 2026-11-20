@@ -51,7 +51,7 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": 1194,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": 929,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_UIShell.lua": 809,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_Widgets.lua": 967
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_Widgets.lua": 966
  },
  "functions": {
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": {
@@ -2027,14 +2027,6 @@
     "ccn": [
      23
     ]
-   },
-   "buildMailParcels": {
-    "lines": [
-     42
-    ],
-    "ccn": [
-     11
-    ]
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_MarketUI.lua": {
@@ -2227,18 +2219,6 @@
     ],
     "ccn": [
      24
-    ]
-   }
-  },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_SettingsTab.lua": {
-   "buildSections": {
-    "lines": [
-     78
-    ]
-   },
-   "createItem": {
-    "lines": [
-     49
     ]
    }
   },
