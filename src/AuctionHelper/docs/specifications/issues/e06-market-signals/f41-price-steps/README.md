@@ -14,25 +14,31 @@ A full scan keeps, for each item, its cheapest price levels and how many are lis
 
 ## Scope
 
-- While aggregating a dump, keep per item a bounded list of its cheapest unit prices: insert each row's `(unitPrice, quantity)`, merge equal prices, drop the dearest level when the list exceeds `maxSteps` (8). Rows without a buyout are skipped.
-- `ForeverLogic.BuildPriceSteps(levels, maxSteps)` → flat array `{price1, qty1, price2, qty2, …}` sorted by price
-- Store it on the snapshot entry as `l`. It is not copied into hourly or daily history.
-- The live single-item search fills `l` the same way, so opening an item's buy page refreshes its steps (F30 already saves price and quantity from that page)
-- Pure helpers:
-  - `ForeverLogic.CostToClear(steps, upToPrice)` → `{qty, cost}`
-  - `ForeverLogic.AverageFill(steps, units)` → average unit price for the cheapest `units`, nil when the steps do not cover that many
-  - `ForeverLogic.FindPriceGap(steps, minGapPct)` → `{belowQty, belowCost, floorPrice, nextPrice}` for the largest jump between neighbouring levels
-- Item details window: a "Price steps" list (price, quantity, cost so far)
-- Setting "Keep the cheapest price steps of each item from a full scan" (on by default); off removes `l` at the next scan
+- Pure helpers in `AuctionHelper_MarketSignals.lua`:
+  - `AddPriceStep(levels, price, qty, maxSteps)`: bounded insert into an ascending list, merging equal prices and dropping the dearest level past `maxSteps` (8)
+  - `BuildPriceSteps(levels)` → flat array `{price1, qty1, price2, qty2, …}` sorted by price
+  - `CostToClear(steps, upToPrice)` → `{qty, cost}`
+  - `AverageFill(steps, units)` → average unit price for the cheapest `units`, nil when the steps do not cover that many
+  - `FindPriceGap(steps, minGapPct)` → `{belowQty, belowCost, floorPrice, nextPrice, gapPct}` for the largest jump between neighbouring levels
+- `AuctionHelper_PriceSteps.lua` (AuctionData):
+  - `AggregateAuctionRow` folds a scan row into its item's aggregate and its price levels; rows without a buyout are skipped. Both scan paths call it, and the duplicated inline aggregation they carried as a fallback is removed.
+  - `PersistDumpAggregate` saves one item's aggregate (the code moved out of `PersistFullAuctionDumpChunk`) and its steps
+  - Steps are stored in their own table, `auction.priceSteps[itemID] = {t, l}`, not on the snapshot entry: full scans store one entry per item ID, and this keeps the snapshot compaction code untouched. They are not copied into history and are trimmed with the hourly retention at load.
+  - `GetPriceSteps(itemID)` → `steps, seenAt`
+- Item details: "Cheapest steps" (the three cheapest levels) and "Biggest price jump"
+- Setting "Keep the cheapest price steps of each item from a full scan" (on by default); off removes an item's steps at the next scan
+- Still open:
+  - the live single-item search (`GetLiveAuctionSearchAggregate`) does not refresh steps yet
+  - a full "Price steps" list (price, quantity, cost so far) in the item details window
 
 ## Acceptance criteria
 
 - [ ] After a full scan an item with several prices has up to 8 steps, cheapest first, and the first step equals the stored lowest price
-- [ ] An item listed at one price has one step holding its full quantity
+- [ ] An item listed at one price has one step holding its full quantity (offline test passes; in-game check pending)
 - [ ] A scan of 18,000 items stays chunked and takes no noticeably longer than before
 - [ ] Saved data from before this feature loads; items without steps show "-" where steps are needed
 - [ ] Turning the setting off stops storing steps and nothing errors
-- [ ] Offline tests: merge of equal prices, more than 8 levels, stacks priced per unit, cost to clear, average fill beyond the kept steps, largest gap, single level
+- [x] Offline tests: merge of equal prices, more than 8 levels, stacks priced per unit, cost to clear, average fill beyond the kept steps, largest gap, single level
 
 ## Verification
 

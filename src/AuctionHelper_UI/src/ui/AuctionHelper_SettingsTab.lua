@@ -39,6 +39,8 @@ local function auctionHouseItems(pe)
 			options = numberOptions({ 7, 14, 30 }, "%d days"), onChange = refreshEconomy },
 		{ kind = "select", label = "Keep daily prices for", path = "auction.dailyRetentionDays", default = 180,
 			options = numberOptions({ 90, 180, 365 }, "%d days") },
+		{ kind = "check", label = "Keep the cheapest price steps of each item from a full scan", path = "auction.keepPriceSteps",
+			default = true },
 		{ kind = "select", label = "Refresh prices older than", path = "auction.priceFreshnessMinutes", default = 15,
 			options = numberOptions({ 5, 15, 30, 60, 180 }, "%d minutes") },
 		{ kind = "check", label = "Scan craft and reagent prices when the auction house opens",

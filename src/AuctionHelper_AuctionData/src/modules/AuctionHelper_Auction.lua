@@ -4867,28 +4867,7 @@ function ProfessionExporter:PersistFullAuctionDumpChunk(token)
 		local itemID = tonumber(keys[i])
 		local aggregate = itemID and dump.aggregate and dump.aggregate[itemID] or nil
 		if itemID and aggregate then
-			local sourceLabel = tostring(dump.sourceLabel or (dump.classic and "classic_full" or "replicate_full"))
-			self:PersistAuctionDumpObservation({
-				itemID = itemID,
-				isCommodity = false,
-				itemKey = tostring(itemID),
-				minBuyout = tonumber(aggregate.minBuyout),
-				marketLow = tonumber(aggregate.marketLow),
-				marketHigh = tonumber(aggregate.marketHigh),
-				sampleSize = tonumber(aggregate.sampleSize) or 1,
-				listingCount = tonumber(aggregate.listingCount),
-				source = sourceLabel,
-				seenAt = seenAt,
-			})
-			if tonumber(aggregate.weightedQty) and tonumber(aggregate.weightedQty) > 0 then
-				self:RecordItemHistoryObservation(
-					itemID,
-					"market",
-					tonumber(aggregate.weightedSum) / tonumber(aggregate.weightedQty),
-					sourceLabel,
-					seenAt
-				)
-			end
+			self:PersistDumpAggregate(itemID, aggregate, dump, seenAt)
 		end
 	end
 	dump.persistIndex = last + 1
@@ -4932,38 +4911,12 @@ function ProfessionExporter:ProcessFullAuctionDumpChunk(token)
 	end
 	dump.status = "processing"
 	dump.aggregate = dump.aggregate or {}
-	local aggregateRow = self.ForeverLogic and self.ForeverLogic.AggregateClassicAuctionRow
+	local aggregateRow = self.AggregateAuctionRow
 	local last = math.min(total - 1, index + FULL_AH_DUMP_ROW_CHUNK - 1)
 	for i = index, last do
 		local _, _, count, _, _, _, _, _, _, buyoutPrice, _, _, _, _, _, _, itemID = C_AuctionHouse.GetReplicateItemInfo(i)
 		itemID = normalizeItemID(itemID)
-		if aggregateRow then
-			aggregateRow(dump.aggregate, itemID, count, buyoutPrice)
-		elseif itemID then
-			local quantity = math.max(1, tonumber(count) or 1)
-			local rawBuyout = tonumber(buyoutPrice)
-			local bucket = dump.aggregate[itemID] or {
-				itemID = itemID,
-				marketLow = nil,
-				marketHigh = nil,
-				minBuyout = nil,
-				sampleSize = 0,
-				listingCount = 0,
-				weightedQty = 0,
-				weightedSum = 0,
-			}
-			if rawBuyout and rawBuyout > 0 then
-				local perUnit = rawBuyout / quantity
-				bucket.marketLow = bucket.marketLow and math.min(bucket.marketLow, perUnit) or perUnit
-				bucket.marketHigh = bucket.marketHigh and math.max(bucket.marketHigh, perUnit) or perUnit
-				bucket.minBuyout = bucket.minBuyout and math.min(bucket.minBuyout, rawBuyout) or rawBuyout
-				bucket.sampleSize = (tonumber(bucket.sampleSize) or 0) + quantity
-				bucket.listingCount = (tonumber(bucket.listingCount) or 0) + 1
-				bucket.weightedQty = (tonumber(bucket.weightedQty) or 0) + quantity
-				bucket.weightedSum = (tonumber(bucket.weightedSum) or 0) + (perUnit * quantity)
-			end
-			dump.aggregate[itemID] = bucket
-		end
+		aggregateRow(dump.aggregate, itemID, count, buyoutPrice)
 	end
 	dump.index = last + 1
 	dump.done = dump.index
@@ -5277,7 +5230,7 @@ function ProfessionExporter:OnAuctionItemListUpdate()
 	dump.status = "processing"
 	dump.seenAt = now()
 	dump.aggregate = dump.aggregate or {}
-	local aggregateRow = self.ForeverLogic and self.ForeverLogic.AggregateClassicAuctionRow
+	local aggregateRow = self.AggregateAuctionRow
 	for i = 1, numBatch do
 		local _, _, count, _, _, _, _, _, _, buyoutPrice, _, _, _, _, _, _, itemID = GetAuctionItemInfo("list", i)
 		itemID = normalizeItemID(itemID)
@@ -5287,33 +5240,7 @@ function ProfessionExporter:OnAuctionItemListUpdate()
 				itemID = normalizeItemID(link:match("item:(%d+)"))
 			end
 		end
-		if aggregateRow then
-			aggregateRow(dump.aggregate, itemID, count, buyoutPrice)
-		elseif itemID then
-			local quantity = math.max(1, tonumber(count) or 1)
-			local rawBuyout = tonumber(buyoutPrice)
-			local bucket = dump.aggregate[itemID] or {
-				itemID = itemID,
-				marketLow = nil,
-				marketHigh = nil,
-				minBuyout = nil,
-				sampleSize = 0,
-				listingCount = 0,
-				weightedQty = 0,
-				weightedSum = 0,
-			}
-			if rawBuyout and rawBuyout > 0 then
-				local perUnit = rawBuyout / quantity
-				bucket.marketLow = bucket.marketLow and math.min(bucket.marketLow, perUnit) or perUnit
-				bucket.marketHigh = bucket.marketHigh and math.max(bucket.marketHigh, perUnit) or perUnit
-				bucket.minBuyout = bucket.minBuyout and math.min(bucket.minBuyout, rawBuyout) or rawBuyout
-				bucket.sampleSize = (tonumber(bucket.sampleSize) or 0) + quantity
-				bucket.listingCount = (tonumber(bucket.listingCount) or 0) + 1
-				bucket.weightedQty = (tonumber(bucket.weightedQty) or 0) + quantity
-				bucket.weightedSum = (tonumber(bucket.weightedSum) or 0) + (perUnit * quantity)
-			end
-			dump.aggregate[itemID] = bucket
-		end
+		aggregateRow(dump.aggregate, itemID, count, buyoutPrice)
 	end
 	local pageSize = tonumber(dump.pageSize) or CLASSIC_AH_DUMP_PAGE_SIZE
 	local page = tonumber(dump.page) or 0

@@ -92,6 +92,30 @@ local function usualColumns(pe)
 	}
 end
 
+-- "26g x4 · 30g x12 · 38g x70": the cheapest price levels from the last full scan.
+local function priceStepsText(pe, rowData)
+	local steps = pe.GetPriceSteps and pe:GetPriceSteps(rowData.itemID)
+	if not steps or #steps == 0 then
+		return "-"
+	end
+	local parts = {}
+	for index = 1, math.min(#steps, 6), 2 do
+		parts[#parts + 1] = pe:FormatCopperShort(steps[index]) .. " x" .. pe:FormatNumberGrouped(steps[index + 1])
+	end
+	return table.concat(parts, " · ")
+end
+
+-- "+46% after 9 for 26g 40s": the largest jump between price levels and what clearing up to it costs.
+local function priceGapText(pe, rowData)
+	local steps = pe.GetPriceSteps and pe:GetPriceSteps(rowData.itemID)
+	local gap = steps and pe.MarketSignals.FindPriceGap(steps, 0.1)
+	if not gap then
+		return "-"
+	end
+	return string.format("+%d%% after %s for %s", math.floor(gap.gapPct * 100 + 0.5),
+		pe:FormatNumberGrouped(gap.belowQty), pe:FormatCopperShort(gap.belowCost))
+end
+
 -- Key facts of one Market row for the item view.
 local function marketFactRows(pe, rowData)
 	return {
@@ -101,6 +125,8 @@ local function marketFactRows(pe, rowData)
 		{ "Usual range", usualRangeText(pe, rowData) },
 		{ "Sells a day, estimated", sellsFactText(pe, rowData) },
 		{ "Listed supply lasts", supplyFactText(pe, rowData) },
+		{ "Cheapest steps", priceStepsText(pe, rowData) },
+		{ "Biggest price jump", priceGapText(pe, rowData) },
 		{ "Quantity", pe:FormatNumberGrouped(rowData.sampleSize or 0) },
 		{ "Listings", (tonumber(rowData.listingCount) or 0) > 0 and pe:FormatNumberGrouped(rowData.listingCount) or "-" },
 		{ "Seen", pe:FormatScanTimestamp(rowData.seenAt) },

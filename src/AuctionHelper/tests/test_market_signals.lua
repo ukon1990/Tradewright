@@ -115,6 +115,31 @@ check("Days without an estimate are ignored", MS.SellsPerDay({ [day1 + 9 * DAY] 
 check("Days of supply", MS.DaysOfSupply(86, 12) == 86 / 12)
 check("Days of supply needs sales", MS.DaysOfSupply(86, 0) == nil and MS.DaysOfSupply(86, nil) == nil)
 
+-- Price steps
+local levels = {}
+for _, row in ipairs({ { 310, 2 }, { 280, 3 }, { 410, 22 }, { 295, 4 }, { 280, 0 }, { 425, 31 }, { 440, 40 } }) do
+	MS.AddPriceStep(levels, row[1], row[2], 8)
+end
+local steps = MS.BuildPriceSteps(levels)
+check("Steps are cheapest first", steps[1] == 280 and steps[3] == 295 and steps[5] == 310 and steps[7] == 410)
+check("Equal prices merge", steps[2] == 3 and #steps == 12)
+local capped = {}
+for price = 20, 1, -1 do
+	MS.AddPriceStep(capped, price, 1, 8)
+end
+check("Only the 8 cheapest levels are kept", #capped == 8 and capped[1][1] == 1 and capped[8][1] == 8)
+local single = MS.BuildPriceSteps(MS.AddPriceStep({}, 50, 7, 8))
+check("One price gives one step with its quantity", #single == 2 and single[1] == 50 and single[2] == 7)
+local clear = MS.CostToClear(steps, 310)
+check("Cost to clear up to a price", clear.qty == 9 and clear.cost == 3 * 280 + 4 * 295 + 2 * 310)
+check("Cost to clear below the floor is nothing", MS.CostToClear(steps, 100).qty == 0)
+check("Average fill walks the steps", MS.AverageFill(steps, 5) == (3 * 280 + 2 * 295) / 5)
+check("Average fill beyond the kept steps is nil", MS.AverageFill(steps, 1000) == nil)
+local gap = MS.FindPriceGap(steps, 0.25)
+check("Largest gap: buy 9 for 26g 40s, next 4g 10s", gap and gap.belowQty == 9 and gap.belowCost == 2640 and gap.nextPrice == 410 and gap.floorPrice == 280)
+check("No gap under the threshold", MS.FindPriceGap(steps, 0.5) == nil)
+check("A single level has no gap", MS.FindPriceGap(single, 0) == nil)
+
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}
 local auction = { history = { hourly = {}, daily = {} } }
@@ -132,6 +157,9 @@ _G.GetServerTime = function() return today + HOUR end
 local glue, glueErr = loadfile(root .. "/../AuctionHelper_AuctionData/src/modules/AuctionHelper_PriceHistory.lua")
 assert(glue, glueErr)
 glue("AuctionHelper_AuctionData", pe)
+local stepsGlue, stepsErr = loadfile(root .. "/../AuctionHelper_AuctionData/src/modules/AuctionHelper_PriceSteps.lua")
+assert(stepsGlue, stepsErr)
+stepsGlue("AuctionHelper_AuctionData", pe)
 local logic, logicErr = loadfile(root .. "/src/util/AuctionHelper_ForeverLogic.lua")
 assert(logic, logicErr)
 logic("AuctionHelper", pe)
@@ -162,6 +190,7 @@ auction.indexes = { byItemID = { ["42"] = { k = true, few = true } } }
 local itemUsual, itemSells = pe:GetItemPriceSignals(42)
 check("Item lookup uses the listing with the most history", itemUsual and itemUsual.days == 6 and itemSells ~= nil)
 check("Item without listings has no signals", pe:GetItemPriceSignals(7) == nil)
+local realLogic = pe.ForeverLogic
 pe.ForeverLogic = { ParseItemIDFromStorageKey = function() return 42 end }
 function pe:GetSalesSummary(windowDays) -- luacheck: ignore 212
 	return { items = { { itemID = 42, units = 14 * windowDays } } }
@@ -169,12 +198,40 @@ end
 state.auctionDataRevision = 5
 check("The ledger's own sales are the floor", pe:GetSellsPerDay("k").perDay == 14)
 pe.GetSalesSummary = nil
+pe.ForeverLogic = realLogic
 state.ownSalesPerDay = nil
 auction.history.daily["few"] = { [today - DAY] = { p = 10 }, [today - 2 * DAY] = { p = 12 } }
 state.auctionDataRevision = 2
 check("Fewer than 5 days gives no usual price", pe:GetUsualPrice("few") == nil)
 settings["auction.usualPriceDays"] = 3
 check("Changing the window recomputes", pe:GetUsualPrice("k") == nil)
+
+-- Price steps glue: aggregate rows of a full scan, then persist one item
+local persisted, historyPoints = {}, 0
+function pe:PersistAuctionDumpObservation(observation) -- luacheck: ignore 212
+	persisted[#persisted + 1] = observation
+	return true
+end
+function pe:RecordItemHistoryObservation() -- luacheck: ignore 212
+	historyPoints = historyPoints + 1
+end
+local scan = {}
+pe.AggregateAuctionRow(scan, 99, 20, 2000)
+pe.AggregateAuctionRow(scan, 99, 1, 140)
+pe.AggregateAuctionRow(scan, 99, 5, 0)
+check("Rows aggregate as before", scan[99].sampleSize == 21 and scan[99].listingCount == 2 and scan[99].marketLow == 100)
+check("Stacks are priced per unit, rows without a buyout skipped", #scan[99].levels == 2 and scan[99].levels[1][1] == 100 and scan[99].levels[1][2] == 20)
+pe:PersistDumpAggregate(99, scan[99], { classic = true }, today)
+check("Persist keeps the snapshot fields", #persisted == 1 and persisted[1].marketLow == 100 and persisted[1].source == "classic_full" and historyPoints == 1)
+local kept, keptAt = pe:GetPriceSteps(99)
+check("Steps are saved per item, first step is the lowest price", kept and kept[1] == persisted[1].marketLow and kept[2] == 20 and keptAt == today)
+settings["auction.keepPriceSteps"] = false
+pe:PersistDumpAggregate(99, scan[99], { classic = true }, today)
+check("Turning the setting off drops the steps", pe:GetPriceSteps(99) == nil)
+settings["auction.keepPriceSteps"] = nil
+auction.priceSteps[5] = { t = today - 400 * DAY, l = { 1, 1 } }
+pe:TrimPriceSteps()
+check("Old steps are trimmed", pe:GetPriceSteps(5) == nil)
 
 if failed > 0 then
 	print(failed .. " check(s) failed")

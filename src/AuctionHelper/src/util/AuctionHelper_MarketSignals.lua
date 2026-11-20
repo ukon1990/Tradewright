@@ -221,4 +221,77 @@ function MarketSignals.DaysOfSupply(quantity, perDay)
 	return quantity / perDay
 end
 
+--- Add `qty` units at `price` to an ascending list of `{ price, qty }` levels, keeping the cheapest `maxSteps`.
+function MarketSignals.AddPriceStep(levels, price, qty, maxSteps)
+	for index, level in ipairs(levels) do
+		if level[1] == price then
+			level[2] = level[2] + qty
+			return levels
+		end
+		if price < level[1] then
+			table.insert(levels, index, { price, qty })
+			levels[maxSteps + 1] = nil
+			return levels
+		end
+	end
+	if #levels < maxSteps then
+		levels[#levels + 1] = { price, qty }
+	end
+	return levels
+end
+
+--- Levels as the flat saved form `{ price1, qty1, price2, qty2, … }`, cheapest first.
+function MarketSignals.BuildPriceSteps(levels)
+	local steps = {}
+	for _, level in ipairs(levels or {}) do
+		steps[#steps + 1] = level[1]
+		steps[#steps + 1] = level[2]
+	end
+	return steps
+end
+
+--- Units and cost of everything listed at or under `upToPrice` in flat price steps.
+function MarketSignals.CostToClear(steps, upToPrice)
+	local out = { qty = 0, cost = 0 }
+	for index = 1, #(steps or {}), 2 do
+		if steps[index] > upToPrice then
+			break
+		end
+		out.qty = out.qty + steps[index + 1]
+		out.cost = out.cost + steps[index] * steps[index + 1]
+	end
+	return out
+end
+
+--- Average unit price of the cheapest `units`, or nil when the kept steps hold fewer.
+function MarketSignals.AverageFill(steps, units)
+	local left, cost = units, 0
+	for index = 1, #(steps or {}), 2 do
+		local take = math.min(left, steps[index + 1])
+		cost = cost + take * steps[index]
+		left = left - take
+		if left <= 0 then
+			return cost / units
+		end
+	end
+	return nil
+end
+
+--- The largest jump between neighbouring price levels, when it is at least `minGapPct` (a fraction):
+--- `{ belowQty, belowCost, floorPrice, nextPrice, gapPct }`, or nil.
+function MarketSignals.FindPriceGap(steps, minGapPct)
+	local best
+	local qty, cost = 0, 0
+	for index = 1, #(steps or {}) - 2, 2 do
+		local price, nextPrice = steps[index], steps[index + 2]
+		qty = qty + steps[index + 1]
+		cost = cost + price * steps[index + 1]
+		local gapPct = (nextPrice - price) / price
+		if gapPct >= (minGapPct or 0) and (not best or gapPct > best.gapPct) then
+			best = { belowQty = qty, belowCost = cost, floorPrice = steps[1], nextPrice = nextPrice, gapPct = gapPct }
+		end
+	end
+	return best
+end
+
 return MarketSignals

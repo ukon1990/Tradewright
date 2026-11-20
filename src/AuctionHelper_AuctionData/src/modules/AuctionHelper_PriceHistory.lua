@@ -64,6 +64,7 @@ function ProfessionExporter:RollupDailyAuctionHistory()
 	end
 	local keepDays = math.max(7, tonumber(self:GetSetting("auction.dailyRetentionDays", 180)) or 180)
 	trimDailyHistory(history.daily, today - keepDays * DAY)
+	self:TrimPriceSteps()
 end
 
 local function dailyHistory(pe, storageKey)
