@@ -1237,11 +1237,6 @@
    }
   },
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_MailPlans.lua": {
-   "ProfessionExporter:BuildMailPanelPlan": {
-    "ccn": [
-     13
-    ]
-   },
    "ProfessionExporter:GetBagItems": {
     "ccn": [
      11
@@ -2009,23 +2004,7 @@
    },
    "ProfessionExporter:EnsureMailPanel": {
     "lines": [
-     130
-    ]
-   },
-   "ProfessionExporter:ProcessNextMailParcel": {
-    "lines": [
-     45
-    ],
-    "ccn": [
-     16
-    ]
-   },
-   "ProfessionExporter:RefreshMailPanel": {
-    "lines": [
-     56
-    ],
-    "ccn": [
-     23
+     120
     ]
    }
   },

@@ -105,6 +105,15 @@ do
 end
 
 
+-- Surplus items from review rows
+do
+	local items = ML.SurplusItems({
+		{ itemID = 1, name = "Ore", send = 5 }, { itemID = 2, name = "Herb", send = 0 }, { itemID = 3, name = "Cloth", send = 2 },
+	})
+	check("Surplus items: only rows that send, by name", #items == 2 and items[1].name == "Cloth" and items[2].quantity == 5)
+	check("Surplus items: none from no rows", #ML.SurplusItems({}) == 0)
+end
+
 if failed > 0 then
 	print(failed .. " check(s) failed")
 	os.exit(1)

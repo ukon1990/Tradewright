@@ -10,8 +10,8 @@ end
 local ATTACHMENTS_MAX = ATTACHMENTS_MAX_SEND or 12
 local AUTO_SEND_DELAY = 0.5
 local AUTO_SEND_TIMEOUT = 6
-local MAIL_SUBJECT = "AuctionHelper mats"
-local MAIL_BODY = "Materials from AuctionHelper shopping cart."
+local MAIL_SUBJECTS = { materials = "AuctionHelper mats", crafts = "AuctionHelper crafts", surplus = "AuctionHelper surplus" }
+local MAIL_BODY = "Sent with AuctionHelper."
 
 function ProfessionExporter:GetMailCharacterLabel(characterKey)
 	if self.GetDashboardSidebarCharacterLabel then
@@ -36,8 +36,14 @@ end
 local function clearMailAttachments()
 	for i = 1, ATTACHMENTS_MAX do
 		if GetSendMailItem and GetSendMailItem(i) then
-			ClickSendMailItemButton(i)
+			ClickSendMailItemButton(i, true)
 		end
+	end
+end
+
+local function setMailField(box, text)
+	if box and box.SetText then
+		box:SetText(text)
 	end
 end
 
@@ -133,6 +139,36 @@ function ProfessionExporter:CountMailParcels(destinations)
 	return #buildMailParcels(destinations)
 end
 
+-- An automatic send has no click behind it. If the client ignores it, hand back to the buttons.
+local function watchAutoSend(st)
+	local index = st.index
+	C_Timer.After(AUTO_SEND_TIMEOUT, function()
+		if st.running and st.auto and st.index == index then
+			ProfessionExporter:CancelMailSendQueue()
+			ProfessionExporter:PrintMessage("Could not mail the materials automatically. Use Prepare all in the mail panel.")
+		end
+	end)
+end
+
+-- Attaches a parcel and fills in To, Subject and body in the game's Send Mail window. Automatic
+-- sends go out at once; the buttons leave the mail for the player to check and send.
+local function fillParcel(pe, parcel, st)
+	clearMailAttachments()
+	for _, item in ipairs(parcel.items or {}) do
+		if not attachItemQuantity(item.itemID, item.quantity) then
+			pe:PrintMessage(string.format("Could not attach all of %s for %s.", tostring(item.name or item.itemID), tostring(parcel.mailName)))
+		end
+	end
+	local subject = string.format("%s %d/%d", MAIL_SUBJECTS[parcel.kind] or MAIL_SUBJECTS.materials, st.index, st.total)
+	setMailField(SendMailNameEditBox, parcel.mailName)
+	setMailField(SendMailSubjectEditBox, subject)
+	setMailField(SendMailBodyEditBox, MAIL_BODY)
+	if st.auto and SendMail then
+		SendMail(parcel.mailName, subject, MAIL_BODY)
+		watchAutoSend(st)
+	end
+end
+
 function ProfessionExporter:EnsureMailSendQueueState()
 	self._mailSendQueue = self._mailSendQueue or {
 		parcels = {},
@@ -150,6 +186,12 @@ function ProfessionExporter:CancelMailSendQueue()
 	local st = self:EnsureMailSendQueueState()
 	st.cancel = true
 	st.running = false
+	if MailFrame and MailFrame:IsShown() then
+		clearMailAttachments()
+		for _, box in ipairs({ SendMailNameEditBox, SendMailSubjectEditBox, SendMailBodyEditBox }) do
+			setMailField(box, "")
+		end
+	end
 	if self.ui and self.ui.mailPanel and self.ui.mailPanel:IsShown() then
 		self:RefreshMailPanel()
 	end
@@ -212,27 +254,7 @@ function ProfessionExporter:ProcessNextMailParcel()
 	if MailFrameTab2 and MailFrameTab2.Click then
 		MailFrameTab2:Click()
 	end
-	clearMailAttachments()
-	for _, item in ipairs(parcel.items or {}) do
-		local ok = attachItemQuantity(item.itemID, item.quantity)
-		if not ok then
-			self:PrintMessage(string.format("Could not attach all of %s for %s.", tostring(item.name or item.itemID), tostring(parcel.mailName)))
-		end
-	end
-	if SendMail then
-		SendMail(parcel.mailName, MAIL_SUBJECT, MAIL_BODY)
-	end
-	-- An automatic send has no click behind it. If the client ignores it, hand back to the buttons.
-	if st.auto then
-		local index = st.index
-		C_Timer.After(AUTO_SEND_TIMEOUT, function()
-			if st.running and st.auto and st.index == index then
-				clearMailAttachments()
-				ProfessionExporter:CancelMailSendQueue()
-				ProfessionExporter:PrintMessage("Could not mail the materials automatically. Use Send all in the mail panel.")
-			end
-		end)
-	end
+	fillParcel(self, parcel, st)
 end
 
 function ProfessionExporter:StartMailSendQueue(destinations, auto)
@@ -274,8 +296,19 @@ function ProfessionExporter:AutoSendReadyMaterials()
 	end
 end
 
+--- Materials and crafted items; the surplus only goes from its review panel.
+local function readyDestinations(plan)
+	local ready = {}
+	for _, dest in ipairs(plan) do
+		if dest.kind ~= "surplus" and (tonumber(dest.totalQuantity) or 0) > 0 then
+			ready[#ready + 1] = dest
+		end
+	end
+	return ready
+end
+
 function ProfessionExporter:StartMailSendAll()
-	return self:StartMailSendQueue(self:BuildMailPanelPlan())
+	return self:StartMailSendQueue(readyDestinations(self:BuildMailPanelPlan()))
 end
 
 local MAIL_PAD = 12
@@ -301,12 +334,12 @@ local function showDestTooltip(pe, row)
 	addItemLines(pe, row.dest.items, muted, { r = 1, g = 1, b = 1 }, "")
 	addItemLines(pe, row.dest.missing, danger, danger, " (not in bags)")
 	if row.dest.kind == "surplus" then
-		GameTooltip:AddLine("Click to review and change what goes.", muted.r, muted.g, muted.b, true)
+		GameTooltip:AddLine("Review… lists every item, what goes and what stays.", muted.r, muted.g, muted.b, true)
 	end
 	GameTooltip:Show()
 end
 
--- One destination: character and item count, the first items, and a Send button.
+-- One destination: character and item count, the first items, and its button.
 local function createMailRow(pe, parent)
 	local row = pe:CreateInset(parent)
 	row:SetHeight(MAIL_ROW - 6)
@@ -324,24 +357,39 @@ local function createMailRow(pe, parent)
 	row.openFill:SetAllPoints()
 	row.openFill:SetColorTexture(gold.r, gold.g, gold.b, 0.07)
 	row:EnableMouse(true)
-	row:SetScript("OnMouseUp", function(self)
-		if self.dest and self.dest.kind == "surplus" then
-			pe:ToggleMailReviewPanel()
-		end
-	end)
 	row:SetScript("OnEnter", function(self) showDestTooltip(pe, self) end)
 	row:SetScript("OnLeave", GameTooltip_Hide)
 	return row
 end
 
--- "Surplus to Bånkey · 214 items · ready" with the count muted and the state coloured.
+local function colorize(color, text)
+	return string.format("|cff%02x%02x%02x%s|r", color.r * 255, color.g * 255, color.b * 255, text)
+end
+
+-- "Crafted items to Bånkey · 6 items · ready" with the count muted and the state coloured. The
+-- surplus row has no state: what goes is decided in its review panel.
 local function destTitle(pe, dest)
 	local theme = pe:GetTheme()
-	local muted, state = theme.textMuted, dest.complete ~= false and theme.success or theme.warning
-	local title = (ROW_TITLES[dest.kind] or "") .. pe:GetMailCharacterLabel(dest.characterKey)
-	return string.format("%s |cff%02x%02x%02x· %s items|r |cff%02x%02x%02x· %s|r", title,
-		muted.r * 255, muted.g * 255, muted.b * 255, pe:FormatNumberGrouped(dest.totalQuantity or 0),
-		state.r * 255, state.g * 255, state.b * 255, dest.complete ~= false and "ready" or (#dest.missing .. " still missing"))
+	local text = (ROW_TITLES[dest.kind] or "") .. pe:GetMailCharacterLabel(dest.characterKey)
+	if dest.kind == "surplus" then
+		return text
+	end
+	text = text .. " " .. colorize(theme.textMuted, "· " .. pe:FormatNumberGrouped(dest.totalQuantity or 0) .. " items")
+	local ready = dest.complete ~= false
+	return text .. " " .. colorize(ready and theme.success or theme.warning, "· " .. (ready and "ready" or (#dest.missing .. " still missing")))
+end
+
+-- "214 to send · 12 stay · 4 skipped" for the surplus row.
+local function surplusText(pe, sum)
+	local text = sum.send > 0 and (pe:FormatNumberGrouped(sum.send) .. " to send") or "Nothing to send"
+	local stay = sum.kept - sum.skipped
+	if stay > 0 then
+		text = text .. string.format(" · %d stay", stay)
+	end
+	if sum.skipped > 0 then
+		text = text .. string.format(" · %d skipped", sum.skipped)
+	end
+	return text
 end
 
 -- "Runecloth x100, Heavy Leather x60 and 36 more".
@@ -356,16 +404,62 @@ local function destItemsText(pe, items)
 	return table.concat(parts, ", ")
 end
 
--- Fills one destination row: title, count and state, the first three items, and Send.
+-- Fills one destination row: title, count and state, the first three items, and its button:
+-- Prepare for materials and crafts, Review… for the surplus.
 local function fillMailRow(pe, row, dest)
+	local surplus = dest.kind == "surplus"
 	row.dest = dest
 	row.name:SetText(destTitle(pe, dest))
-	row.items:SetText(destItemsText(pe, dest.items or {}))
+	row.items:SetText(surplus and surplusText(pe, dest.summary) or destItemsText(pe, dest.items or {}))
+	local open = surplus and pe:IsMailReviewPanelShown()
+	pe:SetButtonLabel(row.send, open and "Hide review" or (surplus and "Review…" or "Prepare"), true)
+	row.send:SetEnabled(surplus or not pe:EnsureMailSendQueueState().running)
 	row.send:SetScript("OnClick", function()
-		ProfessionExporter:StartMailSendQueue({ dest })
+		if surplus then
+			pe:ToggleMailReviewPanel()
+		else
+			pe:StartMailSendQueue({ dest })
+		end
 	end)
-	row.openFill:SetShown(dest.kind == "surplus" and pe:IsMailReviewPanelShown())
+	row.openFill:SetShown(open)
 	row:Show()
+end
+
+-- Footer: what Prepare all covers, or where the surplus goes from.
+local function footerText(pe, plan)
+	local ready, items = readyDestinations(plan), 0
+	for _, dest in ipairs(ready) do
+		items = items + dest.totalQuantity
+	end
+	if #ready > 0 then
+		return string.format("%d %s · %s items to prepare", #ready, #ready == 1 and "mail row" or "mail rows", pe:FormatNumberGrouped(items))
+	end
+	return #plan > 0 and "Use Review… to choose what surplus goes" or "No mail pending"
+end
+
+-- Progress text: a count beside the bar for automatic sends, a prompt for a prepared mail.
+local function progressLabel(panel, st, done)
+	if st.auto then
+		panel.progressText:SetPoint("RIGHT", panel.progressBar, "LEFT", -8, 0)
+		return string.format("Sending %d of %d", done, st.total)
+	end
+	panel.progressText:SetPoint("RIGHT", panel.progressRow, "RIGHT")
+	return string.format("Mail %d of %d ready: press Send in the mailbox", st.index, st.total)
+end
+
+-- Progress while a queue runs; returns whether one does.
+local function refreshProgress(panel, st)
+	local active = st.running == true and (st.total or 0) > 0
+	panel.progressRow:SetShown(active)
+	if not active then
+		return false
+	end
+	local done = math.min(st.total, math.max(0, (st.index or 1) - 1))
+	panel.progressBar:SetShown(st.auto == true)
+	panel.progressBar:SetMinMaxValues(0, st.total)
+	panel.progressBar:SetValue(done)
+	panel.progressText:SetText(progressLabel(panel, st, done))
+	return true
 end
 
 function ProfessionExporter:EnsureMailPanel()
@@ -436,7 +530,7 @@ function ProfessionExporter:EnsureMailPanel()
 	actions:SetHeight(26)
 	panel.cancelBtn = self:CreateButton(actions, "Cancel", function() pe:CancelMailSendQueue() end)
 	panel.cancelBtn:SetPoint("RIGHT")
-	panel.sendAllBtn = self:CreateButton(actions, "Send all", function() pe:StartMailSendAll() end, { primary = true })
+	panel.sendAllBtn = self:CreateButton(actions, "Prepare all", function() pe:StartMailSendAll() end, { primary = true })
 	panel.sendAllBtn:SetPoint("LEFT")
 	panel.sendAllBtn:SetPoint("RIGHT", panel.cancelBtn, "LEFT", -8, 0)
 	panel.progressRow = CreateFrame("Frame", nil, panel)
@@ -445,9 +539,8 @@ function ProfessionExporter:EnsureMailPanel()
 	panel.progressRow:SetHeight(18)
 	panel.progressText = self:CreateText(panel.progressRow, "GameFontHighlightSmall")
 	panel.progressText:SetPoint("LEFT")
-	panel.progressText:SetWidth(110)
 	panel.progressBar = CreateFrame("StatusBar", nil, panel.progressRow)
-	panel.progressBar:SetPoint("LEFT", panel.progressText, "RIGHT", 8, 0)
+	panel.progressBar:SetPoint("LEFT", 118, 0)
 	panel.progressBar:SetPoint("RIGHT")
 	self:StyleProgressBar(panel.progressBar)
 
@@ -456,17 +549,8 @@ function ProfessionExporter:EnsureMailPanel()
 	panel.summary:SetPoint("TOPLEFT", panel, "TOPLEFT", MAIL_PAD, -(theme.size.header + 1 + MAIL_PAD))
 	panel.summary:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -MAIL_PAD, -(theme.size.header + 1 + MAIL_PAD))
 	panel.summary:SetText("Reagents in your bags that your queue needs on other characters.")
-	-- Crafters only: what else goes to the seller. Collapses to nothing on the seller.
-	panel.surplusRow = CreateFrame("Frame", nil, panel)
-	panel.surplusRow:SetPoint("TOPLEFT", panel.summary, "BOTTOMLEFT", 0, -8)
-	panel.surplusRow:SetPoint("TOPRIGHT", panel.summary, "BOTTOMRIGHT", 0, -8)
-	panel.sendOthers = self:CreateCheckbox(panel.surplusRow, "Send other sellable items", function(checked)
-		pe:SetMailSendOthers(checked)
-		pe:RefreshMailPanel()
-	end)
-	panel.sendOthers:SetPoint("LEFT")
 	local scroll = CreateFrame("ScrollFrame", addonName .. "MailPanelScroll", panel, "UIPanelScrollFrameTemplate")
-	scroll:SetPoint("TOPLEFT", panel.surplusRow, "BOTTOMLEFT", 0, -10)
+	scroll:SetPoint("TOPLEFT", panel.summary, "BOTTOMLEFT", 0, -10)
 	scroll:SetPoint("BOTTOMRIGHT", panel.progressRow, "TOPRIGHT", -14, 10)
 	panel.scroll = scroll
 	panel.content = CreateFrame("Frame", nil, scroll)
@@ -513,17 +597,8 @@ function ProfessionExporter:RefreshMailPanel()
 	panel.applyExpanded(expanded)
 
 	panel.summary:SetText(roleText(self))
-	local seller = self:GetSellerCharacterKey()
-	local crafter = seller ~= nil and seller ~= self:GetCharacterKey()
-	panel.surplusRow:SetShown(crafter)
-	panel.surplusRow:SetHeight(crafter and 26 or 1)
-	if crafter then
-		panel.sendOthers.check:SetChecked(self:GetMailSendOthers())
-	end
 	local plan = self:BuildMailPanelPlan()
-	local itemCount = 0
 	for index, dest in ipairs(plan) do
-		itemCount = itemCount + (tonumber(dest.totalQuantity) or 0)
 		local row = panel.rows[index]
 		if not row then
 			row = createMailRow(self, panel.content)
@@ -539,19 +614,10 @@ function ProfessionExporter:RefreshMailPanel()
 	end
 	panel.content:SetHeight(math.max(MAIL_ROW, #plan * MAIL_ROW))
 	panel.empty:SetShown(#plan == 0)
-	panel.footerText:SetText(#plan == 0 and "No mail pending" or string.format("%d %s · %s items ready",
-		#plan, #plan == 1 and "character" or "characters", self:FormatNumberGrouped(itemCount)))
-
+	panel.footerText:SetText(footerText(self, plan))
 	local st = self:EnsureMailSendQueueState()
-	local sending = st.running and st.total and st.total > 0
-	panel.progressRow:SetShown(sending and true or false)
-	if sending then
-		local done = math.min(st.total, math.max(0, (st.index or 1) - 1))
-		panel.progressBar:SetMinMaxValues(0, st.total)
-		panel.progressBar:SetValue(done)
-		panel.progressText:SetText(string.format("Sending %d of %d", done, st.total))
-	end
-	panel.sendAllBtn:SetEnabled(#plan > 0 and not sending)
+	local sending = refreshProgress(panel, st)
+	panel.sendAllBtn:SetEnabled(#readyDestinations(plan) > 0 and not sending)
 	panel.cancelBtn:SetEnabled(st.running == true)
 	self:RefreshMailReviewPanel(plan)
 end
@@ -584,13 +650,28 @@ function ProfessionExporter:OnMailFrameHide()
 	end
 end
 
+local function nameOnly(name)
+	return tostring(name or ""):match("^[^%-]+") or ""
+end
+
+--- A send went through. While mails are prepared, a mail the player sent to someone else is not
+--- the prepared parcel: that parcel is filled in again instead of counted as sent.
 function ProfessionExporter:OnMailSendSuccess()
+	local st = self:EnsureMailSendQueueState()
+	local parcel = st.running and st.parcels and st.parcels[st.index]
+	if parcel and not st.auto and nameOnly(self._lastMailTo):lower() ~= nameOnly(parcel.mailName):lower() then
+		C_Timer.After(0.35, function() ProfessionExporter:ProcessNextMailParcel() end)
+		return
+	end
 	self:AdvanceMailSendQueue(true)
 end
 
+--- A failed automatic send moves on; a prepared mail stays as it is for the player to fix or cancel.
 function ProfessionExporter:OnMailSendFailed()
 	self:PrintMessage("Mail send failed.")
-	self:AdvanceMailSendQueue(false)
+	if self:EnsureMailSendQueueState().auto then
+		self:AdvanceMailSendQueue(false)
+	end
 end
 
 function ProfessionExporter:InitMailPanelHooks()
@@ -598,6 +679,9 @@ function ProfessionExporter:InitMailPanelHooks()
 		return
 	end
 	self._mailPanelHooks = true
+	hooksecurefunc("SendMail", function(recipient)
+		ProfessionExporter._lastMailTo = recipient
+	end)
 	local mail = _G.MailFrame
 	if mail and mail.HookScript then
 		mail:HookScript("OnShow", function()

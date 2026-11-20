@@ -15,6 +15,7 @@
 | [f22-return-crafts](issues/e03-craft-mail/f22-return-crafts/README.md) | Send crafts back to the seller | done |
 | [f23-keep-and-send-surplus](issues/e03-craft-mail/f23-keep-and-send-surplus/README.md) | Keep amounts and mail the surplus | done |
 | [f24-mail-review](issues/e03-craft-mail/f24-mail-review/README.md) | Review what the surplus mail sends | implemented, in-game check pending |
+| [f25-prepare-mail](issues/e03-craft-mail/f25-prepare-mail/README.md) | Prepare mails for the player to send, surplus only after review | implemented, in-game check pending |
 | [e04-ah-shortcuts](issues/e04-ah-shortcuts/README.md) | AH shortcuts: from AuctionHelper lists to the auction house | in progress |
 | [f30-buy-in-ah](issues/e04-ah-shortcuts/f30-buy-in-ah/README.md) | Open a deal's buy page in the auction house | in progress |
 | [e05-table-paging](issues/e05-table-paging/README.md) | Paging in the shared table | implemented, in-game check pending |

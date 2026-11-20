@@ -125,6 +125,20 @@ local function heldQuantities(pe, plan)
 	return held
 end
 
+-- The surplus row, shown on a crafter even when nothing goes: its review rows (F24) with names
+-- and prices, their summary, and the items that go.
+local function surplusDestination(pe, plan, bags, seller)
+	local rows = pe.MailLogic.BuildReviewRows(bags, characterStore(pe, "keepByCharacter"), heldQuantities(pe, plan),
+		pe:GetMailSendOthers(), pe:GetMailSkipped())
+	for _, row in ipairs(rows) do
+		row.name = row.name or pe:GetItemDisplayName(row.itemID)
+		row.unitPrice = pe:GetMailItemUnitPrice(row.itemID)
+	end
+	local summary = pe.MailLogic.SummarizeReviewRows(rows)
+	return { kind = "surplus", characterKey = seller, mailName = seller:match("^([^%-]+)") or seller,
+		items = pe.MailLogic.SurplusItems(rows), totalQuantity = summary.send, reviewRows = rows, summary = summary }
+end
+
 --- Everything the mailbox panel can send from this character: materials for crafters, and on a
 --- crafter the crafted items owed to the seller and the surplus above its keep amounts. Each
 --- destination carries its `kind`.
@@ -147,16 +161,7 @@ function ProfessionExporter:BuildMailPanelPlan()
 	for _, dest in ipairs(self.ForeverLogic.BuildReturnToSellerPlan(toSeller, bags, seller)) do
 		plan[#plan + 1] = dest
 	end
-	local surplus = self.MailLogic.BuildSurplusPlan(bags, characterStore(self, "keepByCharacter"), heldQuantities(self, plan),
-		self:GetMailSendOthers(), self:GetMailSkipped())
-	if #surplus > 0 then
-		local total = 0
-		for _, item in ipairs(surplus) do
-			total = total + item.quantity
-		end
-		plan[#plan + 1] = { kind = "surplus", characterKey = seller, mailName = seller:match("^([^%-]+)") or seller,
-			items = surplus, totalQuantity = total }
-	end
+	plan[#plan + 1] = surplusDestination(self, plan, bags, seller)
 	return plan
 end
 
@@ -203,23 +208,15 @@ function ProfessionExporter:GetMailItemUnitPrice(itemID)
 	return self.GetNativeAhPrice and self:GetNativeAhPrice(itemID) or nil
 end
 
---- Rows for the surplus review panel (MailLogic.BuildReviewRows) with names and unit prices.
---- Held counts the same things the surplus row holds back: queued crafts and the other rows of
---- `panelPlan` (BuildMailPanelPlan, built when not given).
+--- The surplus review rows (MailLogic.BuildReviewRows, with names and prices) and the surplus
+--- destination of `panelPlan` (BuildMailPanelPlan, built when not given). No rows off a crafter.
 function ProfessionExporter:BuildMailReviewRows(panelPlan)
-	local plan = {}
 	for _, dest in ipairs(panelPlan or self:BuildMailPanelPlan()) do
-		if dest.kind ~= "surplus" then
-			plan[#plan + 1] = dest
+		if dest.kind == "surplus" then
+			return dest.reviewRows, dest
 		end
 	end
-	local rows = self.MailLogic.BuildReviewRows(self:GetBagItems(), characterStore(self, "keepByCharacter"),
-		heldQuantities(self, plan), self:GetMailSendOthers(), self:GetMailSkipped())
-	for _, row in ipairs(rows) do
-		row.name = row.name or self:GetItemDisplayName(row.itemID)
-		row.unitPrice = self:GetMailItemUnitPrice(row.itemID)
-	end
-	return rows
+	return {}, nil
 end
 
 --- Keep everything the bags hold now, so nothing goes until the bags grow.

@@ -55,17 +55,21 @@ function MailLogic.BuildReviewRows(bagItems, keep, held, sendOthers, skip)
 	return rows
 end
 
---- What a character can spare from its bags: the review rows that send something, as
---- { { itemID, quantity, name } } sorted by name (see BuildReviewRows).
-function MailLogic.BuildSurplusPlan(bagItems, keep, held, sendOthers, skip)
+--- The review rows that send something, as { { itemID, quantity, name } } sorted by name.
+function MailLogic.SurplusItems(rows)
 	local items = {}
-	for _, row in ipairs(MailLogic.BuildReviewRows(bagItems, keep, held, sendOthers, skip)) do
+	for _, row in ipairs(rows) do
 		if row.send > 0 then
 			items[#items + 1] = { itemID = row.itemID, quantity = row.send, name = row.name }
 		end
 	end
 	table.sort(items, function(a, b) return tostring(a.name) < tostring(b.name) end)
 	return items
+end
+
+--- What a character can spare from its bags (see BuildReviewRows and SurplusItems).
+function MailLogic.BuildSurplusPlan(bagItems, keep, held, sendOthers, skip)
+	return MailLogic.SurplusItems(MailLogic.BuildReviewRows(bagItems, keep, held, sendOthers, skip))
 end
 
 --- Counts and totals for the review panel: rows sending and not, units to send, rows skipped,

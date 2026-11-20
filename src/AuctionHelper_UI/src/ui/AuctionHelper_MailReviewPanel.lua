@@ -1,6 +1,6 @@
 local addonName, ProfessionExporter = ...
 
--- Surplus review (mailbox panel → click the surplus row): every item the surplus mail could send,
+-- Surplus review (mailbox panel → Review… on the surplus row): every item the surplus mail could send,
 -- docked to the right of the mailbox panel. Keep amounts are edited in the row and saved per
 -- character; unticking an item skips it for this mailbox visit only. Rows come from
 -- MailLogic.BuildReviewRows, the same rows the surplus mail is built from.
@@ -227,6 +227,11 @@ local function createToolbar(pe, f)
 	end)
 	f.search:SetPoint("LEFT", f, "TOPLEFT", PAD + 6, top - 11)
 	f.search:SetPoint("RIGHT", previous, "LEFT", -10, 0)
+	f.sendOthers = pe:CreateCheckbox(f, "Also send items with no keep amount", function(checked)
+		pe:SetMailSendOthers(checked)
+		pe:RefreshMailPanel()
+	end)
+	f.sendOthers:SetPoint("TOPLEFT", f.search, "BOTTOMLEFT", -6, -8)
 end
 
 -- Clear keeps asks for a second click within a few seconds.
@@ -249,7 +254,7 @@ local function confirmClearKeeps(pe, button)
 end
 
 local function createActions(pe, f)
-	f.sendBtn = pe:CreateButton(f, "Send", function()
+	f.sendBtn = pe:CreateButton(f, "Prepare", function()
 		if f.dest then
 			pe:StartMailSendQueue({ f.dest })
 		end
@@ -287,7 +292,7 @@ local function ensurePanel(pe)
 	createToolbar(pe, f)
 	createActions(pe, f)
 	createTable(pe, f)
-	f.table.frame:SetPoint("TOPLEFT", f.search, "BOTTOMLEFT", -6, -10)
+	f.table.frame:SetPoint("TOPLEFT", f.sendOthers, "BOTTOMLEFT", 0, -6)
 	f.table.frame:SetPoint("BOTTOMRIGHT", f.hint, "TOPRIGHT", 0, 8)
 	pe:SkinTree(f)
 	f:Hide()
@@ -300,7 +305,8 @@ function ProfessionExporter:IsMailReviewPanelShown()
 	return f ~= nil and f:IsShown()
 end
 
---- Opens or closes the review panel; `show` nil toggles. The mailbox panel highlights its surplus row.
+--- Opens or closes the review panel; `show` nil toggles. The choice is saved, so the panel opens
+--- with the mailbox next time. The mailbox panel highlights its surplus row while it is open.
 function ProfessionExporter:ToggleMailReviewPanel(show)
 	if not (self.ui and self.ui.mailPanel) then
 		return
@@ -309,15 +315,21 @@ function ProfessionExporter:ToggleMailReviewPanel(show)
 	if show == nil then
 		show = not f:IsShown()
 	end
+	self:SetSetting("mail.reviewPanelOpen", show)
 	f:SetShown(show)
 	self:RefreshMailPanel()
 end
 
-local function surplusDest(plan)
-	for _, dest in ipairs(plan) do
-		if dest.kind == "surplus" then
-			return dest
-		end
+-- Shows the review panel again when it was open last time the mailbox closed: on opening the
+-- mailbox, and on expanding a collapsed mailbox panel. Only on a crafter (it has a surplus row).
+local function restorePanel(pe, plan)
+	local panel = pe.ui and pe.ui.mailPanel
+	if not (pe:GetSetting("mail.reviewPanelOpen", false) and panel and panel:IsShown()) then
+		return
+	end
+	local _, dest = pe:BuildMailReviewRows(plan)
+	if dest then
+		pe:ToggleMailReviewPanel(true)
 	end
 end
 
@@ -328,15 +340,17 @@ local function refreshControls(pe, f, sum)
 		pe:StyleShellButton(button, f.filter == button.filter.id)
 	end
 	local sending = pe:EnsureMailSendQueueState().running
-	pe:SetButtonLabel(f.sendBtn, string.format("Send %s items", pe:FormatNumberGrouped(sum.send)), false)
-	f.sendBtn:SetEnabled(f.dest ~= nil and not sending)
+	local mails = f.dest and pe:CountMailParcels({ f.dest }) or 0
+	pe:SetButtonLabel(f.sendBtn, string.format("Prepare %s items · %d %s", pe:FormatNumberGrouped(sum.send), mails,
+		mails == 1 and "mail" or "mails"), false)
+	f.sendBtn:SetEnabled(sum.send > 0 and not sending)
+	f.sendOthers.check:SetChecked(pe:GetMailSendOthers())
 end
 
 -- Title "Surplus to <seller>", items and mails in the header, totals in the table footer.
 local function refreshTexts(pe, f, sum, seller)
 	f.title:SetText("Surplus to " .. pe:GetMailCharacterLabel(seller))
-	local mails = f.dest and pe:CountMailParcels({ f.dest }) or 0
-	f.meta:SetText(string.format("%s items · %d %s", pe:FormatNumberGrouped(sum.send), mails, mails == 1 and "mail" or "mails"))
+	f.meta:SetText(string.format("%d kinds of items", sum.all))
 	local skipped = sum.skipped > 0 and string.format(" · %d skipped this time", sum.skipped) or ""
 	f.table:SetFooterText(string.format("%s to send%s", pe:FormatNumberGrouped(sum.send), skipped),
 		sum.worth > 0 and ("about " .. pe:FormatCopperShort(sum.worth)) or "")
@@ -346,16 +360,16 @@ end
 function ProfessionExporter:RefreshMailReviewPanel(plan)
 	local f = self.ui and self.ui.mailReviewPanel
 	if not f or not f:IsShown() then
-		return
+		return restorePanel(self, plan)
 	end
 	local seller = self:GetSellerCharacterKey()
 	if not seller or seller == self:GetCharacterKey() then
 		f:Hide()
 		return
 	end
-	local rows = self:BuildMailReviewRows(plan)
-	local sum = self.MailLogic.SummarizeReviewRows(rows)
-	f.dest = surplusDest(plan or self:BuildMailPanelPlan())
+	local rows, dest = self:BuildMailReviewRows(plan)
+	f.dest = dest
+	local sum = dest and dest.summary or self.MailLogic.SummarizeReviewRows(rows)
 	refreshControls(self, f, sum)
 	f.table:SetRows(self.MailLogic.ListReviewRows(rows, f.filter, f.searchText, function(row)
 		return self:GetItemFilterInfo(row.itemID).classLabel
