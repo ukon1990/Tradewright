@@ -1,6 +1,7 @@
 local ProfessionExporter = select(2, ...)
 
--- Farming tab (E09 F71): saved farms with their gold an hour when run and at today's prices.
+-- Farming tab (E09 F71, F72): saved farms with their gold an hour when run and at today's prices,
+-- and the "What to farm" list from AuctionHelper_FarmTargets.lua.
 
 local FarmingTab = {}
 ProfessionExporter.FarmingTab = FarmingTab
@@ -159,7 +160,8 @@ local function buildToolbar(pe, panel)
 	panel.toolbar:SetPoint("TOPRIGHT")
 	panel.toolbar:SetHeight(26)
 	panel.status = pe:CreateText(panel.toolbar, "GameFontHighlightSmall", "textMuted")
-	panel.status:SetPoint("LEFT")
+	local lastViewButton = pe:BuildFarmViewButtons(panel, function() FarmingTab:Refresh() end)
+	panel.status:SetPoint("LEFT", lastViewButton, "RIGHT", GAP, 0)
 	panel.startButton = pe:CreateButton(panel.toolbar, "Start farm", function()
 		if pe:GetCurrentFarmRun() then
 			pe:ToggleFarmWindow()
@@ -210,6 +212,9 @@ local function buildPanel(pe, container)
 	panel.table.frame:SetPoint("TOPLEFT", panel.statsRow, "BOTTOMLEFT", 0, -GAP)
 	panel.table.frame:SetPoint("BOTTOMRIGHT", panel.detail, "BOTTOMLEFT", -GAP, 0)
 	panel.table:SetColumns(farmColumns(pe))
+	panel.targets = pe:CreateFarmTargetsView(panel)
+	panel.targets:SetPoint("TOPLEFT", panel.toolbar, "BOTTOMLEFT", 0, -GAP)
+	panel.targets:SetPoint("BOTTOMRIGHT")
 	panel:SetScript("OnSizeChanged", function(self)
 		pe:LayoutEvenRow(self.statsRow, self.stats, 0, GAP)
 	end)
@@ -232,6 +237,12 @@ local function refreshStats(pe, panel, rows)
 	pe:LayoutEvenRow(panel.statsRow, panel.stats, 0, GAP)
 end
 
+local function refreshStatus(pe, panel)
+	local running = pe:GetCurrentFarmRun()
+	panel.status:SetText(running and ("Farm running: " .. running.name) or "No farm running")
+	panel.startButton:SetText(running and "Show farm window" or "Start farm")
+end
+
 function FarmingTab:Create(container, uiState)
 	uiState.farmingPanel = uiState.farmingPanel or buildPanel(ProfessionExporter, container)
 	uiState.farmingPanel:Show()
@@ -247,10 +258,12 @@ function FarmingTab:Refresh() -- luacheck: ignore 212
 	if not panel then
 		return
 	end
+	refreshStatus(pe, panel)
+	if pe:ApplyFarmView(panel) then
+		panel.targets:Refresh()
+		return
+	end
 	local rows = pe:GetFarmRows()
-	local running = pe:GetCurrentFarmRun()
-	panel.status:SetText(running and ("Farm running: " .. running.name) or "No farm running")
-	panel.startButton:SetText(running and "Show farm window" or "Start farm")
 	refreshStats(pe, panel, rows)
 	panel.table:SetRows(rows)
 	panel.table:SetFooterText("Gold an hour: Then at the day's prices, Now at today's", string.format("%d farms", #rows))

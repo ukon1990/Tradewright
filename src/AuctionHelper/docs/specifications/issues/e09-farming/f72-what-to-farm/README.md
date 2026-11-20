@@ -27,6 +27,22 @@ A "What to farm" list in the Farming tab ranks materials by how much gold change
 - One line above the table: "Materials that move the most gold each day. AuctionHelper does not know where items drop: the last columns come from your own farms."
 - Footer explains Traded a day and Listed
 
+## Status
+
+Implemented:
+
+- `FarmLogic.BuildLootIndex(farms)` and `BuildFarmTargets(items, lootIndex, opts)` (pure, offline-tested)
+- `AuctionHelper_FarmTargets.lua` (UI): `GetFarmTargetRows`, the "What to farm" view (note, two filter buttons, table) and the two list buttons of the Farming tab
+- Columns as above. "Listed" is the insights' supply change (quantity now against its 7-day level), and the item's second line says how long supply lasts and whether your recipes use it.
+
+Differs from the scope:
+
+- **Trade goods only:** the kind-of-item choice and its subclasses are not offered; an item counts when the client gives it item class 7
+- **"Used by your recipes" is yes or no,** not a count of recipes
+- **Listed** compares with the 7-day level from the hourly history, not a 14-day middle quantity
+- The explanation sits in a note beside the filter buttons; the footer explains Traded a day
+- Rows are rebuilt on each refresh of the view, not cached
+
 ## Acceptance criteria
 
 - [ ] An item with a usual price of 48s that sells 400 a day shows 192g traded a day
@@ -35,7 +51,7 @@ A "What to farm" list in the Farming tab ranks materials by how much gold change
 - [ ] An item without a sells-a-day estimate is not listed
 - [ ] "My recipes use it" keeps only materials of recipes your characters know
 - [ ] No source or rate appears that did not come from the player's saved runs
-- [ ] Offline tests of `BuildFarmTargets`: ranking, best source, never looted, filters, missing turnover
+- [x] Offline tests of `BuildFarmTargets`: ranking, best source, never looted, filters, missing turnover
 
 ## Verification
 

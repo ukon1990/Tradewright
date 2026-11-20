@@ -361,6 +361,31 @@ check("A price rise lifts Now and leaves Then", dearer.nowPerHour > farmNow.nowP
 local unpriced = Farm.SummarizeFarm({ runs = { { items = { [9] = 3 }, activeSeconds = 600, valueWhenSaved = 0 } } }, function() return nil end)
 check("A farm with no priced items is 0 an hour with no change", unpriced.nowPerHour == 0 and unpriced.changePct == nil)
 
+-- What to farm
+local lootIndex = Farm.BuildLootIndex({
+	["Felwood herb loop"] = { runs = { { items = { [1] = 38, [3] = 14 }, activeSeconds = 3600 } } },
+	["Slow loop"] = { runs = { { items = { [1] = 10 }, activeSeconds = 3600 }, { items = { [1] = 10 }, activeSeconds = 3600 } } },
+})
+check("Loot index names the farm with the higher rate", lootIndex[1].farm == "Felwood herb loop" and lootIndex[1].perHour == 38)
+check("Loot index covers every looted item", lootIndex[3] and lootIndex[3].perHour == 14 and lootIndex[9] == nil)
+local targetItems = {
+	{ itemID = 1, usual = 4800, sellsPerDay = 400, quantity = 3200, usedByRecipes = true },
+	{ itemID = 2, usual = 9600, sellsPerDay = 2, quantity = 8 },
+	{ itemID = 3, usual = 5500, sellsPerDay = 180, quantity = 90 },
+	{ itemID = 4, usual = 100 },
+}
+local targets = Farm.BuildFarmTargets(targetItems, lootIndex, { cut = 0.05 })
+check("Traded a day is usual price times sells a day", targets[1].itemID == 1 and targets[1].tradedPerDay == 4800 * 400)
+check("Targets are ranked by gold traded a day", #targets == 3 and targets[2].itemID == 3 and targets[3].itemID == 2)
+check("A farmed item names its farm and your rate", targets[1].source == "Felwood herb loop" and targets[1].yoursPerHour == 38 * 4800 * 0.95)
+check("An item never looted in a farm has no source or rate", targets[3].source == nil and targets[3].yoursPerHour == nil)
+check("An item without a sells-a-day estimate is not listed", targets[4] == nil)
+check("Days of supply", targets[1].daysOfSupply == 8 and targets[2].daysOfSupply == 0.5)
+local farmedOnly = Farm.BuildFarmTargets(targetItems, lootIndex, { onlyFarmed = true })
+check("Only farmed before", #farmedOnly == 2 and farmedOnly[1].itemID == 1 and farmedOnly[2].itemID == 3)
+local recipeOnly = Farm.BuildFarmTargets(targetItems, lootIndex, { onlyRecipes = true })
+check("My recipes use it", #recipeOnly == 1 and recipeOnly[1].itemID == 1)
+
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}
 local auction = { history = { hourly = {}, daily = {} } }

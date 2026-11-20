@@ -37,10 +37,9 @@ Implemented:
 Differs from the scope:
 
 - **No Rename** and **no period filter** (all runs are counted)
-- **No segmented control yet:** it arrives with F72, the second list
 - **The stats are over all runs,** not the last 7 days
 - **Vendor items and coin are one share** in the side pane, and are not listed as separate rows under the items
-- The farm column shows name and zone on two lines through one text cell, not the item column
+- The farm column is one line of text (name, then zone and last run in grey), not the item column: table cells do not wrap
 
 ## Acceptance criteria
 

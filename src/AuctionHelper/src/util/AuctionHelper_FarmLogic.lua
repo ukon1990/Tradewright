@@ -133,4 +133,60 @@ function FarmLogic.SummarizeFarm(farm, priceFn, opts)
 	return out
 end
 
+--- For each item ever looted in a saved farm, the farm with the highest units an hour:
+--- `{ [itemID] = { farm = name, perHour = units } }`. `farms` is `{ [name] = { runs = { … } } }`.
+function FarmLogic.BuildLootIndex(farms)
+	local index = {}
+	for name, farm in pairs(farms or {}) do
+		local all = combineRuns(farm)
+		for itemID, qty in pairs(all.items) do
+			local rate = perHour(qty, all.activeSeconds)
+			if rate > 0 and (not index[itemID] or rate > index[itemID].perHour) then
+				index[itemID] = { farm = name, perHour = rate }
+			end
+		end
+	end
+	return index
+end
+
+local function targetWanted(item, source, opts)
+	if opts.onlyRecipes and not item.usedByRecipes then
+		return false
+	end
+	return not (opts.onlyFarmed and not source)
+end
+
+-- One "what to farm" row, or nil when the item is not known to sell or a filter leaves it out.
+local function targetRow(item, source, opts)
+	local usual, sells = tonumber(item.usual), tonumber(item.sellsPerDay)
+	if not (usual and sells) or sells <= 0 or not targetWanted(item, source, opts) then
+		return nil
+	end
+	local row = {
+		itemID = item.itemID, storageKey = item.storageKey, usual = usual, sellsPerDay = sells,
+		tradedPerDay = usual * sells, daysOfSupply = number(item.quantity) / sells,
+		supplyChange = item.supplyChange, usedByRecipes = item.usedByRecipes == true,
+	}
+	if source then
+		row.source, row.sourcePerHour = source.farm, source.perHour
+		row.yoursPerHour = source.perHour * usual * (1 - option(opts, "cut", 0.05))
+	end
+	return row
+end
+
+--- "What to farm" rows from `items = { { itemID, usual, sellsPerDay, quantity, supplyChange, usedByRecipes } }`
+--- and a loot index, most gold traded a day first. `tradedPerDay` is a ranking, not income: it inherits
+--- the upward bias of the sells-a-day estimate. `yoursPerHour` is your own rate at the usual price after the cut.
+function FarmLogic.BuildFarmTargets(items, lootIndex, opts)
+	opts = opts or {}
+	local rows = {}
+	for _, item in ipairs(items or {}) do
+		rows[#rows + 1] = targetRow(item, lootIndex and lootIndex[item.itemID], opts)
+	end
+	table.sort(rows, function(a, b)
+		return a.tradedPerDay > b.tradedPerDay
+	end)
+	return rows
+end
+
 return FarmLogic
