@@ -25,6 +25,23 @@ A new Farming tab lists your saved farms with their gold an hour when you ran th
 - Period filter: 7 days, 30 days, all
 - Empty state: "No farms yet. Press Start farm, loot for a while, then save it."
 
+## Status
+
+Implemented:
+
+- `FarmLogic.SummarizeFarm(farm, priceFn, opts)` (pure, offline-tested): every run folded into one, valued when saved ("Then") and at today's prices ("Now")
+- `GetFarmRows()` and `DeleteFarm(name)` in `AuctionHelper_Farm.lua`
+- New tab "Farming" between Crafts and Export (`AuctionHelper_FarmingTab.lua`): status and a Start farm button, four stats, the farms table (Farm, Runs, Time, Then, Now, Change, sorted by Now), and a side pane with gold an hour now and then, the two shares and up to seven items with their rate and worth an hour
+- Buttons: "Start this farm" and Delete (a second click confirms)
+
+Differs from the scope:
+
+- **No Rename** and **no period filter** (all runs are counted)
+- **No segmented control yet:** it arrives with F72, the second list
+- **The stats are over all runs,** not the last 7 days
+- **Vendor items and coin are one share** in the side pane, and are not listed as separate rows under the items
+- The farm column shows name and zone on two lines through one text cell, not the item column
+
 ## Acceptance criteria
 
 - [ ] Saving a run under a new name creates a farm; saving under an existing name adds a run to it
@@ -32,7 +49,7 @@ A new Farming tab lists your saved farms with their gold an hour when you ran th
 - [ ] A farm with one 5-minute run shows "1" under Runs and its short time, not hidden
 - [ ] The per-item rows add up to the farm's gold an hour
 - [ ] Rename keeps the runs; Delete asks first and removes them
-- [ ] Offline tests of `SummarizeFarm`: several runs, re-valuing up and down, shares, a farm with no priced items
+- [x] Offline tests of `SummarizeFarm`: several runs, re-valuing up and down, shares, a farm with no priced items
 
 ## Verification
 

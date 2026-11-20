@@ -7,6 +7,7 @@ ProfessionExporter.DASHBOARD_TABS = {
 	{ id = "inventory", label = "Inventory", module = function() return ProfessionExporter.InventoryTab end },
 	{ id = "market", label = "Market", module = function() return ProfessionExporter.MarketTab end },
 	{ id = "crafts", label = "Crafts", module = function() return ProfessionExporter.CraftsTab end },
+	{ id = "farming", label = "Farming", module = function() return ProfessionExporter.FarmingTab end },
 	{ id = "export", label = "Export", module = function() return ProfessionExporter.ExportTab end },
 	{ id = "docs", label = "Docs", module = function() return ProfessionExporter.DocsTab end },
 	{ id = "settings", label = "Settings", module = function() return ProfessionExporter.SettingsTab end },

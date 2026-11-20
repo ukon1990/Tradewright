@@ -338,6 +338,29 @@ check("Selling to a vendor takes items out of the run", Farm.RemoveItems(farmRun
 check("Selling more than was looted removes only what was looted", Farm.RemoveItems(farmRun, 2, 9) == 1 and farmRun.items[2] == nil)
 check("Selling something not looted in the run changes nothing", Farm.RemoveItems(farmRun, 77, 5) == 0)
 
+-- Saved farms
+local savedFarm = { zone = "Felwood", runs = {
+	{ items = { [1] = 10, [2] = 4 }, coin = 500, vendorSold = 100, activeSeconds = 1800, endedAt = 5000, valueWhenSaved = 1200 },
+	{ items = { [1] = 20 }, coin = 300, vendorSold = 0, activeSeconds = 1800, endedAt = 9000, valueWhenSaved = 1800 },
+} }
+local farmNow = Farm.SummarizeFarm(savedFarm, function(itemID) return farmPrices[itemID] end, { cut = 0.05 })
+check("A farm adds up its runs", farmNow.runs == 2 and farmNow.activeSeconds == 3600 and farmNow.lastRunAt == 9000)
+check("Then is the value when saved, per hour", farmNow.thenPerHour == 3000)
+check("Now values the same loot at today's prices", farmNow.nowPerHour == 30 * 95 + 4 * 25 + 800 + 100)
+check("Change compares now with then", math.abs(farmNow.changePct - (farmNow.nowPerHour - 3000) / 3000) < 1e-9)
+check("Shares add up to 1", math.abs(farmNow.liquidShare + farmNow.coinShare - 1) < 1e-9 and farmNow.liquidShare > 0.7)
+local itemSum = 0
+for _, item in ipairs(farmNow.perHourByItem) do
+	itemSum = itemSum + item.valuePerHour
+end
+check("Per-item rows plus coin and vendor sales add up to gold an hour", itemSum + 900 == farmNow.nowPerHour and farmNow.perHourByItem[1].qtyPerHour == 30)
+local dearer = Farm.SummarizeFarm(savedFarm, function(itemID)
+	return itemID == 1 and { vendor = 10, usual = 200, sellsPerDay = 40 } or farmPrices[itemID]
+end, { cut = 0.05 })
+check("A price rise lifts Now and leaves Then", dearer.nowPerHour > farmNow.nowPerHour and dearer.thenPerHour == 3000)
+local unpriced = Farm.SummarizeFarm({ runs = { { items = { [9] = 3 }, activeSeconds = 600, valueWhenSaved = 0 } } }, function() return nil end)
+check("A farm with no priced items is 0 an hour with no change", unpriced.nowPerHour == 0 and unpriced.changePct == nil)
+
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}
 local auction = { history = { hourly = {}, daily = {} } }

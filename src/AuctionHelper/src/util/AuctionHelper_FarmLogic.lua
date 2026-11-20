@@ -83,4 +83,54 @@ function FarmLogic.RemoveItems(run, itemID, qty)
 	return removed
 end
 
+local function number(value)
+	return tonumber(value) or 0
+end
+
+-- Every run of a farm folded into one: summed items, coin, vendor sales, time and value when saved.
+local function combineRuns(farm)
+	local all = { items = {}, coin = 0, vendorSold = 0, activeSeconds = 0, valueWhenSaved = 0, lastRunAt = 0, runs = 0 }
+	for _, run in ipairs(farm.runs or {}) do
+		for itemID, qty in pairs(run.items or {}) do
+			all.items[itemID] = (all.items[itemID] or 0) + qty
+		end
+		all.coin = all.coin + number(run.coin)
+		all.vendorSold = all.vendorSold + number(run.vendorSold)
+		all.activeSeconds = all.activeSeconds + number(run.activeSeconds)
+		all.valueWhenSaved = all.valueWhenSaved + number(run.valueWhenSaved)
+		all.lastRunAt = math.max(all.lastRunAt, number(run.endedAt))
+		all.runs = all.runs + 1
+	end
+	return all
+end
+
+local function perHour(value, seconds)
+	return seconds > 0 and value / seconds * 3600 or 0
+end
+
+--- A saved farm at the prices `priceFn(itemID)` gives now: `{ runs, activeSeconds, lastRunAt,
+--- valueWhenSaved, thenPerHour, nowPerHour, changePct, liquidShare, coinShare, perHourByItem }`.
+--- "Then" is what the runs were worth when saved; "now" values the same loot at today's prices.
+function FarmLogic.SummarizeFarm(farm, priceFn, opts)
+	local all = combineRuns(farm)
+	local now = FarmLogic.SummarizeRun({ items = all.items, coin = all.coin, vendorSold = all.vendorSold }, priceFn, 0, opts)
+	local out = {
+		runs = all.runs, activeSeconds = all.activeSeconds, lastRunAt = all.lastRunAt, valueWhenSaved = all.valueWhenSaved,
+		thenPerHour = perHour(all.valueWhenSaved, all.activeSeconds), nowPerHour = perHour(now.total, all.activeSeconds),
+		liquidShare = now.total > 0 and now.auctionValue / now.total or 0,
+		coinShare = now.total > 0 and (now.total - now.auctionValue) / now.total or 0,
+		perHourByItem = {},
+	}
+	if out.thenPerHour > 0 then
+		out.changePct = (out.nowPerHour - out.thenPerHour) / out.thenPerHour
+	end
+	for index, item in ipairs(now.byItem) do
+		out.perHourByItem[index] = {
+			itemID = item.itemID, kind = item.kind,
+			qtyPerHour = perHour(item.qty, all.activeSeconds), valuePerHour = perHour(item.value, all.activeSeconds),
+		}
+	end
+	return out
+end
+
 return FarmLogic

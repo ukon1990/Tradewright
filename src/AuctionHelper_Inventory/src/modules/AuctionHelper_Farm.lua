@@ -127,6 +127,29 @@ function ProfessionExporter:StopFarmRun()
 	return summary, run
 end
 
+--- Saved farms as table rows, each with its summary at today's prices (see FarmLogic.SummarizeFarm).
+function ProfessionExporter:GetFarmRows()
+	local store = farmStore(self)
+	local cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05
+	local rows = {}
+	for name, farm in pairs(store and store.farms or {}) do
+		local row = self.FarmLogic.SummarizeFarm(farm, function(itemID)
+			return self:GetFarmItemPrice(itemID)
+		end, { cut = cut })
+		row.name, row.zone, row._rowIdentity = name, farm.zone or "", name
+		rows[#rows + 1] = row
+	end
+	return rows
+end
+
+--- Remove a saved farm and all its runs.
+function ProfessionExporter:DeleteFarm(name)
+	local store = farmStore(self)
+	if store then
+		store.farms[name] = nil
+	end
+end
+
 local function onLoot(pe, message)
 	local run = activeRun(pe)
 	local kind, itemID, quantity = IncomeLogic.ParseItemMessage(tostring(message or ""), LOOT_PATTERNS)
