@@ -291,4 +291,123 @@ local gaps = {
 	end,
 }
 
-ProfessionExporter.OpportunityViews = { flips, vendor, gaps }
+-- ---------- Sell now: owned items priced above usual that sell ----------
+
+-- One candidate per owned item with a scanned price, a usual price and a sells-a-day estimate.
+local function sellCandidates(pe, insights)
+	local items = {}
+	for _, inv in ipairs(pe:BuildInventoryRowsAggregatedByItem(pe.db, {}, "") or {}) do
+		local market = insights.byItemID[tonumber(inv.itemID)]
+		local usual = market and pe:GetUsualPrice(market.storageKey)
+		local sells = usual and pe:GetSellsPerDay(market.storageKey)
+		if sells then
+			items[#items + 1] = {
+				itemID = tonumber(inv.itemID), storageKey = market.storageKey, total = inv.total, bags = inv.bags, bank = inv.bank,
+				price = market.price, usual = usual.usual, sellsPerDay = sells.perDay,
+			}
+		end
+	end
+	return items
+end
+
+-- Rebuilt at most every 10 seconds: bags change without a new scan.
+local function sellRows(pe, onReady)
+	local insights = pe:GetMarketInsights(onReady)
+	if not insights then
+		return nil
+	end
+	local state = pe:GetState()
+	local revision = tostring(insights.builtAt) .. ":" .. math.floor(time() / 10)
+	if state.sellNowRevision ~= revision then
+		local cut = pe:GetFlipOptions().cut
+		local rows = pe.FlipLogic.BuildSellNowRows(sellCandidates(pe, insights), { cut = cut })
+		for _, row in ipairs(rows) do
+			row._rowIdentity = tostring(row.itemID)
+		end
+		state.sellNowRows, state.sellNowRevision = rows, revision
+	end
+	return state.sellNowRows, insights
+end
+
+local function whereText(pe, row)
+	return string.format("%s bags · %s bank", pe:FormatNumberGrouped(row.bags or 0), pe:FormatNumberGrouped(row.bank or 0))
+end
+
+local function sellDetail(pe, row)
+	if row.slow then
+		return whereText(pe, row) .. " · more than a day of sales"
+	end
+	return whereText(pe, row)
+end
+
+local function sellColumns(pe)
+	return {
+		itemColumn(pe, sellDetail),
+		moneyColumn(pe, "price", "Price", "price", 70),
+		{
+			id = "premium", label = "Vs usual", justifyH = "RIGHT", width = 60, sortable = true, defaultSort = "desc",
+			sortValue = function(row) return row.premium or 0 end,
+			getText = function(row) return "+" .. percent(row.premium) end,
+		},
+		{
+			id = "total", label = "Owned", justifyH = "RIGHT", width = 56, sortable = true, defaultSort = "desc",
+			sortValue = function(row) return row.total or 0 end,
+			getText = function(row) return pe:FormatNumberGrouped(row.total) end,
+		},
+		signedColumn(pe, "Worth", "worth"),
+		{
+			id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = 66, sortable = true, defaultSort = "desc",
+			sortValue = function(row) return row.sellsPerDay or 0 end,
+			getText = function(row) return perDayText(pe, row.sellsPerDay) end,
+		},
+	}
+end
+
+local function sellDetailRows(pe, row)
+	return {
+		{ "Lowest price now", pe:FormatCopperFull(row.price) },
+		{ "Usual price", pe:FormatCopperFull(row.usual) },
+		{ "Above usual by", percent(row.premium), "success" },
+		{ "", "" },
+		{ "You own", pe:FormatNumberGrouped(row.total) },
+		{ "Where", whereText(pe, row) },
+		{ "Worth after the cut", pe:FormatCopperFull(row.worth), "success" },
+		{ "", "" },
+		{ "Sells a day, estimated", perDayText(pe, row.sellsPerDay) },
+		{ "Your stock is", string.format("%.1f days of sales", row.daysToSell) },
+	}
+end
+
+local function sellRiskText(pe, row)
+	local text = "Worth assumes every one sells at today's lowest price. Prices above usual tend to come back down."
+	if row.slow then
+		text = text .. string.format(" You own more than a day of sales, so listing all %s at once will likely push the price down.",
+			pe:FormatNumberGrouped(row.total))
+	end
+	return text
+end
+
+local function sellStats(pe, stats, rows, insights)
+	stats[1]:SetValues(string.format("Worth, all %d", #rows), pe:FormatCopperShort(sumOf(rows, "worth")), "After the auction cut", "success")
+	stats[2]:SetValues("Items", tostring(#rows), "Owned and priced above usual")
+	stats[3]:SetValues("Counts as above usual", "10% or more", "Against the usual price of your scans")
+	stats[4]:SetValues("Last scan", lastScanText(pe, insights), "Prices may have changed since")
+end
+
+local sell = {
+	id = "sell", label = "Sell now",
+	emptyTitle = "Nothing to sell right now",
+	emptyHint = "Nothing you own is priced 10% or more above its usual price and known to sell.",
+	getRows = sellRows,
+	columns = sellColumns,
+	detailRows = sellDetailRows,
+	riskText = sellRiskText,
+	setStats = sellStats,
+	subtitle = function(_, row) return percent(row.premium) .. " above its usual price" end,
+	tooltipPairs = function(pe, row) return { { "Worth after the cut", pe:FormatCopperFull(row and row.worth) } } end,
+	footer = function(_, rows)
+		return string.format("%d of your items", #rows), "Worth = owned at today's lowest price, after the cut"
+	end,
+}
+
+ProfessionExporter.OpportunityViews = { flips, vendor, gaps, sell }

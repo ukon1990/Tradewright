@@ -19,13 +19,27 @@ A "Sell now" list in Opportunities shows items you own whose price is above usua
 - The Gold view card takes its top 5 from the same function
 - Row clicks as elsewhere: left opens item details, right opens Market, shift links
 
+## Status
+
+Implemented:
+
+- `FlipLogic.BuildSellNowRow` and `BuildSellNowRows` (pure, offline-tested)
+- "Sell now" list in the Opportunities tab: columns as above, a side pane with price, usual price, where the stock is, worth after the cut and how many days of sales you own. Rows are rebuilt at most every 10 seconds, since bags change without a scan.
+
+Differs from the scope:
+
+- The Gold view's "Sell what I own" card is unchanged and still builds its own rows (it also feeds the "Stock value" stat and has a fallback for items without history). The two can therefore differ: the card has no turnover check.
+- No fallback list when no owned item has a usual price; the list is empty with its hint
+- The side pane does not show what you paid on average (needs F44)
+- Left click opens the side pane; right click opens the item in the auction house when it is open
+
 ## Acceptance criteria
 
 - [ ] An owned item priced 20% above usual with a sells-a-day estimate is listed with the right worth
 - [ ] An owned item above usual with no sells-a-day estimate is not listed
 - [ ] The card and the list show the same top rows
 - [ ] The "Stock value" stat is unchanged by this feature
-- [ ] Offline tests of `BuildSellNowRows`: premium edge, unknown turnover, fallback without usual prices, worth after the cut
+- [x] Offline tests of `BuildSellNowRows`: premium edge, unknown turnover, no usual price, worth after the cut, sort order
 
 ## Verification
 

@@ -243,6 +243,22 @@ end
 check("A weekday without scans gives no pattern", WP.Build(noSundays) == nil)
 check("No history gives no pattern", WP.Build(nil) == nil and WP.Build({}) == nil)
 
+-- Sell now
+local owned = Flip.BuildSellNowRow({ itemID = 1, total = 40, bags = 12, bank = 28, price = 120, usual = 100, sellsPerDay = 80 }, { cut = 0.05 })
+check("Owned item 20% above usual is listed with its worth", owned and math.abs(owned.premium - 0.2) < 1e-9 and owned.worth == 40 * 120 * 0.95)
+check("Days of sales and the slow flag", owned and owned.daysToSell == 0.5 and owned.slow == false)
+check("Premium edge: 9% above is not listed", Flip.BuildSellNowRow({ itemID = 2, total = 5, price = 109, usual = 100, sellsPerDay = 9 }) == nil)
+check("Premium edge: 10% above is listed", Flip.BuildSellNowRow({ itemID = 2, total = 5, price = 110, usual = 100, sellsPerDay = 9 }) ~= nil)
+check("Unknown turnover is not listed", Flip.BuildSellNowRow({ itemID = 3, total = 5, price = 150, usual = 100 }) == nil)
+check("No usual price, no row", Flip.BuildSellNowRow({ itemID = 4, total = 5, price = 150, sellsPerDay = 9 }) == nil)
+local heavy = Flip.BuildSellNowRow({ itemID = 5, total = 60, price = 150, usual = 100, sellsPerDay = 20 })
+check("More than a day of sales is flagged", heavy and heavy.slow == true and heavy.daysToSell == 3)
+local sellList = Flip.BuildSellNowRows({
+	{ itemID = 6, total = 1, price = 150, usual = 100, sellsPerDay = 9 },
+	{ itemID = 7, total = 50, price = 150, usual = 100, sellsPerDay = 9 },
+})
+check("Sell now is sorted by worth", #sellList == 2 and sellList[1].itemID == 7)
+
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}
 local auction = { history = { hourly = {}, daily = {} } }

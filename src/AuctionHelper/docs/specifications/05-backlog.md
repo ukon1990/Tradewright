@@ -28,7 +28,7 @@
 | [f51-sure-things](issues/e07-opportunities/f51-sure-things/README.md) | Sure things: listed under vendor price | implemented, in-game check pending |
 | [f52-price-gaps](issues/e07-opportunities/f52-price-gaps/README.md) | Price gaps (risky) | implemented, in-game check pending |
 | [f53-weekday-pattern](issues/e07-opportunities/f53-weekday-pattern/README.md) | Weekday pattern in the Market item view | implemented as one line of text, in-game check pending |
-| [f54-sell-now](issues/e07-opportunities/f54-sell-now/README.md) | Sell now | planned |
+| [f54-sell-now](issues/e07-opportunities/f54-sell-now/README.md) | Sell now | list implemented, in-game check pending; Gold view card still separate |
 | [e08-craft-planning](issues/e08-craft-planning/README.md) | Craft planning: material sources, how many to make, cooldowns | planned |
 | [f60-cheapest-material-source](issues/e08-craft-planning/f60-cheapest-material-source/README.md) | Cheapest way to get each material | planned |
 | [f61-how-many-to-make](issues/e08-craft-planning/f61-how-many-to-make/README.md) | How many to make | planned |

@@ -193,4 +193,39 @@ function FlipLogic.BuildGapRows(items, opts)
 	return rows
 end
 
+--- One "sell now" row for `item = { itemID, storageKey, total, bags, bank, price, usual, sellsPerDay }`:
+--- something you own that is priced above usual and sells, or nil. Worth is after the cut.
+function FlipLogic.BuildSellNowRow(item, opts)
+	local total, price, usual, sells = tonumber(item.total), tonumber(item.price), tonumber(item.usual), tonumber(item.sellsPerDay)
+	if not (total and price and usual and sells) or total <= 0 or usual <= 0 or sells <= 0 then
+		return nil
+	end
+	local premium = (price - usual) / usual
+	if premium < gapOption(opts, "minPremium", 0.1) then
+		return nil
+	end
+	local daysToSell = total / sells
+	return {
+		itemID = item.itemID, storageKey = item.storageKey, total = total, bags = item.bags, bank = item.bank,
+		price = price, usual = usual, premium = premium, sellsPerDay = sells,
+		worth = total * price * (1 - gapOption(opts, "cut", 0.05)),
+		daysToSell = daysToSell, slow = daysToSell > 1,
+	}
+end
+
+--- Sell-now rows for a list of owned items, most worth first.
+function FlipLogic.BuildSellNowRows(items, opts)
+	local rows = {}
+	for _, item in ipairs(items or {}) do
+		local row = FlipLogic.BuildSellNowRow(item, opts)
+		if row then
+			rows[#rows + 1] = row
+		end
+	end
+	table.sort(rows, function(a, b)
+		return a.worth > b.worth
+	end)
+	return rows
+end
+
 return FlipLogic
