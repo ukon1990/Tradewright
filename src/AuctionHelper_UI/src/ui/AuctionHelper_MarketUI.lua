@@ -537,7 +537,7 @@ function ProfessionExporter:RenderMarketDetails(rowData)
 	self:LayoutMarketPanel(panel)
 end
 
-local MODAL_W, MODAL_H = 760, 540
+local MODAL_W, MODAL_H = 760, 640
 
 local function createItemDetailsWindow(pe)
 	local theme = pe:GetTheme()
@@ -573,7 +573,7 @@ local function createItemDetailsWindow(pe)
 	local heading = pe:CreateHeading(frame.marketCard, "Auction house")
 	heading:SetPoint("TOPLEFT", PAD, -PAD)
 	heading:SetPoint("TOPRIGHT", -PAD, -PAD)
-	frame.market = pe:CreateMarketHistoryView(frame.marketCard, { noHeader = true, plotHeight = 140 })
+	frame.market = pe:CreateMarketHistoryView(frame.marketCard, { noHeader = true, plotHeight = 120 })
 	frame.market:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -8)
 	frame.market:SetPoint("BOTTOMRIGHT", -PAD, PAD)
 	frame.marketEmpty = pe:CreateEmptyState(frame.marketCard)
