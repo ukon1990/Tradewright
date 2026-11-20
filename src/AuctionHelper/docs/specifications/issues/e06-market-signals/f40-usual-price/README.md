@@ -23,7 +23,9 @@ Each item gets one stored price per day and a "usual price": the middle of those
 - Market tab: `Usual` and `Vs usual` columns. Item details: usual price and usual range.
 - One retention default (30 days) for hourly history in both places
 - Settings: "Usual price looks back" (7, 14, 30 days) and "Keep daily prices for"
-- Still open: the item chart's 14-day and 90-day ranges drawn from daily values with the usual range as a band, and the tooltip line "Usual price, 14 days" (`BuildItemGoldSummary`)
+- Item chart (`AuctionHelper_MarketChart.lua`): range buttons for 48 hours, 14 days and 90 days; the daily ranges draw the day's price and the usual price as a flat line. The chart's hover shows each day's low and high.
+- Tooltip: "Usual price, N days" and "Usual range" replace the 7-day lines once an item has a usual price (`FillPriceBaseline`)
+- Not done: the usual range as a shaded band. The chart's `paint` function is over the lint limits and may not grow; a band needs that function split first.
 
 ## Acceptance criteria
 
@@ -33,8 +35,9 @@ Each item gets one stored price per day and a "usual price": the middle of those
 - [ ] An item with fewer than 5 days of history still classifies as today (7-day average)
 - [ ] An item whose price never moved (MAD 0) shows a usual price and a percentage, and no error
 - [ ] Deals to buy and Market movers use the usual price; their thresholds still come from Settings
-- [ ] The item chart offers 14-day and 90-day ranges with the usual range as a band
-- [ ] The tooltip shows "Usual price, 14 days"
+- [ ] The item chart offers 14-day and 90-day ranges with the usual price as a line (implemented; in-game check pending)
+- [ ] The usual range is drawn as a band (not done, see Scope)
+- [ ] The tooltip shows "Usual price, 14 days" (implemented; in-game check pending)
 - [x] Offline tests: rollup of a day, median with an even and an odd count, MAD 0, window shorter than history, missing days
 
 ## Verification

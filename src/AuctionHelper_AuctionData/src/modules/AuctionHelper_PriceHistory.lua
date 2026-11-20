@@ -81,8 +81,29 @@ local function computeUsualPrice(pe, storageKey, window)
 	return false
 end
 
+-- Units of one item the player sold per day over the window, from the ledger. Rebuilt at most once a minute.
+local function ownSalesPerDay(pe, itemID, window)
+	if not (itemID and pe.GetSalesSummary) then
+		return nil
+	end
+	local state = pe:GetState()
+	local cache = state.ownSalesPerDay
+	if not cache or cache.window ~= window or now() - cache.at > 60 then
+		cache = { at = now(), window = window, byItem = {} }
+		for _, item in ipairs(pe:GetSalesSummary(window).items) do
+			if tonumber(item.itemID) then
+				cache.byItem[tonumber(item.itemID)] = item.units / window
+			end
+		end
+		state.ownSalesPerDay = cache
+	end
+	return cache.byItem[itemID]
+end
+
 local function computeSellsPerDay(pe, storageKey, window)
-	return pe.MarketSignals.SellsPerDay(dailyHistory(pe, storageKey), now(), window) or false
+	local itemID = tonumber(pe.ForeverLogic.ParseItemIDFromStorageKey(storageKey))
+	local own = ownSalesPerDay(pe, itemID, window)
+	return pe.MarketSignals.SellsPerDay(dailyHistory(pe, storageKey), now(), window, own) or false
 end
 
 -- One cached value per stored listing and kind, dropped at the next scan observation or window change.
@@ -110,4 +131,67 @@ end
 --- scans do not say. Built from finished days, so it appears the day after two scans of an item.
 function ProfessionExporter:GetSellsPerDay(storageKey)
 	return cachedSignal(self, "sells", storageKey, computeSellsPerDay)
+end
+
+-- The stored listing of an item with the most daily history (items can have several variants).
+local function bestStorageKey(pe, itemID)
+	local auction = pe:InitAuctionDB()
+	local keys = auction and auction.indexes.byItemID[tostring(itemID)]
+	local best, bestDays
+	for storageKey in pairs(keys or {}) do
+		local days = 0
+		for _ in pairs(dailyHistory(pe, storageKey) or {}) do
+			days = days + 1
+		end
+		if not best or days > bestDays then
+			best, bestDays = storageKey, days
+		end
+	end
+	return best
+end
+
+--- Usual price and sells per day for an item ID (tooltip, Inventory): `usual, sells`, either may be nil.
+function ProfessionExporter:GetItemPriceSignals(itemID)
+	local storageKey = bestStorageKey(self, itemID)
+	if not storageKey then
+		return nil, nil
+	end
+	return self:GetUsualPrice(storageKey), self:GetSellsPerDay(storageKey)
+end
+
+-- 7-day average, low and high of an item's own price history.
+local function sevenDayBaseline(pe, out, itemID)
+	local total, count = 0, 0
+	for _, p in ipairs(pe:GetItemHistorySeries(itemID, "market", "7d")) do
+		local v = tonumber(p.avg or p.last)
+		if v and v > 0 then
+			total, count = total + v, count + 1
+			out.low = math.min(out.low or v, tonumber(p.min) or v)
+			out.high = math.max(out.high or v, tonumber(p.max) or v)
+		end
+	end
+	if count >= 2 then
+		out.average = total / count
+	end
+end
+
+--- Fill a tooltip summary with what the price is compared with: the usual price once an item has enough daily history,
+-- else the 7-day average. Also notes how many sell a day when the scans say.
+function ProfessionExporter:FillPriceBaseline(out, itemID)
+	local pe = self
+	local usual, sells = pe:GetItemPriceSignals(itemID)
+	out.baselineLabel, out.rangeLabel = "7-day average", "7-day range"
+	if usual then
+		out.baselineLabel, out.rangeLabel = "Usual price, " .. usual.days .. " days", "Usual range"
+		out.average, out.low, out.high = usual.usual, usual.low, usual.high
+	elseif pe.GetItemHistorySeries then
+		sevenDayBaseline(pe, out, itemID)
+	end
+	if out.average and out.price then
+		out.trend = (out.price - out.average) / out.average * 100
+	end
+	if sells then
+		local perDay = sells.perDay >= 10 and math.floor(sells.perDay + 0.5) or string.format("%.1f", sells.perDay)
+		out.listedNote = "  ·  sells about " .. perDay .. " a day"
+	end
 end

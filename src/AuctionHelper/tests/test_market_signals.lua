@@ -109,6 +109,8 @@ local confident = MS.SellsPerDay(sellsDaily, now, 14)
 check("Five scan pairs give good confidence", confident and confident.confidence == "good" and confident.perDay == 20)
 check("Own sales are a floor", MS.SellsPerDay(sellsDaily, now, 14, 55).perDay == 55)
 check("One scan pair shows nothing", MS.SellsPerDay({ [day1 + 9 * DAY] = { s = 5, g = 3, c = 1 } }, now, 14) == nil)
+local ownOnly = MS.SellsPerDay({ [day1 + 9 * DAY] = { s = 5, g = 3, c = 1 } }, now, 14, 10)
+check("Own sales alone give a figure", ownOnly and ownOnly.perDay == 10 and ownOnly.confidence == "few")
 check("Days without an estimate are ignored", MS.SellsPerDay({ [day1 + 9 * DAY] = { p = 10 } }, now, 14) == nil)
 check("Days of supply", MS.DaysOfSupply(86, 12) == 86 / 12)
 check("Days of supply needs sales", MS.DaysOfSupply(86, 0) == nil and MS.DaysOfSupply(86, nil) == nil)
@@ -130,6 +132,9 @@ _G.GetServerTime = function() return today + HOUR end
 local glue, glueErr = loadfile(root .. "/../AuctionHelper_AuctionData/src/modules/AuctionHelper_PriceHistory.lua")
 assert(glue, glueErr)
 glue("AuctionHelper_AuctionData", pe)
+local logic, logicErr = loadfile(root .. "/src/util/AuctionHelper_ForeverLogic.lua")
+assert(logic, logicErr)
+logic("AuctionHelper", pe)
 
 for back = 1, 6 do
 	auction.history.hourly["k"] = auction.history.hourly["k"] or {}
@@ -153,6 +158,18 @@ rolled[today - DAY].p = 101
 local usual = pe:GetUsualPrice("k")
 check("Usual price needs 5 days and uses the daily middle", usual and usual.days == 6 and usual.usual == 103.5, usual and usual.usual)
 check("Unknown listing has no usual price", pe:GetUsualPrice("missing") == nil)
+auction.indexes = { byItemID = { ["42"] = { k = true, few = true } } }
+local itemUsual, itemSells = pe:GetItemPriceSignals(42)
+check("Item lookup uses the listing with the most history", itemUsual and itemUsual.days == 6 and itemSells ~= nil)
+check("Item without listings has no signals", pe:GetItemPriceSignals(7) == nil)
+pe.ForeverLogic = { ParseItemIDFromStorageKey = function() return 42 end }
+function pe:GetSalesSummary(windowDays) -- luacheck: ignore 212
+	return { items = { { itemID = 42, units = 14 * windowDays } } }
+end
+state.auctionDataRevision = 5
+check("The ledger's own sales are the floor", pe:GetSellsPerDay("k").perDay == 14)
+pe.GetSalesSummary = nil
+state.ownSalesPerDay = nil
 auction.history.daily["few"] = { [today - DAY] = { p = 10 }, [today - 2 * DAY] = { p = 12 } }
 state.auctionDataRevision = 2
 check("Fewer than 5 days gives no usual price", pe:GetUsualPrice("few") == nil)

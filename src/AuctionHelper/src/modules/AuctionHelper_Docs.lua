@@ -137,6 +137,28 @@ Over COPYBOX_PAGE_BYTES, each page starts with an AuctionHelper paging header. C
 
 Compact website scopes use shortened keys plus key tables in the package body so a script can decode them without guessing field meanings.]=],
 	},
+	{
+		id = "prices",
+		title = "Usual price and sells a day",
+		body = [=[USUAL PRICE
+• Each day you scan, AuctionHelper keeps one price per item: the middle of the lowest prices it saw that day.
+• The usual price is the middle of those daily prices over the last 14 days. Settings can change the window.
+• One odd listing does not move it. The usual range is where the middle half of those days fell.
+• An item needs scans on 5 different days first. Until then deals and movers use its 7-day average.
+• A day is added the first time you log in after it ended.
+
+SELLS A DAY, ESTIMATED
+• The auction house shows what is listed, never what was sold.
+• AuctionHelper compares an item's listed quantity between two of your scans at most 26 hours apart.
+• What is gone counts as sold. Cancelled and expired auctions also disappear, so the figure runs high.
+• New listings between two scans hide sales. Read it as "at most about this many".
+• Your own sales of an item are the lowest the figure can be.
+• It needs two scans of the item within 26 hours and shows the day after.
+• "Few sales seen" means it rests on fewer than five pairs of scans.
+
+LISTED SUPPLY LASTS
+• Listed quantity divided by sells a day. It counts every listing, also overpriced ones that will not sell.]=],
+	},
 }
 
 function ProfessionExporter:GetDocumentationSections()

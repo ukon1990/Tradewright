@@ -21,11 +21,12 @@ Each item gets "Sells a day, estimated": how many units leave the auction house 
 - The estimate is made from the hourly history when a day is rolled up (F40's `RollupDailyAuctionHistory`), so no scan code changes and it appears the day after two scans of an item. `s`, `g` and `c` are stored on that day's `history.daily` entry.
 - `GetSellsPerDay(storageKey)` (AuctionData), cached like the usual price
 - Market tab column `Sells a day`; item details "Sells a day, estimated" and "Listed supply lasts"; "(few sales seen)" when confidence is "few"
+- The player's own sales per day from the ledger are the floor (`GetSalesSummary`, rebuilt at most once a minute); with no scan estimate they stand alone
+- Tooltip: the "Listed" line ends with "sells about N a day"
+- Docs tab: section "Usual price and sells a day" on how both are made and why sells a day runs high
 - Still open:
   - with price steps (F41): count only the drop at or below the next scan's lowest price
-  - the own-sales floor from the ledger (the function takes it; nothing passes it yet)
-  - Inventory optional column and the tooltip line
-  - Docs tab: a short section on how the estimate is made and why it runs high
+  - Inventory optional column: `AuctionHelper_InventoryUI.lua` is over the file-size limit and may not grow; it needs a split first
 
 ## Acceptance criteria
 
@@ -33,7 +34,7 @@ Each item gets "Sells a day, estimated": how many units leave the auction house 
 - [x] A quantity that rose between scans counts as 0, not as negative
 - [x] Scans 3 days apart add nothing
 - [x] An item with one scan shows "-" for sells a day
-- [ ] An item you sold 10 of per day never shows less than 10
+- [x] An item you sold 10 of per day never shows less than 10 (offline test)
 - [ ] The word "estimated" appears wherever the figure is explained (details, tooltip, Docs)
 - [x] Offline tests: restock between scans, long gap, pair across midnight, confidence levels, own-sales floor, days of supply with perDay 0 or nil
 - [ ] Offline test with price steps (after F41)

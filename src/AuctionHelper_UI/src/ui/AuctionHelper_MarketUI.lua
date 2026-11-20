@@ -172,13 +172,11 @@ function ProfessionExporter:CreateMarketHistoryView(parent, opts)
 	view.facts = self:CreateKeyValueList(view)
 	view.facts:SetPoint("TOPLEFT", top, top == view and "TOPLEFT" or "BOTTOMLEFT", 0, top == view and 0 or -10)
 	view.facts:SetPoint("TOPRIGHT", top, top == view and "TOPRIGHT" or "BOTTOMRIGHT", 0, top == view and 0 or -10)
-	local graphHeading = self:CreateHeading(view, "Hourly price")
-	graphHeading:SetPoint("TOPLEFT", view.facts, "BOTTOMLEFT", 0, -10)
-	graphHeading:SetPoint("TOPRIGHT", view.facts, "BOTTOMRIGHT", 0, -10)
+	local graphHeading = self:CreateMarketChartHeading(view)
 	view.graph = self:CreateTimeSeriesGraph(view, {
 		showTitle = false,
 		plotHeight = opts.plotHeight or 96,
-		emptyText = "No hourly history yet. Run a full scan at the auction house.",
+		emptyText = "No price history for this range yet. Run a full scan at the auction house.",
 		yFormatter = function(v) return pe:FormatCopperShort(v) end,
 	})
 	view.graph:SetPoint("TOPLEFT", graphHeading, "BOTTOMLEFT", 0, -6)
@@ -226,12 +224,7 @@ function ProfessionExporter:CreateMarketHistoryView(parent, opts)
 		self.historyTable:SetRows(recent)
 		self.historyTable:Refresh()
 
-		self.graph:SetSeries(primary)
-		self.graph:SetSecondarySeries(secondary)
-		self.graph:SetQuantitySeries(quantity)
-		self.graph:SetSeriesLabels("Price", "Lowest", "Listed", nil)
-		self.graph:SetTooltipBuilder(nil)
-		self.graph:Refresh()
+		pe:ShowMarketChart(self, rowData, { primary = primary, secondary = secondary, quantity = quantity })
 	end
 	return view
 end

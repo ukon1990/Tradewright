@@ -318,7 +318,7 @@ function ProfessionExporter:BuildItemGoldSummary(itemID)
 	if self.GetNativeAhPrice then
 		nativePrice, _, nativeSeenAt = self:GetNativeAhPrice(itemID)
 	end
-	local out = {}
+	local out = { listedNote = "" }
 	if cachedPrice and cachedPrice > 0 then
 		out.price, out.priceAt = cachedPrice, tonumber(cachedSeenAt)
 	elseif nativePrice and nativePrice > 0 then
@@ -337,24 +337,8 @@ function ProfessionExporter:BuildItemGoldSummary(itemID)
 	out.listed = tonumber(snap.sampleSize)
 	out.listings = tonumber(snap.listingCount)
 
-	if self.GetItemHistorySeries then
-		local points = self:GetItemHistorySeries(itemID, "market", "7d")
-		local total, count = 0, 0
-		for _, p in ipairs(points) do
-			local v = tonumber(p.avg or p.last)
-			if v and v > 0 then
-				total, count = total + v, count + 1
-				local low, high = tonumber(p.min) or v, tonumber(p.max) or v
-				out.low = out.low and math.min(out.low, low) or low
-				out.high = out.high and math.max(out.high, high) or high
-			end
-		end
-		if count >= 2 then
-			out.average = total / count
-			if out.price then
-				out.trend = (out.price - out.average) / out.average * 100
-			end
-		end
+	if self.FillPriceBaseline then
+		self:FillPriceBaseline(out, itemID)
 	end
 
 	local craft = self.GetItemHistoryStats and self:GetItemHistoryStats(itemID, "crafting", "30d") or {}
@@ -404,9 +388,9 @@ function ProfessionExporter:AppendPricingToItemTooltip(tooltip, itemID)
 	end
 	if g.average then
 		local tone = g.trend and (g.trend >= 10 and TIP_SUCCESS or g.trend <= -10 and TIP_INFO) or nil
-		addToned(tooltip, "7-day average", self:FormatCopperShort(g.average) .. (g.trend and ("  " .. percentText(g.trend)) or ""), tone)
+		addToned(tooltip, g.baselineLabel, self:FormatCopperShort(g.average) .. (g.trend and ("  " .. percentText(g.trend)) or ""), tone)
 		if g.low and g.high and g.high > g.low then
-			addPair(tooltip, "7-day range", self:FormatCopperShort(g.low) .. " – " .. self:FormatCopperShort(g.high))
+			addPair(tooltip, g.rangeLabel, self:FormatCopperShort(g.low) .. " – " .. self:FormatCopperShort(g.high))
 		end
 	end
 	if g.listed and g.listed > 0 then
@@ -414,7 +398,7 @@ function ProfessionExporter:AppendPricingToItemTooltip(tooltip, itemID)
 		if g.listings and g.listings > 0 then
 			listed = listed .. " in " .. self:FormatNumberGrouped(g.listings) .. " auctions"
 		end
-		addPair(tooltip, "Listed", listed)
+		addPair(tooltip, "Listed", listed .. g.listedNote)
 	end
 	if g.saleRate then
 		addPair(tooltip, "Sale rate", self:FormatSaleRateDisplay(g.saleRate))
