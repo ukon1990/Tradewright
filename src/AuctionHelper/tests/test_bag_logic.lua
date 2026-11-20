@@ -32,6 +32,12 @@ check("Category: quest class is quest", cat({ classID = 12, quality = 1 }) == "q
 check("Category: quest flag beats class", cat({ classID = 0, isQuest = true, quality = 1 }) == "quest")
 check("Category: poor quest item stays quest", cat({ classID = 12, quality = 0 }) == "quest")
 check("Category: poor armor is junk", cat({ classID = 4, quality = 0 }) == "junk")
+check("Category: gear in a saved set", cat({ classID = 4, quality = 3, inSet = true }) == "gearset")
+check("Category: gear in no set", cat({ classID = 2, quality = 3, inSet = false }) == "gearloose")
+check("Category: set split leaves other items alone", cat({ classID = 7, quality = 1, inSet = false }) == "trade")
+check("Category: poor gear stays junk when split", cat({ classID = 4, quality = 0, inSet = false }) == "junk")
+local splitGroups = BL.GroupItems({ { name = "A", classID = 4, quality = 2, inSet = false }, { name = "B", classID = 4, quality = 2, inSet = true } })
+check("Groups: set gear first, then gear in no set", splitGroups[1].label == "Gear in a set" and splitGroups[2].label == "Gear not in a set")
 check("Category: recipe is other", cat({ classID = 9, quality = 2 }) == "other")
 check("Category: unknown class is other", cat({ quality = 1 }) == "other")
 

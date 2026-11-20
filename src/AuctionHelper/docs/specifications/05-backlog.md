@@ -54,6 +54,8 @@
 | [f93-bag-row](issues/e11-bags/f93-bag-row/README.md) | Bag row: equipped bags and the reagent bag | implemented, in-game check pending |
 | [f94-other-characters](issues/e11-bags/f94-other-characters/README.md) | Other characters as tabs, bank, and the All tab | implemented, in-game check pending |
 | [f95-make-room](issues/e11-bags/f95-make-room/README.md) | Make room: delete the cheapest stack, or swap it for loot | implemented, in-game check pending |
+| [f96-gear-sets-and-new-items](issues/e11-bags/f96-gear-sets-and-new-items/README.md) | Gear split by equipment set, and a mark on new items | implemented, in-game check pending |
+| [f97-item-log](issues/e11-bags/f97-item-log/README.md) | Item log: what entered and left the bags, and why | implemented, in-game check pending |
 | [e12-bank-and-bulk](issues/e12-bank-and-bulk/README.md) | Bank and bulk actions in the bag window | implemented, in-game check pending |
 | [f100-selection-and-move-logic](issues/e12-bank-and-bulk/f100-selection-and-move-logic/README.md) | Selection and move logic | done |
 | [f101-bank-in-the-bag-window](issues/e12-bank-and-bulk/f101-bank-in-the-bag-window/README.md) | Bank in the bag window | implemented, in-game check pending |

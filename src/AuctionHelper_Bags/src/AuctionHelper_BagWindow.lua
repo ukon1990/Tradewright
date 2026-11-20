@@ -1,7 +1,7 @@
 local _, ProfessionExporter = ...
 
 -- Bag window (E11 F92, F94; E12 F101): header, character tabs, search, category headings with item
--- slots, an optional bag row and a footer. The logged-in character's bags are live, and with the
+-- slots (or the item log), an optional bag row and a footer. The logged-in character's bags are live, and with the
 -- bank open so are its bank and the warband bank; everything else is a read-only list from the
 -- holdings in the inventory database.
 
@@ -15,9 +15,12 @@ local SECTION_GAP = 8
 local MAX_TABS = 6
 local MAX_SCREEN_SHARE = 0.85
 local WHEEL_STEP = 40
-local MODES = { { key = "bags", label = "Bags" }, { key = "bank", label = "Bank" }, { key = "both", label = "Both" } }
+local MODES = {
+	{ key = "bags", label = "Bags" }, { key = "bank", label = "Bank" }, { key = "both", label = "Both" }, { key = "log", label = "Log" },
+}
 local MODE_TEXT = { bags = "bags", bank = "bank", both = "bags and bank" }
 local EMPTY_TEXT = "Nothing saved here yet. The bank is saved when this character opens it."
+local LOG_EMPTY_TEXT = "Nothing logged. Items are listed here from now on as they enter or leave this character's bags."
 
 local refreshPending = false
 
@@ -226,7 +229,19 @@ local function livePlace(pe, view)
 	elseif view.mode == "bags" then
 		return "bags"
 	end
-	return bankOpen and "bank" or nil
+	return view.mode == "bank" and bankOpen and "bank" or nil
+end
+
+-- Modes that the tab does not have fall back: the warband bank is only a bank, All has no log,
+-- and the logged-in character has no Both (its bags are live).
+local function settleMode(pe, view)
+	if view.tab == pe.BAG_WARBAND_KEY then
+		view.mode = "bank"
+	elseif view.tab == "all" and view.mode == "log" then
+		view.mode = "both"
+	elseif view.tab == view.current and view.mode == "both" then
+		view.mode = "bags"
+	end
 end
 
 local function scanView(pe, view)
@@ -246,13 +261,7 @@ local function currentView(pe, f)
 	if not known or not pe:GetSetting("bags.showCharacters", true) then
 		view.tab = view.current
 	end
-	local own = view.tab == view.current
-	if own and view.mode == "both" then
-		view.mode = "bags"
-	end
-	if view.tab == pe.BAG_WARBAND_KEY then
-		view.mode = "bank"
-	end
+	settleMode(pe, view)
 	view.place = livePlace(pe, view)
 	view.live = view.place ~= nil
 	view.columns = pe:GetSetting("bags.columns", 10)
@@ -338,6 +347,8 @@ end
 local function modeShown(pe, view, key)
 	if view.tab == pe.BAG_WARBAND_KEY then
 		return key == "bank"
+	elseif key == "log" then
+		return view.tab ~= "all"
 	end
 	return not (view.tab == view.current and key == "both")
 end
@@ -452,10 +463,22 @@ local function freeText(totals, full)
 	return free
 end
 
+local function refreshLogTexts(pe, f, view, rowCount)
+	local record = pe:GetBagHoldings()[view.tab]
+	f.meta:SetText((record and record.name or view.tab) .. " · item log")
+	local entries = rowCount == 1 and "1 entry" or (rowCount .. " entries")
+	f.footLeft:SetText(string.format("%s · last %d days", entries, pe:GetItemLogLimits().days))
+	f.footRight:SetText(view.tab == view.current and goldText(pe, GetMoney()) or "")
+end
+
 -- Header and footer lines. `totals`: BagLogic.BagTotals of the carried bags.
 local function refreshTexts(pe, f, view, totals, itemCount)
 	local full = view.place == "bags" and totals.free == 0
 	showDropButton(f, full)
+	if view.mode == "log" then
+		refreshLogTexts(pe, f, view, itemCount)
+		return
+	end
 	if view.live then
 		f.meta:SetText(string.format("%d / %d slots", totals.used, totals.slots))
 		f.footLeft:SetText(freeText(totals, full))
@@ -502,6 +525,29 @@ local function applyLayout(pe, f, view, parts)
 	updateThumb(f)
 end
 
+-- Draws the view's item slots under their headings. Returns the content height and the item count.
+local function drawItems(pe, f, view, scan, totals)
+	local groups, itemCount = buildGroups(pe, view, scan)
+	local layout = pe.BagLogic.Layout(groups, {
+		columns = view.columns, slot = view.slot, gap = GAP, heading = HEADING, headingGap = HEADING_GAP, groupGap = GROUP_GAP,
+	})
+	pe:HideBagLog()
+	f.empty:SetText(EMPTY_TEXT)
+	drawHeadings(pe, f, layout, view)
+	drawSlots(pe, f, layout, view, totals.free)
+	return layout.height, itemCount
+end
+
+-- Draws the item log in place of the slots. Returns the content height and the row count.
+local function drawLog(pe, f, view)
+	drawHeadings(pe, f, { headings = {} }, view)
+	drawSlots(pe, f, { slots = {} }, view, 0)
+	local height, rowCount = pe:DrawBagLog(f, view)
+	f.empty:SetText(LOG_EMPTY_TEXT)
+	f.empty:SetShown(rowCount == 0)
+	return height, rowCount
+end
+
 --- Redraw the bag window from the bags or the saved lists. A hidden window is left alone.
 function ProfessionExporter:RefreshBagWindow()
 	local f = self.ui.bagWindow
@@ -512,21 +558,17 @@ function ProfessionExporter:RefreshBagWindow()
 	local scan = scanView(self, view)
 	self:SyncBagSelection(view, scan.items)
 	local totals = self.BagLogic.BagTotals(scan.bags)
-	local groups, itemCount = buildGroups(self, view, scan)
-	local layout = self.BagLogic.Layout(groups, {
-		columns = view.columns, slot = view.slot, gap = GAP, heading = HEADING, headingGap = HEADING_GAP, groupGap = GROUP_GAP,
-	})
 	local showRow = view.place == "bags" and self:GetSetting("bags.showBagRow", false) == true
 	f:SetWidth(view.innerWidth + 2 * PAD)
 	local hasTabs = refreshTabs(self, f, view)
 	refreshModes(self, f, view)
-	drawHeadings(self, f, layout, view)
-	drawSlots(self, f, layout, view, totals.free)
+	local draw = view.mode == "log" and drawLog or drawItems
+	local contentHeight, itemCount = draw(self, f, view, scan, totals)
 	refreshTexts(self, f, view, totals, itemCount)
 	f.rowButton:SetEnabled(view.place == "bags")
 	self:SetButtonPrimary(f.rowButton, showRow)
 	applyLayout(self, f, view, {
-		hasTabs = hasTabs, hasBar = self:RefreshBagSelectBar(f.selectBar), showRow = showRow, contentHeight = layout.height,
+		hasTabs = hasTabs, hasBar = self:RefreshBagSelectBar(f.selectBar), showRow = showRow, contentHeight = contentHeight,
 		bags = scan.bags,
 	})
 	self:UpdateBagCatcher()

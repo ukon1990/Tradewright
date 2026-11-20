@@ -83,20 +83,21 @@ local function recipeColumns(pe)
 	}
 end
 
--- A queued craft opens its recipe in the profession window; a queued crafting order opens the order.
-local function openQueueRow(pe, row)
+--- A queued craft opens its recipe in the profession window; a queued crafting order opens the order.
+--- Used by a row click and by the Craft button's first click on a crafting order.
+function ProfessionExporter:OpenProfessionQueueRow(row)
 	if not row then
 		return
 	end
 	local orderID = tonumber(row.orderID)
-	if orderID and pe.OpenCraftingOrderWorkQueueEntry then
-		local storage = pe.GetCraftingOrderWorkQueueStorage and pe:GetCraftingOrderWorkQueueStorage() or {}
+	if orderID and self.OpenCraftingOrderWorkQueueEntry then
+		local storage = self.GetCraftingOrderWorkQueueStorage and self:GetCraftingOrderWorkQueueStorage() or {}
 		local stored = storage[tostring(orderID)]
-		pe:OpenCraftingOrderWorkQueueEntry(type(stored) == "table" and stored
+		self:OpenCraftingOrderWorkQueueEntry(type(stored) == "table" and stored
 			or { orderID = orderID, spellID = row.recipeID, itemID = row.outputItemID })
 		return
 	end
-	pe:JumpToProfessionRecipe(row.recipeID, row.skillLineID)
+	self:JumpToProfessionRecipe(row.recipeID, row.skillLineID)
 end
 
 local function showQueueRowTooltip(pe, rowFrame, row)
@@ -224,7 +225,7 @@ local function createRecipeTable(pe, f, card)
 		autoFitToScroll = true,
 		emptyTitle = "Nothing queued",
 		emptyHint = "Pick a recipe and press Add to queue.",
-		onRowClick = function(_, row) openQueueRow(pe, row) end,
+		onRowClick = function(_, row) pe:OpenProfessionQueueRow(row) end,
 		onRowEnter = function(rowFrame, row) showQueueRowTooltip(pe, rowFrame, row) end,
 		onRowLeave = function() GameTooltip:Hide() end,
 	})

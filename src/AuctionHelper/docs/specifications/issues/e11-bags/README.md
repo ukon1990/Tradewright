@@ -23,6 +23,8 @@ Designs: [AuctionHelper Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnS
 - F93: the bag row: equipped bags and reagent bag, swap and replace
 - F94: other characters as tabs, bank and the All tab
 - F95: make room when the bags are full: delete the cheapest stack, or swap it for loot
+- F96: gear split by equipment set, and a mark on new items
+- F97: item log: what entered and left the bags, and why
 
 ## Acceptance criteria
 
@@ -48,5 +50,5 @@ In-game on Forever (full restart, the module adds new files): enable AuctionHelp
 - A live bank window (done later in E12)
 - Changing the order of the categories (the "Category order" row of the design)
 - Sorting or auto-stacking bags, selling junk at a vendor with one click
-- Item sets, item level or new-item markers on slots
+- Item level on slots
 - The slot count of a replacement bag in the picker (the game does not give it without reading tooltips)

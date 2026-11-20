@@ -6,6 +6,7 @@ local _, ProfessionExporter = ...
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local DIM_ALPHA = 0.22
 local SELECT_ALPHA = 0.35
+local NEW_MARK = 7
 
 local live = {} -- [bag][slot] = button; a button keeps its bag and slot for life
 local bagParents = {} -- [bag] = frame whose ID is the bag, as the item button template expects
@@ -37,6 +38,22 @@ local function addLook(pe, button)
 	button.ahSelect:SetAllPoints()
 	button.ahSelect:SetColorTexture(theme.gold.r, theme.gold.g, theme.gold.b, SELECT_ALPHA)
 	button.ahSelect:Hide()
+	-- New item: a small gold corner, top left.
+	button.ahNew = button:CreateTexture(nil, "OVERLAY", nil, 1)
+	button.ahNew:SetSize(NEW_MARK, NEW_MARK)
+	button.ahNew:SetPoint("TOPLEFT", 1, -1)
+	button.ahNew:SetColorTexture(theme.gold.r, theme.gold.g, theme.gold.b, 1)
+	button.ahNew:Hide()
+end
+
+-- Hovering a new item is seeing it: the game's own bags forget it the same way.
+local function forgetNew(button)
+	local item = button.ahItem
+	if item and item.isNew then
+		item.isNew = nil
+		button.ahNew:Hide()
+		C_NewItems.RemoveNewItem(item.bag, item.slot)
+	end
 end
 
 local function bagParent(content, bag)
@@ -74,6 +91,7 @@ local function createLiveSlot(pe, content, bag, slot)
 	end
 	addLook(pe, button)
 	hideGameGlows(button)
+	button:HookScript("OnEnter", forgetNew)
 	return button
 end
 
@@ -167,6 +185,7 @@ function ProfessionExporter:SetBagSlotItem(button, item, look)
 		color = theme.gold
 	end
 	button.ahSelect:SetShown(look.selected == true)
+	button.ahNew:SetShown(item.isNew == true)
 	button.ahItem = item
 	button.ahBorder:SetColorTexture(color.r, color.g, color.b, 1)
 	button.ahFill:Show()
@@ -185,6 +204,7 @@ function ProfessionExporter:SetBagSlotFree(button, freeCount)
 	local theme = self:GetTheme()
 	button.ahItem = nil
 	button.ahSelect:Hide()
+	button.ahNew:Hide()
 	button.ahBorder:SetColorTexture(theme.borderStrong.r, theme.borderStrong.g, theme.borderStrong.b, 1)
 	button.ahFill:Show()
 	button.ahIcon:Hide()

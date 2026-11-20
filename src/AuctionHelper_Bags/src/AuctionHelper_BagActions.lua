@@ -126,13 +126,6 @@ local function addMenuLine(text, onClick, isTitle)
 	UIDropDownMenu_AddButton(info)
 end
 
--- Selling and destroying: only for stacks in the carried bags.
-local function addBagOnlyLines(pe, items)
-	if pe:IsMerchantOpen() then
-		addMenuLine("Sell to the vendor", function() pe:RunBagSell(items) end)
-	end
-	addMenuLine("Destroy…", function() pe:ArmBagDestroy(items) end)
-end
 
 --- Menu of what can be done with `items`, which all sit in `place` ("bags", "bank" or "warband").
 --- Opens at `anchor`, or at the mouse.
@@ -148,9 +141,11 @@ function ProfessionExporter:ShowBagActionMenu(items, place, anchor)
 		if #targets == 0 then
 			addMenuLine("Open the bank to move items")
 		end
-		if place == "bags" then
-			addBagOnlyLines(pe, items)
+		-- A vendor only buys from the carried bags.
+		if place == "bags" and pe:IsMerchantOpen() then
+			addMenuLine("Sell to the vendor", function() pe:RunBagSell(items) end)
 		end
+		addMenuLine("Destroy…", function() pe:ArmBagDestroy(items) end)
 	end, "MENU")
 	ToggleDropDownMenu(1, nil, menu, anchor or "cursor", 0, 0)
 end

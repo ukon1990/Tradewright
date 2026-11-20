@@ -56,7 +56,33 @@ local function isQuestSlot(bag, slot)
 	return type(quest) == "table" and (quest.isQuestItem == true or quest.questID ~= nil)
 end
 
-local function readSlot(pe, bag, slot)
+-- What a redraw marks on live slots: `sets` (split gear by saved equipment set) and `new` (mark
+-- items the game counts as new). Each needs its setting on and the client to have the API.
+local function slotMarks(pe)
+	local sets = C_EquipmentSet and C_EquipmentSet.GetNumEquipmentSets and C_Container.GetContainerItemEquipmentSetInfo
+	return {
+		sets = pe:GetSetting("bags.splitGearSets", true) == true and sets ~= nil and C_EquipmentSet.GetNumEquipmentSets() > 0,
+		new = pe:GetSetting("bags.markNew", true) == true and C_NewItems ~= nil and C_NewItems.IsNewItem ~= nil,
+	}
+end
+
+-- Sets `inSet` and `isNew` on a live item, and lets the search find them ("set", a set's name, "new").
+local function addMarks(item, marks)
+	if marks.sets then
+		local inSet, setNames = C_Container.GetContainerItemEquipmentSetInfo(item.bag, item.slot)
+		item.inSet = inSet == true
+		if item.inSet then
+			item.keywords = item.keywords .. " set " .. tostring(setNames or "")
+		end
+	end
+	-- Junk is never marked: it is new all the time.
+	if marks.new and item.quality ~= 0 and C_NewItems.IsNewItem(item.bag, item.slot) then
+		item.isNew = true
+		item.keywords = item.keywords .. " new"
+	end
+end
+
+local function readSlot(pe, bag, slot, marks)
 	local info = C_Container.GetContainerItemInfo(bag, slot)
 	local itemID = info and tonumber(info.itemID)
 	if not itemID then
@@ -71,6 +97,7 @@ local function readSlot(pe, bag, slot)
 	item.bag, item.slot = bag, slot
 	item.locked = info.isLocked == true
 	item.isQuest = isQuestSlot(bag, slot)
+	addMarks(item, marks)
 	return item
 end
 
@@ -87,13 +114,14 @@ end
 --- bag, or nil).
 function ProfessionExporter:ScanBags(bagIDs)
 	local scan = { items = {}, bags = {} }
+	local marks = slotMarks(self)
 	local reagentBag = self:GetReagentBagIndex()
 	for _, bag in ipairs(bagIDs or carriedBagIDs(self)) do
 		local slots = C_Container.GetContainerNumSlots(bag) or 0
 		local entry = { bag = bag, slots = slots, free = 0, isReagent = bag == reagentBag }
 		scan.bags[#scan.bags + 1] = entry
 		for slot = 1, slots do
-			local item = readSlot(self, bag, slot)
+			local item = readSlot(self, bag, slot, marks)
 			if item then
 				scan.items[#scan.items + 1] = item
 			else
@@ -159,6 +187,8 @@ local handlers = {
 	GET_ITEM_INFO_RECEIVED = refreshWindow,
 	PLAYERBANKSLOTS_CHANGED = refreshWindow,
 	PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED = refreshWindow,
+	EQUIPMENT_SETS_CHANGED = refreshWindow,
+	BAG_NEW_ITEMS_UPDATED = refreshWindow,
 }
 
 function handlers.PLAYER_LOGIN(pe)

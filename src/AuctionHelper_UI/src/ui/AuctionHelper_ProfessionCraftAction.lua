@@ -162,8 +162,49 @@ local function setQuantityWhenOpen(pe, recipeID, amount)
 	end
 end
 
+-- A shown, enabled button, or nil.
+local function usableButton(button)
+	return button and button:IsShown() and button:IsEnabled() and button or nil
+end
+
+-- The crafting-orders view while it shows order `orderID`, or nil.
+local function orderViewShowing(orderID)
+	local pf = _G.ProfessionsFrame
+	local view = pf and pf.OrdersPage and pf.OrdersPage.OrderView
+	local order = view and view:IsShown() and view.order
+	return order and tonumber(order.orderID) == orderID and view or nil
+end
+
+-- A queued crafting order (retail) is worked on in the orders tab, one step per click like a player
+-- would: open the order, then Start Order, then Create. Each step needs a click of its own, and
+-- Create only works once the server has accepted Start Order.
+local function stepCraftingOrder(pe, row, orderID)
+	local view = orderViewShowing(orderID)
+	if not view then
+		pe:OpenProfessionQueueRow(row)
+		return true
+	end
+	local button = usableButton(view.OrderInfo and view.OrderInfo.StartOrderButton) or usableButton(view.CreateButton)
+	if button then
+		return clickCreate(button)
+	end
+	pe:PrintMessage(string.format("Crafting order #%d cannot be started or crafted right now.", orderID))
+	return false
+end
+
+-- Remembers which queue row the next finished craft belongs to.
+local function notePendingCraft(pe, row, recipeID)
+	pe._pendingProfessionQueueCraft = {
+		queueKey = row.queueKey,
+		recipeID = recipeID,
+		outputItemID = tonumber(row.outputItemID),
+		startedAt = GetTime and GetTime() or 0,
+	}
+end
+
 --- Crafts a queue row inside the click: through the open recipe's Create button, or by recipe id
---- while another recipe shows, which is then opened with the queued quantity filled in.
+--- while another recipe shows, which is then opened with the queued quantity filled in. A crafting
+--- order row instead steps through its order in the orders tab.
 function ProfessionExporter:CraftProfessionQueueRecipe(row)
 	if type(row) ~= "table" then
 		return false
@@ -172,12 +213,11 @@ function ProfessionExporter:CraftProfessionQueueRecipe(row)
 	if not recipeSpellID then
 		return false
 	end
-	self._pendingProfessionQueueCraft = {
-		queueKey = row.queueKey,
-		recipeID = recipeSpellID,
-		outputItemID = tonumber(row.outputItemID),
-		startedAt = GetTime and GetTime() or 0,
-	}
+	notePendingCraft(self, row, recipeSpellID)
+	local orderID = tonumber(row.orderID)
+	if orderID and self.IS_RETAIL and self.OpenCraftingOrderWorkQueueEntry then
+		return stepCraftingOrder(self, row, orderID)
+	end
 	local craftAmount = math.max(1, math.floor(tonumber(row.quantity) or 1))
 	if startOpenRecipeCraft(self, recipeSpellID, craftAmount) then
 		return true

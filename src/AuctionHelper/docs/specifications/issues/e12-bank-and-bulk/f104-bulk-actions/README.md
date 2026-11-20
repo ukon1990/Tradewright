@@ -14,7 +14,7 @@ Act on the selection: move it to the bank, warband bank or bags, sell it to a ve
 
 - Move: one entry per target of `BagLogic.MoveTargets`
 - Sell: only in the Bags view with a merchant open; stacks without a vendor price are skipped; chat line with the count and the gold
-- Destroy: only in the Bags view, on retail and Forever. First click arms it and prints "Destroying N stacks worth X"; the button then reads "Destroy next (N left)" and each click deletes one stack. Quest items, bags and rare or better items are refused and said so
+- Destroy: in every live view (bags, bank, warband bank), on retail and Forever. First click arms it and prints "Destroying N stacks worth X"; the button then reads "Destroy next (N left)" and each click deletes one stack. Quest items, bags and rare or better items are refused and said so
 - Changing the selection disarms Destroy
 
 ## Acceptance criteria

@@ -7,6 +7,8 @@ ProfessionExporter.BagLogic = BagLogic
 
 -- Display order of the category headings.
 BagLogic.CATEGORIES = {
+	{ key = "gearset", label = "Gear in a set" },
+	{ key = "gearloose", label = "Gear not in a set" },
 	{ key = "gear", label = "Gear" },
 	{ key = "consumable", label = "Consumables" },
 	{ key = "food", label = "Food and drink" },
@@ -26,6 +28,14 @@ local CLASS_CATEGORY = {
 	[8] = "consumable", [19] = "gear",
 }
 
+-- Gear whose `inSet` is known (true or false) is split by it: saved equipment sets or none.
+local function gearKey(item)
+	if item.inSet == nil then
+		return "gear"
+	end
+	return item.inSet and "gearset" or "gearloose"
+end
+
 --- Category key of an item: quest items first, then poor quality as junk, then by item class.
 function BagLogic.CategoryOf(item)
 	if item.isQuest or item.classID == CLASS.quest then
@@ -37,7 +47,8 @@ function BagLogic.CategoryOf(item)
 	if item.classID == CLASS.consumable and item.subclassID == FOOD_SUBCLASS then
 		return "food"
 	end
-	return CLASS_CATEGORY[item.classID] or "other"
+	local key = CLASS_CATEGORY[item.classID] or "other"
+	return key == "gear" and gearKey(item) or key
 end
 
 -- Best quality first, then name, then the larger stack; bag and slot keep the order stable.
