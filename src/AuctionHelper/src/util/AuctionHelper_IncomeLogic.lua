@@ -90,3 +90,116 @@ function IncomeLogic.PruneDays(days, firstDay)
 		end
 	end
 end
+
+--- PruneDays for every map in `byKey` ({ [key] = days }), dropping keys left empty.
+function IncomeLogic.PruneAllDays(byKey, firstDay)
+	for key, days in pairs(byKey) do
+		IncomeLogic.PruneDays(days, firstDay)
+		if next(days) == nil then
+			byKey[key] = nil
+		end
+	end
+end
+
+-- Item chat lines -------------------------------------------------------------------------------
+
+--- A Lua pattern for a GlobalStrings format ("You create: %sx%d." → "^You create: (.+)x(%d+)%.$").
+function IncomeLogic.FormatToPattern(format)
+	local pattern = format:gsub("([%(%)%.%+%-%*%?%[%]%^%$])", "%%%1")
+	pattern = pattern:gsub("%%s", "(.+)"):gsub("%%d", "(%%d+)")
+	return "^" .. pattern .. "$"
+end
+
+--- Reads one of the player's own item chat lines. `patterns` is a list of { pattern, kind }, the
+--- "x%d" forms first. Returns kind, itemID, quantity, or nil when no pattern matches.
+function IncomeLogic.ParseItemMessage(message, patterns)
+	for _, entry in ipairs(patterns) do
+		local link, count = message:match(entry[1])
+		local itemID = link and tonumber(link:match("item:(%d+)"))
+		if itemID then
+			return entry[2], itemID, tonumber(count) or 1
+		end
+	end
+	return nil
+end
+
+-- Where sold items came from (F81) --------------------------------------------------------------
+
+local ORIGIN_OF_KIND = { craft = "crafted", loot = "farmed", buy = "resold" }
+
+--- Adds `quantity` of `kind` (craft or loot) to `acquired[itemID][day][kind]`.
+function IncomeLogic.AddAcquired(acquired, itemID, day, kind, quantity)
+	acquired[itemID] = acquired[itemID] or {}
+	local days = acquired[itemID]
+	days[day] = days[day] or {}
+	days[day][kind] = (days[day][kind] or 0) + quantity
+end
+
+-- Everything that put an item in the account's hands, oldest first: { day, origin, left }.
+local function supplyFor(itemID, acquired, buysByItem)
+	local supply = {}
+	for day, kinds in pairs(acquired[itemID] or {}) do
+		for kind, quantity in pairs(kinds) do
+			supply[#supply + 1] = { day = tonumber(day), origin = ORIGIN_OF_KIND[kind], left = quantity }
+		end
+	end
+	for _, buy in ipairs(buysByItem[itemID] or {}) do
+		supply[#supply + 1] = { day = IncomeLogic.DayOf(buy.ts), origin = "resold", left = tonumber(buy.quantity) or 0 }
+	end
+	table.sort(supply, function(a, b)
+		return a.day < b.day
+	end)
+	return supply
+end
+
+-- Takes `units` out of the supply that came before `day`, oldest first, into `label`.
+local function consume(supply, day, units, label)
+	for _, lot in ipairs(supply) do
+		if units <= 0 or lot.day > day then
+			break
+		end
+		local take = math.min(units, lot.left)
+		if take > 0 then
+			lot.left, units = lot.left - take, units - take
+			label[lot.origin] = (label[lot.origin] or 0) + take
+		end
+	end
+	if units > 0 then
+		label.unknown = (label.unknown or 0) + units
+	end
+end
+
+local function byItem(events, kind)
+	local out = {}
+	for _, event in ipairs(events) do
+		local itemID = tonumber(event.itemID)
+		if event.kind == kind and itemID then
+			out[itemID] = out[itemID] or {}
+			table.insert(out[itemID], event)
+		end
+	end
+	return out
+end
+
+--- Labels each auction sale with where its units came from: crafted, farmed (looted), resold
+--- (bought, F44) or unknown, matched oldest first per item against what came before the sale.
+--- `acquired[itemID][day] = { craft = n, loot = n }`. Returns { [sale event] = { origin = units } }.
+function IncomeLogic.LabelSaleOrigins(events, acquired)
+	local labels, buysByItem = {}, byItem(events, "buy")
+	for itemID, sales in pairs(byItem(events, "sell")) do
+		table.sort(sales, function(a, b)
+			return (tonumber(a.ts) or 0) < (tonumber(b.ts) or 0)
+		end)
+		local supply = supplyFor(itemID, acquired, buysByItem)
+		for _, sale in ipairs(sales) do
+			labels[sale] = {}
+			consume(supply, IncomeLogic.DayOf(sale.ts), tonumber(sale.quantity) or 1, labels[sale])
+		end
+	end
+	for _, event in ipairs(events) do
+		if event.kind == "sell" and not labels[event] then
+			labels[event] = { unknown = tonumber(event.quantity) or 1 }
+		end
+	end
+	return labels
+end

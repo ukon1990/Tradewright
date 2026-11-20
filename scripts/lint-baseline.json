@@ -2242,15 +2242,15 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_SalesDashboard.lua": {
    "ProfessionExporter:CreateSalesDashboard": {
     "lines": [
-     174
+     151
     ]
    },
    "dash:Refresh": {
     "lines": [
-     59
+     44
     ],
     "ccn": [
-     35
+     26
     ]
    }
   },

@@ -61,7 +61,54 @@ check("Days: a zero change adds no day", days[11] == nil)
 IL.AddToDay(days, 3, "loot", 5)
 IL.PruneDays(days, 5)
 check("Days: old days dropped", days[3] == nil and days[10] ~= nil)
+local byItem = { [1] = { [2] = {} }, [2] = { [9] = {} } }
+IL.PruneAllDays(byItem, 5)
+check("Days: items left without days are dropped", byItem[1] == nil and byItem[2][9] ~= nil)
 check("Days: day of a timestamp", IL.DayOf(86400 * 3 + 5) == 3)
+
+-- Item chat lines
+local patterns = {
+	{ IL.FormatToPattern("You create: %sx%d."), "craft" },
+	{ IL.FormatToPattern("You create: %s."), "craft" },
+	{ IL.FormatToPattern("You receive loot: %sx%d."), "loot" },
+	{ IL.FormatToPattern("You receive loot: %s."), "loot" },
+}
+local link = "|cffffffff|Hitem:2589::::::::60:::::|h[Linen Cloth]|h|r"
+local function parse(message)
+	return { IL.ParseItemMessage(message, patterns) }
+end
+local r = parse("You create: " .. link .. "x5.")
+check("Chat: crafted stack", r[1] == "craft" and r[2] == 2589 and r[3] == 5)
+r = parse("You create: " .. link .. ".")
+check("Chat: crafted single", r[1] == "craft" and r[2] == 2589 and r[3] == 1)
+r = parse("You receive loot: " .. link .. "x2.")
+check("Chat: looted stack", r[1] == "loot" and r[3] == 2)
+check("Chat: someone else's loot is ignored", parse("Bob receives loot: " .. link .. ".")[1] == nil)
+check("Chat: a line without an item link is ignored", parse("You receive loot: Gold.")[1] == nil)
+
+-- Where sold items came from
+local acquired = {}
+IL.AddAcquired(acquired, 7, 10, "craft", 6)
+IL.AddAcquired(acquired, 7, 11, "loot", 4)
+IL.AddAcquired(acquired, 7, 30, "craft", 9)
+IL.AddAcquired(acquired, 8, 10, "loot", 1)
+local function at(day) return day * 86400 + 100 end
+local ledger = {
+	{ kind = "sell", itemID = 7, ts = at(12), quantity = 10 },
+	{ kind = "sell", itemID = 7, ts = at(20), quantity = 3 },
+	{ kind = "buy", itemID = 9, ts = at(5), quantity = 2 },
+	{ kind = "sell", itemID = 9, ts = at(6), quantity = 2 },
+	{ kind = "sell", itemID = 8, ts = at(9), quantity = 1 },
+	{ kind = "sell", itemName = "Mystery", ts = at(9), quantity = 4 },
+}
+local labels = IL.LabelSaleOrigins(ledger, acquired)
+check("Origin: 6 crafted and 4 looted split a sale of 10", labels[ledger[1]].crafted == 6 and labels[ledger[1]].farmed == 4)
+check("Origin: crafts made after the sale do not count", labels[ledger[2]].unknown == 3 and labels[ledger[2]].crafted == nil)
+check("Origin: bought then sold is resold", labels[ledger[4]].resold == 2)
+check("Origin: looted after the sale does not count", labels[ledger[5]].unknown == 1)
+check("Origin: a sale without an item id is unknown", labels[ledger[6]].unknown == 4)
+check("Origin: buys are not labelled", labels[ledger[3]] == nil)
+check("Origin: empty ledger", next(IL.LabelSaleOrigins({}, {})) == nil)
 
 if failed > 0 then
 	print(failed .. " check(s) failed")

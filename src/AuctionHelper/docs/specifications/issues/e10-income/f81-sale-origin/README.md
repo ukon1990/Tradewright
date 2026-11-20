@@ -12,15 +12,15 @@ Each auction sale is labelled crafted, resold, farmed or unknown, from what the 
 
 ## Scope
 
-- Ledger event `kind = "craft"`: item, quantity, recipe, time; on retail from the craft result, on Forever from the cast plus the item arriving
-- Ledger event `kind = "loot"`: item and quantity from the player's own loot messages, with daily per-item totals instead of one event per pickup, so the ledger is not flooded
-- `IncomeLogic.LabelSaleOrigins(events)` → for each sale, units by origin `{crafted, resold, farmed, unknown}`. Units are matched oldest first, per item, against crafts, buys and loot that came before the sale, so 10 crafted and 5 bought split the right way
-- Labels are worked out when needed, never stored, so older sales get labels too
-- Ledger size: craft and loot entries count towards the existing cap
+- Crafts and loot are read from the player's own item chat lines (`CHAT_MSG_LOOT` with `LOOT_ITEM_CREATED_SELF[_MULTIPLE]` and `LOOT_ITEM_SELF[_MULTIPLE]`, turned into patterns with `IncomeLogic.FormatToPattern`, so every client language works). This works the same on retail and Forever; the recipe is not known from the line and is not stored
+- Stored apart from the ledger events, so loot never crowds sales out of the 2,500-event cap: `ledger.acquired[itemID][day] = { craft = n, loot = n }`, account-wide (items move between characters by mail before they are sold), days older than 400 dropped at login
+- `IncomeLogic.LabelSaleOrigins(events, acquired)` → for each sale, units by origin `{crafted, resold, farmed, unknown}`. Units are matched oldest first, per item, against crafts, loot and buys (F44 `kind = "buy"` events) from the sale's day or earlier, so 10 crafted and 5 bought split the right way
+- Labels are worked out when needed, never stored, so older sales get labels too (as unknown, since nothing before this feature was logged)
+- Sales view: the "What sells" tooltip gains "Came from: 6 crafted, 4 farmed"
 
 ## Acceptance criteria
 
-- [ ] Crafting 5 of an item writes one `craft` event with quantity 5, on retail and on Forever
+- [ ] Crafting 5 of an item adds 5 crafted to that item and day, on retail and on Forever
 - [ ] Selling 5 of an item crafted earlier labels the sale crafted
 - [ ] An item bought then sold is labelled resold (with F44); without F44, unknown
 - [ ] An item looted then sold is labelled farmed
@@ -34,7 +34,7 @@ Each auction sale is labelled crafted, resold, farmed or unknown, from what the 
 npm test
 ```
 
-In-game on Forever: craft 2 of an item, loot 2 of another, post and sell both → after taking the mail, `/dump` the labelled origins or check F82's split.
+In-game on Forever: craft 2 of an item, loot 2 of another, post and sell both → after taking the mail, Overview → Sales → hover each in "What sells": "Came from" shows 2 crafted and 2 farmed.
 
 ## Dependencies
 

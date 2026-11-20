@@ -55,6 +55,67 @@ local function attachTable(pe, card, columns, sortKey, tooltipPairs)
 	card.table = tbl
 end
 
+local ORIGINS = { "crafted", "resold", "farmed", "unknown" }
+
+-- "6 crafted, 4 farmed": where the item's sold units came from (E10 F81).
+local function originText(origins)
+	local parts = {}
+	for _, origin in ipairs(ORIGINS) do
+		if (origins[origin] or 0) > 0 then
+			parts[#parts + 1] = string.format("%d %s", origins[origin], origin)
+		end
+	end
+	return #parts > 0 and table.concat(parts, ", ") or "-"
+end
+
+-- Sums each sale's origin labels into its item row (rows matched by item id, else name).
+local function addOrigins(items, sales, labels)
+	local byKey = {}
+	for _, item in ipairs(items) do
+		item.origins = {}
+		byKey[item.itemID or item.name] = item
+	end
+	for _, sale in ipairs(sales) do
+		local item = byKey[sale.itemID or sale.itemName]
+		for origin, units in pairs(item and labels[sale] or {}) do
+			item.origins[origin] = (item.origins[origin] or 0) + units
+		end
+	end
+end
+
+local function itemTooltipPairs(pe, row)
+	local count = function(n) return pe:FormatNumberGrouped(n) end
+	return {
+		{ "Sales", string.format("%s, %s items", count(row.sales), count(row.units)) },
+		{ "Earned after cut", pe:FormatCopperFull(row.net) },
+		{ "Sold for", pe:FormatCopperFull(row.gross) },
+		{ "Sales a week", string.format("%.1f", row.perWeek) },
+		{ "Last sold", pe:FormatScanTimestamp(row.lastAt) },
+		{ "Came from", originText(row.origins or {}) },
+	}
+end
+
+-- The latest sales as table rows, newest first.
+local function recentRows(pe, events)
+	local rows = {}
+	for index = 1, math.min(RECENT_ROWS, #events) do
+		local event = events[index]
+		local quantity = tonumber(event.quantity) or 1
+		local name = event.itemName or pe:GetItemDisplayName(event.itemID)
+		rows[index] = {
+			_rowIdentity = tostring(index),
+			itemID = event.itemID,
+			name = quantity > 1 and string.format("%s x%d", name, quantity) or name,
+			ts = tonumber(event.ts) or 0,
+			net = tonumber(event.netCopper) or tonumber(event.totalCopper) or 0,
+			gross = tonumber(event.totalCopper) or 0,
+			buyer = event.buyer,
+			characterKey = event.characterKey,
+		}
+	end
+	return rows
+end
+
 function ProfessionExporter:CreateSalesDashboard(parent)
 	local pe = self
 	local money = function(copper) return pe:FormatCopperShort(copper) end
@@ -123,15 +184,7 @@ function ProfessionExporter:CreateSalesDashboard(parent)
 		numberColumn("net", "Earned", 78, money),
 		numberColumn("avgUnit", "Each", 70, money, true),
 		numberColumn("perWeek", "A week", 56, function(n) return string.format("%.1f", n) end),
-	}, "net", function(row)
-		return {
-			{ "Sales", string.format("%s, %s items", count(row.sales), count(row.units)) },
-			{ "Earned after cut", pe:FormatCopperFull(row.net) },
-			{ "Sold for", pe:FormatCopperFull(row.gross) },
-			{ "Sales a week", string.format("%.1f", row.perWeek) },
-			{ "Last sold", pe:FormatScanTimestamp(row.lastAt) },
-		}
-	end)
+	}, "net", function(row) return itemTooltipPairs(pe, row) end)
 
 	-- Latest sales, newest first.
 	dash.recent = createCard(pe, dash, "Latest sales")
@@ -200,25 +253,10 @@ function ProfessionExporter:CreateSalesDashboard(parent)
 		self.graph:SetQuantitySeries({})
 		self.graph:Refresh()
 
-		local recent = {}
-		for index = 1, math.min(RECENT_ROWS, #summary.recent) do
-			local event = summary.recent[index]
-			local quantity = tonumber(event.quantity) or 1
-			local name = event.itemName or pe:GetItemDisplayName(event.itemID)
-			recent[index] = {
-				_rowIdentity = tostring(index),
-				itemID = event.itemID,
-				name = quantity > 1 and string.format("%s x%d", name, quantity) or name,
-				ts = tonumber(event.ts) or 0,
-				net = tonumber(event.netCopper) or tonumber(event.totalCopper) or 0,
-				gross = tonumber(event.totalCopper) or 0,
-				buyer = event.buyer,
-				characterKey = event.characterKey,
-			}
-		end
+		addOrigins(summary.items, summary.recent, pe:GetSaleOrigins())
 		self.items.table:SetRows(summary.items)
 		self.items.table:Refresh()
-		self.recent.table:SetRows(recent)
+		self.recent.table:SetRows(recentRows(pe, summary.recent))
 		self.recent.table:Refresh()
 		self:Layout()
 	end

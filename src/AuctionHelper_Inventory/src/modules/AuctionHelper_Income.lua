@@ -21,6 +21,45 @@ local WINDOW_EVENTS = {
 -- One-off events: event -> moment.
 local MOMENT_EVENTS = { QUEST_TURNED_IN = "quest", CHAT_MSG_MONEY = "loot" }
 
+-- The player's own "You create:" and "You receive loot:" lines (F81), in the client's language.
+-- The "x%d" forms come first so a stack is not read as a single item.
+local ITEM_MESSAGES = {}
+for _, entry in ipairs({
+	{ LOOT_ITEM_CREATED_SELF_MULTIPLE, "craft" }, { LOOT_ITEM_CREATED_SELF, "craft" },
+	{ LOOT_ITEM_SELF_MULTIPLE, "loot" }, { LOOT_ITEM_SELF, "loot" },
+}) do
+	if type(entry[1]) == "string" then
+		ITEM_MESSAGES[#ITEM_MESSAGES + 1] = { IncomeLogic.FormatToPattern(entry[1]), entry[2] }
+	end
+end
+
+-- Crafted and looted amounts per item and day, account-wide (items are mailed between
+-- characters before they are sold): { [itemID] = { [day] = { craft = n, loot = n } } }.
+local function acquiredStore()
+	local L = ProfessionExporter:InitLedger()
+	if L then
+		L.acquired = L.acquired or {}
+		return L.acquired
+	end
+end
+
+local function onItemMessage(message)
+	local kind, itemID, quantity = IncomeLogic.ParseItemMessage(tostring(message or ""), ITEM_MESSAGES)
+	local acquired = kind and acquiredStore()
+	if acquired then
+		IncomeLogic.AddAcquired(acquired, itemID, IncomeLogic.DayOf(time()), kind, quantity)
+	end
+end
+
+local function pruneOldDays()
+	local firstDay = IncomeLogic.DayOf(time()) - IncomeLogic.KEEP_DAYS
+	local L = ProfessionExporter:InitLedger()
+	if L then
+		IncomeLogic.PruneAllDays(L.income or {}, firstDay)
+		IncomeLogic.PruneAllDays(L.acquired or {}, firstDay)
+	end
+end
+
 local function incomeDays()
 	local L = ProfessionExporter:InitLedger()
 	if not L then
@@ -97,7 +136,7 @@ local function onInboxMoneyTaken(index)
 	end
 end
 
-local function onEvent(_, event)
+local function onEvent(_, event, message)
 	local window = WINDOW_EVENTS[event]
 	if window then
 		context.open[window[1]] = window[2] or nil
@@ -106,21 +145,20 @@ local function onEvent(_, event)
 		end
 	elseif MOMENT_EVENTS[event] then
 		context.at[MOMENT_EVENTS[event]] = GetTime()
+	elseif event == "CHAT_MSG_LOOT" then
+		onItemMessage(message)
 	elseif event == "PLAYER_MONEY" then
 		onMoney()
 	elseif event == "PLAYER_ENTERING_WORLD" then
 		-- A baseline, not income: gold changed while logged out is not known here.
 		lastMoney = GetMoney()
-		local days = incomeDays()
-		if days then
-			IncomeLogic.PruneDays(days, IncomeLogic.DayOf(time()) - IncomeLogic.KEEP_DAYS)
-		end
+		pruneOldDays()
 	end
 end
 
 local frame = CreateFrame("Frame")
 frame:SetScript("OnEvent", onEvent)
-for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_MONEY", "QUEST_TURNED_IN", "CHAT_MSG_MONEY" }) do
+for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_MONEY", "QUEST_TURNED_IN", "CHAT_MSG_MONEY", "CHAT_MSG_LOOT" }) do
 	pcall(frame.RegisterEvent, frame, event)
 end
 for event in pairs(WINDOW_EVENTS) do
@@ -143,4 +181,11 @@ end
 function ProfessionExporter:GetIncomeDays()
 	local L = self:InitLedger()
 	return L and L.income or {}
+end
+
+--- Where each auction sale's units came from (see IncomeLogic.LabelSaleOrigins). Call after
+--- GetSalesSummary, which fills in the item ids of sales recorded by name.
+function ProfessionExporter:GetSaleOrigins()
+	local L = self:InitLedger()
+	return IncomeLogic.LabelSaleOrigins(L and L.events or {}, L and L.acquired or {})
 end
