@@ -259,6 +259,32 @@ local sellList = Flip.BuildSellNowRows({
 })
 check("Sell now is sorted by worth", #sellList == 2 and sellList[1].itemID == 7)
 
+-- Cheapest material source
+local materialChunk, materialErr = loadfile(root .. "/src/util/AuctionHelper_MaterialLogic.lua")
+assert(materialChunk, materialErr)
+materialChunk("AuctionHelper", pe)
+local ML = pe.MaterialLogic
+local cost, from = ML.CheapestSource({ { 60, "Market" }, { 52, "Craft" } })
+check("Crafting wins when cheaper", cost == 52 and from == "Craft")
+cost, from = ML.CheapestSource({ { 60, "Market" }, { 75, "Craft" } })
+check("Buying wins when cheaper", cost == 60 and from == "Market")
+cost, from = ML.CheapestSource({ { 60, "Market" }, { 60, "Craft" } })
+check("On a tie the first source is kept", cost == 60 and from == "Market")
+cost, from = ML.CheapestSource({ { nil, nil }, { 40, "Craft" } })
+check("A missing price falls to the other source", cost == 40 and from == "Craft")
+cost, from = ML.CheapestSource({ { nil, nil }, { nil, "Craft" }, { 0, "Vendor" } })
+check("No usable price gives nil", cost == nil and from == nil)
+local unitIndex = ML.UnitCostIndex({
+	{ outputItemID = 10, matCost = 300, fullMatCost = 260, outputQty = 5, bestCharacterKey = "Brannoc" },
+	{ outputItemID = 10, matCost = 400, outputQty = 5, bestCharacterKey = "Maelis" },
+	{ outputItemID = 11, matCost = 90, matMissingPrice = true },
+	{ outputItemID = 12, matCost = 90, hasCooldown = true },
+	{ outputItemID = 13, matCost = 70 },
+})
+check("Unit cost is the full material cost over the output quantity", unitIndex[10] and unitIndex[10].cost == 52 and unitIndex[10].crafter == "Brannoc")
+check("Rows with a missing price or a cooldown are left out", unitIndex[11] == nil and unitIndex[12] == nil)
+check("Output quantity defaults to 1", unitIndex[13] and unitIndex[13].cost == 70)
+
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}
 local auction = { history = { hourly = {}, daily = {} } }

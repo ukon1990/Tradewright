@@ -87,6 +87,16 @@ local function opportunitiesSection()
 	return { column = 1, title = "Opportunities", items = opportunityItems() }
 end
 
+local function craftsSection()
+	return { column = 1, title = "Crafts", items = {
+		{ kind = "check", label = "Use my own recipes when a material is cheaper to craft", path = "crafts.useCheapestSource",
+			default = true, onChange = function(pe)
+				pe:InvalidateCraftOpportunityCaches()
+				refreshEconomy(pe)
+			end },
+	} }
+end
+
 local function auctionHouseSection(pe)
 	return { column = 2, title = "Auction house", items = auctionHouseItems(pe) }
 end
@@ -124,7 +134,7 @@ local function buildSections(pe)
 		{ column = 1, title = "Troubleshooting", items = {
 			{ kind = "check", label = "Write debug messages to chat", path = "debug.enabled", default = false },
 		} },
-		opportunitiesSection(), auctionHouseSection(pe),
+		opportunitiesSection(), craftsSection(), auctionHouseSection(pe),
 		{ column = 2, title = "Mail", items = {
 			{ kind = "select", label = "Auction house / bank character", path = "mail.sellerByRealm." .. realm, default = "",
 				options = sellerOptions },

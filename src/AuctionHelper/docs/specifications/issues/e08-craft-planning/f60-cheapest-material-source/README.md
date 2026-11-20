@@ -25,6 +25,23 @@ For every material of a craft the addon picks the cheapest way to get it: buy it
 - Craft queue: adding a craft whose material source is "craft" adds the intermediate crafts to "To craft" for the character who knows them, and their raw materials to "To buy"
 - Setting "Use my own recipes when a material is cheaper to craft" (on)
 
+## Status
+
+Implemented, in a smaller form than the scope above:
+
+- `AuctionHelper_MaterialLogic.lua` (core, pure, offline-tested): `CheapestSource(candidates)` and `UnitCostIndex(rows)`
+- `AuctionHelper_MaterialSource.lua` (Professions): `GetCraftUnitCost(itemID)` and `CheapestMaterialUnit(itemID, unit, source)`
+- The crafts engine's material price (`craftEvalPickUnit`) now goes through `CheapestMaterialUnit`: a material is priced at your own craft cost per unit when that is below what the engine found by its usual rules. Its source reads "Craft", which the existing detail text and queue already show.
+- Setting "Use my own recipes when a material is cheaper to craft" (on), in a new Crafts group
+
+How it differs from the scope, and why:
+
+- **No recursive resolver.** The craft cost per unit is read from the engine's own last finished evaluation (cheapest full material cost ÷ output quantity per output item) instead of walking recipes again. That keeps the engine's rules (quality, optional reagents) and cannot loop, but it is one evaluation behind: a material that is cheaper to craft is priced that way from the evaluation after the one that first priced its recipe. A new scan or a settings change triggers the next evaluation.
+- **Vendor prices are unchanged.** The engine already prices vendor-sourced reagents at the vendor; widening that to every reagent needs a check of what `C_Item.GetItemVendorPrice` returns for items no vendor sells.
+- **Works in every material mode except "market only"**, as a setting, not as a new "Cheapest way" mode.
+- **Not done:** the "From" column and the "If you bought every material" line in the detail pane, the row note ("bolts made by …"), and adding intermediate crafts to the queue.
+- **Cooldowns:** rows carrying `hasCooldown` are left out of the index; nothing sets that flag until F62.
+
 ## Acceptance criteria
 
 - [ ] A bag needing 5 bolts, where a bolt costs 60s to buy and 52s to craft, prices the bolts at 52s each and shows From: Craft
@@ -33,7 +50,8 @@ For every material of a craft the addon picks the cheapest way to get it: buy it
 - [ ] Two recipes that reference each other do not hang; both fall back to buy
 - [ ] With the setting off, costs match today's behaviour
 - [ ] Queueing the bag queues the bolts for the right character
-- [ ] Offline tests of `ResolveMaterialCost`: each source winning, nested craft, cooldown skip, cycle, depth limit, missing prices
+- [x] Offline tests of `CheapestSource` and `UnitCostIndex`: each source winning, tie, missing prices, cooldown skip, output quantity
+- [ ] Nested crafts price through after two evaluations (in-game check)
 
 ## Verification
 

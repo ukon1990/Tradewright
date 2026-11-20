@@ -1172,7 +1172,7 @@ local function craftEvalPickUnit(self, c, id)
     if c.sourceMode == "market_only" then
         return craftEvalSaleUnit(self, c, id)
     end
-    return craftEvalMatUnit(self, c, id)
+    return self:CheapestMaterialUnit(id, craftEvalMatUnit(self, c, id))
 end
 
 local function newCraftEvalInventoryLookup(self)

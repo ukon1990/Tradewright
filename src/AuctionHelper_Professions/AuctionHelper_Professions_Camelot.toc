@@ -21,6 +21,7 @@ src\data\spec_catalog\midnight\AuctionHelper_SpecCatalog_Midnight_Tailoring.lua
 src\data\AuctionHelper_CraftingOrdersPatronKnowledgeData.lua
 src\modules\AuctionHelper_Integrations.lua
 src\modules\AuctionHelper_Debug.lua
+src\modules\AuctionHelper_MaterialSource.lua
 src\modules\AuctionHelper_CraftsEngine.lua
 src\modules\AuctionHelper_CraftDetailText.lua
 src\modules\AuctionHelper_CraftingOrdersMaterials.lua

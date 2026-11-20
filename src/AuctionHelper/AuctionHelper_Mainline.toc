@@ -13,6 +13,7 @@ src\util\AuctionHelper_ForeverLogic.lua
 src\util\AuctionHelper_IncomeLogic.lua
 src\util\AuctionHelper_MarketSignals.lua
 src\util\AuctionHelper_FlipLogic.lua
+src\util\AuctionHelper_MaterialLogic.lua
 src\util\AuctionHelper_WeekdayPattern.lua
 src\core\AuctionHelper_Data.lua
 src\core\AuctionHelper_DataInit.lua
