@@ -168,6 +168,19 @@ check("Expected deposit loss is subtracted", withDeposit and withDeposit.profit 
 local sorted = Flip.BuildFlipRows({ noSteps and { itemID = 7, price = 50, usual = 100, sellsPerDay = 9 }, arcanite }, { minProfit = 0 })
 check("Rows are sorted by profit", #sorted == 2 and sorted[1].itemID == 1 and sorted[2].itemID == 7)
 
+-- Sure things: listed under vendor price
+local sure = Flip.BuildVendorRow({ itemID = 1, price = 1000, vendorSell = 2500, steps = { 1000, 3, 2000, 2, 2500, 9, 4000, 50 } })
+check("Units under vendor price and their cost", sure and sure.qty == 5 and sure.cost == 7000 and sure.qtyKnown == true)
+check("Gain has no auction cut", sure and sure.gain == 5 * 2500 - 7000)
+check("A step exactly at vendor price is excluded", sure and sure.qty == 5)
+check("No vendor price, no row", Flip.BuildVendorRow({ itemID = 2, price = 100 }) == nil)
+check("Not under vendor price, no row", Flip.BuildVendorRow({ itemID = 3, price = 250, vendorSell = 250 }) == nil)
+check("Gain floor drops tiny gains", Flip.BuildVendorRow({ itemID = 4, price = 100, vendorSell = 150 }) == nil)
+local oneUnit = Flip.BuildVendorRow({ itemID = 5, price = 100, vendorSell = 5000 })
+check("Without steps one unit at the lowest price", oneUnit and oneUnit.qty == 1 and oneUnit.gain == 4900 and oneUnit.qtyKnown == false)
+local sureRows = Flip.BuildVendorRows({ { itemID = 5, price = 100, vendorSell = 5000 }, { itemID = 6, price = 100, vendorSell = 90000 } })
+check("Sure things are sorted by gain", #sureRows == 2 and sureRows[1].itemID == 6)
+
 -- Daily history glue (AuctionData module) against a stub addon table
 local settings = {}
 local auction = { history = { hourly = {}, daily = {} } }

@@ -78,4 +78,53 @@ function FlipLogic.BuildFlipRows(items, opts)
 	return rows
 end
 
+-- Units listed under `vendorSell` and what they cost. Without price steps: one unit at the lowest price.
+local function underVendor(item)
+	if not (item.steps and #item.steps > 0) then
+		return 1, item.price
+	end
+	local qty, cost = 0, 0
+	for index = 1, #item.steps, 2 do
+		if item.steps[index] >= item.vendorSell then
+			break
+		end
+		qty = qty + item.steps[index + 1]
+		cost = cost + item.steps[index] * item.steps[index + 1]
+	end
+	return qty, cost
+end
+
+--- One "sure thing" row for `item = { itemID, storageKey, price, vendorSell, steps }`: units listed
+--- below what a vendor pays, or nil. The gain has no auction cut: the items are sold to a vendor.
+function FlipLogic.BuildVendorRow(item, opts)
+	local price, vendorSell = tonumber(item.price), tonumber(item.vendorSell)
+	if not (price and vendorSell) or price <= 0 or price >= vendorSell then
+		return nil
+	end
+	local qty, cost = underVendor(item)
+	local gain = qty * vendorSell - cost
+	if qty < 1 or gain < (opts and tonumber(opts.minGain) or 1000) then
+		return nil
+	end
+	return {
+		itemID = item.itemID, storageKey = item.storageKey, price = price, vendorSell = vendorSell,
+		qty = qty, cost = cost, gain = gain, qtyKnown = item.steps ~= nil and #item.steps > 0,
+	}
+end
+
+--- Sure-thing rows for a list of items, most gain first.
+function FlipLogic.BuildVendorRows(items, opts)
+	local rows = {}
+	for _, item in ipairs(items or {}) do
+		local row = FlipLogic.BuildVendorRow(item, opts)
+		if row then
+			rows[#rows + 1] = row
+		end
+	end
+	table.sort(rows, function(a, b)
+		return a.gain > b.gain
+	end)
+	return rows
+end
+
 return FlipLogic

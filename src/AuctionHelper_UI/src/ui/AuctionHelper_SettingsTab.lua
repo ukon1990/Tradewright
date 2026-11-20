@@ -71,6 +71,8 @@ local function opportunityItems()
 			options = choices({ 1, 5, 10, 25, 50 }, "%dg"), onChange = refreshOpportunities },
 		{ kind = "select", label = "An item must sell at least", path = "opportunities.minSellsPerDay", default = 1,
 			options = choices({ 0.5, 1, 5, 20 }, "%s a day"), onChange = refreshOpportunities },
+		{ kind = "check", label = "Show items listed under their vendor price", path = "opportunities.showVendor", default = true,
+			onChange = refreshOpportunities },
 		{ kind = "select", label = "Buy no more than", path = "opportunities.dayShare", default = 0.34,
 			options = { { value = 0.1, label = "A tenth of a day's sales" }, { value = 0.34, label = "A third of a day's sales" },
 				{ value = 1, label = "A day's sales" } }, onChange = refreshOpportunities },

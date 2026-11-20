@@ -60,3 +60,39 @@ function ProfessionExporter:GetFlipRows(onReady)
 	end
 	return state.flipRows, insights
 end
+
+-- One candidate per scanned item whose vendor price the client already knows.
+local function vendorCandidates(pe, insights)
+	local items = {}
+	for itemID, row in pairs(insights.byItemID or {}) do
+		local vendorSell = pe:GetItemVendorSellCopper(itemID)
+		if vendorSell and row.price < vendorSell then
+			items[#items + 1] = {
+				itemID = itemID, storageKey = row.storageKey, price = row.price, vendorSell = vendorSell,
+				steps = pe:GetPriceSteps(itemID),
+			}
+		end
+	end
+	return items
+end
+
+--- Items listed under their vendor price, most gain first, or nil while the market insights are being
+--- built. Vendor prices load on demand, so the list is rebuilt at most every 30 seconds to pick up
+--- items whose price was not known yet.
+function ProfessionExporter:GetVendorRows(onReady)
+	local insights = self:GetMarketInsights(onReady)
+	if not insights or not self:GetSetting("opportunities.showVendor", true) then
+		return insights and {} or nil, insights
+	end
+	local state = self:GetState()
+	local stamp = math.floor(time() / 30)
+	local revision = tostring(insights.builtAt) .. ":" .. stamp
+	if state.vendorRowsRevision ~= revision then
+		local rows = self.FlipLogic.BuildVendorRows(vendorCandidates(self, insights), { minGain = 1000 })
+		for _, row in ipairs(rows) do
+			row._rowIdentity = tostring(row.itemID)
+		end
+		state.vendorRows, state.vendorRowsRevision = rows, revision
+	end
+	return state.vendorRows, insights
+end

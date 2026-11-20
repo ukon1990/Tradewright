@@ -1,6 +1,7 @@
 local ProfessionExporter = select(2, ...)
 
--- Opportunities tab (F50): flips priced after fees, with the sums in a side pane.
+-- Opportunities tab: one table and side pane, switched between lists (views).
+-- Each view lives in AuctionHelper_OpportunityViews.lua and supplies its rows, columns and side-pane text.
 
 local OpportunitiesTab = {}
 ProfessionExporter.OpportunitiesTab = OpportunitiesTab
@@ -10,94 +11,15 @@ local PAD = 10
 local DETAIL_WIDTH = 300
 local TALL_ROW = 36
 
-local function percent(fraction)
-	return string.format("%d%%", math.floor((fraction or 0) * 100 + 0.5))
-end
-
--- "12" for a busy item, "0.4" for a slow one.
-local function perDayText(pe, perDay)
-	if perDay >= 10 then
-		return pe:FormatNumberGrouped(math.floor(perDay + 0.5))
+local function currentView(pe)
+	local views = pe.OpportunityViews
+	local wanted = pe:GetSetting("opportunities.view", views[1].id)
+	for _, view in ipairs(views) do
+		if view.id == wanted then
+			return view
+		end
 	end
-	return string.format("%.1f", perDay)
-end
-
--- Second line of a flip row: how far under usual, and the caveat that matters most.
-local function rowDetail(pe, row)
-	local detail = percent(row.discount) .. " under usual"
-	if row.fewSales then
-		return detail .. " · few sales seen"
-	elseif row.slow then
-		return detail .. " · sells slowly"
-	elseif row.listedUnder then
-		return string.format("%s · %s listed under %s", detail, pe:FormatNumberGrouped(row.listedUnder), pe:FormatCopperShort(row.limitPrice))
-	end
-	return detail
-end
-
-local function flipColumns(pe)
-	local function money(id, label, field, width)
-		return {
-			id = id, label = label, justifyH = "RIGHT", width = width or 76, sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row[field] or 0 end,
-			getText = function(row) return pe:FormatCopperShort(row[field]) end,
-		}
-	end
-	return {
-		pe:CreateItemColumn({
-			label = "Item", defaultSort = "asc",
-			getItemID = function(row) return row.itemID end,
-			getName = function(row) return pe:GetItemDisplayName(row.itemID) end,
-			getDetail = function(row) return rowDetail(pe, row) end,
-		}),
-		money("price", "Buy at", "price"),
-		money("usual", "Usual", "usual"),
-		{
-			id = "buyQty", label = "Buy", justifyH = "RIGHT", width = 44, sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row.buyQty or 0 end,
-			getText = function(row) return row.buyQty and pe:FormatNumberGrouped(row.buyQty) or "-" end,
-		},
-		{
-			id = "profit", label = "Profit", justifyH = "RIGHT", width = 84, sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row.profit or 0 end,
-			getText = function(row) return pe:FormatSignedMoney(row.profit) end,
-		},
-		{
-			id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row.sellsPerDay or 0 end,
-			getText = function(row) return perDayText(pe, row.sellsPerDay) end,
-		},
-	}
-end
-
--- The sums behind one flip, as label and value pairs.
-local function detailRows(pe, row)
-	local units = row.buyQty or 1
-	return {
-		{ "Cheapest now", pe:FormatCopperFull(row.price) },
-		{ string.format("Usual price, %d days", row.usualDays or 0), pe:FormatCopperFull(row.usual) },
-		{ string.format("Sale after %s cut", percent(1 - row.saleNet / row.usual)), pe:FormatCopperFull(row.saleNet) },
-		{ "Profit each", pe:FormatSignedMoney(row.profitEach), "success" },
-		{ "Return", percent(row.roi) },
-		{ "", "" },
-		{ "Listed under " .. pe:FormatCopperShort(row.limitPrice), row.listedUnder and pe:FormatNumberGrouped(row.listedUnder) or "-" },
-		{ "Sells a day, estimated", perDayText(pe, row.sellsPerDay) },
-		{ string.format("Buy %s and spend", pe:FormatNumberGrouped(units)), pe:FormatCopperFull(row.cost) },
-		{ "Profit if all sell at the usual price", pe:FormatSignedMoney(row.profit), "success" },
-	}
-end
-
-local function riskText(pe, row)
-	local range = string.format("Its price stayed between %s and %s on the middle half of the last %d days.",
-		pe:FormatCopperShort(row.usualLow or row.usual), pe:FormatCopperShort(row.usualHigh or row.usual), row.usualDays or 0)
-	local breakEven = string.format(" Below %s you lose gold on each one.", pe:FormatCopperShort(row.breakEven))
-	local caveat = ""
-	if row.fewSales then
-		caveat = " Few sales were seen, so it may sell slower than shown."
-	elseif not row.buyQty then
-		caveat = " No price steps are kept, so the quantity at this price is unknown."
-	end
-	return range .. breakEven .. caveat
+	return views[1]
 end
 
 local function buildDetail(pe, panel)
@@ -105,7 +27,7 @@ local function buildDetail(pe, panel)
 	card:SetWidth(DETAIL_WIDTH)
 	card.empty = pe:CreateEmptyState(card)
 	card.empty:SetAllPoints()
-	card.empty:SetMessage("Select a flip", "Click a row to see the sums behind it and what could go wrong.")
+	card.empty:SetMessage("Select a row", "Click a row to see the sums behind it and what could go wrong.")
 	card.body = CreateFrame("Frame", nil, card)
 	card.body:SetPoint("TOPLEFT", PAD, -PAD)
 	card.body:SetPoint("BOTTOMRIGHT", -PAD, PAD)
@@ -137,15 +59,16 @@ end
 
 local function showDetail(pe, panel, row)
 	local card = panel.detail
+	local view = currentView(pe)
 	panel.selected = row
 	card.empty:SetShown(row == nil)
 	card.body:SetShown(row ~= nil)
 	if not row then
 		return
 	end
-	card.header:SetItem(row.itemID, pe:GetItemDisplayName(row.itemID), percent(row.discount) .. " under its usual price")
-	card.facts:SetRows(detailRows(pe, row))
-	card.risk:SetText(riskText(pe, row))
+	card.header:SetItem(row.itemID, pe:GetItemDisplayName(row.itemID), view.subtitle(pe, row))
+	card.facts:SetRows(view.detailRows(pe, row))
+	card.risk:SetText(view.riskText(pe, row))
 	local ahOpen = pe.IsAuctionHouseFrameOpen and pe:IsAuctionHouseFrameOpen()
 	card.open:SetEnabled(ahOpen == true)
 	card.openHint:SetText(ahOpen and "" or "Open the auction house to go to this item.")
@@ -155,8 +78,6 @@ local function buildTable(pe, panel)
 	return pe:CreateReusableTable(panel, {
 		footer = true,
 		rowHeight = TALL_ROW,
-		emptyTitle = "No flips right now",
-		emptyHint = "Scan the auction house on a few different days to build usual prices.",
 		autoFitToScroll = true,
 		sortKey = "profit",
 		sortAsc = false,
@@ -164,9 +85,8 @@ local function buildTable(pe, panel)
 			return panel.selected ~= nil and row ~= nil and row.itemID == panel.selected.itemID
 		end,
 		onRowEnter = function(rowFrame, row)
-			pe:ShowItemRowTooltip(rowFrame, row and row.itemID, {
-				{ "Profit each after the cut", pe:FormatSignedMoney(row and row.profitEach) },
-			}, "Click for the sums · Right-click to open in the auction house · Shift-click to link")
+			pe:ShowItemRowTooltip(rowFrame, row and row.itemID, currentView(pe).tooltipPairs(pe, row),
+				"Click for the sums · Right-click to open in the auction house · Shift-click to link")
 		end,
 		onRowLeave = function()
 			GameTooltip:Hide()
@@ -184,12 +104,38 @@ local function buildTable(pe, panel)
 	})
 end
 
+-- One button per list, left to right, above the stats.
+local function buildViewButtons(pe, panel)
+	panel.viewRow = CreateFrame("Frame", nil, panel)
+	panel.viewRow:SetPoint("TOPLEFT")
+	panel.viewRow:SetPoint("TOPRIGHT")
+	panel.viewRow:SetHeight(26)
+	panel.viewButtons = {}
+	local previous
+	for _, view in ipairs(pe.OpportunityViews) do
+		local button = pe:CreateButton(panel.viewRow, view.label, function()
+			pe:SetSetting("opportunities.view", view.id)
+			panel.selected = nil
+			OpportunitiesTab:Refresh()
+		end)
+		button.view = view
+		if previous then
+			button:SetPoint("LEFT", previous, "RIGHT", -1, 0)
+		else
+			button:SetPoint("LEFT")
+		end
+		previous = button
+		panel.viewButtons[#panel.viewButtons + 1] = button
+	end
+end
+
 local function buildPanel(pe, container)
 	local panel = CreateFrame("Frame", nil, container)
 	panel:SetAllPoints()
+	buildViewButtons(pe, panel)
 	panel.statsRow = CreateFrame("Frame", nil, panel)
-	panel.statsRow:SetPoint("TOPLEFT")
-	panel.statsRow:SetPoint("TOPRIGHT")
+	panel.statsRow:SetPoint("TOPLEFT", panel.viewRow, "BOTTOMLEFT", 0, -GAP)
+	panel.statsRow:SetPoint("TOPRIGHT", panel.viewRow, "BOTTOMRIGHT", 0, -GAP)
 	panel.statsRow:SetHeight(58)
 	panel.stats = {}
 	for index = 1, 4 do
@@ -201,7 +147,6 @@ local function buildPanel(pe, container)
 	panel.table = buildTable(pe, panel)
 	panel.table.frame:SetPoint("TOPLEFT", panel.statsRow, "BOTTOMLEFT", 0, -GAP)
 	panel.table.frame:SetPoint("BOTTOMRIGHT", panel.detail, "BOTTOMLEFT", -GAP, 0)
-	panel.table:SetColumns(flipColumns(pe))
 	panel:SetScript("OnSizeChanged", function(self)
 		pe:LayoutEvenRow(self.statsRow, self.stats, 0, GAP)
 	end)
@@ -209,18 +154,24 @@ local function buildPanel(pe, container)
 	return panel
 end
 
-local function refreshStats(pe, panel, rows, insights)
-	local profit, cost = 0, 0
-	for _, row in ipairs(rows) do
-		profit, cost = profit + row.profit, cost + row.cost
+-- Button labels carry each list's row count once its rows are known.
+local function refreshViewButtons(pe, panel, active)
+	for _, button in ipairs(panel.viewButtons) do
+		local rows = button.view.getRows(pe)
+		button:SetText(rows and string.format("%s (%d)", button.view.label, #rows) or button.view.label)
+		pe:StyleShellButton(button, button.view == active)
 	end
-	local opts = pe:GetFlipOptions()
-	panel.stats[1]:SetValues(string.format("Expected profit, all %d", #rows), pe:FormatSignedMoney(profit), "After the auction cut", "success")
-	panel.stats[2]:SetValues("Gold needed", pe:FormatCopperShort(cost), "You have " .. pe:FormatCopperShort(GetMoney()))
-	panel.stats[3]:SetValues("Usual price from", pe:GetSetting("auction.usualPriceDays", 14) .. " days", "Middle price of your scans")
-	local lastScan = insights.lastSeenAt and pe:FormatScanTimestamp(insights.lastSeenAt) or "not yet"
-	panel.stats[4]:SetValues("Auction cut", percent(opts.cut), "Last scan " .. lastScan)
-	pe:LayoutEvenRow(panel.statsRow, panel.stats, 0, GAP)
+end
+
+-- Keep the selected row when it is still listed; otherwise show the empty side pane.
+local function reselect(pe, panel, rows)
+	local keep
+	for _, row in ipairs(rows) do
+		if panel.selected and row.itemID == panel.selected.itemID then
+			keep = row
+		end
+	end
+	showDetail(pe, panel, keep)
 end
 
 function OpportunitiesTab:Create(container, uiState)
@@ -238,27 +189,25 @@ function OpportunitiesTab:Refresh()
 	if not panel then
 		return
 	end
-	local rows, insights = pe:GetFlipRows(function()
+	local view = currentView(pe)
+	local rows, insights = view.getRows(pe, function()
 		if panel:IsVisible() then
 			self:Refresh()
 		end
 	end)
+	panel.table:SetColumns(view.columns(pe))
+	panel.table:SetEmptyText(view.emptyTitle, view.emptyHint)
+	refreshViewButtons(pe, panel, view)
 	if not rows then
 		panel.table:SetRows({})
 		panel.table:SetFooterText("Reading the last scan…", "")
 		panel.table:Refresh()
 		return
 	end
-	refreshStats(pe, panel, rows, insights)
+	view.setStats(pe, panel.stats, rows, insights)
+	pe:LayoutEvenRow(panel.statsRow, panel.stats, 0, GAP)
 	panel.table:SetRows(rows)
-	panel.table:SetFooterText(string.format("%d flips from %s items", #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
-		"Buy is capped at a share of a day's sales")
+	panel.table:SetFooterText(view.footer(pe, rows, insights))
 	panel.table:Refresh()
-	if panel.selected then
-		local stillThere
-		for _, row in ipairs(rows) do
-			stillThere = stillThere or (row.itemID == panel.selected.itemID and row)
-		end
-		showDetail(pe, panel, stillThere or nil)
-	end
+	reselect(pe, panel, rows)
 end

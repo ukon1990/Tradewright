@@ -44,7 +44,6 @@ Implemented:
 
 Still open:
 
-- The segmented control: with one list there is nothing to switch, so it arrives with F51
 - "Add to cart": the cart is built from the craft queue and has no call to add a single item
 - Gold view "Deals to buy" still uses its own rows
 - Expected deposit loss is 0 until F43 reads deposits and F44 gives the sale chance

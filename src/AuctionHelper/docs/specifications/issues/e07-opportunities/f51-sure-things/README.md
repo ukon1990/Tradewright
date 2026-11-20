@@ -21,13 +21,27 @@ A "Sure things" list in Opportunities shows auctions priced below what a vendor 
 - Setting "Show items listed under their vendor price" (on)
 - Empty state: "Nothing is listed under vendor price in the last scan."
 
+## Status
+
+Implemented:
+
+- `FlipLogic.BuildVendorRow` and `BuildVendorRows` (pure, offline-tested); a step exactly at vendor price is excluded
+- `GetVendorRows` (AuctionData): built from the market insights, rebuilt at most every 30 seconds so items whose vendor price had not loaded yet are picked up
+- The Opportunities tab now switches between lists with a row of buttons that carry each list's count; lists are defined in `AuctionHelper_OpportunityViews.lua`
+- Setting "Show items listed under their vendor price"
+
+Differs from the scope:
+
+- The build is not chunked: it asks the client for the vendor price of every scanned item in one pass. Watch for a hitch on the first open after a full scan.
+- "Bag slots needed" is not computed (stack sizes are not read); the side pane says so.
+
 ## Acceptance criteria
 
 - [ ] An item listed at 1s with a vendor price of 2s 50c appears with the right quantity and gain
 - [ ] An item with no vendor price never appears
 - [ ] Gain is not reduced by the auction cut
 - [ ] The list refreshes after a new scan and after item info loads
-- [ ] Offline tests: several steps under vendor price, step exactly at vendor price (excluded), missing vendor price, gain floor
+- [x] Offline tests: several steps under vendor price, step exactly at vendor price (excluded), missing vendor price, gain floor
 
 ## Verification
 
