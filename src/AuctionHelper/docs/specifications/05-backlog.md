@@ -62,7 +62,22 @@
 | [f102-move-menu](issues/e12-bank-and-bulk/f102-move-menu/README.md) | Move menu per item | implemented, in-game check pending |
 | [f103-multi-select](issues/e12-bank-and-bulk/f103-multi-select/README.md) | Multi-select | implemented, in-game check pending |
 | [f104-bulk-actions](issues/e12-bank-and-bulk/f104-bulk-actions/README.md) | Bulk actions: move, sell, destroy | implemented, in-game check pending |
+| [e13-code-health](issues/e13-code-health/README.md) | Code health: maintainable by a human | planned |
+| [f105-conventions](issues/e13-code-health/f105-conventions/README.md) | Conventions: maintainable by a human | planned |
+| [f106-audit-bugs](issues/e13-code-health/f106-audit-bugs/README.md) | Bugs found by the audit | planned |
+| [f107-dead-code](issues/e13-code-health/f107-dead-code/README.md) | Delete dead code | planned |
+| [f108-comment-sweep](issues/e13-code-health/f108-comment-sweep/README.md) | Comment sweep | planned |
+| [f109-shared-helpers](issues/e13-code-health/f109-shared-helpers/README.md) | Shared core helpers for repeated code | planned |
+| [f110-lookup-tables](issues/e13-code-health/f110-lookup-tables/README.md) | Lookup tables instead of if-chains | planned |
+| [f111-item-key-normalizers](issues/e13-code-health/f111-item-key-normalizers/README.md) | One item key and snapshot normalizer | planned |
+| [f112-queue-vocabulary](issues/e13-code-health/f112-queue-vocabulary/README.md) | One name for the craft queue | planned |
+| [f113-tests-and-complex-functions](issues/e13-code-health/f113-tests-and-complex-functions/README.md) | Tests for core logic, then break up complex functions | planned |
+| [f114-split-professions-inventory](issues/e13-code-health/f114-split-professions-inventory/README.md) | Split the Professions and Inventory files | planned |
+| [f115-split-ui](issues/e13-code-health/f115-split-ui/README.md) | Split the UI files | planned |
+| [f116-split-auction](issues/e13-code-health/f116-split-auction/README.md) | Split Auction.lua | planned |
+| [f117-shared-ui-helpers](issues/e13-code-health/f117-shared-ui-helpers/README.md) | Shared UI helpers | planned |
+| [f118-split-data-util-foreverlogic](issues/e13-code-health/f118-split-data-util-foreverlogic/README.md) | Split Data.lua, Util.lua and ForeverLogic.lua | planned |
 
-Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E07 follow-ups: F55, then F56 → F57 → F58. E10: F80 first (no dependencies), then F81 and F82.
+Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E07 follow-ups: F55, then F56 → F57 → F58. E10: F80 first (no dependencies), then F81 and F82. E13: F105, then F106 to F108 in any order; F109 and F110 (after F106); F117 (after F109); F111; F112; F113; then the splits F114, F115, F116, F118.
 
 Research behind E06 to E09: [WoW gold making market strategies](../../../../../reports/WoW%20gold%20making%20market%20strategies.md). Designs: [AuctionHelper Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnSs5), section "Proposed, not built yet: finding gold".
