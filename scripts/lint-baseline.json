@@ -838,11 +838,6 @@
    }
   },
   "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_MarketInsights.lua": {
-   "AuctionHelper:GetMarketInsights": {
-    "lines": [
-     50
-    ]
-   },
    "AuctionHelper:GetRecipeMaterialSet": {
     "ccn": [
      18

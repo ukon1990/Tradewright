@@ -190,7 +190,8 @@ function AuctionHelper:CreateFarmTargetsView(panel)
 			pe:StyleShellButton(button, pe:GetSetting(button.setting, false) == true)
 		end
 		local rows, emptyTitle, emptyHint = pe:GetFarmTargetRows(function() if self:IsVisible() then self:Refresh() end end)
-		self.table:SetEmptyText(emptyTitle or "Reading the last scan…", emptyHint or "")
+		self.table:SetEmptyText(emptyTitle, emptyHint)
+		self.table:SetLoading(not rows and pe.MarketInsightsLoadingNote or nil)
 		self.table:SetRows(rows or {})
 		self.table:SetFooterText(rows and "Traded a day = usual price times estimated sales, a ranking and not income" or "Reading the last scan…",
 			rows and materialCount(rows) or "")

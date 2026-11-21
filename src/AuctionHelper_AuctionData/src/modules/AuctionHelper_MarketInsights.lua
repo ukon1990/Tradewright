@@ -144,39 +144,41 @@ local function insightsRevision(state, opts)
 		tostring(opts.externalReference), opts.usualDays }, ":")
 end
 
---- Cached insights, or nil while the first build runs. Starts a rebuild when scan data or settings changed;
---- `onDone(insights)` fires when that rebuild finishes. Progress is `state.marketInsightsProgress` (0..1).
-function AuctionHelper:GetMarketInsights(onDone)
-	local state = self:GetState()
-	local opts = self:GetGoldDashboardOptions()
-	local revision = insightsRevision(state, opts)
-	local cached = state.marketInsights
-	if (cached and state.marketInsightsRevision == revision) or state.marketInsightsBuilding then
-		return cached
-	end
-	-- Scans bump the revision per observation; rebuild at most every 30 seconds meanwhile,
-	-- unless a single live search asked for a rebuild.
-	if cached and not state.marketInsightsForceRebuild and AuctionHelper:Now() - (cached.builtAt or 0) < 30 then
-		return cached
-	end
+--- The loading line of tables waiting for the insights. A function without arguments, so a table's
+--- SetLoading can read it again while the build moves on.
+function AuctionHelper.MarketInsightsLoadingNote()
+	local progress = AuctionHelper:GetState().marketInsightsProgress or 0
+	return string.format("Reading auction scans · %d%%", math.floor(progress * 100))
+end
 
-	local FL = self.ForeverLogic
-	local auction = self:InitAuctionDB()
+-- Every caller that asked while a build ran is told when it ends, not only the one that started it:
+-- each of them may be showing a loading state that only its callback clears.
+local function notifyWaiting(state, insights)
+	local waiting = state.marketInsightsWaiting or {}
+	state.marketInsightsWaiting = nil
+	for _, onDone in ipairs(waiting) do
+		onDone(insights)
+	end
+end
+
+-- Evaluates every scanned item, CHUNK per frame so a large database does not freeze the game, then
+-- stores the insights for `revision` and tells the waiting callers.
+local function buildInsights(pe, state, opts, revision)
+	local FL = pe.ForeverLogic
+	local auction = pe:InitAuctionDB()
 	local keys = collectKeys(auction)
 	local byItemID, index, ts = {}, 1, AuctionHelper:Now()
-	state.marketInsightsForceRebuild = nil
-	state.marketInsightsBuilding = revision
-	state.marketInsightsProgress = 0
-
 	local function step()
 		local last = math.min(#keys, index + CHUNK - 1)
 		local ok, err = pcall(function()
 			for i = index, last do
-				evaluateKey(self, FL, auction, keys[i], opts, ts, byItemID)
+				evaluateKey(pe, FL, auction, keys[i], opts, ts, byItemID)
 			end
 		end)
 		if not ok then
+			-- Not told: their refresh would start the failing build again at once, in a loop.
 			state.marketInsightsBuilding = nil
+			state.marketInsightsWaiting = nil
 			geterrorhandler()(err)
 			return
 		end
@@ -189,11 +191,34 @@ function AuctionHelper:GetMarketInsights(onDone)
 		state.marketInsights = finish(byItemID, ts)
 		state.marketInsightsRevision = revision
 		state.marketInsightsBuilding = nil
-		if onDone then
-			onDone(state.marketInsights)
-		end
+		notifyWaiting(state, state.marketInsights)
 	end
 	C_Timer.After(0, step)
+end
+
+--- Cached insights, or nil while the first build runs. Starts a rebuild when scan data or settings changed;
+--- `onDone(insights)` fires when that rebuild finishes. Progress is `state.marketInsightsProgress` (0..1).
+function AuctionHelper:GetMarketInsights(onDone)
+	local state = self:GetState()
+	local opts = self:GetGoldDashboardOptions()
+	local revision = insightsRevision(state, opts)
+	local cached = state.marketInsights
+	if state.marketInsightsBuilding and onDone then
+		table.insert(state.marketInsightsWaiting, onDone)
+	end
+	if (cached and state.marketInsightsRevision == revision) or state.marketInsightsBuilding then
+		return cached
+	end
+	-- Scans bump the revision per observation; rebuild at most every 30 seconds meanwhile,
+	-- unless a single live search asked for a rebuild.
+	if cached and not state.marketInsightsForceRebuild and AuctionHelper:Now() - (cached.builtAt or 0) < 30 then
+		return cached
+	end
+	state.marketInsightsForceRebuild = nil
+	state.marketInsightsBuilding = revision
+	state.marketInsightsProgress = 0
+	state.marketInsightsWaiting = { onDone }
+	buildInsights(self, state, opts, revision)
 	return cached
 end
 

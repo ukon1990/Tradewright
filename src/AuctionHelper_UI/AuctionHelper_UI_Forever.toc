@@ -16,6 +16,7 @@ src\ui\AuctionHelper_Table.lua
 src\ui\AuctionHelper_TableHeader.lua
 src\ui\AuctionHelper_TableLayout.lua
 src\ui\AuctionHelper_TablePager.lua
+src\ui\AuctionHelper_TableLoading.lua
 src\ui\AuctionHelper_Columns.lua
 src\ui\AuctionHelper_DashboardWidgets.lua
 src\ui\AuctionHelper_InventoryColumns.lua

@@ -497,7 +497,9 @@ end
 
 function TableMixin:UpdateEmptyState()
 	local empty = #(self.displayRows or {}) == 0
-	self.emptyFrame:SetShown(empty)
+	local loading = empty and self.loadingNote ~= nil
+	self.emptyFrame:SetShown(empty and not loading)
+	self:ShowLoadingState(loading)
 	self.emptyFrame.title:SetText(self.emptyTitle or "Nothing to show")
 	self.emptyFrame.hint:SetText(self.emptyHint or "Change the search or filters.")
 end

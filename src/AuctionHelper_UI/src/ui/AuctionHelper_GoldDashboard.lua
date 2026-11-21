@@ -321,23 +321,11 @@ local function profitableCraftRows(rows)
 	return profitable
 end
 
--- While craft profit is still being worked out the empty table says how far it got.
-function GoldDashboardMixin:SetCraftsEmptyText(isEmpty)
-	local state = self.pe:GetState()
-	local workList = state.craftEvalInProgress and state.craftEvalWorkList
-	if isEmpty and workList and #workList > 0 then
-		local done = math.max(0, (state.craftEvalIdx or 1) - 1)
-		self.crafts.table:SetEmptyText("Working out craft profit", string.format("%d of %d recipes checked…", done, #workList))
-	else
-		self.crafts.table:SetEmptyText("No profitable crafts", "Scan your professions and the auction house to compare material cost with sale price.")
-	end
-end
-
 function GoldDashboardMixin:RefreshCrafts()
 	local pe = self.pe
 	local profitable = profitableCraftRows(pe:BuildCraftOpportunityRows() or {})
 	local top = pe.MarketLogic.TopN(profitable, TOP_ROWS, "profit")
-	self:SetCraftsEmptyText(#top == 0)
+	self.crafts.table:SetLoading(pe:GetCraftEvalProgress() and pe.CraftProfitLoadingNote or nil)
 	self.crafts.table:SetRows(top)
 	self.crafts.table:Refresh()
 	local best = top[1]
@@ -417,7 +405,7 @@ end
 function GoldDashboardMixin:RefreshMarketStats(insights)
 	local pe = self.pe
 	if not insights then
-		local working = string.format("Reading scans %d%%", (pe:GetState().marketInsightsProgress or 0) * 100)
+		local working = pe.MarketInsightsLoadingNote and pe.MarketInsightsLoadingNote() or "Auction Data module is off"
 		self.stats.deals:SetValues("Deals found", "…", working)
 		self.stats.marketData:SetValues("Market data", "…", working)
 		return
@@ -448,6 +436,10 @@ function GoldDashboardMixin:Refresh()
 		end
 	end) or nil
 	self.insights = insights
+	local loadingNote = not insights and pe.MarketInsightsLoadingNote or nil
+	for _, card in ipairs({ self.deals, self.sell, self.movers }) do
+		card.table:SetLoading(loadingNote)
+	end
 	self:RefreshGoldStat()
 	self:RefreshMarketStats(insights)
 	self.deals.table:SetRows(insights and insights.deals or {})

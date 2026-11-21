@@ -278,13 +278,28 @@ function AuctionHelper:RefreshCraftsFilterDropdowns(panel, rows)
 	end
 end
 
+--- Recipes checked and recipes to check while craft profit is worked out in the background, else nil.
+function AuctionHelper:GetCraftEvalProgress()
+	local state = self:GetState()
+	local workList = state.craftEvalInProgress and state.craftEvalWorkList
+	if workList and #workList > 0 then
+		return math.max(0, (state.craftEvalIdx or 1) - 1), #workList
+	end
+	return nil
+end
+
+--- The loading line of craft tables. A function without arguments, so a table's SetLoading can read
+--- it again while the check moves on.
+function AuctionHelper.CraftProfitLoadingNote()
+	local done, total = AuctionHelper:GetCraftEvalProgress()
+	return done and string.format("Working out craft profit · %d of %d recipes", done, total) or nil
+end
+
 -- The note under the options row: evaluation progress while recipes update, else the AH cut and price source.
 function AuctionHelper:GetCraftsOptionsNote()
-	local craftState = self:GetState()
-	local workList = craftState.craftEvalInProgress and craftState.craftEvalWorkList
-	if workList and #workList > 0 then
-		local done = math.max(0, (craftState.craftEvalIdx or 1) - 1)
-		return self:Colorize(string.format("Updating %d of %d recipes…", done, #workList), "warning")
+	local done, total = self:GetCraftEvalProgress()
+	if done then
+		return self:Colorize(string.format("Updating %d of %d recipes…", done, total), "warning")
 	end
 	return string.format("Auction cut %d%% · %s", tonumber(self:GetSetting("crafts.ahCutPercent", 5)) or 5,
 		self.IS_RETAIL and "Prices from TSM, Auctionator or scans" or "Prices from the last auction house scan")
@@ -335,6 +350,7 @@ function AuctionHelper:RefreshCraftsTab()
 	ui.craftsTable.sortKey = self:GetSetting("crafts.sortColumn", "profit")
 	ui.craftsTable.sortAsc = self:GetSetting("crafts.sortAsc", false)
 	ui.craftsTable:SetRows(rows)
+	ui.craftsTable:SetLoading(self:GetCraftEvalProgress() and self.CraftProfitLoadingNote or nil)
 	ui.craftsTable:Refresh()
 	ui.craftsTable:SetFooterText(self:GetCraftsFooterTexts(rows))
 

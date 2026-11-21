@@ -203,6 +203,7 @@ function OpportunitiesTab:Refresh()
 	panel.table:SetColumns(view.columns(pe))
 	panel.table:SetEmptyText(view.emptyTitle, view.emptyHint)
 	refreshViewButtons(pe, panel, view)
+	panel.table:SetLoading(not rows and pe.MarketInsightsLoadingNote or nil)
 	if not rows then
 		panel.table:SetRows({})
 		panel.table:SetFooterText("Reading the last scan…", "")
