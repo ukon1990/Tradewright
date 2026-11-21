@@ -90,10 +90,10 @@ function AuctionHelper:OpenProfessionQueueRow(row)
 		return
 	end
 	local orderID = tonumber(row.orderID)
-	if orderID and self.OpenCraftingOrderWorkQueueEntry then
-		local storage = self.GetCraftingOrderWorkQueueStorage and self:GetCraftingOrderWorkQueueStorage() or {}
+	if orderID and self.OpenCraftingOrderQueueEntry then
+		local storage = self.GetCraftingOrderQueueStorage and self:GetCraftingOrderQueueStorage() or {}
 		local stored = storage[tostring(orderID)]
-		self:OpenCraftingOrderWorkQueueEntry(type(stored) == "table" and stored
+		self:OpenCraftingOrderQueueEntry(type(stored) == "table" and stored
 			or { orderID = orderID, spellID = row.recipeID, itemID = row.outputItemID })
 		return
 	end
@@ -182,15 +182,15 @@ local function createOrderNav(pe, f, host)
 	orderNav:SetHeight(48)
 	orderNav:Hide()
 	f.orderNav = orderNav
-	f.peAddWorkOrderBtn = pe:CreateButton(orderNav, "Add to shopping", nil,
+	f.peAddToQueueBtn = pe:CreateButton(orderNav, "Add to shopping", nil,
 		{ tooltip = "Adds this order's crafter-supplied reagents to the cart without starting the order." })
-	f.peAddWorkOrderBtn:SetPoint("TOPLEFT")
-	f.peAddWorkOrderBtn:Hide()
-	f.peRemoveWorkOrderBtn = pe:CreateButton(orderNav, "Remove")
-	f.peRemoveWorkOrderBtn:SetPoint("LEFT", f.peAddWorkOrderBtn, "RIGHT", 8, 0)
-	f.peRemoveWorkOrderBtn:Hide()
+	f.peAddToQueueBtn:SetPoint("TOPLEFT")
+	f.peAddToQueueBtn:Hide()
+	f.peRemoveFromQueueBtn = pe:CreateButton(orderNav, "Remove")
+	f.peRemoveFromQueueBtn:SetPoint("LEFT", f.peAddToQueueBtn, "RIGHT", 8, 0)
+	f.peRemoveFromQueueBtn:Hide()
 	f.pePrevOrderBtn = pe:CreateButton(orderNav, "Previous", nil, { small = true })
-	f.pePrevOrderBtn:SetPoint("TOPLEFT", f.peAddWorkOrderBtn, "BOTTOMLEFT", 0, -4)
+	f.pePrevOrderBtn:SetPoint("TOPLEFT", f.peAddToQueueBtn, "BOTTOMLEFT", 0, -4)
 	f.pePrevOrderBtn:Hide()
 	f.peNextOrderBtn = pe:CreateButton(orderNav, "Next", nil, { small = true })
 	f.peNextOrderBtn:SetPoint("LEFT", f.pePrevOrderBtn, "RIGHT", 8, 0)

@@ -297,7 +297,8 @@ function AuctionHelper:ExtractCrafterShoppingReagentsFromOrder(order)
 	return totals
 end
 
-function AuctionHelper:GetCraftingOrderWorkQueueStorage()
+-- "craftingOrderWorkQueue" is the saved name; kept so existing queues survive.
+function AuctionHelper:GetCraftingOrderQueueStorage()
 	self:InitDB()
 	if type(self.db.craftingOrderWorkQueue) ~= "table" then
 		self.db.craftingOrderWorkQueue = {}
@@ -305,12 +306,12 @@ function AuctionHelper:GetCraftingOrderWorkQueueStorage()
 	return self.db.craftingOrderWorkQueue
 end
 
-function AuctionHelper:IsCraftingOrderInWorkQueue(orderID)
+function AuctionHelper:IsCraftingOrderQueued(orderID)
 	orderID = tonumber(orderID)
 	if not orderID then
 		return false
 	end
-	local st = self:GetCraftingOrderWorkQueueStorage()
+	local st = self:GetCraftingOrderQueueStorage()
 	return st[tostring(orderID)] ~= nil
 end
 
@@ -373,99 +374,108 @@ local function copyOrderPayload(order)
 	return payload
 end
 
-local function buildOrderFromWorkQueueEntry(entry)
-	if type(entry) ~= "table" or not entry.orderID then
-		return nil
-	end
-	local order = nil
-	if type(entry.orderPayload) == "table" then
-		order = copyPlainValue(entry.orderPayload, 0)
-	end
-	order = order or {}
-	order.orderID = tonumber(order.orderID) or tonumber(entry.orderID)
-	order.spellID = tonumber(order.spellID) or tonumber(entry.spellID)
-	order.itemID = tonumber(order.itemID) or tonumber(entry.itemID)
-	order.orderType = order.orderType ~= nil and order.orderType or entry.orderType
-	order.isRecraft = order.isRecraft == true or entry.isRecraft == true
-	order.tipAmount = tonumber(order.tipAmount) or tonumber(entry.tipAmount) or 0
+-- Fields a live order always has; the orders UI errors on nil.
+local function applyOrderDisplayDefaults(order)
+	order.tipAmount = tonumber(order.tipAmount) or 0
 	order.consortiumCut = tonumber(order.consortiumCut) or 0
 	order.customerName = tostring(order.customerName or "?")
 	order.customerNotes = tostring(order.customerNotes or "")
 	order.npcOrderRewards = type(order.npcOrderRewards) == "table" and order.npcOrderRewards or {}
-	order.reagents = type(order.reagents) == "table" and order.reagents
-		or copyReagentsList(entry.reagents)
-		or {}
+end
+
+local function applyOrderStateDefaults(order)
 	if order.orderState == nil and Enum and Enum.CraftingOrderState then
 		order.orderState = Enum.CraftingOrderState.Created
 	end
 	if order.reagentState == nil and Enum and Enum.CraftingOrderReagentsType then
 		order.reagentState = Enum.CraftingOrderReagentsType.Some
 	end
+end
+
+-- Fills what the stored payload lacks from the queue entry's own fields.
+local function applyQueueEntryFields(order, entry)
+	for _, field in ipairs({ "orderID", "spellID", "itemID", "tipAmount" }) do
+		order[field] = tonumber(order[field]) or tonumber(entry[field])
+	end
+	if order.orderType == nil then
+		order.orderType = entry.orderType
+	end
+	order.isRecraft = order.isRecraft == true or entry.isRecraft == true
+	order.reagents = type(order.reagents) == "table" and order.reagents or copyReagentsList(entry.reagents)
+end
+
+local function buildOrderFromQueueEntry(entry)
+	if type(entry) ~= "table" or not entry.orderID then
+		return nil
+	end
+	local order = type(entry.orderPayload) == "table" and copyPlainValue(entry.orderPayload, 0) or {}
+	applyQueueEntryFields(order, entry)
+	applyOrderDisplayDefaults(order)
+	applyOrderStateDefaults(order)
 	return order
 end
 
-function AuctionHelper:AddCraftingOrderToWorkQueue(order)
-	if type(order) ~= "table" or not order.orderID then
-		self:PrintMessage("Crafting order add failed: missing order data.")
-		return nil, "bad_order"
-	end
-	local oid = tonumber(order.orderID)
-	if not oid then
-		self:PrintMessage("Crafting order add failed: bad order ID.")
-		return nil, "bad_id"
-	end
-	local key = tostring(oid)
-	local mats = self:ExtractCrafterShoppingReagentsFromOrder(order)
-	local recipeName
-	local recipeID = self.NormalizeTradeSkillRecipeId and self:NormalizeTradeSkillRecipeId(order.spellID) or order.spellID
-	local ri = C_TradeSkillUI.GetRecipeInfo(recipeID)
-	if ri and ri.name then
-		recipeName = ri.name
-	end
+local function resolveOrderRecipeName(self, order, recipeID)
+	local recipeInfo = C_TradeSkillUI.GetRecipeInfo(recipeID)
+	local recipeName = recipeInfo and recipeInfo.name
 	if not recipeName and tonumber(order.itemID) then
 		recipeName = self:GetItemDisplayName(order.itemID)
 	end
 	if not recipeName or recipeName == "" then
-		recipeName = "Crafting order"
+		return "Crafting order"
 	end
-	local reagentTypes = 0
-	local totalQty = 0
-	for _, qty in pairs(mats or {}) do
-		reagentTypes = reagentTypes + 1
-		totalQty = totalQty + (tonumber(qty) or 0)
-	end
-	local entry = {
-		orderID = oid,
+	return recipeName
+end
+
+local function newOrderQueueEntry(self, order, orderID)
+	local recipeID = self.NormalizeTradeSkillRecipeId and self:NormalizeTradeSkillRecipeId(order.spellID) or order.spellID
+	return {
+		orderID = orderID,
 		spellID = tonumber(recipeID or order.spellID),
 		itemID = tonumber(order.itemID),
 		orderType = order.orderType,
 		isRecraft = order.isRecraft == true,
 		reagents = copyReagentsList(order.reagents),
 		orderPayload = copyOrderPayload(order),
-		crafterMatTotals = mats,
-		recipeName = recipeName,
+		crafterMatTotals = self:ExtractCrafterShoppingReagentsFromOrder(order),
+		recipeName = resolveOrderRecipeName(self, order, recipeID),
 		tipAmount = tonumber(order.tipAmount),
 		characterKey = self:GetCharacterKey(),
 		addedAt = time(),
 	}
-	self:GetCraftingOrderWorkQueueStorage()[key] = entry
+end
+
+--- Stores the order in the crafting-order queue and mirrors it as a craft queue line. Returns its key.
+function AuctionHelper:AddCraftingOrderToQueue(order)
+	if type(order) ~= "table" or not order.orderID then
+		self:PrintMessage("Crafting order add failed: missing order data.")
+		return nil, "bad_order"
+	end
+	local orderID = tonumber(order.orderID)
+	if not orderID then
+		self:PrintMessage("Crafting order add failed: bad order ID.")
+		return nil, "bad_id"
+	end
+	local key = tostring(orderID)
+	local entry = newOrderQueueEntry(self, order, orderID)
+	self:GetCraftingOrderQueueStorage()[key] = entry
 	if self.UpsertCraftQueueForCraftingOrder then
 		self:UpsertCraftQueueForCraftingOrder(entry)
 	end
-	self:NotifyWorkOrderQueueChanged()
+	self:NotifyCraftingOrderQueueChanged()
 	return key
 end
 
-function AuctionHelper:RemoveCraftingOrderFromWorkQueue(orderID)
+function AuctionHelper:RemoveCraftingOrderFromQueue(orderID)
 	orderID = tonumber(orderID)
 	if not orderID then
 		return
 	end
-	self:GetCraftingOrderWorkQueueStorage()[tostring(orderID)] = nil
+	self:GetCraftingOrderQueueStorage()[tostring(orderID)] = nil
 	if self.RemoveCraftQueueByOrderID then
 		self:RemoveCraftQueueByOrderID(orderID)
 	end
-	self:NotifyWorkOrderQueueChanged()
+	self:NotifyCraftingOrderQueueChanged()
 end
 
 function AuctionHelper:RemoveCraftingOrdersByReagentItem(itemID)
@@ -474,7 +484,7 @@ function AuctionHelper:RemoveCraftingOrdersByReagentItem(itemID)
 		return 0
 	end
 	local removed = 0
-	local storage = self:GetCraftingOrderWorkQueueStorage()
+	local storage = self:GetCraftingOrderQueueStorage()
 	local removedOrderIDs = {}
 	for key, entry in pairs(storage) do
 		if type(entry) == "table" and tonumber(entry.crafterMatTotals and entry.crafterMatTotals[itemID]) and tonumber(entry.crafterMatTotals[itemID]) > 0 then
@@ -492,21 +502,21 @@ function AuctionHelper:RemoveCraftingOrdersByReagentItem(itemID)
 		end
 	end
 	if removed > 0 then
-		self:NotifyWorkOrderQueueChanged()
+		self:NotifyCraftingOrderQueueChanged()
 	end
 	return removed
 end
 
-function AuctionHelper:ClearCraftingOrderWorkQueue()
-	local st = self:GetCraftingOrderWorkQueueStorage()
+function AuctionHelper:ClearCraftingOrderQueue()
+	local st = self:GetCraftingOrderQueueStorage()
 	for k in pairs(st) do
 		st[k] = nil
 	end
-	self:NotifyWorkOrderQueueChanged()
+	self:NotifyCraftingOrderQueueChanged()
 end
 
-function AuctionHelper:GetCraftingOrderWorkQueueRows()
-	local st = self:GetCraftingOrderWorkQueueStorage()
+function AuctionHelper:GetCraftingOrderQueueRows()
+	local st = self:GetCraftingOrderQueueStorage()
 	local list = {}
 	local currentKey = self:GetCharacterKey()
 	for _, entry in pairs(st) do
@@ -523,77 +533,57 @@ function AuctionHelper:GetCraftingOrderWorkQueueRows()
 	return list
 end
 
-function AuctionHelper:BuildCraftingOrderWorkQueueSummary()
-	local rows = self:GetCraftingOrderWorkQueueRows()
-	local reagentTotals = {}
-	local currentCharacterKey = self:GetCharacterKey()
-	for _, entry in ipairs(rows) do
-		local mats = entry.crafterMatTotals
-		local destKey = tostring(entry.characterKey or currentCharacterKey)
-		if type(mats) == "table" then
-			for itemID, qty in pairs(mats) do
-				local id = tonumber(itemID)
-				local q = tonumber(qty) or 0
-				if id and q > 0 then
-					local line = reagentTotals[id]
-					if not line then
-						line = {
-							itemID = id,
-							quantity = 0,
-							quantityNeeded = 0,
-							name = self:GetItemDisplayName(id),
-							currentCharacterKey = currentCharacterKey,
-							currentCharacterQuantity = self.GetCharacterItemTotal and self:GetCharacterItemTotal(currentCharacterKey, id) or 0,
-							sources = {},
-						}
-						reagentTotals[id] = line
-					end
-					line.quantity = (tonumber(line.quantity) or 0) + q
-					line.quantityNeeded = (tonumber(line.quantityNeeded) or 0) + q
-					line.sources[#line.sources + 1] = {
-						orderID = tonumber(entry.orderID),
-						recipeName = entry.recipeName,
-						quantity = q,
-						characterKey = destKey,
-					}
-				end
-			end
+local function addOrderReagents(self, reagentTotals, entry, currentCharacterKey)
+	for matItemID, quantity in pairs(type(entry.crafterMatTotals) == "table" and entry.crafterMatTotals or {}) do
+		local itemID, need = tonumber(matItemID), tonumber(quantity) or 0
+		if itemID and need > 0 then
+			local line = reagentTotals[itemID] or { itemID = itemID, quantity = 0, quantityNeeded = 0,
+				name = self:GetItemDisplayName(itemID), currentCharacterKey = currentCharacterKey, sources = {} }
+			reagentTotals[itemID] = line
+			line.quantity = line.quantity + need
+			line.quantityNeeded = line.quantityNeeded + need
+			line.sources[#line.sources + 1] = { orderID = tonumber(entry.orderID), recipeName = entry.recipeName,
+				quantity = need, characterKey = tostring(entry.characterKey or currentCharacterKey) }
 		end
 	end
-	local matLines, tsm = {}, self:GetTsmPriceStrings()
-	for itemID, line in pairs(reagentTotals) do
-		if self.GetCharacterItemTotal then
-			line.currentCharacterQuantity = self:GetCharacterItemTotal(currentCharacterKey, itemID)
-		else
-			local _, _, _, total = self.GetItemCountByLocation and self:GetItemCountByLocation(itemID) or nil, nil, nil, 0
-			line.currentCharacterQuantity = tonumber(total) or 0
-		end
-		line.currentCharacterAvailable = math.min(tonumber(line.currentCharacterQuantity) or 0, tonumber(line.quantityNeeded) or 0)
-		line.quantityToBuy = math.max(0, (tonumber(line.quantityNeeded) or 0) - (tonumber(line.currentCharacterQuantity) or 0))
-		if self.BuildReagentMailAllocations then
-			line.mailAllocations = self:BuildReagentMailAllocations(itemID, line.sources)
-			line.mailToText = self:FormatMailAllocationsShort(line.mailAllocations)
-		end
-		if self.GetMarketEstimateCopper then
-			line.estimatedUnitPrice = select(1, self:GetMarketEstimateCopper(itemID, tsm.material, tsm.fallback))
-		end
-		if line.estimatedUnitPrice and line.quantityToBuy > 0 then
-			line.estimatedBuyCost = line.estimatedUnitPrice * line.quantityToBuy
-		end
-		matLines[#matLines + 1] = line
-	end
-	table.sort(matLines, function(a, b)
-		return tostring(a.name) < tostring(b.name)
-	end)
-	return {
-		lineCount = #rows,
-		lines = rows,
-		reagentTotals = reagentTotals,
-		reagentLines = matLines,
-	}
 end
 
-function AuctionHelper:NotifyWorkOrderQueueChanged()
+-- What the current character still has to buy and mail for one reagent.
+local function finishOrderReagentLine(self, line, tsm)
+	local have = self.GetCharacterItemTotal and self:GetCharacterItemTotal(line.currentCharacterKey, line.itemID) or 0
+	line.currentCharacterQuantity = have
+	line.currentCharacterAvailable = math.min(have, line.quantityNeeded)
+	line.quantityToBuy = math.max(0, line.quantityNeeded - have)
+	if self.BuildReagentMailAllocations then
+		line.mailAllocations = self:BuildReagentMailAllocations(line.itemID, line.sources)
+		line.mailToText = self:FormatMailAllocationsShort(line.mailAllocations)
+	end
+	if self.GetMarketEstimateCopper then
+		line.estimatedUnitPrice = select(1, self:GetMarketEstimateCopper(line.itemID, tsm.material, tsm.fallback))
+	end
+	if line.estimatedUnitPrice and line.quantityToBuy > 0 then
+		line.estimatedBuyCost = line.estimatedUnitPrice * line.quantityToBuy
+	end
+end
+
+function AuctionHelper:BuildCraftingOrderQueueSummary()
+	local rows = self:GetCraftingOrderQueueRows()
+	local currentCharacterKey = self:GetCharacterKey()
+	local reagentTotals, reagentLines, tsm = {}, {}, self:GetTsmPriceStrings()
+	for _, entry in ipairs(rows) do
+		addOrderReagents(self, reagentTotals, entry, currentCharacterKey)
+	end
+	for _, line in pairs(reagentTotals) do
+		finishOrderReagentLine(self, line, tsm)
+		reagentLines[#reagentLines + 1] = line
+	end
+	table.sort(reagentLines, function(a, b)
+		return tostring(a.name) < tostring(b.name)
+	end)
+	return { lineCount = #rows, lines = rows, reagentTotals = reagentTotals, reagentLines = reagentLines }
+end
+
+function AuctionHelper:NotifyCraftingOrderQueueChanged()
 	if self.RefreshCraftsQueuePanel then
 		self:RefreshCraftsQueuePanel()
 	end
@@ -618,26 +608,26 @@ function AuctionHelper:OnCraftingOrderFulfilled(orderID)
 	if not orderID then
 		return
 	end
-	local nextEntry = self.GetAdjacentCraftingOrderWorkQueueEntry and self:GetAdjacentCraftingOrderWorkQueueEntry(orderID, 1) or nil
+	local nextEntry = self.GetAdjacentCraftingOrderQueueEntry and self:GetAdjacentCraftingOrderQueueEntry(orderID, 1) or nil
 	local orderViewVisible = false
 	local liveView = getLiveCraftingOrderView()
 	if liveView and liveView.IsShown and liveView:IsShown() then
 		orderViewVisible = true
 	end
-	self:RemoveCraftingOrderFromWorkQueue(orderID)
-	if orderViewVisible and nextEntry and self.OpenCraftingOrderWorkQueueEntry then
+	self:RemoveCraftingOrderFromQueue(orderID)
+	if orderViewVisible and nextEntry and self.OpenCraftingOrderQueueEntry then
 		C_Timer.After(0.25, function()
-			AuctionHelper:OpenCraftingOrderWorkQueueEntry(nextEntry)
+			AuctionHelper:OpenCraftingOrderQueueEntry(nextEntry)
 		end)
 	end
 end
 
-function AuctionHelper:GetCraftingOrderWorkQueueIndex(orderID)
+function AuctionHelper:GetCraftingOrderQueueIndex(orderID)
 	orderID = tonumber(orderID)
 	if not orderID then
 		return nil, 0
 	end
-	local rows = self:GetCraftingOrderWorkQueueRows()
+	local rows = self:GetCraftingOrderQueueRows()
 	for i, entry in ipairs(rows) do
 		if tonumber(entry.orderID) == orderID then
 			return i, #rows
@@ -646,13 +636,13 @@ function AuctionHelper:GetCraftingOrderWorkQueueIndex(orderID)
 	return nil, #rows
 end
 
-function AuctionHelper:GetAdjacentCraftingOrderWorkQueueEntry(orderID, delta)
+function AuctionHelper:GetAdjacentCraftingOrderQueueEntry(orderID, delta)
 	orderID = tonumber(orderID)
 	delta = tonumber(delta) or 0
 	if not orderID or delta == 0 then
 		return nil
 	end
-	local rows = self:GetCraftingOrderWorkQueueRows()
+	local rows = self:GetCraftingOrderQueueRows()
 	local idx = nil
 	for i, entry in ipairs(rows) do
 		if tonumber(entry.orderID) == orderID then
@@ -691,97 +681,83 @@ function AuctionHelper:FindLiveCraftingOrder(orderID)
 	return nil
 end
 
-function AuctionHelper:OpenCraftingOrderWorkQueueEntry(entry)
-	if type(entry) ~= "table" then
+local function ordersTabAvailable(pf)
+	return C_CraftingOrders and C_CraftingOrders.ShouldShowCraftingOrderTab and C_CraftingOrders.ShouldShowCraftingOrderTab()
+		and pf.isCraftingOrdersTabEnabled and pf.GetTabButton
+end
+
+-- Switches the professions window to the orders tab; returns whether it had to switch.
+local function ensureOrdersTab(pf)
+	if not ordersTabAvailable(pf) then
 		return false
 	end
-	local orderID = tonumber(entry.orderID)
+	local ordersPage = pf.OrdersPage
+	if ordersPage and ordersPage.IsVisible and ordersPage:IsVisible() then
+		return false
+	end
+	local tabButton = pf:GetTabButton(3)
+	if tabButton and tabButton.Click then
+		tabButton:Click()
+		return true
+	end
+	return false
+end
+
+local function showOrderInView(ordersPage, order)
+	if ordersPage and type(ordersPage.ViewOrder) == "function" and pcall(ordersPage.ViewOrder, ordersPage, order) then
+		return true
+	end
+	local orderView = ordersPage and ordersPage.OrderView
+	if not (orderView and type(orderView.SetOrder) == "function" and pcall(orderView.SetOrder, orderView, order)) then
+		return false
+	end
+	if orderView.Show then
+		orderView:Show()
+	end
+	return true
+end
+
+local function applyOrder(self, pf, orderID, order)
+	if not order or not showOrderInView(pf.OrdersPage, order) then
+		self:PrintMessage(string.format("Could not open crafting order #%s in the orders UI.", tostring(orderID)))
+		return false
+	end
+	if self._professionCraftPanel then
+		self._professionCraftPanel._navOrderID = orderID
+	end
+	C_Timer.After(0, function()
+		AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), order)
+		if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
+			AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
+		end
+	end)
+	return true
+end
+
+function AuctionHelper:OpenCraftingOrderQueueEntry(entry)
+	local orderID = type(entry) == "table" and tonumber(entry.orderID)
 	if not orderID then
 		return false
 	end
-	-- Prefer the latest stored work-queue entry (includes orderPayload after reopen).
-	local stored = self:GetCraftingOrderWorkQueueStorage()[tostring(orderID)]
-	if type(stored) == "table" then
-		entry = stored
-	end
-
+	-- Prefer the stored queue entry: it carries the order payload after a reload.
+	local stored = self:GetCraftingOrderQueueStorage()[tostring(orderID)]
+	entry = type(stored) == "table" and stored or entry
 	local pf = _G.ProfessionsFrame
 	if not pf then
 		self:PrintMessage(string.format("Open Professions to view crafting order #%s.", tostring(orderID)))
 		return false
 	end
-
-	local function ensureOrdersTab()
-		if not (C_CraftingOrders and C_CraftingOrders.ShouldShowCraftingOrderTab and C_CraftingOrders.ShouldShowCraftingOrderTab()) then
-			return false
-		end
-		if not (pf.isCraftingOrdersTabEnabled and pf.GetTabButton) then
-			return false
-		end
-		local ordersPage = pf.OrdersPage
-		if ordersPage and ordersPage.IsVisible and ordersPage:IsVisible() then
-			return false
-		end
-		local tabBtn = pf:GetTabButton(3)
-		if tabBtn and tabBtn.Click then
-			tabBtn:Click()
-			return true
-		end
-		return false
-	end
-
-	local function resolveOrder()
-		return self:FindLiveCraftingOrder(orderID) or buildOrderFromWorkQueueEntry(entry)
-	end
-
-	local function applyOrder(order)
-		if not order then
-			self:PrintMessage(string.format("Could not open crafting order #%s in the orders UI.", tostring(orderID)))
-			return false
-		end
-		local ordersPage = pf.OrdersPage
-		local orderView = ordersPage and ordersPage.OrderView
-		local opened = false
-		if ordersPage and type(ordersPage.ViewOrder) == "function" then
-			local ok = pcall(ordersPage.ViewOrder, ordersPage, order)
-			opened = ok == true
-		end
-		if not opened and orderView and type(orderView.SetOrder) == "function" then
-			local ok = pcall(orderView.SetOrder, orderView, order)
-			opened = ok == true
-			if opened and orderView.Show then
-				orderView:Show()
-			end
-		end
-		if not opened then
-			self:PrintMessage(string.format("Could not open crafting order #%s in the orders UI.", tostring(orderID)))
-			return false
-		end
-		if self._professionCraftPanel then
-			self._professionCraftPanel._navOrderID = orderID
-		end
-		C_Timer.After(0, function()
-			AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), order)
-			if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
-				AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
-			end
-		end)
-		return true
-	end
-
 	if not pf:IsShown() then
 		ShowUIPanel(pf)
 	end
-
-	local switchedTab = ensureOrdersTab()
-	local delay = switchedTab and 0.20 or 0.05
+	local delay = ensureOrdersTab(pf) and 0.20 or 0.05
 	C_Timer.After(delay, function()
-		applyOrder(resolveOrder())
+		applyOrder(self, pf, orderID, self:FindLiveCraftingOrder(orderID) or buildOrderFromQueueEntry(entry))
 	end)
 	return true
 end
 
-local function resolveCurrentWorkQueueOrderID(orderView, panel)
+local function resolveCurrentQueuedOrderID(orderView, panel)
 	local order = orderView and orderView.order
 	local oid = order and tonumber(order.orderID)
 	if oid then
@@ -812,23 +788,23 @@ local function getProfessionSidePanelOrderControls()
 		return nil
 	end
 	local panel = AuctionHelper:EnsureProfessionCraftEconomyPanel()
-	if not panel or not panel.peAddWorkOrderBtn then
+	if not panel or not panel.peAddToQueueBtn then
 		return nil
 	end
 	return panel
 end
 
 local function layoutOrderQueueButtons(panel)
-	if not panel or not panel.peAddWorkOrderBtn or not panel.orderNav then
+	if not panel or not panel.peAddToQueueBtn or not panel.orderNav then
 		return
 	end
-	panel.peAddWorkOrderBtn:ClearAllPoints()
-	panel.peAddWorkOrderBtn:SetPoint("TOPLEFT", panel.orderNav, "TOPLEFT", 0, 0)
-	panel.peRemoveWorkOrderBtn:ClearAllPoints()
-	panel.peRemoveWorkOrderBtn:SetPoint("LEFT", panel.peAddWorkOrderBtn, "RIGHT", 6, 0)
+	panel.peAddToQueueBtn:ClearAllPoints()
+	panel.peAddToQueueBtn:SetPoint("TOPLEFT", panel.orderNav, "TOPLEFT", 0, 0)
+	panel.peRemoveFromQueueBtn:ClearAllPoints()
+	panel.peRemoveFromQueueBtn:SetPoint("LEFT", panel.peAddToQueueBtn, "RIGHT", 6, 0)
 	if panel.pePrevOrderBtn then
 		panel.pePrevOrderBtn:ClearAllPoints()
-		panel.pePrevOrderBtn:SetPoint("TOPLEFT", panel.peAddWorkOrderBtn, "BOTTOMLEFT", 0, -4)
+		panel.pePrevOrderBtn:SetPoint("TOPLEFT", panel.peAddToQueueBtn, "BOTTOMLEFT", 0, -4)
 	end
 	if panel.peNextOrderBtn then
 		panel.peNextOrderBtn:ClearAllPoints()
@@ -836,7 +812,7 @@ local function layoutOrderQueueButtons(panel)
 	end
 	if panel.peQueueStatusText then
 		panel.peQueueStatusText:ClearAllPoints()
-		panel.peQueueStatusText:SetPoint("LEFT", panel.peNextOrderBtn or panel.pePrevOrderBtn or panel.peAddWorkOrderBtn, "RIGHT", 8, 0)
+		panel.peQueueStatusText:SetPoint("LEFT", panel.peNextOrderBtn or panel.pePrevOrderBtn or panel.peAddToQueueBtn, "RIGHT", 8, 0)
 	end
 end
 
@@ -850,24 +826,24 @@ function AuctionHelper:EnsureCraftingOrderViewActionButtons()
 	end
 	panel.__ahOrderQueueControlsWired = true
 
-	local function navigateWorkQueue(delta)
+	local function navigateCraftingOrderQueue(delta)
 		local view = getLiveCraftingOrderView()
-		local oid = resolveCurrentWorkQueueOrderID(view, panel)
+		local oid = resolveCurrentQueuedOrderID(view, panel)
 		if not oid then
 			AuctionHelper:PrintMessage("No crafting order selected to navigate from.")
 			return
 		end
-		local nextEntry = AuctionHelper:GetAdjacentCraftingOrderWorkQueueEntry(oid, delta)
+		local nextEntry = AuctionHelper:GetAdjacentCraftingOrderQueueEntry(oid, delta)
 		if nextEntry then
-			AuctionHelper:OpenCraftingOrderWorkQueueEntry(nextEntry)
+			AuctionHelper:OpenCraftingOrderQueueEntry(nextEntry)
 		end
 	end
 
 	panel.pePrevOrderBtn:SetScript("OnClick", function()
-		navigateWorkQueue(-1)
+		navigateCraftingOrderQueue(-1)
 	end)
 	panel.peNextOrderBtn:SetScript("OnClick", function()
-		navigateWorkQueue(1)
+		navigateCraftingOrderQueue(1)
 	end)
 end
 
@@ -876,7 +852,7 @@ function AuctionHelper:CraftingOrderViewRefreshButtons(orderView, order)
 	self:EnsureCraftingOrderViewActionButtons()
 	local panel = getProfessionSidePanelOrderControls()
 	order = order or (orderView and orderView.order) or nil
-	if not panel or not panel.peAddWorkOrderBtn then
+	if not panel or not panel.peAddToQueueBtn then
 		return
 	end
 
@@ -910,8 +886,8 @@ function AuctionHelper:CraftingOrderViewRefreshButtons(orderView, order)
 	end
 
 	if not showOrderNav and not showRecipeNav then
-		panel.peAddWorkOrderBtn:Hide()
-		panel.peRemoveWorkOrderBtn:Hide()
+		panel.peAddToQueueBtn:Hide()
+		panel.peRemoveFromQueueBtn:Hide()
 		if panel.pePrevOrderBtn then panel.pePrevOrderBtn:Hide() end
 		if panel.peNextOrderBtn then panel.peNextOrderBtn:Hide() end
 		if panel.peQueueStatusText then panel.peQueueStatusText:Hide() end
@@ -926,12 +902,12 @@ function AuctionHelper:CraftingOrderViewRefreshButtons(orderView, order)
 		if panel.peNextOrderBtn then panel.peNextOrderBtn:Hide() end
 		if panel.peQueueStatusText then panel.peQueueStatusText:Hide() end
 
-		local inQ = self.IsRecipeInCraftShoppingQueue and self:IsRecipeInCraftShoppingQueue(recipeID)
-		panel.peAddWorkOrderBtn:SetShown(not inQ)
-		panel.peRemoveWorkOrderBtn:SetShown(inQ and true or false)
-		panel.peAddWorkOrderBtn:SetEnabled(true)
-		panel.peRemoveWorkOrderBtn:SetEnabled(true)
-		panel.peAddWorkOrderBtn:SetScript("OnEnter", function(btn)
+		local inQ = self.IsRecipeInCraftQueue and self:IsRecipeInCraftQueue(recipeID)
+		panel.peAddToQueueBtn:SetShown(not inQ)
+		panel.peRemoveFromQueueBtn:SetShown(inQ and true or false)
+		panel.peAddToQueueBtn:SetEnabled(true)
+		panel.peRemoveFromQueueBtn:SetEnabled(true)
+		panel.peAddToQueueBtn:SetScript("OnEnter", function(btn)
 			GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
 			GameTooltip:AddLine("AuctionHelper", 1, 1, 1)
 			GameTooltip:AddLine(
@@ -943,14 +919,14 @@ function AuctionHelper:CraftingOrderViewRefreshButtons(orderView, order)
 			)
 			GameTooltip:Show()
 		end)
-		panel.peAddWorkOrderBtn:SetScript("OnLeave", GameTooltip_Hide)
-		panel.peAddWorkOrderBtn:SetScript("OnClick", function()
+		panel.peAddToQueueBtn:SetScript("OnLeave", GameTooltip_Hide)
+		panel.peAddToQueueBtn:SetScript("OnClick", function()
 			if AuctionHelper.QueueOpenProfessionRecipe then
 				AuctionHelper:QueueOpenProfessionRecipe(1, { recipeID = recipeID })
 			end
 			AuctionHelper:CraftingOrderViewRefreshButtons()
 		end)
-		panel.peRemoveWorkOrderBtn:SetScript("OnClick", function()
+		panel.peRemoveFromQueueBtn:SetScript("OnClick", function()
 			if AuctionHelper.RemoveCraftQueueLinesForRecipeID then
 				AuctionHelper:RemoveCraftQueueLinesForRecipeID(recipeID)
 			end
@@ -967,9 +943,9 @@ function AuctionHelper:CraftingOrderViewRefreshButtons(orderView, order)
 	layoutOrderQueueButtons(panel)
 	local oid = tonumber(order.orderID)
 	panel._navOrderID = oid
-	local inQ = self:IsCraftingOrderInWorkQueue(oid)
+	local inQ = self:IsCraftingOrderQueued(oid)
 	if inQ and type(order) == "table" then
-		local stored = self:GetCraftingOrderWorkQueueStorage()[tostring(oid)]
+		local stored = self:GetCraftingOrderQueueStorage()[tostring(oid)]
 		if type(stored) == "table" then
 			stored.orderPayload = copyOrderPayload(order)
 			stored.reagents = copyReagentsList(order.reagents) or stored.reagents
@@ -983,11 +959,11 @@ function AuctionHelper:CraftingOrderViewRefreshButtons(orderView, order)
 			end
 		end
 	end
-	panel.peAddWorkOrderBtn:SetShown(not inQ)
-	panel.peRemoveWorkOrderBtn:SetShown(inQ)
-	panel.peAddWorkOrderBtn:SetEnabled(true)
-	panel.peRemoveWorkOrderBtn:SetEnabled(true)
-	panel.peAddWorkOrderBtn:SetScript("OnEnter", function(btn)
+	panel.peAddToQueueBtn:SetShown(not inQ)
+	panel.peRemoveFromQueueBtn:SetShown(inQ)
+	panel.peAddToQueueBtn:SetEnabled(true)
+	panel.peRemoveFromQueueBtn:SetEnabled(true)
+	panel.peAddToQueueBtn:SetScript("OnEnter", function(btn)
 		GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
 		GameTooltip:AddLine("AuctionHelper", 1, 1, 1)
 		GameTooltip:AddLine(
@@ -999,33 +975,33 @@ function AuctionHelper:CraftingOrderViewRefreshButtons(orderView, order)
 		)
 		GameTooltip:Show()
 	end)
-	panel.peAddWorkOrderBtn:SetScript("OnLeave", GameTooltip_Hide)
-	panel.peAddWorkOrderBtn:SetScript("OnClick", function()
+	panel.peAddToQueueBtn:SetScript("OnLeave", GameTooltip_Hide)
+	panel.peAddToQueueBtn:SetScript("OnClick", function()
 		local live = getLiveCraftingOrderView()
 		local o = (live and live.order) or order
 		if o then
 			AuctionHelper:PrintMessage(string.format("Queueing crafting order #%s...", tostring(o.orderID or "?")))
-			AuctionHelper:AddCraftingOrderToWorkQueue(o)
+			AuctionHelper:AddCraftingOrderToQueue(o)
 			AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), o)
 		else
 			AuctionHelper:PrintMessage("Crafting order button clicked, but no live order data was found.")
 		end
 	end)
-	panel.peRemoveWorkOrderBtn:SetScript("OnClick", function()
+	panel.peRemoveFromQueueBtn:SetScript("OnClick", function()
 		local live = getLiveCraftingOrderView()
 		local o = (live and live.order) or order
 		if o and o.orderID then
-			AuctionHelper:RemoveCraftingOrderFromWorkQueue(o.orderID)
+			AuctionHelper:RemoveCraftingOrderFromQueue(o.orderID)
 			AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), o)
 		end
 	end)
-	panel.peAddWorkOrderBtn:Show()
+	panel.peAddToQueueBtn:Show()
 	if inQ then
-		panel.peRemoveWorkOrderBtn:Show()
+		panel.peRemoveFromQueueBtn:Show()
 	else
-		panel.peRemoveWorkOrderBtn:Hide()
+		panel.peRemoveFromQueueBtn:Hide()
 	end
-	local idx, total = self:GetCraftingOrderWorkQueueIndex(oid)
+	local idx, total = self:GetCraftingOrderQueueIndex(oid)
 	local hasQueue = (total or 0) > 0
 	if panel.pePrevOrderBtn then
 		panel.pePrevOrderBtn:SetShown(hasQueue and inQ)
@@ -1139,11 +1115,11 @@ local function ensureCrafterOrderListContextMenuHook()
 		end
 		rootDescription:CreateDivider()
 		local oid = tonumber(order.orderID)
-		if AuctionHelper:IsCraftingOrderInWorkQueue(oid) then
+		if AuctionHelper:IsCraftingOrderQueued(oid) then
 			rootDescription:CreateButton("Remove from shopping", function()
 				local live = ownerRegion and ownerRegion.option
 				local liveID = live and tonumber(live.orderID) or oid
-				AuctionHelper:RemoveCraftingOrderFromWorkQueue(liveID)
+				AuctionHelper:RemoveCraftingOrderFromQueue(liveID)
 				AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), live)
 				if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
 					AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
@@ -1156,7 +1132,7 @@ local function ensureCrafterOrderListContextMenuHook()
 					return
 				end
 				AuctionHelper:PrintMessage(string.format("Queueing crafting order #%s...", tostring(live.orderID)))
-				AuctionHelper:AddCraftingOrderToWorkQueue(live)
+				AuctionHelper:AddCraftingOrderToQueue(live)
 				AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), live)
 				if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
 					AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
@@ -1186,8 +1162,8 @@ local function ensureRecipeListContextMenuHook()
 			return
 		end
 		rootDescription:CreateDivider()
-		local inQueue = AuctionHelper.IsRecipeInCraftShoppingQueue
-			and AuctionHelper:IsRecipeInCraftShoppingQueue(recipeID)
+		local inQueue = AuctionHelper.IsRecipeInCraftQueue
+			and AuctionHelper:IsRecipeInCraftQueue(recipeID)
 		if inQueue then
 			rootDescription:CreateButton("Remove from shopping", function()
 				if AuctionHelper.RemoveCraftQueueLinesForRecipeID then

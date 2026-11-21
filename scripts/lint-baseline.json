@@ -28,14 +28,12 @@
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 2557,
   "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": 778,
   "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5474,
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": 779,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1198,
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1241,
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1217,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": 2428,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_LiveUpdate.lua": 708,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_CraftsUI.lua": 797,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": 1006,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": 701,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": 929,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_UIShell.lua": 809,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Widgets.lua": 901
@@ -863,14 +861,6 @@
      22
     ]
    },
-   "AuctionHelper:BuildCraftQueueSummary": {
-    "lines": [
-     130
-    ],
-    "ccn": [
-     35
-    ]
-   },
    "AuctionHelper:BuildReagentMailAllocations": {
     "ccn": [
      14
@@ -892,19 +882,6 @@
    "AuctionHelper:GetCharacterItemTotal": {
     "ccn": [
      16
-    ]
-   },
-   "AuctionHelper:RemoveCraftQueueLinesByReagentItem": {
-    "ccn": [
-     12
-    ]
-   },
-   "AuctionHelper:UpsertCraftQueueForCraftingOrder": {
-    "lines": [
-     68
-    ],
-    "ccn": [
-     35
     ]
    },
    "buildEntryFromEval": {
@@ -1132,22 +1109,6 @@
    }
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": {
-   "AuctionHelper:AddCraftingOrderToWorkQueue": {
-    "lines": [
-     51
-    ],
-    "ccn": [
-     17
-    ]
-   },
-   "AuctionHelper:BuildCraftingOrderWorkQueueSummary": {
-    "lines": [
-     69
-    ],
-    "ccn": [
-     26
-    ]
-   },
    "AuctionHelper:CraftingOrderViewRefreshButtons": {
     "lines": [
      173
@@ -1169,24 +1130,9 @@
      43
     ]
    },
-   "AuctionHelper:OpenCraftingOrderWorkQueueEntry": {
-    "lines": [
-     89
-    ]
-   },
    "AuctionHelper:RemoveCraftingOrdersByReagentItem": {
     "ccn": [
      11
-    ]
-   },
-   "applyOrder": {
-    "ccn": [
-     12
-    ]
-   },
-   "buildOrderFromWorkQueueEntry": {
-    "ccn": [
-     27
     ]
    },
    "buildOrderSlotSchematicLookup": {
@@ -1207,11 +1153,6 @@
    "ensureCrafterOrderListContextMenuHook": {
     "lines": [
      43
-    ]
-   },
-   "ensureOrdersTab": {
-    "ccn": [
-     11
     ]
    },
    "findSchematicSlotKeyForProvidedReagent": {
@@ -1912,14 +1853,6 @@
    },
    "AuctionHelper:InitProfessionCraftEconomyHooks": {
     "lines": [
-     56
-    ]
-   },
-   "AuctionHelper:OnProfessionRecipeCraftedResult": {
-    "lines": [
-     84
-    ],
-    "ccn": [
      56
     ]
    },

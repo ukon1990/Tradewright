@@ -202,6 +202,115 @@ local function notePendingCraft(pe, row, recipeID)
 	}
 end
 
+-- A pending craft older than this no longer belongs to the next craft result.
+local PENDING_CRAFT_TIMEOUT_SEC = 20
+
+local function activePendingCraft(pe)
+	local pending = pe._pendingProfessionQueueCraft
+	if pending and pending.startedAt and GetTime() - pending.startedAt > PENDING_CRAFT_TIMEOUT_SEC then
+		pe._pendingProfessionQueueCraft = nil
+		return nil
+	end
+	return pending
+end
+
+local function craftResultItemID(result)
+	local itemID = result.hyperlink and select(1, C_Item.GetItemInfoInstant(result.hyperlink)) or nil
+	return itemID or tonumber(result.itemID)
+end
+
+-- Counts a finished craft off a queue line; a crafting-order line also leaves the crafting-order queue.
+local function deductQueueEntry(pe, queueKey, entry, craftedItemID, craftedQuantity)
+	local orderID = tonumber(entry.orderID)
+	if not orderID and pe.NoteCraftForSeller then
+		pe:NoteCraftForSeller(craftedItemID or entry.outputItemID, craftedQuantity)
+	end
+	pe:UpdateCraftQueueQuantity(queueKey, (tonumber(entry.quantity) or 0) - craftedQuantity)
+	if orderID and pe.RemoveCraftingOrderFromQueue then
+		pe:RemoveCraftingOrderFromQueue(orderID)
+	end
+end
+
+local function deductPendingCraft(pe, storage, craftedItemID, craftedQuantity)
+	local pending = activePendingCraft(pe)
+	local queueKey = pending and pending.queueKey
+	local entry = queueKey and storage[queueKey]
+	if not entry then
+		return false
+	end
+	if pending.outputItemID and craftedItemID and tonumber(craftedItemID) ~= tonumber(pending.outputItemID) then
+		return false
+	end
+	deductQueueEntry(pe, queueKey, entry, craftedItemID, craftedQuantity)
+	if not storage[queueKey] then
+		pe._pendingProfessionQueueCraft = nil
+	end
+	return true
+end
+
+local function deductByOutputItem(pe, storage, craftedItemID, craftedQuantity)
+	if not craftedItemID then
+		return false
+	end
+	for queueKey, entry in pairs(storage) do
+		if tonumber(entry and entry.outputItemID) == tonumber(craftedItemID) then
+			deductQueueEntry(pe, queueKey, entry, craftedItemID, craftedQuantity)
+			return true
+		end
+	end
+	return false
+end
+
+local function openOrderViewOrder()
+	local ordersPage = _G.ProfessionsFrame and _G.ProfessionsFrame.OrdersPage
+	local orderView = ordersPage and ordersPage.OrderView
+	return orderView and orderView.order
+end
+
+local function orderMatchesCraft(orderEntry, openOrder, craftedItemID)
+	if craftedItemID and tonumber(orderEntry.itemID) == tonumber(craftedItemID) then
+		return true
+	end
+	local spellID = tonumber(openOrder.spellID)
+	return spellID ~= nil and tonumber(orderEntry.spellID) == spellID
+end
+
+-- An order crafted from the open order view that has no craft queue line left.
+local function finishOpenCraftingOrder(pe, craftedItemID)
+	if not (pe.IsCraftingOrderQueued and pe.RemoveCraftingOrderFromQueue) then
+		return
+	end
+	local openOrder = openOrderViewOrder()
+	local orderID = openOrder and tonumber(openOrder.orderID)
+	if not orderID or not pe:IsCraftingOrderQueued(orderID) then
+		return
+	end
+	local orderEntry = pe:GetCraftingOrderQueueStorage()[tostring(orderID)]
+	if orderEntry and orderMatchesCraft(orderEntry, openOrder, craftedItemID) then
+		pe:RemoveCraftingOrderFromQueue(orderID)
+	end
+end
+
+--- TRADE_SKILL_ITEM_CRAFTED_RESULT: counts the craft off the pending queue row, else off a line with the
+--- same output, else finishes the open crafting order.
+function AuctionHelper:OnProfessionRecipeCraftedResult(craftingItemResultData)
+	if type(craftingItemResultData) ~= "table" or not self.GetCraftQueueStorage then
+		return
+	end
+	local craftedQuantity = tonumber(craftingItemResultData.quantity) or 0
+	if craftedQuantity <= 0 then
+		return
+	end
+	local craftedItemID = craftResultItemID(craftingItemResultData)
+	local storage = self:GetCraftQueueStorage()
+	if deductPendingCraft(self, storage, craftedItemID, craftedQuantity)
+		or deductByOutputItem(self, storage, craftedItemID, craftedQuantity)
+	then
+		return
+	end
+	finishOpenCraftingOrder(self, craftedItemID)
+end
+
 --- Crafts a queue row inside the click: through the open recipe's Create button, or by recipe id
 --- while another recipe shows, which is then opened with the queued quantity filled in. A crafting
 --- order row instead steps through its order in the orders tab.
@@ -215,7 +324,7 @@ function AuctionHelper:CraftProfessionQueueRecipe(row)
 	end
 	notePendingCraft(self, row, recipeSpellID)
 	local orderID = tonumber(row.orderID)
-	if orderID and self.IS_RETAIL and self.OpenCraftingOrderWorkQueueEntry then
+	if orderID and self.IS_RETAIL and self.OpenCraftingOrderQueueEntry then
 		return stepCraftingOrder(self, row, orderID)
 	end
 	local craftAmount = math.max(1, math.floor(tonumber(row.quantity) or 1))

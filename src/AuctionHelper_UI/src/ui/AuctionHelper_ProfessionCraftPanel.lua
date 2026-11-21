@@ -84,91 +84,6 @@ function AuctionHelper:JumpToProfessionRecipe(recipeID, skillLineID)
 	return true
 end
 
-function AuctionHelper:OnProfessionRecipeCraftedResult(craftingItemResultData)
-	local craftedQuantity
-	local resultItemID = nil
-	if type(craftingItemResultData) ~= "table" then
-		return
-	end
-	if craftingItemResultData.hyperlink then
-		resultItemID = select(1, C_Item.GetItemInfoInstant(craftingItemResultData.hyperlink))
-	end
-	if not resultItemID and craftingItemResultData.itemID then
-		resultItemID = tonumber(craftingItemResultData.itemID)
-	end
-	craftedQuantity = tonumber(craftingItemResultData.quantity) or 0
-	if craftedQuantity <= 0 then
-		return
-	end
-
-	local storage = self.GetCraftQueueStorage and self:GetCraftQueueStorage() or nil
-	if not storage then
-		return
-	end
-
-	local pending = self._pendingProfessionQueueCraft
-	if pending and pending.startedAt and (GetTime and (GetTime() - pending.startedAt) or 0) > 20 then
-		self._pendingProfessionQueueCraft = nil
-		pending = nil
-	end
-
-	local targetKey = pending and pending.queueKey or nil
-	if targetKey and storage[targetKey] then
-		local entry = storage[targetKey]
-		if pending.outputItemID == nil or resultItemID == nil or tonumber(resultItemID) == tonumber(pending.outputItemID) then
-			local orderID = entry and tonumber(entry.orderID)
-			if not orderID and self.NoteCraftForSeller then
-				self:NoteCraftForSeller(resultItemID or entry.outputItemID, craftedQuantity)
-			end
-			self:UpdateCraftQueueQuantity(targetKey, (tonumber(entry.quantity) or 0) - craftedQuantity)
-			if orderID and self.RemoveCraftingOrderFromWorkQueue then
-				self:RemoveCraftingOrderFromWorkQueue(orderID)
-			end
-			if not storage[targetKey] then
-				self._pendingProfessionQueueCraft = nil
-			end
-			return
-		end
-	end
-
-	if resultItemID ~= nil then
-		for queueKey, entry in pairs(storage) do
-			if tonumber(entry and entry.outputItemID) == tonumber(resultItemID) then
-				local orderID = entry and tonumber(entry.orderID)
-				if not orderID and self.NoteCraftForSeller then
-					self:NoteCraftForSeller(resultItemID, craftedQuantity)
-				end
-				self:UpdateCraftQueueQuantity(queueKey, (tonumber(entry.quantity) or 0) - craftedQuantity)
-				if orderID and self.RemoveCraftingOrderFromWorkQueue then
-					self:RemoveCraftingOrderFromWorkQueue(orderID)
-				end
-				return
-			end
-		end
-	end
-
-	if self.IsCraftingOrderInWorkQueue and self.RemoveCraftingOrderFromWorkQueue then
-		local pf = _G.ProfessionsFrame
-		local orderView = pf and pf.OrdersPage and pf.OrdersPage.OrderView
-		local openOrder = orderView and orderView.order
-		local orderID = openOrder and tonumber(openOrder.orderID)
-		if orderID and self:IsCraftingOrderInWorkQueue(orderID) then
-			local woEntry = self.GetCraftingOrderWorkQueueStorage and self:GetCraftingOrderWorkQueueStorage()[tostring(orderID)]
-			local matches = false
-			if woEntry then
-				if resultItemID and tonumber(woEntry.itemID) == tonumber(resultItemID) then
-					matches = true
-				elseif openOrder and tonumber(openOrder.spellID) and tonumber(woEntry.spellID) == tonumber(openOrder.spellID) then
-					matches = true
-				end
-			end
-			if matches then
-				self:RemoveCraftingOrderFromWorkQueue(orderID)
-			end
-		end
-	end
-end
-
 function AuctionHelper:SetProfessionPanelActiveTab(tabId, persist)
 	tabId = tostring(tabId or "info")
 	if tabId ~= "queue" then
@@ -342,9 +257,9 @@ end
 local function queueOpenRecipe(amount)
 	local pe = AuctionHelper
 	local order = pe.GetOpenCraftingOrder and pe:GetOpenCraftingOrder() or nil
-	if order and pe.AddCraftingOrderToWorkQueue then
+	if order and pe.AddCraftingOrderToQueue then
 		pe:PrintMessage(string.format("Queueing crafting order #%s...", tostring(order.orderID or "?")))
-		pe:AddCraftingOrderToWorkQueue(order)
+		pe:AddCraftingOrderToQueue(order)
 	elseif pe.QueueOpenProfessionRecipe then
 		pe:QueueOpenProfessionRecipe(amount)
 	elseif pe._lastProfessionEvalContext then

@@ -33,6 +33,21 @@ function AuctionHelper:GetCraftQueueRows()
 	return list
 end
 
+local function matchesOpportunityRow(entry, row, scenario)
+	return type(entry) == "table"
+		and tonumber(entry.recipeID) == tonumber(row.recipeID)
+		and tonumber(entry.outputItemID) == tonumber(row.outputItemID)
+		and entry.scenario == scenario
+end
+
+-- Recipe lines are the crafts the player queued; crafting-order lines mirror the crafting-order queue.
+local function isRecipeLine(entry, recipeID)
+	return type(entry) == "table"
+		and tonumber(entry.recipeID) == recipeID
+		and entry.source ~= "craftingOrder"
+		and not entry.orderID
+end
+
 --- Remove all queue lines matching the opportunity row (same recipe, output, scenario as crafts settings).
 function AuctionHelper:RemoveCraftQueueLinesForOpportunityRow(row)
 	if not row or not row.recipeID or not row.outputItemID then
@@ -41,19 +56,14 @@ function AuctionHelper:RemoveCraftQueueLinesForOpportunityRow(row)
 	local scenario = self:GetSetting("crafts.scenario", "default")
 	local storage = self:GetCraftQueueStorage()
 	for k, entry in pairs(storage) do
-		if type(entry) == "table"
-			and tonumber(entry.recipeID) == tonumber(row.recipeID)
-			and tonumber(entry.outputItemID) == tonumber(row.outputItemID)
-			and entry.scenario == scenario
-		then
+		if matchesOpportunityRow(entry, row, scenario) then
 			storage[k] = nil
 		end
 	end
 	self:NotifyCraftQueueChanged()
 end
 
---- Remove non-order craft-queue lines for a recipe ID (any output/scenario on this character's shopping).
---- Returns how many were removed.
+--- Remove the recipe lines for a recipe ID (any output/scenario). Returns how many were removed.
 function AuctionHelper:RemoveCraftQueueLinesForRecipeID(recipeID)
 	recipeID = tonumber(recipeID)
 	if not recipeID then
@@ -62,11 +72,7 @@ function AuctionHelper:RemoveCraftQueueLinesForRecipeID(recipeID)
 	local storage = self:GetCraftQueueStorage()
 	local removed = 0
 	for k, entry in pairs(storage) do
-		if type(entry) == "table"
-			and tonumber(entry.recipeID) == recipeID
-			and entry.source ~= "craftingOrder"
-			and not entry.orderID
-		then
+		if isRecipeLine(entry, recipeID) then
 			storage[k] = nil
 			removed = removed + 1
 		end
@@ -77,71 +83,74 @@ function AuctionHelper:RemoveCraftQueueLinesForRecipeID(recipeID)
 	return removed
 end
 
---- Whether any craft-queue lines exist for this recipe (non-order entries).
-function AuctionHelper:IsRecipeInCraftShoppingQueue(recipeID)
+function AuctionHelper:IsRecipeInCraftQueue(recipeID)
 	recipeID = tonumber(recipeID)
 	if not recipeID then
 		return false
 	end
-	local storage = self:GetCraftQueueStorage()
-	for _, entry in pairs(storage) do
-		if type(entry) == "table"
-			and tonumber(entry.recipeID) == recipeID
-			and entry.source ~= "craftingOrder"
-			and not entry.orderID
-		then
+	for _, entry in pairs(self:GetCraftQueueStorage()) do
+		if isRecipeLine(entry, recipeID) then
 			return true
 		end
 	end
 	return false
 end
 
-local function clearCraftingOrderWorkQueueEntry(self, orderID)
+local function clearCraftingOrderQueueEntry(self, orderID)
 	orderID = tonumber(orderID)
-	if not orderID or not self.GetCraftingOrderWorkQueueStorage then
+	if not orderID or not self.GetCraftingOrderQueueStorage then
 		return false
 	end
-	local wo = self:GetCraftingOrderWorkQueueStorage()
+	local orderStorage = self:GetCraftingOrderQueueStorage()
 	local key = tostring(orderID)
-	if wo[key] == nil then
+	if orderStorage[key] == nil then
 		return false
 	end
-	wo[key] = nil
+	orderStorage[key] = nil
 	return true
 end
 
-function AuctionHelper:ClearCraftQueue()
-	local storage = self:GetCraftQueueStorage()
-	for k in pairs(storage) do
-		storage[k] = nil
+-- Removes one line and, for a crafting-order line, its crafting-order queue entry.
+-- Returns whether a crafting-order queue entry was removed.
+local function removeQueueLine(self, storage, queueKey)
+	local entry = storage[queueKey]
+	storage[queueKey] = nil
+	return clearCraftingOrderQueueEntry(self, entry and entry.orderID)
+end
+
+local function notifyCraftingOrderQueue(self, clearedOrder)
+	if clearedOrder and self.NotifyCraftingOrderQueueChanged then
+		self:NotifyCraftingOrderQueueChanged()
 	end
-	-- Crafting-order mats live in both craftQueue and craftingOrderWorkQueue; clear both
-	-- so shopping cart / reagents-to-buy do not keep orphan work-order needs.
-	if self.GetCraftingOrderWorkQueueStorage then
-		local wo = self:GetCraftingOrderWorkQueueStorage()
-		for k in pairs(wo) do
-			wo[k] = nil
-		end
+end
+
+function AuctionHelper:ClearCraftQueue()
+	wipe(self:GetCraftQueueStorage())
+	-- Crafting-order mats live in both the craft queue and the crafting-order queue; clear both
+	-- so the shopping list keeps no orphan order needs.
+	if self.GetCraftingOrderQueueStorage then
+		wipe(self:GetCraftingOrderQueueStorage())
 	end
 	self:NotifyCraftQueueChanged()
-	if self.NotifyWorkOrderQueueChanged then
-		self:NotifyWorkOrderQueueChanged()
-	end
+	notifyCraftingOrderQueue(self, true)
 end
 
 function AuctionHelper:RemoveCraftFromQueue(queueKey)
 	if not queueKey then
 		return
 	end
-	local storage = self:GetCraftQueueStorage()
-	local entry = storage[queueKey]
-	local orderID = entry and tonumber(entry.orderID)
-	storage[queueKey] = nil
-	local clearedOrder = clearCraftingOrderWorkQueueEntry(self, orderID)
+	local clearedOrder = removeQueueLine(self, self:GetCraftQueueStorage(), queueKey)
 	self:NotifyCraftQueueChanged()
-	if clearedOrder and self.NotifyWorkOrderQueueChanged then
-		self:NotifyWorkOrderQueueChanged()
+	notifyCraftingOrderQueue(self, clearedOrder)
+end
+
+local function usesReagent(entry, itemID)
+	for _, slot in ipairs(entry.reagentPlan or {}) do
+		if tonumber(slot and slot.itemID) == itemID then
+			return true
+		end
 	end
+	return false
 end
 
 function AuctionHelper:RemoveCraftQueueLinesByReagentItem(itemID)
@@ -149,33 +158,22 @@ function AuctionHelper:RemoveCraftQueueLinesByReagentItem(itemID)
 	if not itemID then
 		return 0
 	end
-	local removed = 0
-	local clearedOrder = false
+	local removed, clearedOrder = 0, false
 	local storage = self:GetCraftQueueStorage()
 	for key, entry in pairs(storage) do
-		if type(entry) == "table" then
-			for _, slot in ipairs(entry.reagentPlan or {}) do
-				if tonumber(slot and slot.itemID) == itemID then
-					local orderID = tonumber(entry.orderID)
-					storage[key] = nil
-					removed = removed + 1
-					if clearCraftingOrderWorkQueueEntry(self, orderID) then
-						clearedOrder = true
-					end
-					break
-				end
-			end
+		if type(entry) == "table" and usesReagent(entry, itemID) then
+			clearedOrder = removeQueueLine(self, storage, key) or clearedOrder
+			removed = removed + 1
 		end
 	end
 	if removed > 0 then
 		self:NotifyCraftQueueChanged()
 	end
-	if clearedOrder and self.NotifyWorkOrderQueueChanged then
-		self:NotifyWorkOrderQueueChanged()
-	end
+	notifyCraftingOrderQueue(self, clearedOrder)
 	return removed
 end
 
+--- A quantity of 0 or less removes the line.
 function AuctionHelper:UpdateCraftQueueQuantity(queueKey, quantity)
 	if not queueKey then
 		return
@@ -184,20 +182,12 @@ function AuctionHelper:UpdateCraftQueueQuantity(queueKey, quantity)
 	local storage = self:GetCraftQueueStorage()
 	local clearedOrder = false
 	if quantity <= 0 then
-		local entry = storage[queueKey]
-		local orderID = entry and tonumber(entry.orderID)
-		storage[queueKey] = nil
-		clearedOrder = clearCraftingOrderWorkQueueEntry(self, orderID)
-	else
-		local entry = storage[queueKey]
-		if entry then
-			entry.quantity = math.floor(quantity)
-		end
+		clearedOrder = removeQueueLine(self, storage, queueKey)
+	elseif storage[queueKey] then
+		storage[queueKey].quantity = math.floor(quantity)
 	end
 	self:NotifyCraftQueueChanged()
-	if clearedOrder and self.NotifyWorkOrderQueueChanged then
-		self:NotifyWorkOrderQueueChanged()
-	end
+	notifyCraftingOrderQueue(self, clearedOrder)
 end
 
 local function copyReagentPlan(plan)
@@ -394,11 +384,7 @@ function AuctionHelper:GetCraftQueueQuantityForOpportunityRow(row)
 	local storage = self:GetCraftQueueStorage()
 	local sum = 0
 	for _, entry in pairs(storage) do
-		if type(entry) == "table"
-			and tonumber(entry.recipeID) == tonumber(row.recipeID)
-			and tonumber(entry.outputItemID) == tonumber(row.outputItemID)
-			and entry.scenario == scenario
-		then
+		if matchesOpportunityRow(entry, row, scenario) then
 			sum = sum + (tonumber(entry.quantity) or 0)
 		end
 	end
@@ -418,10 +404,6 @@ function AuctionHelper:GetCharacterItemTotal(characterKey, itemID)
 	local charData = self.db and self.db.characters and self.db.characters[characterKey] or nil
 	local entry = charData and charData.inventorySnapshot and charData.inventorySnapshot.items and charData.inventorySnapshot.items[tostring(itemID)] or nil
 	return tonumber(entry and entry.total) or 0
-end
-
-local function getCharacterSnapshotItemTotal(self, characterKey, itemID)
-	return self:GetCharacterItemTotal(characterKey, itemID)
 end
 
 --- `sources`: entries with characterKey and quantity.
@@ -463,7 +445,7 @@ end
 --- Rows of { characterKey, mailName, items, totalQuantity, missing, complete }.
 function AuctionHelper:BuildShoppingMailSendPlan()
 	local summary = self:BuildCraftQueueSummary()
-	local woSummary = self.BuildCraftingOrderWorkQueueSummary and self:BuildCraftingOrderWorkQueueSummary() or { reagentLines = {} }
+	local orderSummary = self.BuildCraftingOrderQueueSummary and self:BuildCraftingOrderQueueSummary() or { reagentLines = {} }
 	local mirroredOrderIDs = {}
 	for _, entry in ipairs(self:GetCraftQueueRows()) do
 		local oid = tonumber(entry and entry.orderID)
@@ -491,8 +473,8 @@ function AuctionHelper:BuildShoppingMailSendPlan()
 	for _, line in ipairs(summary.reagentLines or {}) do
 		addLine(line)
 	end
-	-- Work orders already mirrored into the craft queue are counted there.
-	for _, line in ipairs(woSummary.reagentLines or {}) do
+	-- Crafting orders already mirrored into the craft queue are counted there.
+	for _, line in ipairs(orderSummary.reagentLines or {}) do
 		local sources = {}
 		for _, src in ipairs(line.sources or {}) do
 			local oid = tonumber(src and src.orderID)
@@ -531,99 +513,6 @@ function AuctionHelper:FormatMailAllocationsShort(allocations, maxEntries)
 	return table.concat(parts, ", ")
 end
 
-function AuctionHelper:RemoveCraftQueueByOrderID(orderID)
-	orderID = tonumber(orderID)
-	if not orderID then
-		return 0
-	end
-	local removed = 0
-	local storage = self:GetCraftQueueStorage()
-	for key, entry in pairs(storage) do
-		if type(entry) == "table" and tonumber(entry.orderID) == orderID then
-			storage[key] = nil
-			removed = removed + 1
-		end
-	end
-	if removed > 0 then
-		self:NotifyCraftQueueChanged()
-	end
-	return removed
-end
-
-function AuctionHelper:CraftQueueMakeOrderKey(orderID)
-	return string.format("craftingOrder|%s", tostring(orderID or ""))
-end
-
---- Upsert a craft-queue marker for a crafting-order work-queue entry.
-function AuctionHelper:UpsertCraftQueueForCraftingOrder(orderEntry)
-	if type(orderEntry) ~= "table" or not orderEntry.orderID then
-		return nil
-	end
-	local orderID = tonumber(orderEntry.orderID)
-	if not orderID then
-		return nil
-	end
-	local characterKey = tostring(orderEntry.characterKey or self:GetCharacterKey())
-	local key = self:CraftQueueMakeOrderKey(orderID)
-	local storage = self:GetCraftQueueStorage()
-	local recipeID = tonumber(orderEntry.spellID)
-	local itemID = tonumber(orderEntry.itemID)
-	local recipeName = orderEntry.recipeName
-	if (not recipeName or recipeName == "") and recipeID and C_TradeSkillUI and C_TradeSkillUI.GetRecipeInfo then
-		local ri = C_TradeSkillUI.GetRecipeInfo(recipeID)
-		recipeName = ri and ri.name or recipeName
-	end
-	if (not recipeName or recipeName == "") and itemID then
-		recipeName = self:GetItemDisplayName(itemID)
-	end
-	local outputIcon = nil
-	if itemID and self.ResolveItemDescriptor then
-		local desc = self:ResolveItemDescriptor(itemID)
-		outputIcon = desc and desc.icon or nil
-	end
-	local entry = storage[key]
-	if not entry then
-		entry = {
-			queueKey = key,
-			orderID = orderID,
-			source = "craftingOrder",
-			recipeID = recipeID,
-			outputItemID = itemID,
-			characterKey = characterKey,
-			scenario = "craftingOrder",
-			quantity = 1,
-			recipeName = recipeName,
-			outputName = itemID and self:GetItemDisplayName(itemID) or nil,
-			outputIcon = outputIcon,
-			reagentPlan = {},
-			snapshot = { canCraftNow = false },
-			addedAt = tonumber(orderEntry.addedAt) or time(),
-		}
-		storage[key] = entry
-	else
-		entry.characterKey = characterKey
-		entry.recipeID = recipeID or entry.recipeID
-		entry.recipeName = recipeName or entry.recipeName
-		entry.outputItemID = itemID or entry.outputItemID
-		entry.outputName = (itemID and self:GetItemDisplayName(itemID)) or entry.outputName
-		entry.outputIcon = outputIcon or entry.outputIcon
-		entry.addedAt = tonumber(orderEntry.addedAt) or entry.addedAt
-		wipe(entry.reagentPlan)
-	end
-	for matItemID, qty in pairs(orderEntry.crafterMatTotals or {}) do
-		local id = tonumber(matItemID)
-		local q = tonumber(qty) or 0
-		if id and q > 0 then
-			entry.reagentPlan[#entry.reagentPlan + 1] = {
-				itemID = id,
-				quantityRequired = q,
-			}
-		end
-	end
-	self:NotifyCraftQueueChanged()
-	return key
-end
-
 local function resolveQueueReagentUnitPrice(self, itemID, slot)
 	local direct = tonumber(slot and slot.priceUnit)
 	if direct and direct > 0 then
@@ -636,135 +525,159 @@ local function resolveQueueReagentUnitPrice(self, itemID, slot)
 	return self:GetMarketEstimateCopper(itemID, tsm.material, tsm.fallback)
 end
 
---- Aggregated totals and reagents for UI / future shopping-list hooks.
-function AuctionHelper:BuildCraftQueueSummary()
-	local rows = self:GetCraftQueueRows()
-	local reagentTotals = {}
-	local totalMat = 0
-	local totalSale = 0
-	local totalProfit = 0
-	local totalCurrentCharacterBuyCost = 0
-	local matKnown = true
-	local saleKnown = true
-	local profitKnown = true
-	local buyCostKnown = true
-	local craftableLines = 0
-	local missingMatLines = 0
-	local currentCharacterKey = self:GetCharacterKey()
+-- Adds `value` to totals[name], or marks the total unknown when the line has no value.
+local function addKnownTotal(totals, name, value)
+	if value then
+		totals[name] = totals[name] + value
+	else
+		totals[name .. "Known"] = false
+	end
+end
 
-	for _, entry in ipairs(rows) do
-		local q = tonumber(entry.quantity) or 0
-		local outQty = math.max(1, tonumber(entry.outputQty) or 1)
-		local snap = entry.snapshot or {}
-		local matPer = tonumber(snap.matCost)
-		local saleNet = tonumber(snap.saleNet)
-		local profit = tonumber(snap.profit)
+local function knownTotal(totals, name)
+	return totals[name .. "Known"] and totals[name] or nil
+end
 
-		if matPer then
-			totalMat = totalMat + matPer * q
-		else
-			matKnown = false
-		end
-		if saleNet then
-			totalSale = totalSale + saleNet * outQty * q
-		else
-			saleKnown = false
-		end
-		if profit then
-			totalProfit = totalProfit + profit * q
-		else
-			profitKnown = false
-		end
+local function addEntryTotals(totals, entry)
+	local quantity = tonumber(entry.quantity) or 0
+	local outputQty = math.max(1, tonumber(entry.outputQty) or 1)
+	local snapshot = entry.snapshot or {}
+	local matCost, saleNet, profit = tonumber(snapshot.matCost), tonumber(snapshot.saleNet), tonumber(snapshot.profit)
+	addKnownTotal(totals, "mat", matCost and matCost * quantity)
+	addKnownTotal(totals, "sale", saleNet and saleNet * outputQty * quantity)
+	addKnownTotal(totals, "profit", profit and profit * quantity)
+	if snapshot.canCraftNow then
+		totals.craftableLines = totals.craftableLines + 1
+	else
+		totals.missingMatLines = totals.missingMatLines + 1
+	end
+end
 
-		if snap.canCraftNow then
-			craftableLines = craftableLines + 1
-		else
-			missingMatLines = missingMatLines + 1
-		end
+local function newReagentLine(self, itemID, currentCharacterKey)
+	return {
+		itemID = itemID,
+		quantity = 0,
+		quantityNeeded = 0,
+		name = self:GetItemDisplayName(itemID),
+		currentCharacterKey = currentCharacterKey,
+		currentCharacterQuantity = self:GetCharacterItemTotal(currentCharacterKey, itemID),
+		currentCharacterAvailable = 0,
+		quantityToBuy = 0,
+		estimatedUnitPrice = nil,
+		estimatedBuyCost = nil,
+		sources = {},
+	}
+end
 
-		for _, slot in ipairs(entry.reagentPlan or {}) do
-			local id = tonumber(slot.itemID)
-			local need = (tonumber(slot.quantityRequired) or 0) * q
-			if id and need > 0 then
-				local row = reagentTotals[id]
-				if not row then
-					row = {
-						itemID = id,
-						quantity = 0,
-						quantityNeeded = 0,
-						name = self:GetItemDisplayName(id),
-						currentCharacterKey = currentCharacterKey,
-						currentCharacterQuantity = getCharacterSnapshotItemTotal(self, currentCharacterKey, id),
-						currentCharacterAvailable = 0,
-						quantityToBuy = 0,
-						estimatedUnitPrice = nil,
-						estimatedBuyCost = nil,
-						sources = {},
-					}
-					reagentTotals[id] = row
-				end
-				row.quantity = row.quantity + need
-				row.quantityNeeded = row.quantityNeeded + need
-				local unitPrice, priceSource = resolveQueueReagentUnitPrice(self, id, slot)
-				unitPrice = tonumber(unitPrice)
-				if unitPrice and unitPrice > 0 and (not row.estimatedUnitPrice or unitPrice < row.estimatedUnitPrice) then
-					row.estimatedUnitPrice = unitPrice
-					row.estimatedPriceSource = priceSource
-				end
-				row.sources[#row.sources + 1] = {
-					queueKey = entry.queueKey,
-					recipeID = tonumber(entry.recipeID),
-					recipeName = entry.recipeName,
-					outputItemID = tonumber(entry.outputItemID),
-					outputName = entry.outputName,
-					quantity = need,
-					scenario = entry.scenario,
-					characterKey = entry.characterKey,
-					qualityIndex = tonumber(entry.qualityIndex),
-					slotClass = slot.slotClass,
-				}
-			end
+-- Keeps the cheapest unit price any queue line saw for this reagent.
+local function noteCheapestUnitPrice(self, line, slot)
+	local unitPrice, priceSource = resolveQueueReagentUnitPrice(self, line.itemID, slot)
+	unitPrice = tonumber(unitPrice)
+	if unitPrice and unitPrice > 0 and (not line.estimatedUnitPrice or unitPrice < line.estimatedUnitPrice) then
+		line.estimatedUnitPrice = unitPrice
+		line.estimatedPriceSource = priceSource
+	end
+end
+
+local function reagentSource(entry, slot, need)
+	return {
+		queueKey = entry.queueKey,
+		recipeID = tonumber(entry.recipeID),
+		recipeName = entry.recipeName,
+		outputItemID = tonumber(entry.outputItemID),
+		outputName = entry.outputName,
+		quantity = need,
+		scenario = entry.scenario,
+		characterKey = entry.characterKey,
+		qualityIndex = tonumber(entry.qualityIndex),
+		slotClass = slot.slotClass,
+	}
+end
+
+local function addEntryReagents(self, reagentTotals, entry, currentCharacterKey)
+	local quantity = tonumber(entry.quantity) or 0
+	for _, slot in ipairs(entry.reagentPlan or {}) do
+		local itemID = tonumber(slot.itemID)
+		local need = (tonumber(slot.quantityRequired) or 0) * quantity
+		if itemID and need > 0 then
+			local line = reagentTotals[itemID] or newReagentLine(self, itemID, currentCharacterKey)
+			reagentTotals[itemID] = line
+			line.quantity = line.quantity + need
+			line.quantityNeeded = line.quantityNeeded + need
+			noteCheapestUnitPrice(self, line, slot)
+			line.sources[#line.sources + 1] = reagentSource(entry, slot, need)
 		end
 	end
+end
 
-	local matLines = {}
-	for itemID, line in pairs(reagentTotals) do
-		line.currentCharacterAvailable = math.min(tonumber(line.currentCharacterQuantity) or 0, tonumber(line.quantityNeeded) or 0)
-		line.quantityToBuy = math.max(0, (tonumber(line.quantityNeeded) or 0) - (tonumber(line.currentCharacterQuantity) or 0))
-		line.mailAllocations = self:BuildReagentMailAllocations(itemID, line.sources)
-		line.mailToText = self:FormatMailAllocationsShort(line.mailAllocations)
-		if line.estimatedUnitPrice and line.quantityToBuy > 0 then
-			line.estimatedBuyCost = line.estimatedUnitPrice * line.quantityToBuy
-			totalCurrentCharacterBuyCost = totalCurrentCharacterBuyCost + line.estimatedBuyCost
-		elseif line.quantityToBuy > 0 then
-			buyCostKnown = false
-		end
-		matLines[#matLines + 1] = line
+-- What the current character still has to buy and mail; adds the buy cost to totals.
+local function finishReagentLine(self, line, totals)
+	local have = tonumber(line.currentCharacterQuantity) or 0
+	line.currentCharacterAvailable = math.min(have, line.quantityNeeded)
+	line.quantityToBuy = math.max(0, line.quantityNeeded - have)
+	line.mailAllocations = self:BuildReagentMailAllocations(line.itemID, line.sources)
+	line.mailToText = self:FormatMailAllocationsShort(line.mailAllocations)
+	if line.estimatedUnitPrice and line.quantityToBuy > 0 then
+		line.estimatedBuyCost = line.estimatedUnitPrice * line.quantityToBuy
 	end
-	table.sort(matLines, function(a, b)
+	if line.quantityToBuy > 0 then
+		addKnownTotal(totals, "buyCost", line.estimatedBuyCost)
+	end
+end
+
+local function sortedReagentLines(reagentTotals)
+	local lines = {}
+	for _, line in pairs(reagentTotals) do
+		lines[#lines + 1] = line
+	end
+	table.sort(lines, function(a, b)
 		return tostring(a.name) < tostring(b.name)
 	end)
+	return lines
+end
 
+local function newSummaryTotals()
+	return {
+		mat = 0, matKnown = true,
+		sale = 0, saleKnown = true,
+		profit = 0, profitKnown = true,
+		buyCost = 0, buyCostKnown = true,
+		craftableLines = 0, missingMatLines = 0,
+	}
+end
+
+--- Aggregated totals and reagents for the queue views and the shopping list.
+function AuctionHelper:BuildCraftQueueSummary()
+	local rows = self:GetCraftQueueRows()
+	local currentCharacterKey = self:GetCharacterKey()
+	local totals, reagentTotals = newSummaryTotals(), {}
+	for _, entry in ipairs(rows) do
+		addEntryTotals(totals, entry)
+		addEntryReagents(self, reagentTotals, entry, currentCharacterKey)
+	end
+	for _, line in pairs(reagentTotals) do
+		finishReagentLine(self, line, totals)
+	end
 	return {
 		lineCount = #rows,
 		lines = rows,
 		currentCharacterKey = currentCharacterKey,
-		totalMatCost = matKnown and totalMat or nil,
-		totalMatCostValue = totalMat,
-		totalMatCostKnown = matKnown,
-		totalSaleNet = saleKnown and totalSale or nil,
-		totalSaleNetValue = totalSale,
-		totalSaleNetKnown = saleKnown,
-		totalProfit = profitKnown and totalProfit or nil,
-		totalProfitValue = totalProfit,
-		totalProfitKnown = profitKnown,
-		totalCurrentCharacterBuyCost = buyCostKnown and totalCurrentCharacterBuyCost or nil,
-		totalCurrentCharacterBuyCostValue = totalCurrentCharacterBuyCost,
-		totalCurrentCharacterBuyCostKnown = buyCostKnown,
+		totalMatCost = knownTotal(totals, "mat"),
+		totalMatCostValue = totals.mat,
+		totalMatCostKnown = totals.matKnown,
+		totalSaleNet = knownTotal(totals, "sale"),
+		totalSaleNetValue = totals.sale,
+		totalSaleNetKnown = totals.saleKnown,
+		totalProfit = knownTotal(totals, "profit"),
+		totalProfitValue = totals.profit,
+		totalProfitKnown = totals.profitKnown,
+		totalCurrentCharacterBuyCost = knownTotal(totals, "buyCost"),
+		totalCurrentCharacterBuyCostValue = totals.buyCost,
+		totalCurrentCharacterBuyCostKnown = totals.buyCostKnown,
 		reagentTotals = reagentTotals,
-		reagentLines = matLines,
-		craftableLineCount = craftableLines,
-		missingMaterialsLineCount = missingMatLines,
+		reagentLines = sortedReagentLines(reagentTotals),
+		craftableLineCount = totals.craftableLines,
+		missingMaterialsLineCount = totals.missingMatLines,
 	}
 end
 

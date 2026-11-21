@@ -1809,9 +1809,9 @@ end
 function AuctionHelper:BuildAuctionCraftCartRows()
 	self:ClearSettledAuctionCartPurchaseCredits()
 	local summary = self:BuildCraftQueueSummary()
-	local workSummary = self.BuildCraftingOrderWorkQueueSummary and self:BuildCraftingOrderWorkQueueSummary() or { reagentLines = {} }
+	local orderSummary = self.BuildCraftingOrderQueueSummary and self:BuildCraftingOrderQueueSummary() or { reagentLines = {} }
 	local merged = {}
-	-- Order mats are upserted into craftQueue; skip those orderIDs when merging work-order summary.
+	-- Order mats are upserted into craftQueue; skip those orderIDs when merging the crafting-order queue summary.
 	local mirroredOrderIDs = {}
 	for _, entry in ipairs(self:GetCraftQueueRows()) do
 		local oid = tonumber(entry and entry.orderID)
@@ -1862,7 +1862,7 @@ function AuctionHelper:BuildAuctionCraftCartRows()
 	for _, reagent in ipairs(summary.reagentLines or {}) do
 		mergeReagentLine(reagent, nil)
 	end
-	for _, reagent in ipairs(workSummary.reagentLines or {}) do
+	for _, reagent in ipairs(orderSummary.reagentLines or {}) do
 		local filteredNeed = 0
 		local filteredSources = {}
 		for _, src in ipairs(reagent.sources or {}) do
@@ -1939,7 +1939,7 @@ function AuctionHelper:BuildAuctionCraftCartRows()
 	table.sort(rows, function(a, b)
 		return tostring(a.itemName) < tostring(b.itemName)
 	end)
-	return rows, summary, workSummary
+	return rows, summary, orderSummary
 end
 
 function AuctionHelper:FilterAuctionCraftCartRows(rows)
@@ -2366,8 +2366,8 @@ local function clearCartSources()
 	if AuctionHelper.ClearCraftQueue then
 		AuctionHelper:ClearCraftQueue()
 	end
-	if AuctionHelper.ClearCraftingOrderWorkQueue then
-		AuctionHelper:ClearCraftingOrderWorkQueue()
+	if AuctionHelper.ClearCraftingOrderQueue then
+		AuctionHelper:ClearCraftingOrderQueue()
 	end
 	AuctionHelper:GetState().auctionCartSelectedItemID = nil
 	AuctionHelper:PrintMessage("Cleared shopping-cart sources.")

@@ -55,6 +55,7 @@ Existing debt is frozen in `scripts/lint-baseline.json` (a ratchet). Lint fails 
 | Concept | Use | Not |
 | --- | --- | --- |
 | Queue of crafts to make | craft queue (`CraftQueue`) | work queue, work order queue, shopping queue (the UI label "shopping list" may stay) |
+| Retail crafting orders taken to craft (own store, mirrored into the craft queue as crafting-order lines) | crafting-order queue (`CraftingOrderQueue`) | work queue, work order queue |
 | Reading the whole AH | full scan | dump, replicate, classic_full |
 | Auction house price seen in game | AH price | native, live, current price |
 | Item identity with bonus ids | item key (`itemKey`) | key fields, scan key |

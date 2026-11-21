@@ -131,7 +131,7 @@ local function heldQuantities(pe, plan)
 		held[itemID] = (held[itemID] or 0) + (tonumber(quantity) or 0)
 	end
 	local current = pe:GetCharacterKey()
-	local orders = pe.BuildCraftingOrderWorkQueueSummary and pe:BuildCraftingOrderWorkQueueSummary() or {}
+	local orders = pe.BuildCraftingOrderQueueSummary and pe:BuildCraftingOrderQueueSummary() or {}
 	for _, lines in ipairs({ pe:BuildCraftQueueSummary().reagentLines or {}, orders.reagentLines or {} }) do
 		for _, line in ipairs(lines) do
 			for _, source in ipairs(line.sources or {}) do

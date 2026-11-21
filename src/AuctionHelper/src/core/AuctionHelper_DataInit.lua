@@ -28,6 +28,7 @@ end
 
 -- Storage sub-tables created per SavedVariable (in creation order).
 local BASE_TABLE_KEYS = { "meta", "settings" }
+-- "craftingOrderWorkQueue" is the saved name of the crafting-order queue; renaming it would drop saved orders.
 local PROFESSIONS_TABLE_KEYS = { "characters", "aggregate", "history", "craftQueue", "craftingOrderWorkQueue" }
 local INVENTORY_TABLE_KEYS = { "itemHistory", "walletHistory", "ledger" }
 local AUCTION_TABLE_KEYS = { "auction" }

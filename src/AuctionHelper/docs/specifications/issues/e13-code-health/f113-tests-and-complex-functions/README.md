@@ -11,7 +11,7 @@ Put meaningful offline tests in front of the logic a refactor is most likely to 
   - `Data.lua CollectSpecializationTreeForSkillLine` 64
   - `LiveUpdate.lua ApplyLiveProfessionMergeForSkillLineID` 61 (two algorithms: full merge and incremental merge)
   - `CraftingOrdersMaterials.lua getOrderReagentDescriptor` 59 (the same six lookup paths written out for four fields)
-  - `ProfessionCraftPanel.lua OnProfessionRecipeCraftedResult` 56 (F112 does the queue part)
+  - `ProfessionCraftAction.lua OnProfessionRecipeCraftedResult`: done by F112 (moved and split)
   - `Auction.lua BuildAuctionCraftCartRows` 53, `GetLiveAuctionSearchAggregate` 52 (a commodity loop and an item loop)
   - `CraftingOrdersMaterials.lua CraftingOrderViewRefreshButtons` 53
   - `InventoryUI.lua FilterInventoryRows` 47 (almost pure)

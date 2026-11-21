@@ -342,8 +342,8 @@ function AuctionHelper:CreateCraftsQueueView(parent)
 	view.clearButton:SetPoint("RIGHT")
 	view.clearButton:GetFontString():SetTextColor(pe:GetTheme().danger.r, pe:GetTheme().danger.g, pe:GetTheme().danger.b)
 	view.clearOrdersButton = self:CreateButton(view.footer, "Clear orders", function()
-		if pe.ClearCraftingOrderWorkQueue then
-			pe:ClearCraftingOrderWorkQueue()
+		if pe.ClearCraftingOrderQueue then
+			pe:ClearCraftingOrderQueue()
 		end
 	end)
 	view.clearOrdersButton:SetPoint("RIGHT", view.clearButton, "LEFT", -8, 0)
