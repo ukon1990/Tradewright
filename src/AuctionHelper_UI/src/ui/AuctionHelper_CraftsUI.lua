@@ -644,10 +644,6 @@ function AuctionHelper:ShowCraftRowTooltip(rowFrame, row)
 	self:ShowItemRowTooltip(rowFrame, row.outputItemID, pairs, "Click for details · Shift-click to link")
 end
 
-function AuctionHelper:ScheduleCraftsSearchRefresh()
-	self:RefreshCraftsTab()
-end
-
 function AuctionHelper:BuildCraftsFilterState()
 	local ui = self.ui or {}
 	return {

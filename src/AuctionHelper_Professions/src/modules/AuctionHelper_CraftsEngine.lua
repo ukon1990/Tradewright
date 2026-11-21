@@ -46,20 +46,6 @@ local function trim(s)
 	return (string.gsub(tostring(s), "^%s*(.-)%s*$", "%1"))
 end
 
-function AuctionHelper:GetRetailCurrentExpansionCraftTag()
-	local iface = tonumber((select(4, GetBuildInfo()))) or 0
-	if iface >= 120000 then
-		return "midnight"
-	end
-	if iface >= 110200 then
-		return "tww"
-	end
-	if iface >= 100000 then
-		return "df"
-	end
-	return "legacy"
-end
-
 function AuctionHelper:GetCraftExpansionTag(professionData, recipeData, outputItemID)
 	local desc = outputItemID and self:ResolveItemDescriptor(outputItemID) or nil
 	local expansionID = desc and tonumber(desc.expansionID) or nil
@@ -95,10 +81,6 @@ function AuctionHelper:GetCraftExpansionTag(professionData, recipeData, outputIt
 	end
 
 	return "legacy"
-end
-
-function AuctionHelper:GetCraftExpansionFilterOptions()
-	return self:GetExpansionFilterOptions()
 end
 
 function AuctionHelper:GetCraftsAhCutFraction()
@@ -1027,32 +1009,6 @@ function AuctionHelper:ComputeMatCostForReagentPlan(plan, unitPriceFn, sourceMod
 	end
 	local coverage = coverageDen > 0 and (coverageNum / coverageDen) or 0
 	return total, missingPrice, coverage, fullMarketTotal
-end
-
---- Fragment for material lines in economics tooltips. With owned_first / mixed, lineCost is only AH
---- spend for missing qty; this avoids "x4 @ 45s = 0" looking like a broken calculation.
-function AuctionHelper:FormatReagentSlotEconomicsTooltipSuffix(slot)
-	local unit = slot.priceUnit and self:FormatCopperShort(slot.priceUnit) or "?"
-	local bought = tonumber(slot.purchasedQuantity)
-	local fromInv = tonumber(slot.ownedQuantity)
-	if bought == nil or fromInv == nil then
-		local total = slot.lineCost ~= nil and self:FormatCopperShort(slot.lineCost) or "?"
-		return string.format("@ %s = %s", unit, total)
-	end
-	local buyStr = self:FormatCopperShort(tonumber(slot.lineCost) or 0)
-	if bought <= 0 then
-		return string.format("@ %s = %s (%s from inventory)", unit, buyStr, self:FormatNumberGrouped(fromInv))
-	end
-	if fromInv <= 0 then
-		return string.format("@ %s = %s", unit, buyStr)
-	end
-	return string.format(
-		"@ %s = %s (%s from inventory, %s to buy)",
-		unit,
-		buyStr,
-		self:FormatNumberGrouped(fromInv),
-		self:FormatNumberGrouped(bought)
-	)
 end
 
 function AuctionHelper:ReagentPlanMeetsInventory(plan, getInventoryTotalsFn)

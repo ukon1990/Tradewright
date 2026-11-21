@@ -216,10 +216,6 @@ function AuctionHelper:ClearMailSkipped()
 	self._mailSkipped = nil
 end
 
-function AuctionHelper:GetMailKeepAmount(itemID)
-	return characterStore(self, "keepByCharacter")[tonumber(itemID)]
-end
-
 function AuctionHelper:ClearMailKeepAmounts()
 	wipe(characterStore(self, "keepByCharacter"))
 end

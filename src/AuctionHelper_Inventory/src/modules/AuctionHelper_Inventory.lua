@@ -159,14 +159,8 @@ function AuctionHelper:GetItemCountByLocation(itemID)
 		if okWarband then
 			withWarband = tonumber(warbandResult) or bags
 		end
-		local resolve = self.ForeverLogic and self.ForeverLogic.ResolveLocationCounts
 		local bank, warband
-		if resolve then
-			bags, bank, warband = resolve(bags, withBank, withWarband)
-		else
-			bank = math.max(0, withBank - bags)
-			warband = withWarband and math.max(0, withWarband - bags) or 0
-		end
+		bags, bank, warband = self.ForeverLogic.ResolveLocationCounts(bags, withBank, withWarband)
 		local listed = self:GetOwnedActiveAuctionQuantityForItem(itemID)
 		bags, bank, warband = subtractAuctionListedFromSplit(bags, bank, warband, listed)
 		return bags, bank, warband, bags + bank + warband

@@ -289,42 +289,6 @@ function AuctionHelper:CreateMenuDropdown(parent, config)
 	return holder
 end
 
-function AuctionHelper:CreateCard(parent, width, height, tone)
-	local card = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-	card:SetSize(width or 100, height or 100)
-	self:StylePanel(card, tone or "surface2")
-	return card
-end
-
-function AuctionHelper:CreateSectionTitle(parent, text)
-	local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	label:SetText(text or "")
-	label:SetJustifyH("LEFT")
-	return label
-end
-
-function AuctionHelper:CreateMutedText(parent, width)
-	local label = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	label:SetWidth(width or 200)
-	label:SetJustifyH("LEFT")
-	label:SetWordWrap(true)
-	local muted = self:GetTheme().textMuted
-	label:SetTextColor(muted.r, muted.g, muted.b)
-	return label
-end
-
-function AuctionHelper:CreateStatusBadge(parent, text, colorKey)
-	local badge = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-	badge:SetSize(120, 20)
-	local theme = self:GetTheme()
-	local border = theme[colorKey or "accent"] or theme.accent
-	self:ApplyBackdrop(badge, theme.surface3, border)
-	badge.text = badge:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	badge.text:SetPoint("CENTER")
-	badge.text:SetText(text or "")
-	return badge
-end
-
 local function setColor(fontString, color)
 	fontString:SetTextColor(color.r, color.g, color.b)
 end

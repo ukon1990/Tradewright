@@ -72,10 +72,6 @@ function AuctionHelper:GetItemRoleLabelFromRoles(roleEntry)
 	return "Tracked"
 end
 
-function AuctionHelper:GetItemSourceLabelFromRoles(roleEntry)
-	return self:GetItemRoleLabelFromRoles(roleEntry)
-end
-
 function AuctionHelper:GetItemRoleKeyFromRoles(roleEntry)
 	if not roleEntry then
 		return "tracked"
@@ -139,19 +135,6 @@ function AuctionHelper:BuildInventoryRowsForCharacter(db, characterKey)
 		local id = tonumber(itemKey)
 		if id and (entry.total or 0) > 0 then
 			table.insert(rows, self:BuildInventoryRowFromSnapshot(charData, characterKey, display, entry, id, roleMap))
-		end
-	end
-	return rows
-end
-
---- Account mode: one row per (character, item) with stock.
-function AuctionHelper:BuildInventoryRowsForAccount(db)
-	local rows = {}
-	local keys = self:GetDashboardCharacterKeyList(db)
-	for _, characterKey in ipairs(keys) do
-		local part = self:BuildInventoryRowsForCharacter(db, characterKey)
-		for _, row in ipairs(part) do
-			table.insert(rows, row)
 		end
 	end
 	return rows

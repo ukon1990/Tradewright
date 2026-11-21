@@ -69,31 +69,6 @@ function AuctionHelper:ResolveSpecCatalogForTierSkillLine(tierSkillLineID)
 	return nil
 end
 
-function AuctionHelper:ResolveSpecCatalogForBaseProfession(baseSkillLineID, preferredTierSkillLineID)
-	if preferredTierSkillLineID then
-		local expansionID, profession, catalog = self:ResolveSpecCatalogForTierSkillLine(preferredTierSkillLineID)
-		if catalog then
-			return expansionID, profession, catalog, preferredTierSkillLineID
-		end
-	end
-	baseSkillLineID = tonumber(baseSkillLineID)
-	if not baseSkillLineID then
-		return nil
-	end
-	for profession, lines in pairs(self.TRADE_SKILL_LINE_BY_PROFESSION) do
-		if lines.BASE == baseSkillLineID then
-			for expansionID = 11, 9, -1 do
-				local tierLine = lines[expansionID]
-				local catalog = tierLine and self:GetSpecCatalog(expansionID, profession) or nil
-				if catalog then
-					return expansionID, profession, catalog, tierLine
-				end
-			end
-		end
-	end
-	return nil
-end
-
 local STAT_KEYS = {
 	"skill",
 	"multicraft",

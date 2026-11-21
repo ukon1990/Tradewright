@@ -807,29 +807,6 @@ local function isOrdersPageActive()
 	return ordersPage and ordersPage.IsShown and ordersPage:IsShown()
 end
 
-local function hideLegacyOrderInfoButtons(orderView)
-	local info = orderView and orderView.OrderInfo
-	if not info then
-		return
-	end
-	-- Legacy OrderInfo-hosted controls (pre side-panel). Keep hidden if still present.
-	if info.peAddWorkOrderBtn and info.peAddWorkOrderBtn ~= (AuctionHelper._professionCraftPanel and AuctionHelper._professionCraftPanel.peAddWorkOrderBtn) then
-		info.peAddWorkOrderBtn:Hide()
-	end
-	if info.peRemoveWorkOrderBtn and info.peRemoveWorkOrderBtn ~= (AuctionHelper._professionCraftPanel and AuctionHelper._professionCraftPanel.peRemoveWorkOrderBtn) then
-		info.peRemoveWorkOrderBtn:Hide()
-	end
-	if info.pePrevOrderBtn and info.pePrevOrderBtn ~= (AuctionHelper._professionCraftPanel and AuctionHelper._professionCraftPanel.pePrevOrderBtn) then
-		info.pePrevOrderBtn:Hide()
-	end
-	if info.peNextOrderBtn and info.peNextOrderBtn ~= (AuctionHelper._professionCraftPanel and AuctionHelper._professionCraftPanel.peNextOrderBtn) then
-		info.peNextOrderBtn:Hide()
-	end
-	if info.peQueueStatusText and info.peQueueStatusText ~= (AuctionHelper._professionCraftPanel and AuctionHelper._professionCraftPanel.peQueueStatusText) then
-		info.peQueueStatusText:Hide()
-	end
-end
-
 local function getProfessionSidePanelOrderControls()
 	if not AuctionHelper.EnsureProfessionCraftEconomyPanel then
 		return nil
@@ -863,8 +840,7 @@ local function layoutOrderQueueButtons(panel)
 	end
 end
 
-function AuctionHelper:EnsureCraftingOrderViewActionButtons(orderView)
-	hideLegacyOrderInfoButtons(orderView)
+function AuctionHelper:EnsureCraftingOrderViewActionButtons()
 	local panel = getProfessionSidePanelOrderControls()
 	if not panel then
 		return
@@ -897,7 +873,7 @@ end
 
 function AuctionHelper:CraftingOrderViewRefreshButtons(orderView, order)
 	orderView = orderView or getLiveCraftingOrderView()
-	self:EnsureCraftingOrderViewActionButtons(orderView)
+	self:EnsureCraftingOrderViewActionButtons()
 	local panel = getProfessionSidePanelOrderControls()
 	order = order or (orderView and orderView.order) or nil
 	if not panel or not panel.peAddWorkOrderBtn then
@@ -1074,7 +1050,7 @@ function AuctionHelper:HookLiveCraftingOrderView(orderView)
 		return
 	end
 	orderView.__ahOrderButtonsHooked = true
-	self:EnsureCraftingOrderViewActionButtons(orderView)
+	self:EnsureCraftingOrderViewActionButtons()
 	if type(orderView.SetOrder) == "function" then
 		hooksecurefunc(orderView, "SetOrder", function(view, order)
 			C_Timer.After(0, function()

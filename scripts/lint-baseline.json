@@ -14,13 +14,10 @@
    "W631": 1
   },
   "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": {
-   "W631": 4
-  },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": {
-   "W631": 1
+   "W631": 2
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": {
-   "W631": 2
+   "W631": 1
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_Scan.lua": {
    "W631": 1
@@ -34,20 +31,20 @@
   }
  },
  "files": {
-  "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 2587,
+  "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 2559,
   "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": 778,
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5669,
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5582,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": 781,
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1331,
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1265,
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": 2533,
+  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1209,
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1241,
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": 2489,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_LiveUpdate.lua": 708,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_CraftsUI.lua": 819,
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_CraftsUI.lua": 815,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": 1041,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": 702,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": 929,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_UIShell.lua": 809,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_Widgets.lua": 942
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_Widgets.lua": 906
  },
  "functions": {
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": {
@@ -392,11 +389,6 @@
    }
   },
   "src/AuctionHelper/src/util/AuctionHelper_Util.lua": {
-   "AuctionHelper:EstimateJsonEscapedByteLength": {
-    "ccn": [
-     11
-    ]
-   },
    "AuctionHelper:FindProfessionByIdentifier": {
     "ccn": [
      11
@@ -607,14 +599,6 @@
    "AuctionHelper:GetAuctionRowProtectionState": {
     "ccn": [
      18
-    ]
-   },
-   "AuctionHelper:GetAuctionSellFrameUnitPriceCopper": {
-    "lines": [
-     41
-    ],
-    "ccn": [
-     25
     ]
    },
    "AuctionHelper:GetAuctionSubclassFilterOptions": {
@@ -1006,10 +990,10 @@
    },
    "AuctionHelper:GetItemCountByLocation": {
     "lines": [
-     52
+     46
     ],
     "ccn": [
-     20
+     16
     ]
    },
    "AuctionHelper:GetOwnedActiveAuctionQuantityForItem": {
@@ -1105,14 +1089,6 @@
      15
     ]
    },
-   "AuctionHelper:BuildItemDetailScrollBodyLines": {
-    "lines": [
-     55
-    ],
-    "ccn": [
-     24
-    ]
-   },
    "AuctionHelper:BuildItemEconomySnapshot": {
     "ccn": [
      12
@@ -1181,14 +1157,6 @@
    "AuctionHelper:RecordWalletObservation": {
     "ccn": [
      16
-    ]
-   },
-   "AuctionHelper:ResolveGraphItemIDForCraftRow": {
-    "lines": [
-     60
-    ],
-    "ccn": [
-     32
     ]
    },
    "qtyTooltip": {
@@ -1338,11 +1306,6 @@
    "getRecipeIDFromMenuOwner": {
     "ccn": [
      14
-    ]
-   },
-   "hideLegacyOrderInfoButtons": {
-    "ccn": [
-     18
     ]
    }
   },

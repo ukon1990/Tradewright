@@ -708,34 +708,6 @@ function AuctionHelper:CollectSpecializationTreeForSkillLine(skillLineID)
 	return result
 end
 
---- Backwards-compatible wrapper; prefer CollectSpecializationTreesForProfession during scans.
-function AuctionHelper:CollectSpecializationTree(skillLineID, fallbackSkillLineID)
-	local candidates = {}
-	if tonumber(skillLineID) and self:SkillLineHasSpecializationConfig(skillLineID) then
-		table.insert(candidates, tonumber(skillLineID))
-	end
-	if tonumber(fallbackSkillLineID) and self:SkillLineHasSpecializationConfig(fallbackSkillLineID) then
-		local fallback = tonumber(fallbackSkillLineID)
-		local found = false
-		for _, sid in ipairs(candidates) do
-			if sid == fallback then
-				found = true
-				break
-			end
-		end
-		if not found then
-			table.insert(candidates, fallback)
-		end
-	end
-	for _, sid in ipairs(candidates) do
-		local tree = self:CollectSpecializationTreeForSkillLine(sid)
-		if tree then
-			return tree
-		end
-	end
-	return nil
-end
-
 --- Full specialization dump keyed by expansion variant skill line (tostring(skillLineID)).
 function AuctionHelper:CollectSpecializationTreesForProfession(baseSkillLineID, childInfo, categories, currentLevelName)
 	local candidates = self:ResolveProfessionSpecSkillLineIDs(baseSkillLineID, childInfo, categories)

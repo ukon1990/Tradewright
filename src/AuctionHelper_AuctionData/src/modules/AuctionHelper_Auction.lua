@@ -11,7 +11,6 @@ local CLASSIC_AH_DUMP_PAGE_SIZE = 50
 local CLASSIC_AH_DUMP_QUERY_RETRY_SEC = 0.5
 local CLASSIC_AH_DUMP_QUERY_MAX_RETRIES = 40
 local KNOWN_AH_SIDE_PANELS = {
-	"ProfessionExporterAuctionPanel",
 	"AuctionHelper_AuctionDataAuctionPanel",
 }
 
@@ -383,22 +382,6 @@ function AuctionHelper:MakeAuctionHouseItemKey(itemID, keyFields)
 	return nil
 end
 
-local function copyScanKeyFields(fields)
-	local n = AuctionHelper:NormalizeAuctionItemKeyFields(fields)
-	if not n then
-		return nil
-	end
-	return {
-		itemLevel = n.itemLevel,
-		itemSuffix = n.itemSuffix,
-		battlePetSpeciesID = n.battlePetSpeciesID,
-	}
-end
-
-function AuctionHelper:AuctionScanEntryKey(itemID, keyFields)
-	return self:SerializeAuctionItemKeyFields(itemID, keyFields)
-end
-
 function AuctionHelper:GetAuctionSearchedTargetsState()
 	local state = self:GetState()
 	state.auctionSearchedTargets = state.auctionSearchedTargets or {}
@@ -408,7 +391,7 @@ end
 
 function AuctionHelper:HasAuctionTargetBeenSearchedThisSession(itemID, keyFields)
 	local searched = self:GetAuctionSearchedTargetsState()
-	local key = self:AuctionScanEntryKey(itemID, keyFields)
+	local key = self:SerializeAuctionItemKeyFields(itemID, keyFields)
 	return searched[key] == true
 end
 
@@ -419,11 +402,11 @@ function AuctionHelper:MarkAuctionTargetSearched(itemID, keyFields, source, seen
 	end
 	local searched, meta = self:GetAuctionSearchedTargetsState()
 	local ts = tonumber(seenAt) or now()
-	local key = self:AuctionScanEntryKey(itemID, keyFields)
+	local key = self:SerializeAuctionItemKeyFields(itemID, keyFields)
 	searched[key] = true
 	meta[key] = {
 		itemID = itemID,
-		itemKeyFields = copyScanKeyFields(keyFields),
+		itemKeyFields = self:NormalizeAuctionItemKeyFields(keyFields),
 		source = tostring(source or "session"),
 		seenAt = ts,
 	}
@@ -825,7 +808,7 @@ function AuctionHelper:SendAuctionPanelSearchQuery(itemID, scanKeyFields)
 	return ok == true
 end
 
-function AuctionHelper:FinishQueuedAuctionRefreshItem(itemID, _priceStateIgnored)
+function AuctionHelper:FinishQueuedAuctionRefreshItem(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return
@@ -893,7 +876,7 @@ function AuctionHelper:OnAuctionRefreshSearchTimeout(token)
 	self:DebugLog("AH", "search timeout", {
 		string.format("itemID=%s token=%s", tostring(ctx.itemID), tostring(token)),
 	})
-	self:FinishQueuedAuctionRefreshItem(ctx.itemID, nil)
+	self:FinishQueuedAuctionRefreshItem(ctx.itemID)
 end
 
 function AuctionHelper:ContinueQueuedAuctionRefresh()
@@ -960,7 +943,7 @@ function AuctionHelper:ContinueQueuedAuctionRefresh()
 		state.auctionSearchToken = token
 		state.auctionSearchContext = {
 			itemID = itemID,
-			scanKeyFields = copyScanKeyFields(scanKeyFields),
+			scanKeyFields = self:NormalizeAuctionItemKeyFields(scanKeyFields),
 			token = token,
 			startedAt = GetTime and GetTime() or 0,
 		}
@@ -969,7 +952,7 @@ function AuctionHelper:ContinueQueuedAuctionRefresh()
 		end)
 		return
 	end
-	self:FinishQueuedAuctionRefreshItem(itemID, nil)
+	self:FinishQueuedAuctionRefreshItem(itemID)
 end
 
 function AuctionHelper:BuildAuctionBulkRows(mode)
@@ -1528,11 +1511,6 @@ function AuctionHelper:MarkAuctionQueueScanCompleted()
 	local auction = self:InitAuctionDB()
 	auction.lastQueueScanAt = ts
 	self:GetState().auctionLastQueueScanCompletedAt = ts
-end
-
-function AuctionHelper:GetLastAuctionQueueScanAt()
-	local auction = self:InitAuctionDB()
-	return tonumber(auction.lastQueueScanAt)
 end
 
 function AuctionHelper:FormatAuctionScanAge(ts)
@@ -3402,48 +3380,6 @@ function AuctionHelper:GetAuctionPostButton()
 	return nil
 end
 
-function AuctionHelper:GetAuctionSellFrameUnitPriceCopper()
-	local ah = _G.AuctionHouseFrame
-	if not ah then
-		return nil
-	end
-	local function readMoney(frame)
-		if not frame then
-			return nil
-		end
-		if MoneyInputFrame_GetCopper then
-			local ok, copper = pcall(MoneyInputFrame_GetCopper, frame)
-			if ok and tonumber(copper) and tonumber(copper) > 0 then
-				return tonumber(copper)
-			end
-		end
-		if frame.GetAmount then
-			local ok, amount = pcall(frame.GetAmount, frame)
-			if ok and tonumber(amount) and tonumber(amount) > 0 then
-				return tonumber(amount)
-			end
-		end
-		return nil
-	end
-	local candidates = {
-		ah.CommoditiesSellFrame and ah.CommoditiesSellFrame.UnitPriceInput and ah.CommoditiesSellFrame.UnitPriceInput.MoneyInputFrame,
-		ah.CommoditiesSellFrame and ah.CommoditiesSellFrame.PriceInput and ah.CommoditiesSellFrame.PriceInput.MoneyInputFrame,
-		ah.ItemSellFrame and ah.ItemSellFrame.UnitPriceInput and ah.ItemSellFrame.UnitPriceInput.MoneyInputFrame,
-		ah.ItemSellFrame and ah.ItemSellFrame.PriceInput and ah.ItemSellFrame.PriceInput.MoneyInputFrame,
-		ah.CommoditiesSellFrame and ah.CommoditiesSellFrame.SaleFrame and ah.CommoditiesSellFrame.SaleFrame.UnitPriceInput and ah.CommoditiesSellFrame.SaleFrame.UnitPriceInput.MoneyInputFrame,
-		ah.CommoditiesSellFrame and ah.CommoditiesSellFrame.SaleFrame and ah.CommoditiesSellFrame.SaleFrame.PriceInput and ah.CommoditiesSellFrame.SaleFrame.PriceInput.MoneyInputFrame,
-		ah.ItemSellFrame and ah.ItemSellFrame.SaleFrame and ah.ItemSellFrame.SaleFrame.UnitPriceInput and ah.ItemSellFrame.SaleFrame.UnitPriceInput.MoneyInputFrame,
-		ah.ItemSellFrame and ah.ItemSellFrame.SaleFrame and ah.ItemSellFrame.SaleFrame.PriceInput and ah.ItemSellFrame.SaleFrame.PriceInput.MoneyInputFrame,
-	}
-	for _, frame in ipairs(candidates) do
-		local value = readMoney(frame)
-		if value and value > 0 then
-			return value
-		end
-	end
-	return nil
-end
-
 function AuctionHelper:GetLiveAuctionResultUnitPrice(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
@@ -4121,28 +4057,6 @@ function AuctionHelper:ResolveReagentUnitPrice(itemID, opts)
 	return nil, "missing", nil
 end
 
-function AuctionHelper:GetLastObservedAuctionPrice(itemID)
-	local summary = self:GetItemEconomySummary(itemID, {})
-	return summary and summary.lastPrice or nil
-end
-
-function AuctionHelper:GetAuctionUnitPriceForCraftCost(itemID)
-	local price, source = self:ResolveReagentUnitPrice(itemID, { allowFallback = true })
-	return price, source
-end
-
-function AuctionHelper:GetAuctionUnitPriceForCraftSale(itemID)
-	local price, source = self:ResolveCurrentAuctionPrice(itemID, { allowFallback = true })
-	if price and price > 0 then
-		return price, source
-	end
-	local avgSell = self:LedgerAverageUnitSellCopper(itemID, nil)
-	if avgSell and avgSell > 0 then
-		return avgSell, "ledger_sell"
-	end
-	return nil, "missing"
-end
-
 function AuctionHelper:EstimateCraftROIForItem(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
@@ -4311,7 +4225,7 @@ function AuctionHelper:RunQueuedAuctionRefresh()
 		elseif type(entry) == "table" and entry.itemID then
 			scanList[#scanList + 1] = {
 				itemID = normalizeItemID(entry.itemID),
-				itemKeyFields = copyScanKeyFields(entry.itemKeyFields),
+				itemKeyFields = self:NormalizeAuctionItemKeyFields(entry.itemKeyFields),
 				queueOrder = tonumber(entry.queueOrder) or 0,
 			}
 		end
@@ -4430,8 +4344,8 @@ function AuctionHelper:BuildVisibleCraftsTabAuctionTargets()
 		if not id then
 			return
 		end
-		local fields = copyScanKeyFields(itemKeyFields)
-		local key = self:AuctionScanEntryKey(id, fields)
+		local fields = self:NormalizeAuctionItemKeyFields(itemKeyFields)
+		local key = self:SerializeAuctionItemKeyFields(id, fields)
 		if seen[key] then
 			return
 		end
@@ -4463,7 +4377,7 @@ function AuctionHelper:QueueVisibleCraftsTabAuctionRefresh(force)
 	end
 	local signatureParts = {}
 	for _, target in ipairs(targets) do
-		signatureParts[#signatureParts + 1] = self:AuctionScanEntryKey(target.itemID, target.itemKeyFields)
+		signatureParts[#signatureParts + 1] = self:SerializeAuctionItemKeyFields(target.itemID, target.itemKeyFields)
 	end
 	local signature = table.concat(signatureParts, ",")
 	if force ~= true and ui.craftsVisibleAuctionTargetsSignature == signature then
@@ -4476,7 +4390,7 @@ function AuctionHelper:QueueVisibleCraftsTabAuctionRefresh(force)
 	local filtered = {}
 	for _, target in ipairs(targets) do
 		local itemID = normalizeItemID(target.itemID)
-		local fields = copyScanKeyFields(target.itemKeyFields)
+		local fields = self:NormalizeAuctionItemKeyFields(target.itemKeyFields)
 		if itemID and (force == true or (not self:HasAuctionTargetBeenSearchedThisSession(itemID, fields) and self:IsItemAuctionScanStale(itemID, freshnessWindowSeconds, currentTs))) then
 			filtered[#filtered + 1] = {
 				itemID = itemID,
@@ -4506,9 +4420,8 @@ function AuctionHelper:QueueAuctionScanTargets(targets, opts)
 	for _, t in ipairs(targets or {}) do
 		local id = normalizeItemID(t and t.itemID)
 		if id then
-			local fields = t.itemKeyFields or t.auctionItemKey
-			fields = copyScanKeyFields(fields)
-			local k = self:AuctionScanEntryKey(id, fields)
+			local fields = self:NormalizeAuctionItemKeyFields(t.itemKeyFields or t.auctionItemKey)
+			local k = self:SerializeAuctionItemKeyFields(id, fields)
 			if opts.skipSessionSearched ~= true or not self:HasAuctionTargetBeenSearchedThisSession(id, fields) then
 				local existing = queued[k]
 				if existing then
@@ -4549,8 +4462,8 @@ function AuctionHelper:BuildPrioritizedAuctionAutoScanTargets(opts)
 		if not itemID then
 			return
 		end
-		local fields = copyScanKeyFields(target.itemKeyFields or target.auctionItemKey)
-		local key = self:AuctionScanEntryKey(itemID, fields)
+		local fields = self:NormalizeAuctionItemKeyFields(target.itemKeyFields or target.auctionItemKey)
+		local key = self:SerializeAuctionItemKeyFields(itemID, fields)
 		if seen[key] then
 			return
 		end
@@ -5530,7 +5443,7 @@ function AuctionHelper:OnCommoditySearchResultsUpdated(itemID)
 	})
 	local ctx = state and state.auctionSearchContext or nil
 	if ctx and self:DoesAuctionSearchEventMatchItem(ctx.itemID, itemID, ctx.scanKeyFields) then
-		self:FinishQueuedAuctionRefreshItem(ctx.itemID, nil)
+		self:FinishQueuedAuctionRefreshItem(ctx.itemID)
 		return
 	end
 	local selectedItemID = normalizeItemID(itemID) or normalizeItemID(state and state.auctionLastSellSelectionItemID)
@@ -5548,7 +5461,7 @@ function AuctionHelper:OnItemSearchResultsUpdated(itemKey)
 	})
 	local ctx = state and state.auctionSearchContext or nil
 	if ctx and self:DoesAuctionSearchEventMatchItem(ctx.itemID, itemKey, ctx.scanKeyFields) then
-		self:FinishQueuedAuctionRefreshItem(ctx.itemID, nil)
+		self:FinishQueuedAuctionRefreshItem(ctx.itemID)
 		return
 	end
 	local selectedItemID = normalizeSearchEventItemID(itemKey) or normalizeItemID(state and state.auctionLastSellSelectionItemID)

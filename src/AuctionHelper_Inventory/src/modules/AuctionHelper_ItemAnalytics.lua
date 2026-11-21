@@ -753,68 +753,6 @@ function AuctionHelper:ItemQuantitySeriesToGraphPoints(series)
 	return out
 end
 
---- Stable item id for itemHistory / quantity graphs when scan output id is wrong (e.g. recipe id stored as output).
-function AuctionHelper:ResolveGraphItemIDForCraftRow(row)
-	if not row then
-		return nil
-	end
-	local id = tonumber(row.outputItemID)
-	local rid = tonumber(row.recipeID)
-	if id and rid and id == rid then
-		id = nil
-	end
-	local function itemIdExists(iid)
-		iid = tonumber(iid)
-		if not iid or iid <= 0 then
-			return false
-		end
-		if self.IS_SUPPORTED and C_Item and C_Item.DoesItemExistByID then
-			return C_Item.DoesItemExistByID(iid) == true
-		end
-		return true
-	end
-	if id and itemIdExists(id) then
-		return id
-	end
-	if rid and C_TradeSkillUI and C_TradeSkillUI.GetRecipeQualityItemIDs then
-		local ok, list = pcall(C_TradeSkillUI.GetRecipeQualityItemIDs, rid)
-		if ok and type(list) == "table" then
-			for _, v in ipairs(list) do
-				local iid = tonumber(v)
-				if iid and itemIdExists(iid) then
-					return iid
-				end
-			end
-		end
-	end
-	self:InitDB()
-	if rid then
-		for _, charData in pairs(self.db.characters or {}) do
-			for _, professionData in pairs(charData.professions or {}) do
-				local recipeData = professionData.recipes and professionData.recipes[tostring(rid)]
-				if recipeData and recipeData.outputs then
-					local outs = recipeData.outputs
-					for _, variant in ipairs(outs.qualityVariants or {}) do
-						local vid = tonumber(variant and variant.itemID)
-						if vid and itemIdExists(vid) then
-							return vid
-						end
-					end
-					local pid = tonumber(self:RecipeOutputsPrimaryItemId(outs))
-					if pid and itemIdExists(pid) then
-						return pid
-					end
-				end
-			end
-		end
-	end
-	local fallback = tonumber(row.outputItemID)
-	if fallback and fallback > 0 then
-		return fallback
-	end
-	return nil
-end
-
 function AuctionHelper:EnsureWalletHistoryStore(characterKey)
 	self:InitDB()
 	characterKey = characterKey and tostring(characterKey) or ""
@@ -1075,66 +1013,6 @@ local function graphTimestampForSeries(at)
 	return date("%Y-%m-%d %H:%M", at)
 end
 
-local function formatCopperFullLocal(pe, copper)
-	return pe:FormatCopperFull(copper)
-end
-
-function AuctionHelper:BuildItemDetailScrollBodyLines(detail)
-	if not detail or type(detail) ~= "table" then
-		return {}
-	end
-	local totals = detail.economy and detail.economy.inventoryTotals or {}
-	local lines = {
-		"|cffffffffOverview|r",
-		string.format(
-			"Inventory total: %s (bags %s / bank %s / warband %s)",
-			AuctionHelper:FormatNumberGrouped(totals.total or 0),
-			AuctionHelper:FormatNumberGrouped(totals.bags or 0),
-			AuctionHelper:FormatNumberGrouped(totals.bank or 0),
-			AuctionHelper:FormatNumberGrouped(totals.warband or 0)
-		),
-		string.format("Average AH observation: %s", formatCopperFullLocal(AuctionHelper, detail.economy and detail.economy.avgObservedPrice)),
-		string.format("Average crafting cost: %s", formatCopperFullLocal(AuctionHelper, detail.crafting and detail.crafting.avgCraftCost)),
-		string.format(
-			"Observed price points: %d  |  crafting points: %d",
-			(detail.economy and detail.economy.count) or 0,
-			(detail.crafting and detail.crafting.count) or 0
-		),
-		" ",
-	}
-	lines[#lines + 1] = "|cffffffffProduces this item|r"
-	local producedBy = detail.crafting and detail.crafting.producedBy or {}
-	if #producedBy == 0 then
-		lines[#lines + 1] = "No scanned recipe outputs for this item yet."
-	else
-		for index = 1, math.min(10, #producedBy) do
-			local entry = producedBy[index]
-			lines[#lines + 1] = string.format("%s | %s | %s", tostring(entry.professionName), tostring(entry.recipeName), tostring(entry.characterLabel))
-		end
-	end
-	lines[#lines + 1] = " "
-	lines[#lines + 1] = "|cffffffffUses this item|r"
-	local usedBy = detail.crafting and detail.crafting.usedBy or {}
-	if #usedBy == 0 then
-		lines[#lines + 1] = "No scanned reagent usage for this item yet."
-	else
-		for index = 1, math.min(10, #usedBy) do
-			local entry = usedBy[index]
-			lines[#lines + 1] = string.format(
-				"%s | %s x%d | %s",
-				tostring(entry.professionName),
-				tostring(entry.recipeName),
-				tonumber(entry.quantityRequired) or 0,
-				tostring(entry.characterLabel)
-			)
-		end
-	end
-	lines[#lines + 1] = " "
-	lines[#lines + 1] =
-		"|cffffcc00Sale-specific ledger stats are not populated yet unless a real source provides them; current history tracks observed AH and crafting values from addon activity.|r"
-	return lines
-end
-
 function AuctionHelper:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, config)
 	config = config or {}
 	if not graphWidget or not graphWidget.SetSeries then
@@ -1195,7 +1073,7 @@ function AuctionHelper:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, confi
 	end
 	local function craftingTooltip(tip, pt)
 		tip:AddLine(graphTimestampForSeries(pt.at), 1, 1, 1)
-		tip:AddLine("|cffffcc00Crafting cost|r  " .. formatCopperFullLocal(AuctionHelper, pt.value), 0.85, 0.92, 1)
+		tip:AddLine("|cffffcc00Crafting cost|r  " .. AuctionHelper:FormatCopperFull(pt.value), 0.85, 0.92, 1)
 		local m = pt.meta or {}
 		if m.flat then
 			tip:AddLine("Current estimate (flat)", 0.72, 0.8, 0.88)
@@ -1207,8 +1085,8 @@ function AuctionHelper:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, confi
 			tip:AddLine(
 				string.format(
 					"Min %s  |  Max %s",
-					formatCopperFullLocal(AuctionHelper, m.min),
-					formatCopperFullLocal(AuctionHelper, m.max)
+					AuctionHelper:FormatCopperFull(m.min),
+					AuctionHelper:FormatCopperFull(m.max)
 				),
 				0.72,
 				0.8,
@@ -1218,7 +1096,7 @@ function AuctionHelper:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, confi
 	end
 	local function marketTooltip(tip, pt)
 		tip:AddLine(graphTimestampForSeries(pt.at), 1, 1, 1)
-		tip:AddLine("|cffffffffMarket|r  " .. formatCopperFullLocal(AuctionHelper, pt.value), 0.85, 0.92, 1)
+		tip:AddLine("|cffffffffMarket|r  " .. AuctionHelper:FormatCopperFull(pt.value), 0.85, 0.92, 1)
 		local m = pt.meta or {}
 		if m.source then
 			tip:AddLine(string.format("Source: %s", tostring(m.source)), 0.72, 0.8, 0.88)
@@ -1230,8 +1108,8 @@ function AuctionHelper:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, confi
 			tip:AddLine(
 				string.format(
 					"Min %s  |  Max %s",
-					formatCopperFullLocal(AuctionHelper, m.min),
-					formatCopperFullLocal(AuctionHelper, m.max)
+					AuctionHelper:FormatCopperFull(m.min),
+					AuctionHelper:FormatCopperFull(m.max)
 				),
 				0.72,
 				0.8,

@@ -109,22 +109,6 @@ function AuctionHelper:JsonEscape(text)
 	return text
 end
 
---- Byte length of JsonEscape(s) without building the string (matches :JsonEscape rules).
-function AuctionHelper:EstimateJsonEscapedByteLength(s)
-	if not s or s == "" then
-		return 0
-	end
-	local n = #s
-	local extra = 0
-	for i = 1, n do
-		local b = string.byte(s, i)
-		if b == 92 or b == 34 or b == 8 or b == 9 or b == 10 or b == 12 or b == 13 then
-			extra = extra + 1
-		end
-	end
-	return n + extra
-end
-
 --- Byte length of BuildCopyBoxPagedWrapperJson(pageIndex, pageCount, payloadFragment).
 function AuctionHelper:EstimateCopyBoxWrappedPagingByteLength(pageIndex, pageCount, payloadFragment)
 	local head = string.format("AHPAGE:%d/%d\n", pageIndex, pageCount)
@@ -676,16 +660,4 @@ function AuctionHelper:StartStateWatcher(key, intervalSec, snapshotFn, onChanged
 	watcher.ticker = C_Timer.NewTicker(math.max(0.05, tonumber(intervalSec) or 0.2), tick)
 	tick()
 	return watcher
-end
-
-function AuctionHelper:StopStateWatcher(key)
-	local watchers = self._stateWatchers
-	if not watchers then
-		return
-	end
-	local watcher = watchers[key]
-	if watcher and watcher.ticker then
-		watcher.ticker:Cancel()
-	end
-	watchers[key] = nil
 end
