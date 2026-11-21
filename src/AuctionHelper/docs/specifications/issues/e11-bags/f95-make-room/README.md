@@ -12,7 +12,7 @@ Two ways out of full bags. A "Make room" button in the bag window deletes the st
 
 ## Scope
 
-- `BagLogic.CheapestToDrop(items, auctionPriceOf)`: the junk stack a vendor pays least for; with no junk, the cheapest other stack valued at the higher of vendor and auction price. Never offered: locked stacks, quest items, bags, rare or better, and items without a vendor price (keys, hearthstone)
+- `BagLogic.CheapestToDrop(items, auctionPriceOf)`: the junk stack a vendor pays least for; with no junk, the cheapest other stack valued at the higher of vendor and auction price. Never offered: locked stacks, quest items, bags, rare or better, items without a vendor price (keys, hearthstone), and the last profession tool of each kind (skinning knife, mining pick, fishing pole, …; a spare copy may go)
 - `BagLogic.BestLootSwap(loot, drop)`: the most valuable loot that is worth more than the stack to delete
 - `AuctionHelper_BagDrop.lua`: the Make room button, shown in the footer when no normal slot is free. The tooltip names the stack and its value. Junk is deleted on the first click; any other stack needs a second click on the same stack within 5 seconds
 - `AuctionHelper_BagLootSwap.lua`: after "Inventory is full" while the loot window is open, a small prompt under the loot window: "Delete X (value) to loot Y (value)?" with Swap. Swap deletes the stack, then loots the item once the slot is free. Works whether or not the bag window is the one in use
@@ -24,7 +24,7 @@ Two ways out of full bags. A "Make room" button in the bag window deletes the st
 - [ ] With a free slot there is no Make room button
 - [ ] With full bags and junk, one click deletes the cheapest junk stack and says so in chat
 - [ ] With full bags and no junk, the first click only announces the stack; the second deletes it
-- [ ] Quest items, bags, rare or better items and items without a vendor price are never deleted
+- [ ] Quest items, bags, rare or better items items without a vendor price and the last profession tool of each kind are never offered
 - [ ] Looting an item worth more than the cheapest stack with full bags shows the prompt; Swap deletes the stack and the item is looted
 - [ ] Loot worth less than the cheapest stack shows no prompt
 - [ ] Nothing is deleted without a click

@@ -19,8 +19,9 @@ BagLogic.CATEGORIES = {
 }
 
 -- The game's item class IDs (Enum.ItemClass).
-local CLASS = { consumable = 0, container = 1, quest = 12 }
+local CLASS = { consumable = 0, container = 1, weapon = 2, quest = 12 }
 local FOOD_SUBCLASS = 5
+local FISHING_POLE_SUBCLASS = 20
 local REAGENT_BAG_SUBCLASS = 11
 -- Weapon, armor and profession gear; gem, reagent and trade goods; item enhancement.
 local CLASS_CATEGORY = {
@@ -208,6 +209,57 @@ end
 
 local MAX_DROP_QUALITY = 2
 
+-- Profession tools a skill or recipe needs in the bags. Tools that do the same job share a kind;
+-- the last one of a kind is never offered for deleting. Fishing poles are found by subclass. The
+-- Gnomish Army Knife keeps its own kind: until it is known to replace every tool, both stay.
+local TOOL_KIND = {
+	[7005] = "skinning", -- Skinning Knife
+	[12709] = "skinning", -- Finkle's Skinner
+	[19901] = "skinning", -- Zulian Slicer
+	[2901] = "mining", -- Mining Pick
+	[5956] = "blacksmithing", -- Blacksmith Hammer
+	[6219] = "engineering", -- Arclight Spanner
+	[10498] = "microAdjustor", -- Gyromatic Micro-Adjustor
+	[40772] = "armyKnife", -- Gnomish Army Knife
+	[4471] = "fire", -- Flint and Tinder
+	[5060] = "lockpicking", -- Thieves' Tools
+	[9149] = "philosophersStone", -- Philosopher's Stone
+	[15846] = "saltShaker", -- Salt Shaker
+	[20815] = "jewelersKit", -- Jeweler's Kit
+	[39505] = "inkingSet", -- Virtuoso Inking Set
+	[6218] = "copperRod", -- Runed Copper Rod
+	[6339] = "silverRod", -- Runed Silver Rod
+	[11130] = "goldenRod", -- Runed Golden Rod
+	[11145] = "truesilverRod", -- Runed Truesilver Rod
+	[16207] = "arcaniteRod", -- Runed Arcanite Rod
+}
+
+--- The kind of profession tool an item is ("skinning", "fishing", ...), or nil for any other item.
+function BagLogic.ToolKind(item)
+	if item.classID == CLASS.weapon and item.subclassID == FISHING_POLE_SUBCLASS then
+		return "fishing"
+	end
+	return TOOL_KIND[item.itemID]
+end
+
+-- How many tools of each kind the bags hold.
+local function toolCounts(items)
+	local counts = {}
+	for _, item in ipairs(items) do
+		local kind = BagLogic.ToolKind(item)
+		if kind then
+			counts[kind] = (counts[kind] or 0) + (item.count or 1)
+		end
+	end
+	return counts
+end
+
+-- Whether deleting the stack would leave no tool of its kind.
+local function isLastTool(item, counts)
+	local kind = BagLogic.ToolKind(item)
+	return kind ~= nil and counts[kind] <= (item.count or 1)
+end
+
 -- Whether an item that is not junk may be offered for deleting: it has a vendor price (so it is
 -- no key, hearthstone or other item without value), is at most uncommon, and is no quest item or bag.
 local function mayDrop(item)
@@ -232,13 +284,14 @@ end
 
 --- The stack to delete when the bags are full: the junk stack a vendor pays least for, or with no
 --- junk the cheapest other stack that may be dropped, valued at the higher of its vendor and
---- auction price (`auctionPriceOf(itemID)` -> copper each, or nil). Locked items are skipped.
+--- auction price (`auctionPriceOf(itemID)` -> copper each, or nil). Locked items are skipped, and
+--- so is the last profession tool of each kind (a spare copy may go).
 --- Returns { item, value, isJunk }, or nil when nothing qualifies.
 function BagLogic.CheapestToDrop(items, auctionPriceOf)
-	local best = {}
+	local best, tools = {}, toolCounts(items)
 	for _, item in ipairs(items) do
 		local kind, value = dropKind(item, auctionPriceOf)
-		if kind then
+		if kind and not isLastTool(item, tools) then
 			best[kind] = cheaper(best[kind], item, value)
 		end
 	end

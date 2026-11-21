@@ -134,6 +134,21 @@ check("Drop: worthless junk goes first", BL.CheapestToDrop({
 }).value == 0)
 check("Drop: empty bags", BL.CheapestToDrop({}) == nil)
 
+-- Profession tools: the last one of a kind is never offered, a spare may go
+local knife = { itemID = 7005, name = "Skinning Knife", quality = 1, classID = 7, sellPrice = 1, count = 1 }
+local pick = { itemID = 2901, name = "Mining Pick", quality = 1, classID = 7, sellPrice = 1, count = 1 }
+local pole = { itemID = 6256, name = "Fishing Pole", quality = 1, classID = 2, subclassID = 20, sellPrice = 1, count = 1 }
+local linen = { itemID = 3, name = "Linen", quality = 1, classID = 7, sellPrice = 5, count = 10 }
+drop = BL.CheapestToDrop({ knife, pick, pole, linen })
+check("Tools: only tools are cheaper, yet the next item is offered", drop and drop.item.name == "Linen", drop and drop.item.name)
+check("Tools: the only tools of each kind are never offered", BL.CheapestToDrop({ knife, pick, pole }) == nil)
+local finkle = { itemID = 12709, name = "Finkle's Skinner", quality = 1, classID = 7, sellPrice = 3, count = 1 }
+drop = BL.CheapestToDrop({ knife, finkle, linen })
+check("Tools: with two skinning tools the cheaper spare may go", drop and drop.item.name == "Skinning Knife", drop and drop.item.name)
+drop = BL.CheapestToDrop({ pole, { itemID = 6365, name = "Strong Fishing Pole", quality = 1, classID = 2, subclassID = 20, sellPrice = 2, count = 1 } })
+check("Tools: fishing poles are found by subclass and count together", drop and drop.item.name == "Fishing Pole", drop and drop.item.name)
+check("Tools: kind of an ordinary item is nil", BL.ToolKind(linen) == nil and BL.ToolKind(pole) == "fishing" and BL.ToolKind(pick) == "mining")
+
 -- Loot worth swapping in
 local lootList = { { slot = 1, name = "Linen", value = 10 }, { slot = 2, name = "Arcanite", value = 5000 }, { slot = 3, name = "Fang", value = 40 } }
 check("Loot swap: most valuable loot above the dropped stack", BL.BestLootSwap(lootList, { value = 30 }).slot == 2)
