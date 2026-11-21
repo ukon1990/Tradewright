@@ -66,7 +66,7 @@ end
 --- Click on an item row `{ itemID, storageKey }`: details window, auction house buy page or Market.
 --- `buyable` rows go to the auction house on right-click while it is open. Shared with other item lists.
 function AuctionHelper:HandleDealRowClick(row, button, buyable)
-	local target = self.ForeverLogic.ResolveDealRowClick(button, canBuyNow(self, buyable))
+	local target = self.MarketLogic.ResolveDealRowClick(button, canBuyNow(self, buyable))
 	if target == "details" then
 		self:ShowItemDetailsWindow(row.itemID, row.storageKey)
 	elseif target == "auction" then
@@ -336,7 +336,7 @@ end
 function GoldDashboardMixin:RefreshCrafts()
 	local pe = self.pe
 	local profitable = profitableCraftRows(pe:BuildCraftOpportunityRows() or {})
-	local top = pe.ForeverLogic.TopN(profitable, TOP_ROWS, "profit")
+	local top = pe.MarketLogic.TopN(profitable, TOP_ROWS, "profit")
 	self:SetCraftsEmptyText(#top == 0)
 	self.crafts.table:SetRows(top)
 	self.crafts.table:Refresh()
@@ -393,7 +393,7 @@ function GoldDashboardMixin:RefreshSell(insights)
 	if anyHistory then
 		rows = aboveUsualPrice(rows)
 	end
-	self.sell.table:SetRows(pe.ForeverLogic.TopN(rows, TOP_ROWS, "value"))
+	self.sell.table:SetRows(pe.MarketLogic.TopN(rows, TOP_ROWS, "value"))
 	self.sell.table:Refresh()
 	self.stats.stockValue:SetValues("Stock value", insights and pe:FormatCopperShort(stockValue) or "…",
 		string.format("%s item types priced", pe:FormatNumberGrouped(priced)))

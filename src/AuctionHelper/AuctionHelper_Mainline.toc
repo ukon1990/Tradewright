@@ -23,7 +23,6 @@ src\util\AuctionHelper_WeekdayPattern.lua
 src\util\AuctionHelper_TooltipLogic.lua
 src\util\AuctionHelper_FilterLogic.lua
 src\util\AuctionHelper_ChartLogic.lua
-src\util\AuctionHelper_ForeverLogicAliases.lua
 src\core\AuctionHelper_Data.lua
 src\core\AuctionHelper_ProfessionSpecTree.lua
 src\core\AuctionHelper_ProfessionScan.lua

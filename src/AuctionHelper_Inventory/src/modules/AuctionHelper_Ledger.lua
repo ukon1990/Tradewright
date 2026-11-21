@@ -144,9 +144,9 @@ function AuctionHelper:GetLedgerEvents()
 	return L.events
 end
 
---- Sales statistics for the last `days` days (nil for all time); see ForeverLogic.SummarizeSales.
+--- Sales statistics for the last `days` days (nil for all time); see IncomeLogic.SummarizeSales.
 function AuctionHelper:GetSalesSummary(days)
-	return self.ForeverLogic.SummarizeSales(self:GetLedgerEvents(), time(), days)
+	return self.IncomeLogic.SummarizeSales(self:GetLedgerEvents(), time(), days)
 end
 
 local function iterEvents(L, kind, itemID, characterKey)

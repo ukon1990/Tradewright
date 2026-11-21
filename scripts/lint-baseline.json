@@ -1037,14 +1037,6 @@
      12
     ]
    },
-   "AuctionHelper:EnrichInventoryRowAnalytics": {
-    "ccn": [
-     19
-    ],
-    "params": [
-     8
-    ]
-   },
    "AuctionHelper:GetItemRecipeRelationships": {
     "lines": [
      61

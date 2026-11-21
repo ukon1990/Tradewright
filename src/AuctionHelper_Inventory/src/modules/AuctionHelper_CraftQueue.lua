@@ -441,7 +441,7 @@ function AuctionHelper:BuildReagentMailAllocations(itemID, sources)
 	return allocations
 end
 
---- Per-crafter mail plan from the bags and the queue's material needs; see ForeverLogic.BuildMailPlan.
+--- Per-crafter mail plan from the bags and the queue's material needs; see MailLogic.BuildMailPlan.
 --- Rows of { characterKey, mailName, items, totalQuantity, missing, complete }.
 function AuctionHelper:BuildShoppingMailSendPlan()
 	local summary = self:BuildCraftQueueSummary()
@@ -486,7 +486,7 @@ function AuctionHelper:BuildShoppingMailSendPlan()
 			addLine(line, sources)
 		end
 	end
-	return self:SetMailRecipients(self.ForeverLogic.BuildMailPlan(lines, stock))
+	return self:SetMailRecipients(self.MailLogic.BuildMailPlan(lines, stock))
 end
 
 function AuctionHelper:FormatMailAllocationsShort(allocations, maxEntries)

@@ -136,7 +136,7 @@ function AuctionHelper:GetItemCountByLocation(itemID)
 			withWarband = tonumber(warbandResult) or bags
 		end
 		local bank, warband
-		bags, bank, warband = self.ForeverLogic.ResolveLocationCounts(bags, withBank, withWarband)
+		bags, bank, warband = self.MaterialLogic.ResolveLocationCounts(bags, withBank, withWarband)
 		local listed = self:GetOwnedActiveAuctionQuantityForItem(itemID)
 		bags, bank, warband = subtractAuctionListedFromSplit(bags, bank, warband, listed)
 		return bags, bank, warband, bags + bank + warband

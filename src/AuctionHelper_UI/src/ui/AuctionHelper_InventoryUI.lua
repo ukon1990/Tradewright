@@ -425,9 +425,16 @@ function AuctionHelper:BuildInventoryTabRows(characterOptions)
 	local metricRange = self:GetInventoryMetricRange()
 	local rankIndex = self:BuildOutputItemQualityRankIndex(selection)
 	ui.invQualityRankIndex = rankIndex
-	local historyStatsMemo = {}
+	local enrichOpts = {
+		roleMap = mergedRoleMap,
+		selectedCharacters = selection,
+		rangeKey = metricRange,
+		rankIndex = rankIndex,
+		historyStatsMemo = {},
+		perCharacterRoleMaps = perCharRoleMaps,
+	}
 	for _, row in ipairs(rows) do
-		self:EnrichInventoryRowAnalytics(row, nil, mergedRoleMap, selection, metricRange, rankIndex, historyStatsMemo, perCharRoleMaps)
+		self:EnrichInventoryRowAnalytics(row, enrichOpts)
 	end
 	return rows
 end

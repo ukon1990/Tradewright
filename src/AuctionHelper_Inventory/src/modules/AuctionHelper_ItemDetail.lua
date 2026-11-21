@@ -157,28 +157,14 @@ function AuctionHelper:BuildItemDetailSnapshot(itemID, context)
 	}
 end
 
-function AuctionHelper:EnrichInventoryRowAnalytics(row, characterData, roleMap, selectedCharacters, rangeKey, rankIndex, historyStatsMemo, perCharacterRoleMaps)
-	if row.aggregatedInventory then
-		self:ApplyEconomyToAggregatedInventoryRow(row, selectedCharacters, roleMap, perCharacterRoleMaps)
-	else
-		self:ApplyEconomyToInventoryRow(row, characterData, roleMap)
-	end
-	rangeKey = rangeKey or self:GetInventoryMetricRange()
-	if row.marketCopper then
-		self:RecordItemHistoryObservation(row.itemID, "market", row.marketCopper, row.marketSource, time())
-	end
-	if row.matCopperPerUnit then
-		self:RecordItemHistoryObservation(row.itemID, "crafting", row.matCopperPerUnit, "Crafting", time())
-	end
+-- The latest market observation saved for an item, or nil.
+local function latestMarketObservation(db, itemID)
+	local history = db.itemHistory and db.itemHistory[tostring(itemID)]
+	return history and history.market and history.market.latest or nil
+end
 
-	local marketStats = self:GetItemHistoryStatsMemo(row.itemID, "market", rangeKey, historyStatsMemo)
-	local craftStats = self:GetItemHistoryStatsMemo(row.itemID, "crafting", rangeKey, historyStatsMemo)
-	local latestMarket = self.db.itemHistory
-		and self.db.itemHistory[tostring(row.itemID)]
-		and self.db.itemHistory[tostring(row.itemID)].market
-		and self.db.itemHistory[tostring(row.itemID)].market.latest
-		or nil
-
+-- Copies the current, observed and craft-cost prices onto an inventory row.
+local function applyPriceStats(row, marketStats, craftStats, latestMarket)
 	row.currentAhCopper = row.marketCopper
 	row.currentAhAt = latestMarket and latestMarket.at or nil
 	row.currentAhSource = row.marketSource
@@ -186,12 +172,40 @@ function AuctionHelper:EnrichInventoryRowAnalytics(row, characterData, roleMap, 
 	row.avgObservedPrice = marketStats.average
 	row.lastCraftCost = craftStats.latest or row.matCopperPerUnit
 	row.avgCraftCost = craftStats.average or row.matCopperPerUnit
-	row.profitCopperPerUnit = row.currentAhCopper and row.avgCraftCost and (row.currentAhCopper - row.avgCraftCost) or nil
-	row.profitCopperStack = row.profitCopperPerUnit and row.total and (row.profitCopperPerUnit * row.total) or nil
 	row.historyPoints = marketStats.count
 	row.craftingPoints = craftStats.count
-	row.selectedCharacters = selectedCharacters
-	row.rankIndex = self:GetItemDisplayProfessionQualityRank(row.itemID, selectedCharacters, rankIndex)
+end
+
+-- Profit per unit and per stack from the current AH price and the average craft cost.
+local function applyProfit(row)
+	local perUnit = row.currentAhCopper and row.avgCraftCost and (row.currentAhCopper - row.avgCraftCost) or nil
+	row.profitCopperPerUnit = perUnit
+	row.profitCopperStack = perUnit and row.total and (perUnit * row.total) or nil
+end
+
+--- Adds economy, price history and profit fields to an inventory row.
+--- `opts`: characterData, roleMap, selectedCharacters, rangeKey, rankIndex, historyStatsMemo, perCharacterRoleMaps.
+function AuctionHelper:EnrichInventoryRowAnalytics(row, opts)
+	if row.aggregatedInventory then
+		self:ApplyEconomyToAggregatedInventoryRow(row, opts.selectedCharacters, opts.roleMap, opts.perCharacterRoleMaps)
+	else
+		self:ApplyEconomyToInventoryRow(row, opts.characterData, opts.roleMap)
+	end
+	local rangeKey = opts.rangeKey or self:GetInventoryMetricRange()
+	if row.marketCopper then
+		self:RecordItemHistoryObservation(row.itemID, "market", row.marketCopper, row.marketSource, time())
+	end
+	if row.matCopperPerUnit then
+		self:RecordItemHistoryObservation(row.itemID, "crafting", row.matCopperPerUnit, "Crafting", time())
+	end
+
+	local memo = opts.historyStatsMemo
+	local marketStats = self:GetItemHistoryStatsMemo(row.itemID, "market", rangeKey, memo)
+	local craftStats = self:GetItemHistoryStatsMemo(row.itemID, "crafting", rangeKey, memo)
+	applyPriceStats(row, marketStats, craftStats, latestMarketObservation(self.db, row.itemID))
+	applyProfit(row)
+	row.selectedCharacters = opts.selectedCharacters
+	row.rankIndex = self:GetItemDisplayProfessionQualityRank(row.itemID, opts.selectedCharacters, opts.rankIndex)
 end
 
 function AuctionHelper:OpenItemDetails(itemID, context)

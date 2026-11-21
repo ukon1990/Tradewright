@@ -237,7 +237,7 @@ function SalesDashboardMixin:Refresh()
 	local days = pe:StylePeriodButtons(self.periodButtons)
 	-- The ledger lives in the Inventory module; without it the view stays empty.
 	local summary = pe.GetSalesSummary and pe:GetSalesSummary(days > 0 and days or nil)
-		or pe.ForeverLogic.SummarizeSales({}, time(), nil)
+		or pe.IncomeLogic.SummarizeSales({}, time(), nil)
 	self:RefreshTotals(summary)
 	self:RefreshTopItems(summary.items)
 	self.graph:SetAccentColor(pe:GetTheme().accent)

@@ -31,5 +31,5 @@ Reference pattern: OpenXP `ItemUpgrades.lua` AH scan.
 
 ## Inventory / export
 
-- `pcall` warband `C_Item.GetItemCount`; else bags+bank via `ForeverLogic.ResolveLocationCounts`
+- `pcall` warband `C_Item.GetItemCount`; else bags+bank via `MaterialLogic.ResolveLocationCounts`
 - Export: CBOR when `C_EncodingUtil` exists; else `AHLUA1:` plain Lua from `ForeverLogic.BuildPlainLuaExportPayload`

@@ -168,7 +168,7 @@ function AuctionHelper:SaveLiveSearchToScanEntry(itemID, searchAggregate, quiet)
 	local auction = self:InitAuctionDB()
 	local storageKey = self:BuildAuctionStorageKey(itemID, "item", tostring(itemID))
 	local saved = storageKey and auction.snapshot.items[storageKey]
-	if not self.ForeverLogic.LiveSearchDiffers(saved, price, quantity, listings) then
+	if not self.AuctionLogic.LiveSearchDiffers(saved, price, quantity, listings) then
 		saved.t = AuctionHelper:Now()
 		return false
 	end

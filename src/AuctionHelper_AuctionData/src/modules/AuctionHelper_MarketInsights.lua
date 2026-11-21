@@ -1,5 +1,7 @@
 local _, AuctionHelper = ...
 
+local MarketLogic = AuctionHelper.MarketLogic
+
 -- Market insights for the gold dashboard: deals, movers and supply per scanned item.
 -- Built in chunks after each new scan so large snapshots never stall a frame.
 
@@ -57,11 +59,11 @@ end
 
 local function evaluateKey(pe, FL, auction, item, opts, ts, byItemID)
 	local itemID = tonumber(FL.ParseItemIDFromStorageKey(item.storageKey))
-	local snap = FL.NormalizeMarketSnapshotFields(item.entry)
+	local snap = MarketLogic.NormalizeMarketSnapshotFields(item.entry)
 	if not itemID or not snap or not snap.price or snap.price <= 0 then
 		return
 	end
-	local summary = FL.SummarizeHourlyHistory(auction.history and auction.history.hourly and auction.history.hourly[item.storageKey], ts)
+	local summary = MarketLogic.SummarizeHourlyHistory(auction.history and auction.history.hourly and auction.history.hourly[item.storageKey], ts)
 	local previous = byItemID[itemID]
 	-- Several variants (item level, suffix) share an item ID: keep the one with the most history.
 	if previous and (previous.hours or 0) >= summary.hours then
@@ -70,7 +72,7 @@ local function evaluateKey(pe, FL, auction, item, opts, ts, byItemID)
 	local base = resolveBaseline(pe, opts, itemID, item.storageKey, summary)
 	local ref, refSource = base.ref, base.refSource
 	local classified = { hours = summary.hours, avg7d = base.price, qtyNow = summary.qtyNow, qtyAvg7d = summary.qtyAvg7d }
-	local flags = FL.ClassifyMarketItem(snap.price, classified, ref, {
+	local flags = MarketLogic.ClassifyMarketItem(snap.price, classified, ref, {
 		refExternal = refSource ~= "7-day avg",
 		dealThreshold = opts.dealThreshold,
 		moverThreshold = opts.moverThreshold,
@@ -104,8 +106,7 @@ local function evaluateKey(pe, FL, auction, item, opts, ts, byItemID)
 	}
 end
 
-local function finish(pe, byItemID, ts)
-	local FL = pe.ForeverLogic
+local function finish(byItemID, ts)
 	local all, deals, risers, fallers, supply = {}, {}, {}, {}, {}
 	local lastSeen
 	for _, row in pairs(byItemID) do
@@ -130,11 +131,11 @@ local function finish(pe, byItemID, ts)
 		itemCount = #all,
 		lastSeenAt = lastSeen,
 		builtAt = ts,
-		deals = FL.TopN(deals, 50, "gain"),
+		deals = MarketLogic.TopN(deals, 50, "gain"),
 		dealCount = #deals,
-		risers = FL.TopN(risers, 50, "change"),
-		fallers = FL.TopN(fallers, 50, "change", true),
-		supply = FL.TopN(supply, 50, "supplyChange", true),
+		risers = MarketLogic.TopN(risers, 50, "change"),
+		fallers = MarketLogic.TopN(fallers, 50, "change", true),
+		supply = MarketLogic.TopN(supply, 50, "supplyChange", true),
 	}
 end
 
@@ -185,7 +186,7 @@ function AuctionHelper:GetMarketInsights(onDone)
 			C_Timer.After(0, step)
 			return
 		end
-		state.marketInsights = finish(self, byItemID, ts)
+		state.marketInsights = finish(byItemID, ts)
 		state.marketInsightsRevision = revision
 		state.marketInsightsBuilding = nil
 		if onDone then

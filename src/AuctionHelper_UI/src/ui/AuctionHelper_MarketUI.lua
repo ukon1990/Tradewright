@@ -203,8 +203,8 @@ end
 function AuctionHelper:GetMarketHistoryPoints(storageKey)
 	local auction = self:InitAuctionDB()
 	local hourly = auction and auction.history and auction.history.hourly and auction.history.hourly[storageKey]
-	local FL = self.ForeverLogic
-	return FL and FL.BuildMarketHistorySeries and FL.BuildMarketHistorySeries(hourly) or {}
+	local MarketLogic = self.MarketLogic
+	return MarketLogic and MarketLogic.BuildMarketHistorySeries and MarketLogic.BuildMarketHistorySeries(hourly) or {}
 end
 
 local function createHistoryTable(pe, view)
@@ -280,7 +280,7 @@ function AuctionHelper:GetMarketRowForStorageKey(storageKey)
 	if not (commodity or item) then
 		return nil
 	end
-	return self.ForeverLogic.BuildMarketBrowserRows(
+	return self.MarketLogic.BuildMarketBrowserRows(
 		commodity and { [storageKey] = commodity } or {},
 		item and { [storageKey] = item } or {},
 		{ resolveName = function(itemID) return AuctionHelper:GetItemDisplayName(itemID, true) end })[1]
@@ -504,13 +504,13 @@ function AuctionHelper:CollectMarketBrowserRows()
 		return {}
 	end
 	local ui = self.ui or {}
-	local FL = self.ForeverLogic
-	if not FL or not FL.BuildMarketBrowserRows then
+	local MarketLogic = self.MarketLogic
+	if not MarketLogic or not MarketLogic.BuildMarketBrowserRows then
 		return {}
 	end
 	local query = self:Trim(ui.marketSearchBox and ui.marketSearchBox:GetText() or "")
 	local sortKey, sortAsc = self:GetMarketSort()
-	return FL.BuildMarketBrowserRows(auction.snapshot.commodities, auction.snapshot.items, {
+	return MarketLogic.BuildMarketBrowserRows(auction.snapshot.commodities, auction.snapshot.items, {
 		query = query,
 		sortKey = sortKey,
 		sortAsc = sortAsc,
@@ -565,7 +565,7 @@ function AuctionHelper:RefreshMarketFilterControls(panel, filters, allRows)
 end
 
 function AuctionHelper:FilterMarketBrowserRows(allRows, filters)
-	return self.ForeverLogic.FilterMarketRows(allRows, {
+	return self.MarketLogic.FilterMarketRows(allRows, {
 		classes = filters.classes,
 		subclasses = filters.subclasses,
 		qualities = filters.qualities,

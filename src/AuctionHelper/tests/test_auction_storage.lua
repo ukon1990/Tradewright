@@ -32,7 +32,6 @@ end
 load("AuctionHelper/src/core/AuctionHelper.lua")
 load("AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua")
 load("AuctionHelper/src/util/AuctionHelper_MarketLogic.lua")
-load("AuctionHelper/src/util/AuctionHelper_ForeverLogicAliases.lua")
 load("AuctionHelper/src/util/AuctionHelper_CoreHelpers.lua")
 load("AuctionHelper/src/util/AuctionHelper_Util.lua")
 load("AuctionHelper/src/util/AuctionHelper_JsonCodec.lua")
@@ -77,18 +76,18 @@ check("Storage key, commodity", pe:BuildAuctionStorageKey(2592, "commodity") == 
 local shortEntry = { p = 150, q = 10, n = 3, h = 200, t = NOW - 60, s = "classic_full" }
 local longEntry = { marketLow = 150, sampleSize = 10, listingCount = 3, marketHigh = 200, seenAt = NOW - 60, source = "classic_full" }
 for name, entry in pairs({ short = shortEntry, long = longEntry }) do
-	local fields = FL.NormalizeMarketSnapshotFields(entry)
+	local fields = pe.MarketLogic.NormalizeMarketSnapshotFields(entry)
 	check("Normalized " .. name .. " entry", fields and fields.price == 150 and fields.marketHigh == 200 and fields.sampleSize == 10
 		and fields.listingCount == 3 and fields.seenAt == NOW - 60 and fields.source == "classic_full")
 	local snap = pe:NormalizeAuctionSnapshotEntry(entry)
 	check("Snapshot of " .. name .. " entry", snap and snap.marketLow == 150 and snap.minBuyout == 150 and snap.marketHigh == 200
 		and snap.sampleSize == 10 and snap.listingCount == 3 and snap.seenAt == NOW - 60 and snap.source == "classic_full")
 end
-check("Price falls back to minBuyout, then price", FL.NormalizeMarketSnapshotFields({ minBuyout = 7 }).price == 7
-	and FL.NormalizeMarketSnapshotFields({ price = 8 }).price == 8)
-check("Entry without a price normalizes to nil", FL.NormalizeMarketSnapshotFields({ t = NOW }) == nil)
-check("Missing counts normalize to zero", FL.NormalizeMarketSnapshotFields({ p = 5 }).sampleSize == 0
-	and FL.NormalizeMarketSnapshotFields({ p = 5 }).listingCount == 0)
+check("Price falls back to minBuyout, then price", pe.MarketLogic.NormalizeMarketSnapshotFields({ minBuyout = 7 }).price == 7
+	and pe.MarketLogic.NormalizeMarketSnapshotFields({ price = 8 }).price == 8)
+check("Entry without a price normalizes to nil", pe.MarketLogic.NormalizeMarketSnapshotFields({ t = NOW }) == nil)
+check("Missing counts normalize to zero", pe.MarketLogic.NormalizeMarketSnapshotFields({ p = 5 }).sampleSize == 0
+	and pe.MarketLogic.NormalizeMarketSnapshotFields({ p = 5 }).listingCount == 0)
 
 -- Compact rows: the saved snapshot format.
 local compact = pe:BuildCompactAuctionSnapshotEntry(longEntry)

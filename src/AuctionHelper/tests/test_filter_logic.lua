@@ -17,7 +17,6 @@ for _, path in ipairs({
 	"/src/util/AuctionHelper_CoreHelpers.lua",
 	"/src/util/AuctionHelper_ForeverLogic.lua",
 	"/src/util/AuctionHelper_MarketLogic.lua",
-	"/src/util/AuctionHelper_ForeverLogicAliases.lua",
 	"/src/util/AuctionHelper_FilterLogic.lua",
 	"/../AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua",
 	"/../AuctionHelper_Professions/src/modules/AuctionHelper_CraftReagentPlan.lua",
@@ -151,11 +150,11 @@ local function getInfo(itemID)
 	return marketInfo[itemID]
 end
 local function marketRows(filters, lookup)
-	return pe.ForeverLogic.FilterMarketRows(market, filters, lookup == nil and getInfo or lookup)
+	return pe.MarketLogic.FilterMarketRows(market, filters, lookup == nil and getInfo or lookup)
 end
 
-expect("Market: nil filters keep all", pe.ForeverLogic.FilterMarketRows(market, nil, getInfo), "10,11,12,13", "itemID")
-expect("Market: nil rows give none", pe.ForeverLogic.FilterMarketRows(nil, {}, getInfo), "", "itemID")
+expect("Market: nil filters keep all", pe.MarketLogic.FilterMarketRows(market, nil, getInfo), "10,11,12,13", "itemID")
+expect("Market: nil rows give none", pe.MarketLogic.FilterMarketRows(nil, {}, getInfo), "", "itemID")
 expect("Market: min price (missing price is 0)", marketRows({ minPrice = 20 }), "11,12", "itemID")
 expect("Market: max price keeps missing price", marketRows({ maxPrice = "30" }), "10,12,13", "itemID")
 expect("Market: price range", marketRows({ minPrice = 15, maxPrice = 30 }), "10,12", "itemID")

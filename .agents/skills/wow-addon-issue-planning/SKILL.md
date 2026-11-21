@@ -25,12 +25,14 @@ English sections: `Summary`, `Context`, `Scope`, `Acceptance criteria`, `Verific
 
 | Area | Paths |
 | --- | --- |
-| Flags / Forever pure | `src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua`, `src/AuctionHelper/src/core/AuctionHelper.lua` |
-| Export | `src/AuctionHelper/src/core/AuctionHelper_Data.lua` |
+| Flags | `src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua`, `src/AuctionHelper/src/core/AuctionHelper.lua` |
+| Pure helpers | `src/AuctionHelper/src/util/AuctionHelper_*Logic.lua` (Auction, Market, Mail, Income, Filter, Material, …) |
+| Export | `src/AuctionHelper/src/core/AuctionHelper_ExportBuild.lua`, `AuctionHelper_JsonCodec.lua` (util) |
+| SavedVariables / session state | `src/AuctionHelper/src/core/AuctionHelper_Data.lua`, `AuctionHelper_DataInit.lua` |
 | Events | `src/AuctionHelper/src/core/AuctionHelper_Events.lua` |
-| Classic / retail AH | `AuctionHelper_AuctionData/.../AuctionHelper_Auction.lua` |
+| Classic / retail AH | `AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction*.lua` (`FullScan`, `Store`, `LiveSearch`, `Panel*`, `Sell*`, …) |
 | Profession scan | `AuctionHelper_Professions/.../AuctionHelper_Scan.lua`, `LiveUpdate.lua` |
-| Crafts / orders | `CraftsEngine.lua`, `CraftingOrders*.lua` |
+| Crafts / orders | `AuctionHelper_Professions/src/modules/`: `CraftsEngine.lua` (basics), `CraftEvaluation.lua`, `CraftOpportunities.lua`, `Craft*.lua`, `CraftingOrder*.lua` |
 | Inventory | `AuctionHelper_Inventory/.../AuctionHelper_Inventory.lua` |
 | UI | `AuctionHelper_UI/src/ui/*` |
 | Tests | `src/AuctionHelper/tests/` |

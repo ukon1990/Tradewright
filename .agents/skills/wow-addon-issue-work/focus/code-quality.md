@@ -11,7 +11,7 @@ A developer new to a file must be able to read it, understand it and change it s
 - Simplest design that meets acceptance criteria
 - Extract duplication only when the same semantics repeat 2+ times
 - Delete dead code; no speculative frameworks
-- Put Forever-pure helpers in `AuctionHelper_ForeverLogic.lua` so tests can load them without the full UI stack
+- Put pure helpers (no WoW API) in the matching `src/AuctionHelper/src/util/AuctionHelper_*Logic.lua` so tests can load them without the full UI stack: `AuctionLogic` (AH scan, cart, owned auctions), `MarketLogic` (Market tab, history, deals), `MailLogic`, `IncomeLogic`, `FilterLogic` (row filters, paging), `MaterialLogic` (materials, location counts); `ForeverLogic` only for client flags, storage keys and export encoding
 
 ## Enforced limits (`npm run lint`, also part of `npm test`)
 
@@ -35,7 +35,7 @@ Existing debt is frozen in `scripts/lint-baseline.json` (a ratchet). Lint fails 
 
 ## File size & responsibility
 
-- Aim for ≤ 500 lines; 700 is the hard limit. `AuctionHelper_Auction.lua` and `AuctionHelper_Data.lua` are legacy monoliths — put new Forever paths in focused helpers instead of growing them
+- Aim for ≤ 500 lines; 700 is the hard limit. Split a file by topic before it reaches the limit (as `AuctionHelper_Auction*.lua` in `AuctionHelper_AuctionData` are); put new code in the file for its topic
 - Keep Midnight-only early returns at the top of order/mail modules
 
 ## Complexity

@@ -2,6 +2,7 @@
 local _, AuctionHelper = ...
 
 local FL = AuctionHelper.ForeverLogic
+local MarketLogic = AuctionHelper.MarketLogic
 local shared = AuctionHelper.AuctionShared
 local normalizeItemID = shared.normalizeItemID
 local shallowCopy = shared.shallowCopy
@@ -60,7 +61,7 @@ end
 
 --- Long-field view of a saved snapshot row; nil when the row has no price.
 function AuctionHelper:NormalizeAuctionSnapshotEntry(entry)
-	local fields = FL.NormalizeMarketSnapshotFields(entry)
+	local fields = MarketLogic.NormalizeMarketSnapshotFields(entry)
 	if not fields then
 		return nil
 	end
@@ -77,7 +78,7 @@ end
 
 --- The saved snapshot row (`t/p/s` plus `q/n/h` when above zero) for an observation or an older row.
 function AuctionHelper:BuildCompactAuctionSnapshotEntry(observation)
-	local fields = FL.NormalizeMarketSnapshotFields(observation)
+	local fields = MarketLogic.NormalizeMarketSnapshotFields(observation)
 	if not fields then
 		return nil
 	end
@@ -193,7 +194,7 @@ function AuctionHelper:UpdateAuctionHistoryFromObservation(storageKey, entry)
 	if not storageKey or type(entry) ~= "table" then
 		return
 	end
-	local fields = FL.NormalizeMarketSnapshotFields(entry)
+	local fields = MarketLogic.NormalizeMarketSnapshotFields(entry)
 	local seenAt = fields and fields.seenAt or AuctionHelper:Now()
 	local hourBucketTs = math.floor(seenAt / 3600) * 3600
 	local itemHistory = getBucketTable(auction.history.hourly, storageKey)
@@ -267,7 +268,7 @@ function AuctionHelper:TrimAuctionHistory()
 	end
 	local function pruneSnapshotRoot(root)
 		for storageKey, entry in pairs(root or {}) do
-			local fields = FL.NormalizeMarketSnapshotFields(entry)
+			local fields = MarketLogic.NormalizeMarketSnapshotFields(entry)
 			if not fields or not fields.seenAt or fields.seenAt < cutoffTs then
 				root[storageKey] = nil
 			else

@@ -218,7 +218,7 @@ function AuctionHelper:BuildOwnedAuctionRows()
 		end
 	end
 	local cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05
-	local rows, totals = self.ForeverLogic.SummarizeOwnedAuctions(owned, lowest, cut)
+	local rows, totals = self.AuctionLogic.SummarizeOwnedAuctions(owned, lowest, cut)
 	local cancelRequestedAt = self:GetState().auctionCancelRequestedAt or {}
 	for _, row in ipairs(rows) do
 		local desc = self:ResolveItemDescriptor(row.itemID)

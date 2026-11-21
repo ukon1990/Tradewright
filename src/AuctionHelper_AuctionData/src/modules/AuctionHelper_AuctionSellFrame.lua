@@ -52,9 +52,9 @@ function AuctionHelper:TrySendItemToAuctionSellFrame(itemID, bag, slot)
 
 	-- Classic cursor inject. Do not use on true retail when the modern sell frame exists
 	-- (Blizzard sell frame can hard-error on stale cursor placements during auto-refresh).
-	local shouldClassic = self.ForeverLogic
-		and self.ForeverLogic.ShouldUseClassicSellInject
-		and self.ForeverLogic.ShouldUseClassicSellInject(self.IS_FOREVER == true, hasSetPostItem)
+	local shouldClassic = self.AuctionLogic
+		and self.AuctionLogic.ShouldUseClassicSellInject
+		and self.AuctionLogic.ShouldUseClassicSellInject(self.IS_FOREVER == true, hasSetPostItem)
 	if not shouldClassic then
 		ClearCursor()
 		return false

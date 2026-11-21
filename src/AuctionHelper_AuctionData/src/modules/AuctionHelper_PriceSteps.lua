@@ -10,7 +10,7 @@ local DAY = 24 * 3600
 --- Fold one auction row of a full scan into its item's aggregate, and remember its price level.
 --- Called as a plain function: `aggregateRow(aggregate, itemID, count, buyoutPrice)`.
 function AuctionHelper.AggregateAuctionRow(aggregate, itemID, count, buyoutPrice)
-	AuctionHelper.ForeverLogic.AggregateClassicAuctionRow(aggregate, itemID, count, buyoutPrice)
+	AuctionHelper.AuctionLogic.AggregateClassicAuctionRow(aggregate, itemID, count, buyoutPrice)
 	local bucket = itemID and aggregate[itemID]
 	local buyout = tonumber(buyoutPrice)
 	if not bucket or not buyout or buyout <= 0 then

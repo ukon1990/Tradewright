@@ -54,7 +54,7 @@ function AuctionHelper:GetSellerCharacterKey()
 	if self.IS_FOREVER and sellers[realm] == nil then
 		sellers[realm] = self.MailLogic.EarlierForeverSeller(sellers, known)
 	end
-	return self.ForeverLogic.ResolveSellerCharacter(sellers, realm, known)
+	return self.MailLogic.ResolveSellerCharacter(sellers, realm, known)
 end
 
 function AuctionHelper:IsSellerCharacter()
@@ -182,7 +182,7 @@ function AuctionHelper:BuildMailPanelPlan()
 		local held = bags[itemID] and bags[itemID].quantity or 0
 		toSeller[itemID] = held > 0 and math.min(owed, held) or nil
 	end
-	for _, dest in ipairs(self:SetMailRecipients(self.ForeverLogic.BuildReturnToSellerPlan(toSeller, bags, seller))) do
+	for _, dest in ipairs(self:SetMailRecipients(self.MailLogic.BuildReturnToSellerPlan(toSeller, bags, seller))) do
 		plan[#plan + 1] = dest
 	end
 	plan[#plan + 1] = surplusDestination(self, plan, bags, seller)
