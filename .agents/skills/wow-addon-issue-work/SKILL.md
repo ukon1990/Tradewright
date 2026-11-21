@@ -13,7 +13,7 @@ description: Implement an AuctionHelper issue from src/AuctionHelper/docs/specif
 | --- | --- |
 | Orchestrator | Load issue, split work, confirm, integrate |
 | Workers | Implement one slice |
-| Reviewers | Pass/fail using focus files |
+| Reviewers | Pass/fail using focus files, and the human check: could a developer new to this file follow the change and modify it safely? If not, fail |
 
 ## Golden rules
 
