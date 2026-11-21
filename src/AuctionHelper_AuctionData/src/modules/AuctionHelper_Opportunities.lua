@@ -138,7 +138,7 @@ function ProfessionExporter:GetVendorRows(onReady)
 		return insights and {} or nil, insights, TURNED_OFF
 	end
 	local state = self:GetState()
-	local stamp = math.floor(time() / 30)
+	local stamp = math.floor(self:Now() / 30)
 	local revision = tostring(insights.builtAt) .. ":" .. stamp
 	if state.vendorRowsRevision ~= revision then
 		local candidates, funnel = vendorCandidates(self, insights)

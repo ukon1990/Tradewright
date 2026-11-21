@@ -28,6 +28,11 @@ AuctionHelper.DASHBOARD_ACCOUNT_KEY = "__AH_ACCOUNT__"
 AuctionHelper.EXPORT_FORMAT = "AHCBOR1"
 AuctionHelper.frame = AuctionHelper.frame or CreateFrame("Frame")
 
+--- Server time, so timestamps saved by every character and module share one clock.
+function AuctionHelper:Now()
+	return (GetServerTime and GetServerTime()) or time()
+end
+
 function AuctionHelper:PrintMessage(message)
 	DEFAULT_CHAT_FRAME:AddMessage("|cffffd100AuctionHelper|r: " .. tostring(message))
 end

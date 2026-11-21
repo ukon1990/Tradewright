@@ -64,7 +64,7 @@
 | [f104-bulk-actions](issues/e12-bank-and-bulk/f104-bulk-actions/README.md) | Bulk actions: move, sell, destroy | implemented, in-game check pending |
 | [e13-code-health](issues/e13-code-health/README.md) | Code health: maintainable by a human | planned |
 | [f105-conventions](issues/e13-code-health/f105-conventions/README.md) | Conventions: maintainable by a human | done |
-| [f106-audit-bugs](issues/e13-code-health/f106-audit-bugs/README.md) | Bugs found by the audit | planned |
+| [f106-audit-bugs](issues/e13-code-health/f106-audit-bugs/README.md) | Bugs found by the audit | done, in-game check pending |
 | [f107-dead-code](issues/e13-code-health/f107-dead-code/README.md) | Delete dead code | planned |
 | [f108-comment-sweep](issues/e13-code-health/f108-comment-sweep/README.md) | Comment sweep | planned |
 | [f109-shared-helpers](issues/e13-code-health/f109-shared-helpers/README.md) | Shared core helpers for repeated code | planned |

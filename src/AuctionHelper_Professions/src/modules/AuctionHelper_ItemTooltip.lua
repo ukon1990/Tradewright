@@ -39,7 +39,7 @@ local function fillPrice(pe, out, itemID, summary)
 		out.estimate = pe.GetMarketEstimateCopper and pe:GetMarketEstimateCopper(itemID, nil, nil) or nil
 	elseif seenAt then
 		local freshness = (tonumber(pe:GetSetting("auction.priceFreshnessMinutes", 15)) or 15) * 60
-		out.priceAge = time() - seenAt
+		out.priceAge = pe:Now() - seenAt
 		out.priceStale = out.priceAge > math.max(freshness, STALE_FLOOR_SECONDS)
 	end
 end

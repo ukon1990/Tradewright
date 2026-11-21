@@ -54,7 +54,7 @@ local function rememberMerchant(pe)
 		return
 	end
 	local store = sellerStore()
-	for itemID, entry in pairs(VendorLogic.SellerEntries(pe:GetMerchantItems(), playerPlace(), time())) do
+	for itemID, entry in pairs(VendorLogic.SellerEntries(pe:GetMerchantItems(), playerPlace(), pe:Now())) do
 		store[itemID] = store[itemID] or {}
 		store[itemID][name] = entry
 	end

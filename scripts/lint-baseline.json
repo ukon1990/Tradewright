@@ -186,11 +186,8 @@
     ]
    },
    "ProfessionExporter:HandleAuctionSlash": {
-    "lines": [
-     45
-    ],
     "ccn": [
-     23
+     21
     ]
    },
    "ProfessionExporter:HandleSettingsSlash": {

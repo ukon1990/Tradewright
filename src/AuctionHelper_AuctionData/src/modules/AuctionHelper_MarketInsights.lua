@@ -7,7 +7,7 @@ local CHUNK = 150
 local DAY = 24 * 3600
 
 local function now()
-	return (GetServerTime and GetServerTime()) or time()
+	return ProfessionExporter:Now()
 end
 
 function ProfessionExporter:GetGoldDashboardOptions()

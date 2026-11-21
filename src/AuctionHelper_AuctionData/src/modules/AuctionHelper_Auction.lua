@@ -16,7 +16,7 @@ local KNOWN_AH_SIDE_PANELS = {
 }
 
 local function now()
-	return time()
+	return ProfessionExporter:Now()
 end
 
 local function normalizeItemID(item)
@@ -2370,7 +2370,9 @@ function ProfessionExporter:SearchAuctionCartRows(rows)
 end
 
 function ProfessionExporter:TryBuyAuctionCartRow(row)
-	row = type(row) == "table" and row or nil
+	if not self.IS_RETAIL then -- Forever may expose the commodity purchase API, but buying is retail-only.
+		return false
+	end
 	self:PauseAuctionScanForManualBuy("cart_buy")
 	local itemID = normalizeItemID(row and row.itemID or self:GetState().auctionCartSelectedItemID)
 	local quantity = math.max(1, math.floor(tonumber(row and row.quantityToBuy) or 0))
@@ -2393,13 +2395,11 @@ function ProfessionExporter:TryBuyAuctionCartRow(row)
 			self:PrintMessage("Commodity buy API not available on this client.")
 			return false
 		end
-		local ok = pcall(C_AuctionHouse.StartCommoditiesPurchase, itemID, quantity)
-		if not ok then
+		if not pcall(C_AuctionHouse.StartCommoditiesPurchase, itemID, quantity) then
 			self:PrintMessage("Could not start commodity purchase.")
 			return false
 		end
-		local confirmOk = pcall(C_AuctionHouse.ConfirmCommoditiesPurchase, itemID, quantity)
-		if not confirmOk then
+		if not pcall(C_AuctionHouse.ConfirmCommoditiesPurchase, itemID, quantity) then
 			self:PrintMessage("Commodity purchase confirmation failed.")
 			return false
 		end

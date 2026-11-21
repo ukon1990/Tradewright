@@ -2408,23 +2408,17 @@ function ProfessionExporter:HandleAuctionSlash(rest)
 		self:PrintMessage(string.format("Auction module: %s. Inventory rows: %d.", enabled and "enabled" or "disabled", #rows))
 		return
 	end
-	if sub == "enable" then
-		self:SetSetting("auction.enabled", true)
-		self:PrintMessage("Auction module enabled.")
-		return
-	end
-	if sub == "disable" then
-		self:SetSetting("auction.enabled", false)
-		self:PrintMessage("Auction module disabled.")
+	if sub == "enable" or sub == "disable" then
+		self:SetSetting("auction.enabled", sub == "enable")
+		self:PrintMessage("Auction module " .. sub .. "d.")
 		return
 	end
 	if sub == "refresh" then
-		local r = string.lower(arg or "")
-		if r == "crafts" or r == "craft" then
-			if self.QueueCraftEconomyAuctionRefresh then
-				self:QueueCraftEconomyAuctionRefresh({})
-				return
-			end
+		local target = string.lower(arg or "")
+		if (target == "crafts" or target == "craft") and self.QueueCraftEconomyAuctionRefresh then
+			self:QueueCraftEconomyAuctionRefresh({})
+			self:PrintMessage("Queued craft refresh.")
+			return
 		end
 		if self.BuildAuctionVisibleItemIDs and self.QueueVisibleAuctionRefresh then
 			self:QueueVisibleAuctionRefresh(self:BuildAuctionVisibleItemIDs())
@@ -2432,15 +2426,21 @@ function ProfessionExporter:HandleAuctionSlash(rest)
 			return
 		end
 	end
-	if sub == "dump" then
-		if self.StartAuctionDump then
-			local mode = arg ~= "" and arg or "visible"
-			self:StartAuctionDump(mode)
-			self:PrintMessage(string.format("Auction dump completed (mode: %s).", mode))
-			return
-		end
+	if sub == "dump" and self.StartAuctionDump then
+		self:RunAuctionDumpSlash(arg)
+		return
 	end
-	self:PrintMessage("Usage: /auctionhelper auction [status|enable|disable|refresh [crafts]|dump [visible|all]]")
+	self:PrintMessage("Usage: /auctionhelper auction [status|enable|disable|refresh [crafts]|dump [visible|full]]")
+end
+
+--- The dump runs asynchronously and prints its own "complete" line when it ends. When it refuses
+--- to start, StartAuctionDump prints why; an empty dump finishes at once and is not "started".
+function ProfessionExporter:RunAuctionDumpSlash(mode)
+	mode = mode ~= "" and mode or "visible"
+	local dump = self:StartAuctionDump(mode) and self:GetState().auctionDump
+	if dump and dump.running == true then
+		self:PrintMessage(string.format("Auction dump started (mode: %s).", mode))
+	end
 end
 
 local SLASH_HELP_LINES = {
