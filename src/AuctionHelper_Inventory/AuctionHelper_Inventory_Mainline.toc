@@ -21,3 +21,6 @@ src\modules\AuctionHelper_ItemLog.lua
 src\modules\AuctionHelper_Inventory.lua
 src\modules\AuctionHelper_InventoryTable.lua
 src\modules\AuctionHelper_ItemAnalytics.lua
+src\modules\AuctionHelper_ItemDetail.lua
+src\modules\AuctionHelper_QuantityHistory.lua
+src\modules\AuctionHelper_WalletHistory.lua

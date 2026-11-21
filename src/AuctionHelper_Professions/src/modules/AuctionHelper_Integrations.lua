@@ -94,60 +94,59 @@ function AuctionHelper:GetAuctionatorPriceCopper(itemID)
 	return n
 end
 
-function AuctionHelper:GetPreferredAddonPrice(itemID, opts)
+local function nativeAhObservation(self, itemID)
+	if not self.GetNativeAhPrice then
+		return nil
+	end
+	local price, source, seenAt, quantity = self:GetNativeAhPrice(itemID)
+	if price and price > 0 and seenAt then
+		return { price = price, source = source or "native", seenAt = seenAt, quantity = tonumber(quantity) }
+	end
+	return nil
+end
+
+local function snapshotObservation(summary)
+	local price = tonumber(summary.lastPrice)
+	if not price or price <= 0 then
+		return nil
+	end
+	local snap = summary.snapshot
+	local source = (snap and snap.source and tostring(snap.source) ~= "") and tostring(snap.source) or "snapshot"
+	return {
+		price = price, source = source, seenAt = tonumber(summary.lastSeenAt),
+		quantity = tonumber(snap and (snap.sampleSize or snap.quantity)),
+	}
+end
+
+-- The newer of the two; a snapshot without a time only counts when there is no own AH price.
+local function latestObservation(native, snapshot)
+	if not native or not snapshot then
+		return native or snapshot
+	end
+	if snapshot.seenAt and snapshot.seenAt > native.seenAt then
+		return snapshot
+	end
+	return native
+end
+
+--- Latest AH price seen for the item (own AH scan or stored snapshot, whichever is newer):
+--- price, source, seenAt, quantity. opts.requireFresh: nil unless the item's economy summary is fresh.
+function AuctionHelper:GetLatestObservedAhPrice(itemID, opts)
 	opts = type(opts) == "table" and opts or {}
 	itemID = tonumber(itemID)
-	if not itemID then
+	local summary = itemID and self.GetItemEconomySummary and self:GetItemEconomySummary(itemID, {})
+	if not summary or (opts.requireFresh == true and summary.freshnessState ~= "fresh") then
 		return nil, nil, nil, nil
 	end
-
-	if not self.GetItemEconomySummary then
+	local latest = latestObservation(nativeAhObservation(self, itemID), snapshotObservation(summary))
+	if not latest then
 		return nil, nil, nil, nil
 	end
-	local summary = self:GetItemEconomySummary(itemID, {})
-	if not summary then
-		return nil, nil, nil, nil
-	end
-	if opts.requireFresh == true and summary.freshnessState ~= "fresh" then
-		return nil, nil, nil, nil
-	end
-
-	local bestPrice, bestSource, bestSeenAt, bestQuantity = nil, nil, nil, nil
-	local nativePrice, nativeSource, nativeSeenAt, nativeQuantity = nil, nil, nil, nil
-	if self.GetNativeAhPrice then
-		nativePrice, nativeSource, nativeSeenAt, nativeQuantity = self:GetNativeAhPrice(itemID)
-	end
-	if nativePrice and nativePrice > 0 and nativeSeenAt then
-		bestPrice = nativePrice
-		bestSource = nativeSource or "native"
-		bestSeenAt = nativeSeenAt
-		bestQuantity = tonumber(nativeQuantity)
-	end
-
-	local snapPrice = tonumber(summary.lastPrice)
-	local snapSeenAt = tonumber(summary.lastSeenAt)
-	if snapPrice and snapPrice > 0 then
-		local snap = summary.snapshot
-		local snapSource = (snap and snap.source and tostring(snap.source) ~= "") and tostring(snap.source) or "snapshot"
-		local snapQuantity = tonumber(snap and (snap.sampleSize or snap.quantity))
-		if snapSeenAt and ((not bestSeenAt) or snapSeenAt > bestSeenAt) then
-			bestPrice = snapPrice
-			bestSource = snapSource
-			bestSeenAt = snapSeenAt
-			bestQuantity = snapQuantity
-		elseif not bestPrice then
-			bestPrice = snapPrice
-			bestSource = snapSource
-			bestSeenAt = snapSeenAt
-			bestQuantity = snapQuantity
-		end
-	end
-
-	return bestPrice, bestSource, bestSeenAt, bestQuantity
+	return latest.price, latest.source, latest.seenAt, latest.quantity
 end
 
 function AuctionHelper:GetFreshAddonCachedPrice(itemID)
-	return self:GetPreferredAddonPrice(itemID, { requireFresh = true })
+	return self:GetLatestObservedAhPrice(itemID, { requireFresh = true })
 end
 
 --- Market column: primary TSM string, configurable fallback TSM string, else Auctionator.
@@ -156,7 +155,7 @@ function AuctionHelper:GetMarketEstimateCopper(itemID, tsmCustomStr, fallbackTSM
 	if st.economyShowColumns == false then
 		return nil, nil
 	end
-	local cachedPrice, cachedSource = self:GetPreferredAddonPrice(itemID, { requireFresh = false })
+	local cachedPrice, cachedSource = self:GetLatestObservedAhPrice(itemID, { requireFresh = false })
 	if cachedPrice and cachedPrice > 0 then
 		return cachedPrice, "cache:" .. tostring(cachedSource or "addon")
 	end
@@ -264,183 +263,4 @@ function AuctionHelper:FormatSaleRateDisplay(value)
 		return string.format("%.0f%%", n)
 	end
 	return self:FormatCopperShort(n)
-end
-
-function AuctionHelper:EstimateRecipeMatCostCopper(recipeData, getUnitPriceCopper)
-	if not recipeData or type(getUnitPriceCopper) ~= "function" then
-		return nil
-	end
-	local slots = self:RecipeDataSlots(recipeData)
-	if type(slots) ~= "table" then
-		return nil
-	end
-	local total = 0
-	for _, slot in ipairs(slots) do
-		local qty = tonumber(slot.quantityRequired) or 0
-		if qty > 0 and type(slot.reagents) == "table" and #slot.reagents > 0 then
-			local bestId, bestQual = nil, -1
-			for _, reagent in ipairs(slot.reagents) do
-				if reagent.itemID then
-					local q = tonumber(reagent.quality) or 0
-					if q >= bestQual then
-						bestQual = q
-						bestId = reagent.itemID
-					end
-				end
-			end
-			if bestId then
-				local p = getUnitPriceCopper(bestId)
-				if not p then
-					return nil
-				end
-				total = total + qty * p
-			end
-		end
-	end
-	return total
-end
-
-function AuctionHelper:GetRecipeOutputQuantityForCost(recipeData)
-	local outs = recipeData and recipeData.outputs
-	if not outs then
-		return 1
-	end
-	local mn = tonumber(outs.quantityMin)
-	local mx = tonumber(outs.quantityMax)
-	if mn and mn > 0 then
-		return mn
-	end
-	if mx and mx > 0 then
-		return mx
-	end
-	return 1
-end
-
---- Per-unit material cost estimate for a craft output item (copper), using TSM/Auc unit prices for reagents.
-function AuctionHelper:EstimateMatCostPerUnitForItem(characterData, itemID)
-	if not characterData or not itemID then
-		return nil
-	end
-	local st = self.db and self.db.settings or {}
-	if st.economyShowMatCost == false then
-		return nil
-	end
-	local tsm = self:GetTsmPriceStrings()
-	local function unitPrice(rid)
-		local addonPrice = self.GetPreferredAddonPrice and self:GetPreferredAddonPrice(rid, { requireFresh = false }) or nil
-		if addonPrice then
-			return addonPrice
-		end
-		local c = self:GetTSMCustomPriceCopper(tsm.material, rid)
-		if c then
-			return c
-		end
-		c = self:GetTSMCustomPriceCopper(tsm.fallback, rid)
-		if c then
-			return c
-		end
-		c = self:GetTSMCustomPriceCopper(tsm.market, rid)
-		if c then
-			return c
-		end
-		return self:GetAuctionatorPriceCopper(rid)
-	end
-
-	local _, bestCostOrRecipe = self:FindBestRecipeForOutputItem(characterData, itemID, function(recipeData)
-		local matTotal = self:EstimateRecipeMatCostCopper(recipeData, unitPrice)
-		if not matTotal then
-			return math.huge
-		end
-		local outQty = self:GetRecipeOutputQuantityForCost(recipeData)
-		return matTotal / math.max(1, outQty)
-	end)
-	if type(bestCostOrRecipe) == "number" and bestCostOrRecipe < math.huge then
-		return bestCostOrRecipe
-	end
-	return nil
-end
-
---- Lowest per-unit mat cost among selected characters that can craft itemID (learned output on their scan).
---- perCharacterRoleMaps optional: characterKey -> BuildItemRoleMap result (avoids O(rows*chars) full rescans per refresh).
-function AuctionHelper:EstimateBestMatCostPerUnitAmongSelection(db, itemID, characterSelection, perCharacterRoleMaps)
-	if not db or not itemID or type(db.characters) ~= "table" then
-		return nil
-	end
-	local best = nil
-	for characterKey, characterData in pairs(db.characters) do
-		if self:IsFilterSelectionEmpty(characterSelection) or characterSelection[characterKey] == true then
-			local rm = perCharacterRoleMaps and perCharacterRoleMaps[characterKey] or self:BuildItemRoleMap(characterData)
-			local re = rm[itemID]
-			if re and re.output then
-				local c = self:EstimateMatCostPerUnitForItem(characterData, itemID)
-				if c and (not best or c < best) then
-					best = c
-				end
-			end
-		end
-	end
-	return best
-end
-
---- Market/sale rate like ApplyEconomyToInventoryRow; mat cost = best among selected crafters when merged role has output.
-function AuctionHelper:ApplyEconomyToAggregatedInventoryRow(row, characterSelection, mergedRoleMap, perCharacterRoleMaps)
-	self:ApplyEconomyToInventoryRow(row, nil, nil)
-	if not row or not row.itemID then
-		return
-	end
-	local st = self.db and self.db.settings or {}
-	if st.economyShowColumns == false or st.economyShowMatCost == false then
-		return
-	end
-	local re = mergedRoleMap and mergedRoleMap[row.itemID]
-	if re and re.output then
-		row.matCopperPerUnit = self:EstimateBestMatCostPerUnitAmongSelection(self.db, row.itemID, characterSelection, perCharacterRoleMaps)
-		if row.marketCopper and row.matCopperPerUnit then
-			row.marginCopperPerUnit = row.marketCopper - row.matCopperPerUnit
-		end
-	end
-end
-
---- Fills row table with economy fields: marketCopper, marketSource, matCopperPerUnit, marginCopperPerUnit, saleRateDisplay
---- roleMap optional: from BuildItemRoleMap(characterData) to avoid rebuilding per row.
-function AuctionHelper:ApplyEconomyToInventoryRow(row, characterData, roleMap)
-	if not row then
-		return
-	end
-	row.marketCopper = nil
-	row.marketSource = nil
-	row.matCopperPerUnit = nil
-	row.marginCopperPerUnit = nil
-	row.saleRateDisplay = nil
-	row.saleRateValue = nil
-
-	local st = self.db and self.db.settings or {}
-	if st.economyShowColumns == false then
-		return
-	end
-
-	local itemID = row.itemID
-	local tsm = self:GetTsmPriceStrings()
-	local mkt, src = self:GetMarketEstimateCopper(itemID, tsm.market)
-	row.marketCopper = mkt
-	row.marketSource = src
-
-	if st.economyShowSaleRate ~= false and self:IsTSMLoaded() then
-		if tsm.saleRate ~= "" then
-			local v = self:GetTSMCustomPriceCopper(tsm.saleRate, itemID)
-			row.saleRateValue = v
-			row.saleRateDisplay = self:FormatSaleRateDisplay(v)
-		end
-	end
-
-	if st.economyShowMatCost ~= false and characterData then
-		roleMap = roleMap or self:BuildItemRoleMap(characterData)
-		local re = roleMap[itemID]
-		if re and re.output then
-			row.matCopperPerUnit = self:EstimateMatCostPerUnitForItem(characterData, itemID)
-			if row.marketCopper and row.matCopperPerUnit then
-				row.marginCopperPerUnit = row.marketCopper - row.matCopperPerUnit
-			end
-		end
-	end
 end

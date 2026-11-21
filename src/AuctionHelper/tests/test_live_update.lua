@@ -163,6 +163,7 @@ local function newAddon(saved, settings)
 		data.finalizedWith = fp
 	end
 
+	assert(loadfile(addons .. "/AuctionHelper_Professions/src/modules/AuctionHelper_ProfessionFingerprint.lua"))("AuctionHelper", pe)
 	local chunk, err = loadfile(addons .. "/AuctionHelper_Professions/src/modules/AuctionHelper_LiveUpdate.lua")
 	assert(chunk, err)
 	chunk("AuctionHelper", pe)

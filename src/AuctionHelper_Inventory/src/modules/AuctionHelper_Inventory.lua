@@ -197,22 +197,22 @@ end
 
 function AuctionHelper:_InventorySnapshotProcessChunk()
 	local state = self:GetState()
-	local p = state.invSnapshotPending
-	if not p or p.cancelled then
+	local pending = state.invSnapshotPending
+	if not pending or pending.cancelled then
 		return
 	end
 
-	local ids = p.ids
-	local batch = p.batchSize
-	local endIdx = math.min(p.idx + batch - 1, #ids)
+	local ids = pending.ids
+	local batch = pending.batchSize
+	local endIdx = math.min(pending.idx + batch - 1, #ids)
 
-	for i = p.idx, endIdx do
+	for i = pending.idx, endIdx do
 		local itemID = ids[i]
 		local bags, bank, warband, total = self:GetItemCountByLocation(itemID)
 		if total > 0 then
-			p.totalQuantity = p.totalQuantity + total
+			pending.totalQuantity = pending.totalQuantity + total
 		end
-		p.items[tostring(itemID)] = {
+		pending.items[tostring(itemID)] = {
 			bags = bags,
 			bank = bank,
 			warband = warband,
@@ -222,31 +222,31 @@ function AuctionHelper:_InventorySnapshotProcessChunk()
 
 	if endIdx >= #ids then
 		local itemTypesWithStock = 0
-		for _, entry in pairs(p.items) do
+		for _, entry in pairs(pending.items) do
 			if (entry.total or 0) > 0 then
 				itemTypesWithStock = itemTypesWithStock + 1
 			end
 		end
-		p.characterData.inventorySnapshot = {
-			capturedAt = p.capturedAt,
+		pending.characterData.inventorySnapshot = {
+			capturedAt = pending.capturedAt,
 			itemTypesTracked = #ids,
 			itemTypesWithStock = itemTypesWithStock,
-			totalQuantity = p.totalQuantity,
-			items = p.items,
+			totalQuantity = pending.totalQuantity,
+			items = pending.items,
 		}
 		if AuctionHelper.OnInventorySnapshotWritten then
-			AuctionHelper:OnInventorySnapshotWritten(p.characterData)
+			AuctionHelper:OnInventorySnapshotWritten(pending.characterData)
 		end
 		state.invSnapshotPending = nil
 		self:BumpDataRevision()
-		local cb = p.onComplete
+		local cb = pending.onComplete
 		if cb then
 			cb()
 		end
 		return
 	end
 
-	p.idx = endIdx + 1
+	pending.idx = endIdx + 1
 	C_Timer.After(0, function()
 		self:_InventorySnapshotProcessChunk()
 	end)

@@ -89,15 +89,15 @@ function AuctionHelper:GetItemRoleKeyFromRoles(roleEntry)
 	return "tracked"
 end
 
---- @param roleMap table|nil from BuildItemRoleMap(characterData); when nil, built once internally (avoid per-item scans)
---- @param characterDisplay string|nil short label for sidebar
-function AuctionHelper:BuildInventoryRowFromSnapshot(characterData, characterKey, characterDisplay, invEntry, itemID, roleMap)
-	local roles = roleMap or self:BuildItemRoleMap(characterData)
+--- character: { data, key, display (short label for the sidebar), roleMap }. roleMap comes from
+--- BuildItemRoleMap(data); pass it when building many rows, else it is rebuilt per row.
+function AuctionHelper:BuildInventoryRowFromSnapshot(character, invEntry, itemID)
+	local roles = character.roleMap or self:BuildItemRoleMap(character.data)
 	local roleEntry = roles[itemID]
 	local itemDesc = self:ResolveItemDescriptor(itemID)
 	return {
-		characterKey = characterKey,
-		characterDisplay = characterDisplay,
+		characterKey = character.key,
+		characterDisplay = character.display,
 		itemID = itemID,
 		name = (itemDesc and itemDesc.name) or self:GetItemDisplayName(itemID),
 		icon = itemDesc and itemDesc.icon,
@@ -129,12 +129,12 @@ function AuctionHelper:BuildInventoryRowsForCharacter(db, characterKey)
 	local meta = charData.meta or {}
 	local display = (meta.name and meta.realm) and string.format("%s - %s", tostring(meta.name), tostring(meta.realm))
 		or characterKey
-	local roleMap = self:BuildItemRoleMap(charData)
+	local character = { data = charData, key = characterKey, display = display, roleMap = self:BuildItemRoleMap(charData) }
 	local rows = {}
 	for itemKey, entry in pairs(inv.items) do
 		local id = tonumber(itemKey)
 		if id and (entry.total or 0) > 0 then
-			table.insert(rows, self:BuildInventoryRowFromSnapshot(charData, characterKey, display, entry, id, roleMap))
+			table.insert(rows, self:BuildInventoryRowFromSnapshot(character, entry, id))
 		end
 	end
 	return rows

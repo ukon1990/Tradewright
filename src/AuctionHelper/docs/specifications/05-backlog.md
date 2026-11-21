@@ -72,7 +72,7 @@
 | [f111-item-key-normalizers](issues/e13-code-health/f111-item-key-normalizers/README.md) | One item key and snapshot normalizer | done, in-game check pending |
 | [f112-queue-vocabulary](issues/e13-code-health/f112-queue-vocabulary/README.md) | One name for the craft queue | done, in-game check pending |
 | [f113-tests-and-complex-functions](issues/e13-code-health/f113-tests-and-complex-functions/README.md) | Tests for core logic, then break up complex functions | done, in-game check pending |
-| [f114-split-professions-inventory](issues/e13-code-health/f114-split-professions-inventory/README.md) | Split the Professions and Inventory files | planned |
+| [f114-split-professions-inventory](issues/e13-code-health/f114-split-professions-inventory/README.md) | Split the Professions and Inventory files | done, in-game check pending |
 | [f115-split-ui](issues/e13-code-health/f115-split-ui/README.md) | Split the UI files | planned |
 | [f116-split-auction](issues/e13-code-health/f116-split-auction/README.md) | Split Auction.lua | done, in-game check pending |
 | [f117-shared-ui-helpers](issues/e13-code-health/f117-shared-ui-helpers/README.md) | Shared UI helpers | done, in-game check pending |

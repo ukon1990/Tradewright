@@ -31,10 +31,10 @@ local function moneyOrDash(self, copper)
 end
 
 --- formats: { "+%s conc" pattern, "+conc" text, unreachable text } for an unreachable rank.
-local function concentrationStatusText(self, ev, formats)
-    if ev.concentrationNeeded then
-        return string.format(formats[1], self:FormatNumberGrouped(ev.concentrationNeeded))
-    elseif ev.concentrationCost and ev.concentrationCost > 0 then
+local function concentrationStatusText(self, evaluation, formats)
+    if evaluation.concentrationNeeded then
+        return string.format(formats[1], self:FormatNumberGrouped(evaluation.concentrationNeeded))
+    elseif evaluation.concentrationCost and evaluation.concentrationCost > 0 then
         return formats[2]
     end
     return formats[3]
@@ -181,10 +181,11 @@ end
 local function appendComparison(self, lines, row)
     lines[#lines + 1] = " "
     lines[#lines + 1] = "|cffffffffCharacter comparison|r"
-    for ck, ev in pairs(row.perChar or {}) do
+    for characterKey, evaluation in pairs(row.perChar or {}) do
         lines[#lines + 1] = string.format(
             "%s  |  profit %s  |  Q%d  |  cov %.0f%%",
-            craftCharacterName(self, ck), moneyOrDash(self, ev.profit), tonumber(ev.qualityIndex) or 0, (ev.coverage or 0) * 100
+            craftCharacterName(self, characterKey), moneyOrDash(self, evaluation.profit),
+            tonumber(evaluation.qualityIndex) or 0, (evaluation.coverage or 0) * 100
         )
     end
 end

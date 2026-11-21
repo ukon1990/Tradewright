@@ -10,6 +10,7 @@
 Bootstrap.lua
 src\ui\AuctionHelper_Widgets.lua
 src\ui\AuctionHelper_Chart.lua
+src\ui\AuctionHelper_ItemDetailGraph.lua
 src\ui\AuctionHelper_Table.lua
 src\ui\AuctionHelper_Columns.lua
 src\ui\AuctionHelper_DashboardWidgets.lua

@@ -94,6 +94,8 @@ local function newAddon(isRetail)
 		"/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueueOrders.lua",
 		"/AuctionHelper_Professions/src/modules/AuctionHelper_OrderReagents.lua",
 		"/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua",
+		"/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrderMenus.lua",
+		"/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrderView.lua",
 		"/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftAction.lua",
 	}
 	for _, file in ipairs(files) do

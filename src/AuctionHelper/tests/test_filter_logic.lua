@@ -20,7 +20,8 @@ for _, path in ipairs({
 	"/src/util/AuctionHelper_ForeverLogicAliases.lua",
 	"/src/util/AuctionHelper_FilterLogic.lua",
 	"/../AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua",
-	"/../AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua",
+	"/../AuctionHelper_Professions/src/modules/AuctionHelper_CraftReagentPlan.lua",
+	"/../AuctionHelper_Professions/src/modules/AuctionHelper_CraftQueries.lua",
 }) do
 	local chunk, err = loadfile(root .. path)
 	assert(chunk, err)

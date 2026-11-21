@@ -28,10 +28,6 @@
   }
  },
  "files": {
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1198,
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1088,
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": 2366,
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_LiveUpdate.lua": 707,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_CraftsUI.lua": 797,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": 956,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": 929,
@@ -959,9 +955,6 @@
    "AuctionHelper:BuildInventoryRowFromSnapshot": {
     "ccn": [
      17
-    ],
-    "params": [
-     6
     ]
    },
    "AuctionHelper:BuildInventoryRowsAggregatedByItem": {
@@ -1000,32 +993,6 @@
    }
   },
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": {
-   "AuctionHelper:ApplyItemDetailTimeSeriesGraph": {
-    "lines": [
-     194
-    ],
-    "ccn": [
-     27
-    ]
-   },
-   "AuctionHelper:BuildAccountWalletBalanceSeries": {
-    "lines": [
-     44
-    ],
-    "ccn": [
-     17
-    ]
-   },
-   "AuctionHelper:BuildInventoryItemTotals": {
-    "ccn": [
-     15
-    ]
-   },
-   "AuctionHelper:BuildItemEconomySnapshot": {
-    "ccn": [
-     12
-    ]
-   },
    "AuctionHelper:BuildOutputItemQualityRankIndex": {
     "ccn": [
      20
@@ -1039,19 +1006,6 @@
      35
     ]
    },
-   "AuctionHelper:EnrichInventoryRowAnalytics": {
-    "ccn": [
-     19
-    ],
-    "params": [
-     8
-    ]
-   },
-   "AuctionHelper:GetCurrentGoldSummaryForOverview": {
-    "lines": [
-     43
-    ]
-   },
    "AuctionHelper:GetItemCraftQualityRank": {
     "ccn": [
      16
@@ -1062,38 +1016,9 @@
      14
     ]
    },
-   "AuctionHelper:GetItemRecipeRelationships": {
-    "lines": [
-     61
-    ],
-    "ccn": [
-     27
-    ]
-   },
    "AuctionHelper:RecordItemHistoryObservation": {
     "ccn": [
      23
-    ]
-   },
-   "AuctionHelper:RecordItemQuantityObservation": {
-    "lines": [
-     42
-    ],
-    "ccn": [
-     24
-    ],
-    "params": [
-     7
-    ]
-   },
-   "AuctionHelper:RecordWalletObservation": {
-    "ccn": [
-     16
-    ]
-   },
-   "qtyTooltip": {
-    "ccn": [
-     12
     ]
    },
    "sortedBucketList": {
@@ -1104,6 +1029,34 @@
    "summarizeSeries": {
     "ccn": [
      14
+    ]
+   }
+  },
+  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemDetail.lua": {
+   "AuctionHelper:BuildInventoryItemTotals": {
+    "ccn": [
+     15
+    ]
+   },
+   "AuctionHelper:BuildItemEconomySnapshot": {
+    "ccn": [
+     12
+    ]
+   },
+   "AuctionHelper:EnrichInventoryRowAnalytics": {
+    "ccn": [
+     19
+    ],
+    "params": [
+     8
+    ]
+   },
+   "AuctionHelper:GetItemRecipeRelationships": {
+    "lines": [
+     61
+    ],
+    "ccn": [
+     27
     ]
    }
   },
@@ -1131,7 +1084,168 @@
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": {
+  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_QuantityHistory.lua": {
+   "AuctionHelper:RecordItemQuantityObservation": {
+    "lines": [
+     42
+    ],
+    "ccn": [
+     24
+    ]
+   }
+  },
+  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_WalletHistory.lua": {
+   "AuctionHelper:BuildAccountWalletBalanceSeries": {
+    "lines": [
+     44
+    ],
+    "ccn": [
+     17
+    ]
+   },
+   "AuctionHelper:GetCurrentGoldSummaryForOverview": {
+    "lines": [
+     43
+    ]
+   },
+   "AuctionHelper:RecordWalletObservation": {
+    "ccn": [
+     16
+    ]
+   }
+  },
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftCategories.lua": {
+   "AuctionHelper:ResolveCraftCategoryLabel": {
+    "ccn": [
+     11
+    ]
+   },
+   "resolveCategoryLabelFromProfessionCategory": {
+    "lines": [
+     46
+    ]
+   }
+  },
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftOpportunities.lua": {
+   "AuctionHelper:BuildCraftOpportunityRows": {
+    "lines": [
+     45
+    ],
+    "ccn": [
+     15
+    ]
+   },
+   "AuctionHelper:CraftEvalProcessNextChunk": {
+    "lines": [
+     55
+    ],
+    "ccn": [
+     13
+    ]
+   },
+   "applyCraftEvalWorkItem": {
+    "lines": [
+     68
+    ],
+    "ccn": [
+     21
+    ]
+   },
+   "commitCraftOpportunityCache": {
+    "params": [
+     6
+    ]
+   },
+   "finalizeCraftOpportunityRowsFromBuckets": {
+    "lines": [
+     80
+    ],
+    "ccn": [
+     33
+    ]
+   }
+  },
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftQueries.lua": {
+   "AuctionHelper:BuildCraftEconomyItemIDs": {
+    "lines": [
+     58
+    ],
+    "ccn": [
+     30
+    ]
+   }
+  },
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftReagentPlan.lua": {
+   "AuctionHelper:ComputeMatCostForReagentPlan": {
+    "lines": [
+     54
+    ],
+    "ccn": [
+     22
+    ]
+   },
+   "AuctionHelper:PickCheapestReagentsPerSlot": {
+    "lines": [
+     52
+    ],
+    "ccn": [
+     29
+    ]
+   },
+   "AuctionHelper:ProfessionRecipeIsVendorSourced": {
+    "ccn": [
+     13
+    ]
+   },
+   "classifyCraftReagentSlot": {
+    "lines": [
+     41
+    ],
+    "ccn": [
+     22
+    ]
+   },
+   "craftIsEnchantRecipe": {
+    "ccn": [
+     14
+    ]
+   },
+   "extractOutputItemIDFromApiResult": {
+    "ccn": [
+     13
+    ]
+   },
+   "pickCheapestReagentForSlot": {
+    "ccn": [
+     11
+    ]
+   },
+   "resolveCraftOutputItemID": {
+    "ccn": [
+     11
+    ]
+   }
+  },
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftTargetQuality.lua": {
+   "buildBestReagentChoicesPerSlot": {
+    "ccn": [
+     19
+    ]
+   }
+  },
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrderMenus.lua": {
+   "ensureCrafterOrderListContextMenuHook": {
+    "lines": [
+     43
+    ]
+   },
+   "getRecipeIDFromMenuOwner": {
+    "ccn": [
+     14
+    ]
+   }
+  },
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrderView.lua": {
    "AuctionHelper:CraftingOrderViewRefreshButtons": {
     "ccn": [
      14
@@ -1141,7 +1255,9 @@
     "lines": [
      43
     ]
-   },
+   }
+  },
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": {
    "AuctionHelper:RemoveCraftingOrdersByReagentItem": {
     "ccn": [
      11
@@ -1162,22 +1278,12 @@
      15
     ]
    },
-   "ensureCrafterOrderListContextMenuHook": {
-    "lines": [
-     43
-    ]
-   },
    "findSchematicSlotKeyForProvidedReagent": {
     "lines": [
      49
     ],
     "ccn": [
      20
-    ]
-   },
-   "getRecipeIDFromMenuOwner": {
-    "ccn": [
-     14
     ]
    }
   },
@@ -1214,142 +1320,9 @@
      11
     ]
    },
-   "AuctionHelper:BuildCraftEconomyItemIDs": {
-    "lines": [
-     58
-    ],
-    "ccn": [
-     30
-    ]
-   },
-   "AuctionHelper:BuildCraftOpportunityRows": {
-    "lines": [
-     45
-    ],
-    "ccn": [
-     15
-    ]
-   },
-   "AuctionHelper:BuildLiveSelectedReagentPlanForOpenRecipe": {
-    "lines": [
-     45
-    ],
-    "ccn": [
-     22
-    ]
-   },
-   "AuctionHelper:BuildProfessionRecipeQueueContext": {
-    "lines": [
-     100
-    ],
-    "ccn": [
-     26
-    ]
-   },
-   "AuctionHelper:ComputeMatCostForReagentPlan": {
-    "lines": [
-     54
-    ],
-    "ccn": [
-     22
-    ]
-   },
-   "AuctionHelper:CraftEvalProcessNextChunk": {
-    "lines": [
-     55
-    ],
-    "ccn": [
-     13
-    ]
-   },
-   "AuctionHelper:EvaluateSelectedProfessionRecipe": {
-    "lines": [
-     63
-    ],
-    "ccn": [
-     12
-    ]
-   },
    "AuctionHelper:GetCraftExpansionTag": {
     "ccn": [
      26
-    ]
-   },
-   "AuctionHelper:GetLiveOrScannedRecipeDataForOpenProfession": {
-    "ccn": [
-     19
-    ]
-   },
-   "AuctionHelper:GetOpenProfessionRecipeID": {
-    "ccn": [
-     23
-    ]
-   },
-   "AuctionHelper:GetOpenProfessionSchematicForm": {
-    "ccn": [
-     16
-    ]
-   },
-   "AuctionHelper:GetProfessionDescriptorForOpenRecipe": {
-    "ccn": [
-     16
-    ]
-   },
-   "AuctionHelper:PickCheapestReagentsPerSlot": {
-    "lines": [
-     52
-    ],
-    "ccn": [
-     29
-    ]
-   },
-   "AuctionHelper:ProfessionRecipeIsVendorSourced": {
-    "ccn": [
-     13
-    ]
-   },
-   "AuctionHelper:QueueOpenProfessionRecipe": {
-    "lines": [
-     42
-    ],
-    "ccn": [
-     20
-    ]
-   },
-   "AuctionHelper:ResolveCraftCategoryLabel": {
-    "ccn": [
-     11
-    ]
-   },
-   "applyCraftEvalWorkItem": {
-    "lines": [
-     68
-    ],
-    "ccn": [
-     21
-    ]
-   },
-   "buildBestReagentChoicesPerSlot": {
-    "ccn": [
-     19
-    ]
-   },
-   "classifyCraftReagentSlot": {
-    "lines": [
-     41
-    ],
-    "ccn": [
-     22
-    ]
-   },
-   "commitCraftOpportunityCache": {
-    "params": [
-     6
-    ]
-   },
-   "craftIsEnchantRecipe": {
-    "ccn": [
-     14
     ]
    },
    "estimatePlanSkillFromReagentPlan": {
@@ -1357,80 +1330,16 @@
      15
     ]
    },
-   "extractOutputItemIDFromApiResult": {
-    "ccn": [
-     13
-    ]
-   },
-   "finalizeCraftOpportunityRowsFromBuckets": {
-    "lines": [
-     80
-    ],
-    "ccn": [
-     37
-    ]
-   },
-   "pickCheapestReagentForSlot": {
-    "ccn": [
-     11
-    ]
-   },
    "reachableQualityIndex": {
     "ccn": [
      22
     ]
-   },
-   "resolveCategoryLabelFromProfessionCategory": {
-    "lines": [
-     46
-    ]
-   },
-   "resolveCraftOutputItemID": {
-    "ccn": [
-     11
-    ]
    }
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_Integrations.lua": {
-   "AuctionHelper:ApplyEconomyToAggregatedInventoryRow": {
-    "ccn": [
-     12
-    ]
-   },
-   "AuctionHelper:ApplyEconomyToInventoryRow": {
-    "lines": [
-     41
-    ],
-    "ccn": [
-     15
-    ]
-   },
-   "AuctionHelper:EstimateBestMatCostPerUnitAmongSelection": {
-    "ccn": [
-     14
-    ]
-   },
-   "AuctionHelper:EstimateMatCostPerUnitForItem": {
-    "lines": [
-     42
-    ]
-   },
-   "AuctionHelper:EstimateRecipeMatCostCopper": {
-    "ccn": [
-     15
-    ]
-   },
    "AuctionHelper:GetMarketEstimateCopper": {
     "ccn": [
      17
-    ]
-   },
-   "AuctionHelper:GetPreferredAddonPrice": {
-    "lines": [
-     51
-    ],
-    "ccn": [
-     25
     ]
    },
    "AuctionHelper:GetTSMCustomPriceCopper": {
@@ -1458,14 +1367,6 @@
      20
     ]
    },
-   "AuctionHelper:BuildOpenProfessionQuickFingerprint": {
-    "lines": [
-     57
-    ],
-    "ccn": [
-     39
-    ]
-   },
    "AuctionHelper:ScheduleLiveInventoryRefresh": {
     "lines": [
      50
@@ -1474,6 +1375,100 @@
    "AuctionHelper:StartChunkedRecipeMergeJob": {
     "lines": [
      56
+    ]
+   }
+  },
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_MaterialCost.lua": {
+   "AuctionHelper:ApplyEconomyToAggregatedInventoryRow": {
+    "ccn": [
+     12
+    ]
+   },
+   "AuctionHelper:ApplyEconomyToInventoryRow": {
+    "lines": [
+     41
+    ],
+    "ccn": [
+     15
+    ]
+   },
+   "AuctionHelper:EstimateBestMatCostPerUnitAmongSelection": {
+    "ccn": [
+     14
+    ]
+   },
+   "AuctionHelper:EstimateMatCostPerUnitForItem": {
+    "lines": [
+     42
+    ]
+   },
+   "AuctionHelper:EstimateRecipeMatCostCopper": {
+    "ccn": [
+     15
+    ]
+   }
+  },
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_OpenProfessionRecipe.lua": {
+   "AuctionHelper:BuildLiveSelectedReagentPlanForOpenRecipe": {
+    "lines": [
+     45
+    ],
+    "ccn": [
+     22
+    ]
+   },
+   "AuctionHelper:BuildProfessionRecipeQueueContext": {
+    "lines": [
+     100
+    ],
+    "ccn": [
+     26
+    ]
+   },
+   "AuctionHelper:EvaluateSelectedProfessionRecipe": {
+    "lines": [
+     63
+    ],
+    "ccn": [
+     12
+    ]
+   },
+   "AuctionHelper:GetLiveOrScannedRecipeDataForOpenProfession": {
+    "ccn": [
+     19
+    ]
+   },
+   "AuctionHelper:GetOpenProfessionRecipeID": {
+    "ccn": [
+     23
+    ]
+   },
+   "AuctionHelper:GetOpenProfessionSchematicForm": {
+    "ccn": [
+     16
+    ]
+   },
+   "AuctionHelper:GetProfessionDescriptorForOpenRecipe": {
+    "ccn": [
+     16
+    ]
+   },
+   "AuctionHelper:QueueOpenProfessionRecipe": {
+    "lines": [
+     42
+    ],
+    "ccn": [
+     20
+    ]
+   }
+  },
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_ProfessionFingerprint.lua": {
+   "AuctionHelper:BuildOpenProfessionQuickFingerprint": {
+    "lines": [
+     57
+    ],
+    "ccn": [
+     39
     ]
    }
   },
@@ -1721,6 +1716,21 @@
     ],
     "ccn": [
      26
+    ]
+   }
+  },
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_ItemDetailGraph.lua": {
+   "AuctionHelper:ApplyItemDetailTimeSeriesGraph": {
+    "lines": [
+     194
+    ],
+    "ccn": [
+     27
+    ]
+   },
+   "qtyTooltip": {
+    "ccn": [
+     12
     ]
    }
   },

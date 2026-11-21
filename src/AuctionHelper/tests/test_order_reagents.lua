@@ -97,6 +97,8 @@ local function newAddon()
 	local files = {
 		"/AuctionHelper_Professions/src/modules/AuctionHelper_OrderReagents.lua",
 		"/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua",
+		"/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrderMenus.lua",
+		"/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrderView.lua",
 	}
 	for _, file in ipairs(files) do
 		local chunk, err = loadfile(addons .. file)

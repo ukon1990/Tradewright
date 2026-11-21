@@ -304,43 +304,43 @@ function AuctionHelper:AddCraftToQueue(rowOrContext, quantity)
 	local ctx
 	if rowOrContext.perChar and rowOrContext.recipeID and rowOrContext.rowKey then
 		local scenario = self:GetSetting("crafts.scenario", "default")
-		local ck = rowOrContext.bestCharacterKey
-		local ev = ck and rowOrContext.perChar[ck]
-		if not ev then
+		local characterKey = rowOrContext.bestCharacterKey
+		local evaluation = characterKey and rowOrContext.perChar[characterKey]
+		if not evaluation then
 			return nil, "no_eval"
 		end
 		ctx = {
 			recipeID = rowOrContext.recipeID,
-			outputItemID = ev.outputItemID,
-			characterKey = ck,
+			outputItemID = evaluation.outputItemID,
+			characterKey = characterKey,
 			scenario = scenario,
 			recipeName = rowOrContext.recipeName,
 			outputName = rowOrContext.outputName,
 			professionName = rowOrContext.professionName,
 			skillLineID = rowOrContext.skillLineID,
-			eval = ev,
+			eval = evaluation,
 			opportunityRow = rowOrContext,
 			dataSource = "scan_row",
-			confidence = self:ResolveCraftConfidenceState(ev, "scan_row"),
+			confidence = self:ResolveCraftConfidenceState(evaluation, "scan_row"),
 			recommendedCrafterLabel = select(1, self:GetCraftRecommendedCrafter(rowOrContext)),
 		}
 	else
 		local base = rowOrContext
 		local opp = base.opportunityRow
 		local craftChar = opp and opp.bestCharacterKey or base.characterKey
-		local ev = opp and craftChar and opp.perChar[craftChar] or base.eval
-		if not ev then
+		local evaluation = opp and craftChar and opp.perChar[craftChar] or base.eval
+		if not evaluation then
 			return nil, "no_eval"
 		end
 		ctx = {
-			recipeID = base.recipeID or ev.recipeID,
-			outputItemID = ev.outputItemID,
+			recipeID = base.recipeID or evaluation.recipeID,
+			outputItemID = evaluation.outputItemID,
 			characterKey = craftChar or self:GetCharacterKey(),
 			scenario = base.scenario or self:GetSetting("crafts.scenario", "default"),
-			recipeName = ev.recipeName,
-			professionName = ev.professionName,
-			skillLineID = ev.skillLineID,
-			eval = ev,
+			recipeName = evaluation.recipeName,
+			professionName = evaluation.professionName,
+			skillLineID = evaluation.skillLineID,
+			eval = evaluation,
 			opportunityRow = opp,
 			dataSource = base.dataSource,
 			confidence = base.confidence,
@@ -416,10 +416,10 @@ function AuctionHelper:BuildReagentMailAllocations(itemID, sources)
 	local currentCharacterKey = tostring(self:GetCharacterKey())
 	local needByChar = {}
 	for _, src in ipairs(sources) do
-		local ck = tostring(src and src.characterKey or "")
+		local characterKey = tostring(src and src.characterKey or "")
 		local qty = tonumber(src and src.quantity) or 0
-		if ck ~= "" and qty > 0 then
-			needByChar[ck] = (needByChar[ck] or 0) + qty
+		if characterKey ~= "" and qty > 0 then
+			needByChar[characterKey] = (needByChar[characterKey] or 0) + qty
 		end
 	end
 	local allocations = {}
