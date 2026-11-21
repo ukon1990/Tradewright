@@ -25,17 +25,37 @@ function AuctionHelper:OnOwnedAuctionsUpdated()
 	end
 end
 
+-- The item a post call was made for; nil once the whole stack has left the bags.
+local function postedItemID(item)
+	local ok, itemID = pcall(C_Item.GetItemID, item)
+	return ok and normalizeItemID(itemID) or nil
+end
+
+-- Tell the bulk job on the next frame, so its panel redraw runs outside the game's post click.
+local function notePost(itemID)
+	C_Timer.After(0, function()
+		AuctionHelper:OnAuctionPostCalled(itemID)
+	end)
+end
+
 -- A non-commodity item's deposit can only be asked for while the item is in the bags, so it is
--- remembered per item whenever one is posted and reused later for repost maths.
+-- remembered per item whenever one is posted and reused later for repost maths. Every post also
+-- tells the bulk job, which moves on to its next item.
 if C_AuctionHouse and C_AuctionHouse.PostItem and hooksecurefunc then
 	hooksecurefunc(C_AuctionHouse, "PostItem", function(item, duration, quantity)
+		local itemID = postedItemID(item)
 		pcall(function()
-			local itemID = normalizeItemID(C_Item.GetItemID(item))
 			local deposit = tonumber(C_AuctionHouse.CalculateItemDeposit(item, duration, quantity))
 			if itemID and deposit and quantity > 0 then
 				AuctionHelper:InitAuctionDB().itemDepositPerUnit[tostring(itemID)] = deposit / quantity
 			end
 		end)
+		notePost(itemID)
+	end)
+end
+if C_AuctionHouse and C_AuctionHouse.PostCommodity and hooksecurefunc then
+	hooksecurefunc(C_AuctionHouse, "PostCommodity", function(item)
+		notePost(postedItemID(item))
 	end)
 end
 

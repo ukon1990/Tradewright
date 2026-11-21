@@ -150,6 +150,49 @@ check("Snapshot price counts as snapshot", counts.snapshot == 1, counts.snapshot
 check("Any other or missing source counts as fallback", counts.fallback == 2, counts.fallback)
 check("Unpriced item is not counted and the last price stays", refreshState.auctionLivePriceByItem[2589] == 100)
 
+-- Bulk post: a post from either button (Post next or the game's Create Auction) moves the job on
+_G.GetTime = _G.GetTime or function() return 100 end
+pe.RecordAuctionTransaction = function() end
+local function bulkWaitingFor(itemID, phase)
+	pe:GetState().auctionBulk = { running = true, phase = phase, currentItemID = itemID, index = 1, total = 2,
+		posted = 0, rows = { { itemID = itemID }, { itemID = 999 } } }
+	return pe:GetState().auctionBulk
+end
+local bulk = bulkWaitingFor(2589, "waiting_button")
+pe:OnAuctionPostCalled(2589)
+check("Bulk: Create Auction on the waiting item counts as posted", bulk.posted == 1 and bulk.index == 2 and bulk.phase == "selecting")
+bulk = bulkWaitingFor(2589, "waiting_confirmation")
+pe:OnAuctionPostCalled(nil)
+check("Bulk: a post whose stack is gone still confirms the waiting item", bulk.posted == 1 and bulk.index == 2)
+bulk = bulkWaitingFor(2589, "waiting_button")
+pe:OnAuctionPostCalled(4306)
+check("Bulk: posting another item leaves the job waiting", bulk.posted == 0 and bulk.index == 1 and bulk.phase == "waiting_button")
+bulk = bulkWaitingFor(2589, "selecting")
+pe:OnAuctionPostCalled(2589)
+check("Bulk: a post while the job is still selecting is not counted", bulk.posted == 0)
+-- Post next: the post hook fires inside the button click; the job must not fall back to waiting
+bulk = bulkWaitingFor(2589, "waiting_button")
+bulk.nextPostAt = 0
+pe.TryClickAuctionPostButton = function()
+	pe:OnAuctionPostCalled(2589)
+	return true
+end
+pe:PostAuctionBulkCurrent()
+check("Bulk: Post next confirmed by the hook moves on, not back to waiting", bulk.posted == 1 and bulk.phase == "selecting")
+pe.TryClickAuctionPostButton = function() return false end
+bulk = bulkWaitingFor(2589, "waiting_button")
+bulk.nextPostAt = 0
+pe:PostAuctionBulkCurrent()
+check("Bulk: a click on a button that is not ready keeps the job waiting for Post next", bulk.phase == "waiting_button")
+-- A late "auction created" event for the item just posted must not count the next one
+bulk = bulkWaitingFor(2589, "waiting_button")
+pe:OnAuctionPostCalled(2589)
+bulk.phase, bulk.currentItemID = "waiting_button", 999
+pe:OnAuctionHouseAuctionCreated()
+check("Bulk: a late created event leaves the next item waiting", bulk.index == 2 and bulk.posted == 1 and bulk.phase == "waiting_button")
+pe:GetState().auctionBulk = nil
+timers = {}
+
 if failed > 0 then
 	print(failed .. " test(s) failed")
 	os.exit(1)

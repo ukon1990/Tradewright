@@ -125,10 +125,22 @@ function AuctionHelper:FailAuctionBulkCurrent(reason)
 	end)
 end
 
+-- Whether the job's current item sits in the sell frame waiting to be posted. The player may post
+-- it with Post next or with the game's own Create Auction button; either counts.
+local function isAwaitingPost(bulk)
+	return bulk ~= nil and bulk.running == true and (bulk.phase == "waiting_button" or bulk.phase == "waiting_confirmation")
+end
+
+-- Only a post seen for the current item confirms it. The server's "auction created" event can
+-- arrive after the job has already moved to the next item, which is then still waiting_button.
+local function isAwaitingConfirmation(bulk)
+	return bulk ~= nil and bulk.running == true and bulk.phase == "waiting_confirmation"
+end
+
 function AuctionHelper:ConfirmAuctionBulkCurrent(source)
 	local state = self:GetState()
 	local bulk = state.auctionBulk
-	if not bulk or bulk.running ~= true or bulk.phase ~= "waiting_confirmation" then
+	if not isAwaitingConfirmation(bulk) then
 		return false
 	end
 	local itemID = normalizeItemID(bulk.currentItemID)
@@ -163,6 +175,20 @@ function AuctionHelper:ConfirmAuctionBulkCurrent(source)
 		AuctionHelper:ContinueAuctionBulkPost()
 	end)
 	return true
+end
+
+--- The game's post call ran for `itemID` (nil when the posted stack is gone and can't be read).
+--- Confirms the bulk job's current item, so the next one comes up after either button.
+function AuctionHelper:OnAuctionPostCalled(itemID)
+	local bulk = self:GetState().auctionBulk
+	if not isAwaitingPost(bulk) then
+		return
+	end
+	if itemID and itemID ~= normalizeItemID(bulk.currentItemID) then
+		return
+	end
+	bulk.phase = "waiting_confirmation"
+	self:ConfirmAuctionBulkCurrent("post_call")
 end
 
 function AuctionHelper:ProcessAuctionBulkPhase(token)
@@ -272,14 +298,19 @@ function AuctionHelper:PostAuctionBulkCurrent()
 		return
 	end
 	local name = self:GetItemDisplayName(bulk.currentItemID)
+	-- Set before the click: the post hook runs inside Click() and confirms the item at once.
+	bulk.phase = "waiting_confirmation"
+	bulk.confirmationStartedAt = nowSec
 	if not self:TryClickAuctionPostButton() then
+		bulk.phase = "waiting_button"
 		bulk.status = string.format("Auction house not ready, click again: %s", name)
 		self:RefreshAuctionHousePanel()
 		return
 	end
+	if bulk.phase ~= "waiting_confirmation" then
+		return -- already confirmed by the post hook
+	end
 	local token = bulk.token
-	bulk.phase = "waiting_confirmation"
-	bulk.confirmationStartedAt = nowSec
 	bulk.status = string.format("Waiting for confirmation: %s", name)
 	self:DebugLog("AH", "bulk click post", {
 		string.format("itemID=%s token=%s", tostring(bulk.currentItemID), tostring(token)),
