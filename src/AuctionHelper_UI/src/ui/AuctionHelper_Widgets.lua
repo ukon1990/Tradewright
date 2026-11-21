@@ -1,294 +1,5 @@
 local _, AuctionHelper = ...
 
-local function copySelection(selection)
-	local out = {}
-	if type(selection) ~= "table" then
-		return out
-	end
-	for key, value in pairs(selection) do
-		if value then
-			out[key] = true
-		end
-	end
-	return out
-end
-
-function AuctionHelper:IsFilterSelectionEmpty(selection)
-	return type(selection) ~= "table" or next(selection) == nil
-end
-
-function AuctionHelper:CountFilterSelection(selection)
-	local count = 0
-	if type(selection) ~= "table" then
-		return count
-	end
-	for _, value in pairs(selection) do
-		if value then
-			count = count + 1
-		end
-	end
-	return count
-end
-
-function AuctionHelper:GetFilterSelectionSummary(options, selection, allLabel)
-	if self:IsFilterSelectionEmpty(selection) then
-		return allLabel
-	end
-
-	local selectedLabels = {}
-	for _, option in ipairs(options or {}) do
-		if option.value ~= "all" and selection[option.value] then
-			table.insert(selectedLabels, option.label)
-		end
-	end
-
-	if #selectedLabels == 0 then
-		return allLabel
-	end
-	if #selectedLabels <= 2 then
-		return table.concat(selectedLabels, ", ")
-	end
-	return string.format("%d selected", #selectedLabels)
-end
-
-function AuctionHelper:NormalizeFilterSelection(selection, options)
-	local valid = {}
-	for _, option in ipairs(options or {}) do
-		if option.value ~= "all" then
-			valid[option.value] = true
-		end
-	end
-
-	local normalized = {}
-	for key, value in pairs(selection or {}) do
-		if value and valid[key] then
-			normalized[key] = true
-		end
-	end
-	return normalized
-end
-
-local DROPDOWN_HEIGHT = 26
-local DROPDOWN_LABEL_GAP = 18
-
--- A flat 26px dropdown button with an optional label above it. The Blizzard menu frame is only used to
--- show the option list, anchored under the button. Holder height: 26, or 44 with a label.
-local function createDropdownShell(parent, config)
-	local holder = CreateFrame("Frame", nil, parent)
-	local hasLabel = config.label ~= false and config.label ~= nil
-	holder.width = config.width or 210
-	holder:SetSize(holder.width, DROPDOWN_HEIGHT + (hasLabel and DROPDOWN_LABEL_GAP or 0))
-
-	if hasLabel then
-		local title = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		title:SetPoint("TOPLEFT", 0, 0)
-		title:SetPoint("TOPRIGHT", 0, 0)
-		title:SetJustifyH("LEFT")
-		title:SetWordWrap(false)
-		local muted = AuctionHelper:GetTheme().textMuted
-		title:SetTextColor(muted.r, muted.g, muted.b)
-		title:SetText(config.label)
-		holder.title = title
-	end
-
-	local button = CreateFrame("Button", nil, holder)
-	button:SetPoint("BOTTOMLEFT", 0, 0)
-	button:SetPoint("BOTTOMRIGHT", 0, 0)
-	button:SetHeight(DROPDOWN_HEIGHT)
-	local theme = AuctionHelper:GetTheme()
-	AuctionHelper:AddSurface(button, theme.surface2, theme.borderControl)
-	button:SetHighlightTexture("Interface\\Buttons\\WHITE8X8")
-	button:GetHighlightTexture():SetVertexColor(theme.gold.r, theme.gold.g, theme.gold.b, 0.09)
-	local text = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	text:SetPoint("LEFT", 8, 0)
-	text:SetPoint("RIGHT", -22, 0)
-	text:SetJustifyH("LEFT")
-	text:SetWordWrap(false)
-	local caret = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	caret:SetPoint("RIGHT", -8, 0)
-	caret:SetText("v")
-	caret:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
-	holder.button = button
-	holder.text = text
-
-	local menu = CreateFrame("Frame", nil, holder, "UIDropDownMenuTemplate")
-	menu:Hide()
-	holder.dropdown = menu
-	button:SetScript("OnClick", function()
-		ToggleDropDownMenu(1, nil, menu, button, 0, 0)
-	end)
-
-	function holder:SetDisplayText(label)
-		self.text:SetText(label or "")
-	end
-	if config.tooltip then
-		button:SetScript("OnEnter", function()
-			GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
-			GameTooltip:SetText(config.tooltip, 1, 1, 1, 1, true)
-			GameTooltip:Show()
-		end)
-		button:SetScript("OnLeave", GameTooltip_Hide)
-	end
-	return holder, menu
-end
-
-local function resolveOptions(holder)
-	if holder.currentOptions then
-		return holder.currentOptions
-	end
-	if type(holder.getOptions) == "function" then
-		return holder.getOptions() or {}
-	end
-	return holder.options or {}
-end
-
-function AuctionHelper:CreateMultiSelectDropdown(parent, config)
-	config = config or {}
-	local holder, menu = createDropdownShell(parent, config)
-	holder.allLabel = config.allLabel or "All"
-	holder.options = config.options or {}
-	holder.getOptions = config.getOptions
-	holder.getSelection = config.getSelection
-	holder.setSelection = config.setSelection
-	holder.onChanged = config.onChanged
-
-	local function getSelection()
-		return type(holder.getSelection) == "function" and holder.getSelection() or {}
-	end
-
-	local function applySelection(selection)
-		selection = copySelection(selection)
-		if type(holder.setSelection) == "function" then
-			holder.setSelection(selection)
-		end
-		holder:RefreshText()
-		if type(holder.onChanged) == "function" then
-			holder.onChanged(selection)
-		end
-	end
-
-	function holder:RefreshText()
-		self:SetDisplayText(AuctionHelper:GetFilterSelectionSummary(resolveOptions(self), getSelection(), self.allLabel))
-	end
-	function holder:SetOptions(options)
-		self.currentOptions = options or {}
-		self:RefreshText()
-	end
-
-	UIDropDownMenu_Initialize(menu, function(_, level)
-		if level ~= 1 then
-			return
-		end
-		local allInfo = UIDropDownMenu_CreateInfo()
-		allInfo.text = holder.allLabel
-		allInfo.isNotRadio = true
-		allInfo.keepShownOnClick = true
-		allInfo.checked = function()
-			return AuctionHelper:IsFilterSelectionEmpty(getSelection())
-		end
-		allInfo.func = function()
-			applySelection({})
-		end
-		UIDropDownMenu_AddButton(allInfo, level)
-
-		for _, option in ipairs(resolveOptions(holder)) do
-			if option.value ~= "all" then
-				local info = UIDropDownMenu_CreateInfo()
-				info.text = option.label
-				info.isNotRadio = true
-				info.keepShownOnClick = true
-				info.checked = function()
-					return getSelection()[option.value] == true
-				end
-				info.func = function()
-					local nextSelection = copySelection(getSelection())
-					nextSelection[option.value] = not nextSelection[option.value] or nil
-					applySelection(nextSelection)
-				end
-				UIDropDownMenu_AddButton(info, level)
-			end
-		end
-	end, "MENU")
-
-	holder:RefreshText()
-	return holder
-end
-
-function AuctionHelper:CreateSingleSelectDropdown(parent, config)
-	config = config or {}
-	local holder, menu = createDropdownShell(parent, config)
-	holder.options = config.options or {}
-	holder.getOptions = config.getOptions
-	holder.getValue = config.getValue
-	holder.setValue = config.setValue
-	holder.onChanged = config.onChanged
-
-	local function getValue()
-		return type(holder.getValue) == "function" and holder.getValue() or nil
-	end
-
-	function holder:RefreshText()
-		local current = getValue()
-		local label = config.placeholder or "Select"
-		for _, option in ipairs(resolveOptions(self)) do
-			if option.value == current then
-				label = option.label
-				break
-			end
-		end
-		self:SetDisplayText(label)
-	end
-	function holder:SetOptions(options)
-		self.currentOptions = options or {}
-		self:RefreshText()
-	end
-
-	UIDropDownMenu_Initialize(menu, function(_, level)
-		if level ~= 1 then
-			return
-		end
-		local current = getValue()
-		for _, option in ipairs(resolveOptions(holder)) do
-			local info = UIDropDownMenu_CreateInfo()
-			info.text = option.label
-			info.checked = current == option.value
-			info.func = function()
-				if type(holder.setValue) == "function" then
-					holder.setValue(option.value)
-				end
-				holder:RefreshText()
-				if type(holder.onChanged) == "function" then
-					holder.onChanged(option.value)
-				end
-			end
-			UIDropDownMenu_AddButton(info, level)
-		end
-	end, "MENU")
-
-	holder:RefreshText()
-	return holder
-end
-
-function AuctionHelper:CreateMenuDropdown(parent, config)
-	config = config or {}
-	local holder, menu = createDropdownShell(parent, config)
-	holder.getText = config.getText
-	holder.initializeMenu = config.initializeMenu
-
-	function holder:RefreshText()
-		self:SetDisplayText(type(self.getText) == "function" and self.getText() or (config.placeholder or "Menu"))
-	end
-
-	UIDropDownMenu_Initialize(menu, function(_, level)
-		if type(holder.initializeMenu) == "function" then
-			holder.initializeMenu(level, holder)
-		end
-	end, "MENU")
-
-	holder:RefreshText()
-	return holder
-end
-
 local function setColor(fontString, color)
 	fontString:SetTextColor(color.r, color.g, color.b)
 end
@@ -306,6 +17,18 @@ function AuctionHelper:CreateText(parent, font, colorKey, justify)
 	return newText(parent, font, self:GetTheme()[colorKey or "textPrimary"], justify)
 end
 
+-- HookScript keeps the skin's hover colour handlers.
+local function addButtonTooltip(button, label, tooltip)
+	button:HookScript("OnEnter", function(self)
+		local muted = AuctionHelper:GetTheme().textMuted
+		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+		GameTooltip:SetText(self:GetText() or label or "", 1, 1, 1)
+		GameTooltip:AddLine(tooltip, muted.r, muted.g, muted.b, true)
+		GameTooltip:Show()
+	end)
+	button:HookScript("OnLeave", GameTooltip_Hide)
+end
+
 -- A 26px flat button sized to its label (or `opts.width`); `opts.small` is 22px, `opts.primary` gold.
 function AuctionHelper:CreateButton(parent, label, onClick, opts)
 	opts = opts or {}
@@ -313,8 +36,10 @@ function AuctionHelper:CreateButton(parent, label, onClick, opts)
 	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
 	button:SetText(label or "")
 	self:SkinButton(button)
-	local height = opts.small and sizes.controlSmall or sizes.control
-	local padding = opts.small and 16 or 24
+	local height, padding = sizes.control, 24
+	if opts.small then
+		height, padding = sizes.controlSmall, 16
+	end
 	button:SetSize(opts.width or (math.ceil(button:GetFontString():GetStringWidth()) + padding), height)
 	if opts.primary then
 		self:SetButtonPrimary(button, true)
@@ -323,15 +48,7 @@ function AuctionHelper:CreateButton(parent, label, onClick, opts)
 		button:SetScript("OnClick", onClick)
 	end
 	if opts.tooltip then
-		-- HookScript keeps the skin's hover colour handlers.
-		button:HookScript("OnEnter", function(self)
-			local muted = AuctionHelper:GetTheme().textMuted
-			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-			GameTooltip:SetText(self:GetText() or label or "", 1, 1, 1)
-			GameTooltip:AddLine(opts.tooltip, muted.r, muted.g, muted.b, true)
-			GameTooltip:Show()
-		end)
-		button:HookScript("OnLeave", GameTooltip_Hide)
+		addButtonTooltip(button, label, opts.tooltip)
 	end
 	return button
 end
@@ -492,29 +209,34 @@ function AuctionHelper:CreateKeyValueList(parent)
 	local theme = self:GetTheme()
 	local list = CreateFrame("Frame", nil, parent)
 	list.rows = {}
+	local function getLine(index)
+		local line = list.rows[index]
+		if not line then
+			line = {}
+			line.value = newText(list, "GameFontHighlightSmall", theme.textPrimary, "RIGHT")
+			line.value:SetPoint("TOPRIGHT", list, "TOPRIGHT", 0, -((index - 1) * 16))
+			line.label = newText(list, "GameFontHighlightSmall", theme.textMuted)
+			line.label:SetPoint("TOPLEFT", list, "TOPLEFT", 0, -((index - 1) * 16))
+			line.label:SetPoint("RIGHT", line.value, "LEFT", -12, 0)
+			list.rows[index] = line
+		end
+		return line
+	end
 	function list:SetRows(rows)
-		for index, row in ipairs(rows or {}) do
-			local line = self.rows[index]
-			if not line then
-				line = {}
-				line.value = newText(self, "GameFontHighlightSmall", theme.textPrimary, "RIGHT")
-				line.value:SetPoint("TOPRIGHT", self, "TOPRIGHT", 0, -((index - 1) * 16))
-				line.label = newText(self, "GameFontHighlightSmall", theme.textMuted)
-				line.label:SetPoint("TOPLEFT", self, "TOPLEFT", 0, -((index - 1) * 16))
-				line.label:SetPoint("RIGHT", line.value, "LEFT", -12, 0)
-				self.rows[index] = line
-			end
+		rows = rows or {}
+		for index, row in ipairs(rows) do
+			local line = getLine(index)
 			line.label:SetText(row[1] or "")
 			line.value:SetText(row[2] or "")
 			setColor(line.value, theme[row[3] or "textPrimary"] or theme.textPrimary)
 			line.label:Show()
 			line.value:Show()
 		end
-		for index = #(rows or {}) + 1, #self.rows do
+		for index = #rows + 1, #self.rows do
 			self.rows[index].label:Hide()
 			self.rows[index].value:Hide()
 		end
-		local height = math.max(1, #(rows or {}) * 16)
+		local height = math.max(1, #rows * 16)
 		self:SetHeight(height)
 		return height
 	end
@@ -652,6 +374,35 @@ function AuctionHelper:CreateItemIcon(parent, size)
 	return holder
 end
 
+local function createItemCell(pe, rowFrame)
+	local cell = CreateFrame("Frame", nil, rowFrame)
+	cell:SetHeight(rowFrame:GetHeight())
+	cell.icon = pe:CreateItemIcon(cell)
+	cell.icon:SetPoint("LEFT", 5, 0)
+	cell.name = pe:CreateText(cell, "GameFontHighlightSmall")
+	cell.detail = pe:CreateText(cell, "GameFontHighlightSmall", "textMuted")
+	cell.name:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
+	cell.detail:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
+	return cell
+end
+
+-- Tall rows show the detail under the name; short rows (or no detail) centre the name alone.
+local function setItemCellDetail(cell, detail)
+	cell.name:ClearAllPoints()
+	cell.name:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
+	if detail and detail ~= "" and cell:GetHeight() >= 30 then
+		cell.name:SetPoint("BOTTOMLEFT", cell.icon, "RIGHT", 6, 1)
+		cell.detail:ClearAllPoints()
+		cell.detail:SetPoint("TOPLEFT", cell.icon, "RIGHT", 6, -1)
+		cell.detail:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
+		cell.detail:SetText(detail)
+		cell.detail:Show()
+	else
+		cell.name:SetPoint("LEFT", cell.icon, "RIGHT", 6, 0)
+		cell.detail:Hide()
+	end
+end
+
 -- Table column: item icon + quality-coloured name, with an optional muted second line
 -- (`getDetail(row)`) when the table uses tall rows. `getItemID`, `getName` read the row.
 function AuctionHelper:CreateItemColumn(spec)
@@ -669,15 +420,7 @@ function AuctionHelper:CreateItemColumn(spec)
 		tooltipText = spec.tooltipText,
 	}
 	column.createCell = function(rowFrame)
-		local cell = CreateFrame("Frame", nil, rowFrame)
-		cell:SetHeight(rowFrame:GetHeight())
-		cell.icon = pe:CreateItemIcon(cell)
-		cell.icon:SetPoint("LEFT", 5, 0)
-		cell.name = pe:CreateText(cell, "GameFontHighlightSmall")
-		cell.detail = pe:CreateText(cell, "GameFontHighlightSmall", "textMuted")
-		cell.name:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
-		cell.detail:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
-		return cell
+		return createItemCell(pe, rowFrame)
 	end
 	column.updateCell = function(cell, row)
 		local itemID = spec.getItemID(row)
@@ -685,20 +428,7 @@ function AuctionHelper:CreateItemColumn(spec)
 		cell.icon:SetItem(itemID, spec.getIcon and spec.getIcon(row) or nil)
 		cell.name:SetText(spec.getName(row) or ("#" .. tostring(itemID or "?")))
 		cell.name:SetTextColor(color.r, color.g, color.b)
-		local detail = spec.getDetail and spec.getDetail(row) or nil
-		cell.name:ClearAllPoints()
-		cell.name:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
-		if detail and detail ~= "" and cell:GetHeight() >= 30 then
-			cell.name:SetPoint("BOTTOMLEFT", cell.icon, "RIGHT", 6, 1)
-			cell.detail:ClearAllPoints()
-			cell.detail:SetPoint("TOPLEFT", cell.icon, "RIGHT", 6, -1)
-			cell.detail:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
-			cell.detail:SetText(detail)
-			cell.detail:Show()
-		else
-			cell.name:SetPoint("LEFT", cell.icon, "RIGHT", 6, 0)
-			cell.detail:Hide()
-		end
+		setItemCellDetail(cell, spec.getDetail and spec.getDetail(row) or nil)
 	end
 	return column
 end
@@ -777,6 +507,26 @@ end
 -- instant item API; quality is only known once the client has the item, so it is retried until then.
 local itemFilterInfoCache = {}
 
+local function itemClassInfo(itemID)
+	local getInstant = C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant
+	if not getInstant then
+		return {}
+	end
+	local _, classLabel, subclassLabel = getInstant(itemID)
+	return { classLabel = classLabel, subclassLabel = subclassLabel }
+end
+
+-- nil until the client has loaded the item.
+local function itemQuality(itemID)
+	local getQuality = C_Item and C_Item.GetItemQualityByID
+	local quality = getQuality and getQuality(itemID)
+	if quality ~= nil then
+		return quality
+	end
+	local getInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
+	return getInfo and select(3, getInfo(itemID))
+end
+
 function AuctionHelper:GetItemFilterInfo(itemID)
 	itemID = tonumber(itemID)
 	if not itemID then
@@ -787,21 +537,10 @@ function AuctionHelper:GetItemFilterInfo(itemID)
 		return info
 	end
 	if not info then
-		local getInstant = C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant
-		local _, classLabel, subclassLabel = nil, nil, nil
-		if getInstant then
-			_, classLabel, subclassLabel = getInstant(itemID)
-		end
-		info = { classLabel = classLabel, subclassLabel = subclassLabel }
+		info = itemClassInfo(itemID)
 		itemFilterInfoCache[itemID] = info
 	end
-	local getQuality = C_Item and C_Item.GetItemQualityByID
-	local quality = getQuality and getQuality(itemID)
-	if quality == nil then
-		local getInfo = C_Item and C_Item.GetItemInfo or GetItemInfo
-		quality = getInfo and select(3, getInfo(itemID))
-	end
-	info.quality = quality
+	info.quality = itemQuality(itemID)
 	return info
 end
 

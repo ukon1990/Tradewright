@@ -1,4 +1,4 @@
-local addonName, AuctionHelper = ...
+local _, AuctionHelper = ...
 
 local MAX_ROWS = 500
 
@@ -181,29 +181,34 @@ end
 
 -- One auction listing's history: optional header, key facts, hourly price graph and the recent hours.
 -- Used by the Market tab detail card and the item details window. `opts.noHeader` hides the header.
-function AuctionHelper:CreateMarketHistoryView(parent, opts)
-	opts = opts or {}
-	local pe = self
-	local view = CreateFrame("Frame", nil, parent)
-	local top = view
-	if not opts.noHeader then
-		view.header = self:CreateDetailHeader(view)
-		view.header:SetPoint("TOPLEFT")
-		view.header:SetPoint("TOPRIGHT")
-		top = view.header
+-- The newest 48 hours of a listing's history as chart series, and as table rows newest first.
+function AuctionHelper:BuildMarketChartSeries(points)
+	local primary, secondary, quantity, recent = {}, {}, {}, {}
+	for i = math.max(1, #points - 47), #points do
+		local p = points[i]
+		primary[#primary + 1] = { at = p.at, value = p.last or p.avg or p.min or 0, meta = { min = p.min, max = p.max } }
+		if p.min then
+			secondary[#secondary + 1] = { at = p.at, value = p.min }
+		end
+		quantity[#quantity + 1] = { at = p.at, value = p.qty or 0 }
+		table.insert(recent, 1, p)
 	end
-	view.facts = self:CreateKeyValueList(view)
-	view.facts:SetPoint("TOPLEFT", top, top == view and "TOPLEFT" or "BOTTOMLEFT", 0, top == view and 0 or -10)
-	view.facts:SetPoint("TOPRIGHT", top, top == view and "TOPRIGHT" or "BOTTOMRIGHT", 0, top == view and 0 or -10)
-	local graphHeading = self:CreateMarketChartHeading(view)
-	view.graph = self:CreateTimeSeriesGraph(view, {
-		showTitle = false,
-		plotHeight = opts.plotHeight or 96,
-		emptyText = "No price history for this range yet. Run a full scan at the auction house.",
-		yFormatter = function(v) return pe:FormatCopperShort(v) end,
-	})
-	view.graph:SetPoint("TOPLEFT", graphHeading, "BOTTOMLEFT", 0, -6)
-	view.historyTable = self:CreateReusableTable(view, {
+	for index, p in ipairs(recent) do
+		p._rowIdentity = index
+	end
+	return { primary = primary, secondary = secondary, quantity = quantity }, recent
+end
+
+-- The hourly history points saved for one auction storage key, oldest first.
+function AuctionHelper:GetMarketHistoryPoints(storageKey)
+	local auction = self:InitAuctionDB()
+	local hourly = auction and auction.history and auction.history.hourly and auction.history.hourly[storageKey]
+	local FL = self.ForeverLogic
+	return FL and FL.BuildMarketHistorySeries and FL.BuildMarketHistorySeries(hourly) or {}
+end
+
+local function createHistoryTable(pe, view)
+	view.historyTable = pe:CreateReusableTable(view, {
 		autoFitToScroll = true,
 		emptyTitle = "No history",
 		emptyHint = "Each full scan adds an hour.",
@@ -215,6 +220,36 @@ function AuctionHelper:CreateMarketHistoryView(parent, opts)
 		{ id = "last", label = "Price", width = 78, justifyH = "RIGHT", getText = function(p) return pe:FormatCopperShort(p.last or p.avg or p.min) end },
 		{ id = "qty", label = "Qty", width = 52, justifyH = "RIGHT", getText = function(p) return pe:FormatNumberGrouped(p.qty or 0) end },
 	})
+end
+
+-- The optional item header and the key facts list below it.
+local function createHistoryFacts(pe, view, opts)
+	local top = view
+	if not opts.noHeader then
+		view.header = pe:CreateDetailHeader(view)
+		view.header:SetPoint("TOPLEFT")
+		view.header:SetPoint("TOPRIGHT")
+		top = view.header
+	end
+	view.facts = pe:CreateKeyValueList(view)
+	view.facts:SetPoint("TOPLEFT", top, top == view and "TOPLEFT" or "BOTTOMLEFT", 0, top == view and 0 or -10)
+	view.facts:SetPoint("TOPRIGHT", top, top == view and "TOPRIGHT" or "BOTTOMRIGHT", 0, top == view and 0 or -10)
+end
+
+function AuctionHelper:CreateMarketHistoryView(parent, opts)
+	opts = opts or {}
+	local pe = self
+	local view = CreateFrame("Frame", nil, parent)
+	createHistoryFacts(self, view, opts)
+	local graphHeading = self:CreateMarketChartHeading(view)
+	view.graph = self:CreateTimeSeriesGraph(view, {
+		showTitle = false,
+		plotHeight = opts.plotHeight or 96,
+		emptyText = "No price history for this range yet. Run a full scan at the auction house.",
+		yFormatter = function(v) return pe:FormatCopperShort(v) end,
+	})
+	view.graph:SetPoint("TOPLEFT", graphHeading, "BOTTOMLEFT", 0, -6)
+	createHistoryTable(self, view)
 	view:SetScript("OnSizeChanged", function(self, width)
 		self.graph:SetWidth(width)
 	end)
@@ -226,28 +261,10 @@ function AuctionHelper:CreateMarketHistoryView(parent, opts)
 				string.format("Item %s · %s", tostring(rowData.itemID or "?"), rowData.scope == "commodity" and "commodity" or "item"))
 		end
 		self.facts:SetRows(marketFactRows(pe, rowData))
-
-		local auction = pe:InitAuctionDB()
-		local hourly = auction and auction.history and auction.history.hourly and auction.history.hourly[rowData.storageKey]
-		local FL = pe.ForeverLogic
-		local points = FL and FL.BuildMarketHistorySeries and FL.BuildMarketHistorySeries(hourly) or {}
-		local primary, secondary, quantity, recent = {}, {}, {}, {}
-		for i = math.max(1, #points - 47), #points do
-			local p = points[i]
-			primary[#primary + 1] = { at = p.at, value = p.last or p.avg or p.min or 0, meta = { min = p.min, max = p.max } }
-			if p.min then
-				secondary[#secondary + 1] = { at = p.at, value = p.min }
-			end
-			quantity[#quantity + 1] = { at = p.at, value = p.qty or 0 }
-			table.insert(recent, 1, p)
-		end
-		for index, p in ipairs(recent) do
-			p._rowIdentity = index
-		end
+		local series, recent = pe:BuildMarketChartSeries(pe:GetMarketHistoryPoints(rowData.storageKey))
 		self.historyTable:SetRows(recent)
 		self.historyTable:Refresh()
-
-		pe:ShowMarketChart(self, rowData, { primary = primary, secondary = secondary, quantity = quantity })
+		pe:ShowMarketChart(self, rowData, series)
 	end
 	return view
 end
@@ -269,99 +286,89 @@ function AuctionHelper:GetMarketRowForStorageKey(storageKey)
 		{ resolveName = function(itemID) return AuctionHelper:GetItemDisplayName(itemID, true) end })[1]
 end
 
-function AuctionHelper:EnsureMarketPanel(container)
-	local ui = self.ui
-	if ui.marketPanel then
-		return ui.marketPanel
-	end
-	local pe = self
-	local panel = CreateFrame("Frame", nil, container)
-	panel:SetAllPoints()
-	ui.marketPanel = panel
+function AuctionHelper:OnMarketFilterChanged()
+	self:SaveMarketFilters()
+	self:RefreshMarketTab()
+end
 
-	local filters = self:GetMarketFilters()
-	local function changed()
-		AuctionHelper:SaveMarketFilters()
-		AuctionHelper:RefreshMarketTab()
-	end
-	local function setFilter(key)
-		return function(selection)
-			filters[key] = selection
-		end
-	end
+-- A dropdown editing the market filter `key` (a multi-choice selection).
+function AuctionHelper:CreateMarketFilterDropdown(parent, key, config)
+	local pe, filters = self, self:GetMarketFilters()
+	config.getSelection = function() return filters[key] end
+	config.setSelection = config.setSelection or function(selection) filters[key] = selection end
+	config.onChanged = function() pe:OnMarketFilterChanged() end
+	return self:CreateMultiSelectDropdown(parent, config)
+end
 
-	-- Row 1: search, item class, subclass, quality.
+-- Row 1: search, item class, subclass, quality.
+function AuctionHelper:CreateMarketToolbar(panel)
+	local pe, filters = self, self:GetMarketFilters()
 	panel.toolbar = CreateFrame("Frame", nil, panel)
 	panel.toolbar:SetPoint("TOPLEFT")
 	panel.toolbar:SetPoint("TOPRIGHT")
 	panel.toolbar:SetHeight(26)
-	panel.qualityDropdown = self:CreateMultiSelectDropdown(panel.toolbar, {
-		width = 128, allLabel = "Any quality",
-		getOptions = function() return pe:GetQualityFilterOptions() end,
-		getSelection = function() return filters.qualities end,
-		setSelection = setFilter("qualities"), onChanged = changed,
-	})
+	panel.qualityDropdown = self:CreateMarketFilterDropdown(panel.toolbar, "qualities", {
+		width = 128, allLabel = "Any quality", getOptions = function() return pe:GetQualityFilterOptions() end })
 	panel.qualityDropdown:SetPoint("RIGHT")
-	panel.subclassDropdown = self:CreateMultiSelectDropdown(panel.toolbar, {
-		width = 150, allLabel = "All subclasses",
-		getSelection = function() return filters.subclasses end,
-		setSelection = setFilter("subclasses"), onChanged = changed,
-	})
-	panel.classDropdown = self:CreateMultiSelectDropdown(panel.toolbar, {
-		width = 150, allLabel = "All classes",
-		getSelection = function() return filters.classes end,
+	panel.subclassDropdown = self:CreateMarketFilterDropdown(panel.toolbar, "subclasses", { width = 150, allLabel = "All subclasses" })
+	panel.classDropdown = self:CreateMarketFilterDropdown(panel.toolbar, "classes", { width = 150, allLabel = "All classes",
 		setSelection = function(selection)
 			filters.classes = selection
 			filters.subclasses = {}
-		end,
-		onChanged = changed,
-	})
+		end })
 	self:ChainLeft({ panel.qualityDropdown, panel.subclassDropdown, panel.classDropdown }, 8)
-	ui.marketSearchBox = self:CreateSearchBox(panel.toolbar, "Search the last scan", function()
-		AuctionHelper:RefreshMarketTab()
+	self.ui.marketSearchBox = self:CreateSearchBox(panel.toolbar, "Search the last scan", function()
+		pe:RefreshMarketTab()
 	end)
-	ui.marketSearchBox:SetPoint("LEFT", 6, 0)
-	ui.marketSearchBox:SetPoint("RIGHT", panel.classDropdown, "LEFT", -14, 0)
+	self.ui.marketSearchBox:SetPoint("LEFT", 6, 0)
+	self.ui.marketSearchBox:SetPoint("RIGHT", panel.classDropdown, "LEFT", -14, 0)
+end
 
-	-- Row 2: owned only, price range in gold, reset; when the last full scan ran on the right.
-	panel.filterRow = CreateFrame("Frame", nil, panel)
-	panel.filterRow:SetPoint("TOPLEFT", panel.toolbar, "BOTTOMLEFT", 0, -8)
-	panel.filterRow:SetPoint("TOPRIGHT", panel.toolbar, "BOTTOMRIGHT", 0, -8)
-	panel.filterRow:SetHeight(26)
-	panel.ownedOnly = self:CreateCheckbox(panel.filterRow, "Only items I own", function(checked)
+-- A gold amount box for the market filter `key`.
+function AuctionHelper:CreateMarketPriceBox(parent, placeholder, key)
+	local pe, filters = self, self:GetMarketFilters()
+	local box = self:CreateSearchBox(parent, placeholder, function(text)
+		filters[key] = tonumber(text)
+		pe:OnMarketFilterChanged()
+	end, 0.4)
+	box:SetNumeric(true)
+	box:SetMaxLetters(7)
+	box:SetWidth(64)
+	box:SetJustifyH("RIGHT")
+	return box
+end
+
+-- Row 2: owned only, price range in gold, reset; when the last full scan ran on the right.
+function AuctionHelper:CreateMarketFilterRow(panel)
+	local pe, filters = self, self:GetMarketFilters()
+	local row = CreateFrame("Frame", nil, panel)
+	row:SetPoint("TOPLEFT", panel.toolbar, "BOTTOMLEFT", 0, -8)
+	row:SetPoint("TOPRIGHT", panel.toolbar, "BOTTOMRIGHT", 0, -8)
+	row:SetHeight(26)
+	panel.filterRow = row
+	panel.ownedOnly = self:CreateCheckbox(row, "Only items I own", function(checked)
 		filters.ownedOnly = checked
-		changed()
+		pe:OnMarketFilterChanged()
 	end)
 	panel.ownedOnly:SetPoint("LEFT")
-	panel.priceLabel = self:CreateText(panel.filterRow, "GameFontHighlightSmall", "textMuted")
+	panel.priceLabel = self:CreateText(row, "GameFontHighlightSmall", "textMuted")
 	panel.priceLabel:SetPoint("LEFT", panel.ownedOnly, "RIGHT", 16, 0)
 	panel.priceLabel:SetText("Lowest price")
-	local function priceBox(placeholder, key)
-		local box = pe:CreateSearchBox(panel.filterRow, placeholder, function(text)
-			filters[key] = tonumber(text)
-			changed()
-		end, 0.4)
-		box:SetNumeric(true)
-		box:SetMaxLetters(7)
-		box:SetWidth(64)
-		box:SetJustifyH("RIGHT")
-		return box
-	end
-	panel.minGold = priceBox("Min g", "minGold")
+	panel.minGold = self:CreateMarketPriceBox(row, "Min g", "minGold")
 	panel.minGold:SetPoint("LEFT", panel.priceLabel, "RIGHT", 12, 0)
-	panel.priceDash = self:CreateText(panel.filterRow, "GameFontHighlightSmall", "textMuted")
+	panel.priceDash = self:CreateText(row, "GameFontHighlightSmall", "textMuted")
 	panel.priceDash:SetPoint("LEFT", panel.minGold, "RIGHT", 10, 0)
 	panel.priceDash:SetText("to")
-	panel.maxGold = priceBox("Max g", "maxGold")
+	panel.maxGold = self:CreateMarketPriceBox(row, "Max g", "maxGold")
 	panel.maxGold:SetPoint("LEFT", panel.priceDash, "RIGHT", 12, 0)
-	panel.resetFilters = self:CreateButton(panel.filterRow, "Reset filters", function()
-		pe:ResetMarketFilters()
-	end, { small = true })
+	panel.resetFilters = self:CreateButton(row, "Reset filters", function() pe:ResetMarketFilters() end, { small = true })
 	panel.resetFilters:SetPoint("LEFT", panel.maxGold, "RIGHT", 14, 0)
-	panel.scanBadge = self:CreateBadge(panel.filterRow)
+	panel.scanBadge = self:CreateBadge(row)
 	panel.scanBadge:SetPoint("RIGHT")
+end
 
-	-- Detail pane, always shown: empty state until a row is picked.
+-- Detail pane, always shown: empty state until a row is picked.
+function AuctionHelper:CreateMarketDetailCard(panel)
 	panel.detailCard = self:CreateInset(panel)
 	panel.detailCard:SetPoint("TOPRIGHT", panel.filterRow, "BOTTOMRIGHT", 0, -GAP)
 	panel.detailCard:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
@@ -369,55 +376,66 @@ function AuctionHelper:EnsureMarketPanel(container)
 	panel.detailEmpty = self:CreateEmptyState(panel.detailCard)
 	panel.detailEmpty:SetAllPoints()
 	panel.detailEmpty:SetMessage("Select an item", "Click a row to see its prices and hourly history from past scans.")
-
 	panel.detailBody = self:CreateMarketHistoryView(panel.detailCard)
 	panel.detailBody:SetPoint("TOPLEFT", PAD, -PAD)
 	panel.detailBody:SetPoint("BOTTOMRIGHT", -PAD, PAD)
+end
 
-	-- Table fills the rest.
-	local sortKey = self:GetSetting("market.sortColumn", "name")
-	local sortAsc = self:GetSetting("market.sortAsc", true)
-	ui.marketTable = self:CreateReusableTable(panel, {
+function AuctionHelper:OnMarketRowClick(panel, rowData, tableWidget)
+	if self:HandleItemRowModifiedClick(rowData and rowData.itemID) then
+		return
+	end
+	self.ui.marketSelectedStorageKey = rowData and rowData.storageKey
+	self.ui.marketSelectedRow = rowData
+	tableWidget:SetSelectedRow(rowData)
+	self:RenderMarketDetails(rowData)
+	self:LayoutMarketPanel(panel)
+end
+
+-- Table fills the rest.
+function AuctionHelper:CreateMarketTable(panel)
+	local pe, ui = self, self.ui
+	local marketTable = self:CreateReusableTable(panel, {
 		footer = true,
 		emptyTitle = "No prices yet",
 		emptyHint = "Open the auction house and run a full scan.",
 		isRowSelected = function(rowData)
-			return rowData and rowData.storageKey ~= nil and rowData.storageKey == AuctionHelper.ui.marketSelectedStorageKey
+			return rowData and rowData.storageKey ~= nil and rowData.storageKey == ui.marketSelectedStorageKey
 		end,
-		maxRows = MAX_ROWS,
-		viewportVirtualize = true,
-		virtualOverscan = 8,
-		autoFitToScroll = true,
-		sortKey = sortKey,
-		sortAsc = sortAsc ~= false,
+		maxRows = MAX_ROWS, viewportVirtualize = true, virtualOverscan = 8, autoFitToScroll = true,
+		sortKey = self:GetSetting("market.sortColumn", "name"),
+		sortAsc = self:GetSetting("market.sortAsc", true) ~= false,
 		onSortChanged = function(key, asc)
-			AuctionHelper:SetSetting("market.sortColumn", key)
-			AuctionHelper:SetSetting("market.sortAsc", asc)
+			pe:SetSetting("market.sortColumn", key)
+			pe:SetSetting("market.sortAsc", asc)
 		end,
 		onRowEnter = function(rowFrame, rowData)
-			AuctionHelper:ShowItemRowTooltip(rowFrame, rowData and rowData.itemID, {
-				{ "Highest listing", AuctionHelper:FormatCopperShort(rowData and (rowData.marketHigh or rowData.price)) },
+			pe:ShowItemRowTooltip(rowFrame, rowData and rowData.itemID, {
+				{ "Highest listing", pe:FormatCopperShort(rowData and (rowData.marketHigh or rowData.price)) },
 			}, "Click for history · Shift-click to link")
 		end,
-		onRowLeave = function()
-			GameTooltip:Hide()
-		end,
-		onRowClick = function(_, rowData, _, tableWidget)
-			if AuctionHelper:HandleItemRowModifiedClick(rowData and rowData.itemID) then
-				return
-			end
-			ui.marketSelectedStorageKey = rowData and rowData.storageKey
-			ui.marketSelectedRow = rowData
-			tableWidget:SetSelectedRow(rowData)
-			AuctionHelper:RenderMarketDetails(rowData)
-			AuctionHelper:LayoutMarketPanel(panel)
-		end,
+		onRowLeave = function() GameTooltip:Hide() end,
+		onRowClick = function(_, rowData, _, tableWidget) pe:OnMarketRowClick(panel, rowData, tableWidget) end,
 	})
-	ui.marketTable.frame:SetPoint("TOPLEFT", panel.filterRow, "BOTTOMLEFT", 0, -GAP)
-	ui.marketTable.frame:SetPoint("BOTTOMRIGHT", panel.detailCard, "BOTTOMLEFT", -GAP, 0)
-	panel.marketTable = ui.marketTable
-	ui.marketTable:SetColumns(self:BuildMarketTableColumns())
+	marketTable.frame:SetPoint("TOPLEFT", panel.filterRow, "BOTTOMLEFT", 0, -GAP)
+	marketTable.frame:SetPoint("BOTTOMRIGHT", panel.detailCard, "BOTTOMLEFT", -GAP, 0)
+	marketTable:SetColumns(self:BuildMarketTableColumns())
+	return marketTable
+end
 
+function AuctionHelper:EnsureMarketPanel(container)
+	local ui = self.ui
+	if ui.marketPanel then
+		return ui.marketPanel
+	end
+	local panel = CreateFrame("Frame", nil, container)
+	panel:SetAllPoints()
+	ui.marketPanel = panel
+	self:CreateMarketToolbar(panel)
+	self:CreateMarketFilterRow(panel)
+	self:CreateMarketDetailCard(panel)
+	ui.marketTable = self:CreateMarketTable(panel)
+	panel.marketTable = ui.marketTable
 	panel:SetScript("OnSizeChanged", function()
 		AuctionHelper:LayoutMarketPanel(panel)
 	end)
@@ -470,6 +488,16 @@ function AuctionHelper:GetOwnedItemSet()
 	return owned
 end
 
+-- The Market table's sort, or the saved one before the table exists.
+function AuctionHelper:GetMarketSort()
+	local marketTable = self.ui and self.ui.marketTable
+	local sortKey = marketTable and marketTable.sortKey or self:GetSetting("market.sortColumn", "name")
+	if marketTable and marketTable.sortAsc ~= nil then
+		return sortKey, marketTable.sortAsc
+	end
+	return sortKey, self:GetSetting("market.sortAsc", true) ~= false
+end
+
 function AuctionHelper:CollectMarketBrowserRows()
 	local auction = self:InitAuctionDB()
 	if not auction then
@@ -481,13 +509,7 @@ function AuctionHelper:CollectMarketBrowserRows()
 		return {}
 	end
 	local query = self:Trim(ui.marketSearchBox and ui.marketSearchBox:GetText() or "")
-	local sortKey = (ui.marketTable and ui.marketTable.sortKey) or self:GetSetting("market.sortColumn", "name")
-	local sortAsc
-	if ui.marketTable and ui.marketTable.sortAsc ~= nil then
-		sortAsc = ui.marketTable.sortAsc
-	else
-		sortAsc = self:GetSetting("market.sortAsc", true) ~= false
-	end
+	local sortKey, sortAsc = self:GetMarketSort()
 	return FL.BuildMarketBrowserRows(auction.snapshot.commodities, auction.snapshot.items, {
 		query = query,
 		sortKey = sortKey,
@@ -519,87 +541,8 @@ function AuctionHelper:RenderMarketDetails(rowData)
 	self:LayoutMarketPanel(panel)
 end
 
-local MODAL_W, MODAL_H = 760, 640
-
-local function createItemDetailsWindow(pe)
-	local theme = pe:GetTheme()
-	local header = theme.size.header
-	local frame = CreateFrame("Frame", addonName .. "ItemDetails", UIParent, "BackdropTemplate")
-	frame:SetSize(MODAL_W, MODAL_H)
-	frame:SetPoint("CENTER")
-	frame:SetFrameStrata("DIALOG")
-	frame:SetClampedToScreen(true)
-	frame:SetMovable(true)
-	frame:EnableMouse(true)
-	frame:RegisterForDrag("LeftButton")
-	frame:SetScript("OnDragStart", frame.StartMoving)
-	frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-	pe:StyleWindow(frame)
-	tinsert(UISpecialFrames, frame:GetName())
-
-	local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-	close:ClearAllPoints()
-	close:SetPoint("RIGHT", frame, "TOPRIGHT", -6, -(header / 2))
-	pe:SkinCloseButton(close)
-	local title = pe:CreateText(frame, "GameFontNormalLarge", "gold")
-	title:SetPoint("LEFT", frame, "TOPLEFT", GAP, -(header / 2) - 1)
-	title:SetText("Item details")
-
-	-- Left: the item (owned, craft cost, chart, recipes). Right: its auction listing history.
-	frame.itemPane = pe:CreateItemDetailPane(frame, { metricSettingKey = "inventory.detailsGraphMetric" })
-	frame.itemPane:SetPoint("TOPLEFT", GAP, -(header + GAP))
-	frame.itemPane:SetPoint("BOTTOMLEFT", GAP, GAP)
-	frame.marketCard = pe:CreateInset(frame)
-	frame.marketCard:SetPoint("TOPLEFT", frame.itemPane, "TOPRIGHT", GAP, 0)
-	frame.marketCard:SetPoint("BOTTOMRIGHT", -GAP, GAP)
-	local heading = pe:CreateHeading(frame.marketCard, "Auction house")
-	heading:SetPoint("TOPLEFT", PAD, -PAD)
-	heading:SetPoint("TOPRIGHT", -PAD, -PAD)
-	frame.market = pe:CreateMarketHistoryView(frame.marketCard, { noHeader = true, plotHeight = 120 })
-	frame.market:SetPoint("TOPLEFT", heading, "BOTTOMLEFT", 0, -8)
-	frame.market:SetPoint("BOTTOMRIGHT", -PAD, PAD)
-	frame.marketEmpty = pe:CreateEmptyState(frame.marketCard)
-	frame.marketEmpty:SetAllPoints()
-	frame.marketEmpty:SetMessage("No auction data", "Scan the auction house to see this item's prices and hourly history.")
-	frame:Hide()
-	return frame
-end
-
--- Item details window: everything the Inventory and Market detail panes show, for one item.
--- storageKey picks the auction listing; without one, the item's full-scan listing is used.
-function AuctionHelper:ShowItemDetailsWindow(itemID, storageKey)
-	itemID = tonumber(itemID)
-	if not itemID then
-		return
-	end
-	local ui = self.ui
-	ui.itemDetailsWindow = ui.itemDetailsWindow or createItemDetailsWindow(self)
-	local frame = ui.itemDetailsWindow
-	frame:Show()
-	frame:Raise()
-	frame.itemPane:ShowItem(itemID, { selectedCharacters = {}, rangeKey = self:GetInventoryMetricRange() })
-	local row = self:GetMarketRowForStorageKey(storageKey)
-		or (self.BuildAuctionStorageKey and self:GetMarketRowForStorageKey(self:BuildAuctionStorageKey(itemID, "item", tostring(itemID))))
-	frame.market:SetShown(row ~= nil)
-	frame.marketEmpty:SetShown(row == nil)
-	if row then
-		frame.market:ShowRow(row)
-	end
-end
-
-function AuctionHelper:RefreshMarketTab()
-	self:InitDB()
-	local ui = self.ui
-	if not ui or not ui.marketPanel then
-		return
-	end
-	if ui.activeMainTab and ui.activeMainTab ~= "market" then
-		return
-	end
-
-	local allRows = self:CollectMarketBrowserRows()
-	local filters = self:GetMarketFilters()
-	local panel = ui.marketPanel
+-- Fills the class and subclass dropdowns from the listed items and syncs the other filter controls.
+function AuctionHelper:RefreshMarketFilterControls(panel, filters, allRows)
 	local itemIDs = {}
 	for index, row in ipairs(allRows) do
 		itemIDs[index] = row.itemID
@@ -612,13 +555,17 @@ function AuctionHelper:RefreshMarketTab()
 	panel.subclassDropdown:SetOptions(subclassOptions)
 	panel.qualityDropdown:RefreshText()
 	panel.ownedOnly.check:SetChecked(filters.ownedOnly)
-	if filters.minGold and panel.minGold:GetText() == "" and not panel.minGold:HasFocus() then
-		panel.minGold:SetText(tostring(filters.minGold))
+	-- Restore a saved gold bound into an empty box, but never overwrite what the player is typing.
+	for _, key in ipairs({ "minGold", "maxGold" }) do
+		local box = panel[key]
+		if filters[key] and box:GetText() == "" and not box:HasFocus() then
+			box:SetText(tostring(filters[key]))
+		end
 	end
-	if filters.maxGold and panel.maxGold:GetText() == "" and not panel.maxGold:HasFocus() then
-		panel.maxGold:SetText(tostring(filters.maxGold))
-	end
-	local rows = self.ForeverLogic.FilterMarketRows(allRows, {
+end
+
+function AuctionHelper:FilterMarketBrowserRows(allRows, filters)
+	return self.ForeverLogic.FilterMarketRows(allRows, {
 		classes = filters.classes,
 		subclasses = filters.subclasses,
 		qualities = filters.qualities,
@@ -629,37 +576,62 @@ function AuctionHelper:RefreshMarketTab()
 	}, function(itemID)
 		return AuctionHelper:GetItemFilterInfo(itemID)
 	end)
-	ui.marketWorkingRows = rows
-	if ui.marketTable then
-		ui.marketTable:SetRows(rows)
-	end
+end
 
-	local lastDump = self.GetLastFullAuctionScanAt and self:GetLastFullAuctionScanAt()
-	if lastDump then
-		panel.scanBadge:SetBadge("Full scan " .. self:FormatScanTimestamp(lastDump), "accent")
+function AuctionHelper:RefreshMarketScanBadge(panel)
+	local lastScanAt = self.GetLastFullAuctionScanAt and self:GetLastFullAuctionScanAt()
+	if lastScanAt then
+		panel.scanBadge:SetBadge("Full scan " .. self:FormatScanTimestamp(lastScanAt), "accent")
 	else
 		panel.scanBadge:SetBadge("No full scan yet", "warning")
 	end
-	ui.marketTable:Refresh()
-	if #allRows > 0 then
-		ui.marketTable:SetEmptyText("Nothing matches", "Change the search or press Reset filters.")
-	else
-		ui.marketTable:SetEmptyText("No prices yet", "Open the auction house and run a full scan.")
-	end
-	ui.marketTable:SetFooterText(string.format("%s of %s items", self:FormatNumberGrouped(#rows), self:FormatNumberGrouped(#allRows)),
-		"Works away from the auction house")
+end
 
-	local selectedKey = ui.marketSelectedStorageKey
-	local selected = nil
-	if selectedKey then
-		for _, row in ipairs(rows) do
-			if row.storageKey == selectedKey then
-				selected = row
-				break
-			end
+-- Empty-state and footer texts: an empty table means "no prices" before any scan, else "nothing matches".
+function AuctionHelper:RefreshMarketTableTexts(marketTable, shownCount, totalCount)
+	if totalCount > 0 then
+		marketTable:SetEmptyText("Nothing matches", "Change the search or press Reset filters.")
+	else
+		marketTable:SetEmptyText("No prices yet", "Open the auction house and run a full scan.")
+	end
+	marketTable:SetFooterText(string.format("%s of %s items", self:FormatNumberGrouped(shownCount), self:FormatNumberGrouped(totalCount)),
+		"Works away from the auction house")
+end
+
+-- The shown row with the selected storage key, or nil when the filters hide it.
+local function findRowByStorageKey(rows, storageKey)
+	if not storageKey then
+		return nil
+	end
+	for _, row in ipairs(rows) do
+		if row.storageKey == storageKey then
+			return row
 		end
 	end
-	ui.marketSelectedRow = selected
-	self:RenderMarketDetails(selected)
+	return nil
+end
+
+function AuctionHelper:RefreshMarketTab()
+	self:InitDB()
+	local ui = self.ui
+	if not ui or not ui.marketPanel then
+		return
+	end
+	if ui.activeMainTab and ui.activeMainTab ~= "market" then
+		return
+	end
+	local panel = ui.marketPanel
+	local allRows = self:CollectMarketBrowserRows()
+	local filters = self:GetMarketFilters()
+	self:RefreshMarketFilterControls(panel, filters, allRows)
+	local rows = self:FilterMarketBrowserRows(allRows, filters)
+	ui.marketWorkingRows = rows
+	ui.marketTable:SetRows(rows)
+	self:RefreshMarketScanBadge(panel)
+	ui.marketTable:Refresh()
+	self:RefreshMarketTableTexts(ui.marketTable, #rows, #allRows)
+
+	ui.marketSelectedRow = findRowByStorageKey(rows, ui.marketSelectedStorageKey)
+	self:RenderMarketDetails(ui.marketSelectedRow)
 	self:LayoutMarketPanel(panel)
 end

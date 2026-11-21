@@ -102,7 +102,7 @@ check("Scales: x at start and end", near(s.xAt(500), 58) and near(s.xAt(2500), 3
 check("Scales: x in the middle", near(s.xAt(1500), 208))
 check("Scales: y at low and high", near(s.yAt(20), 20) and near(s.yAt(80), 120))
 check("Scales: y for a value", near(s.yAt(65), 95))
-check("Scales: quantity y", near(s.yAtQ(10), 120) and near(s.yAtQ(0), 20))
+check("Scales: quantity y", near(s.yAtQuantity(10), 120) and near(s.yAtQuantity(0), 20))
 local noQty = CL.Scales(b, box, 3, false)
 check("Scales: without quantity the quantity top is 1", noQty.qHigh == 1)
 local tiny = CL.Scales(CL.Bounds({ { at = 1, value = 1 } }, {}, { { at = 1, value = 0 } }), box, 3, true)

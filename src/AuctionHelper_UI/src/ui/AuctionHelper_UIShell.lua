@@ -29,6 +29,7 @@ local TRACKED_BLIZZARD_FRAMES = {
 local TAB_ORDER = AuctionHelper.DASHBOARD_TABS
 
 local ADDON_ICON = "Interface\\Icons\\INV_Misc_Coin_01"
+AuctionHelper.ADDON_ICON = ADDON_ICON -- also the minimap button icon
 
 local function addRule(frame, edge, color)
 	local rule = frame:CreateTexture(nil, "BORDER")
@@ -149,19 +150,19 @@ function AuctionHelper:RecordExternalFrameInteraction(owner, reason)
 	self:UpdateDynamicPanelLayering(reason or "interaction")
 end
 
+-- The dashboard goes behind a tracked Blizzard window the player clicked last, while that window is open.
+function AuctionHelper:ShouldShowAddonForeground(state)
+	return state.lastClickedOwner == "addon" or not self:IsTrackedExternalOwnerVisible(state.lastClickedOwner)
+end
+
 function AuctionHelper:UpdateDynamicPanelLayering(_reason)
 	local ui = self.ui
 	local frame = ui and ui.mainFrame
 	if not frame then
 		return
 	end
-
 	local state = self:EnsureDynamicLayeringState()
-	local showForeground = true
-	if state.lastClickedOwner ~= "addon" and self:IsTrackedExternalOwnerVisible(state.lastClickedOwner) then
-		showForeground = false
-	end
-
+	local showForeground = self:ShouldShowAddonForeground(state)
 	local desiredStrata = showForeground and ADDON_FOREGROUND_STRATA or ADDON_BACKGROUND_STRATA
 	local desiredLevel = showForeground and ADDON_FOREGROUND_LEVEL or ADDON_BACKGROUND_LEVEL
 	if state.currentStrata ~= desiredStrata then
@@ -225,53 +226,46 @@ function AuctionHelper:InitDynamicLayeringHooks()
 	self:UpdateDynamicPanelLayering("init_dynamic_hooks")
 end
 
-function AuctionHelper:CreateDashboardFrame()
-	local ui = self.ui
-	if ui.mainFrame then
-		return ui.mainFrame
-	end
+local MIN_WIDTH, MIN_HEIGHT, MAX_WIDTH, MAX_HEIGHT = 860, 580, 1400, 980
 
+local function createWindow()
+	local pe = AuctionHelper
 	local frame = CreateFrame("Frame", addonName .. "Dashboard", UIParent, "BackdropTemplate")
 	registerEscClosableFrame(frame)
-	local initialWidth = clamp(self:GetSetting("appearance.windowWidth", 940), 860, 1400)
-	local initialHeight = clamp(self:GetSetting("appearance.windowHeight", 640), 580, 980)
-	frame:SetSize(initialWidth, initialHeight)
+	frame:SetSize(clamp(pe:GetSetting("appearance.windowWidth", 940), MIN_WIDTH, MAX_WIDTH),
+		clamp(pe:GetSetting("appearance.windowHeight", 640), MIN_HEIGHT, MAX_HEIGHT))
 	frame:SetPoint("CENTER")
 	frame:SetFrameStrata(ADDON_BACKGROUND_STRATA)
 	frame:SetFrameLevel(ADDON_BACKGROUND_LEVEL)
 	frame:SetMovable(true)
 	frame:SetResizable(true)
 	if frame.SetResizeBounds then
-		frame:SetResizeBounds(860, 580, 1400, 980)
+		frame:SetResizeBounds(MIN_WIDTH, MIN_HEIGHT, MAX_WIDTH, MAX_HEIGHT)
 	elseif frame.SetMinResize and frame.SetMaxResize then
-		frame:SetMinResize(860, 580)
-		frame:SetMaxResize(1400, 980)
+		frame:SetMinResize(MIN_WIDTH, MIN_HEIGHT)
+		frame:SetMaxResize(MAX_WIDTH, MAX_HEIGHT)
 	end
 	frame:SetUserPlaced(true)
 	frame:SetClampedToScreen(true)
-	self:MakeWindowDraggable(frame, frame)
-	self:StyleWindow(frame)
+	pe:MakeWindowDraggable(frame, frame)
+	pe:StyleWindow(frame)
+	return frame
+end
 
-	ui.mainFrame = frame
-
+-- Header: drag handle, icon, gold title, character name, close button.
+function AuctionHelper:CreateDashboardTitleBar(frame)
 	local theme = self:GetTheme()
-	local size = theme.size
-	local inset = theme.spacing.md
-
-	-- Header: drag handle, icon, gold title, character name, close button.
 	frame.titleBar = CreateFrame("Frame", nil, frame)
 	frame.titleBar:SetPoint("TOPLEFT", 1, -1)
 	frame.titleBar:SetPoint("TOPRIGHT", -1, -1)
-	frame.titleBar:SetHeight(size.header)
+	frame.titleBar:SetHeight(theme.size.header)
 	self:MakeWindowDraggable(frame, frame.titleBar)
 	addRule(frame.titleBar, "BOTTOM", theme.borderSubtle)
-
 	frame.icon = frame.titleBar:CreateTexture(nil, "ARTWORK")
 	frame.icon:SetTexture(ADDON_ICON)
 	frame.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 	frame.icon:SetSize(16, 16)
 	frame.icon:SetPoint("LEFT", 11, 0)
-
 	frame.closeButton = CreateFrame("Button", nil, frame.titleBar, "UIPanelCloseButton")
 	frame.closeButton:ClearAllPoints()
 	frame.closeButton:SetPoint("RIGHT", -6, 0)
@@ -279,20 +273,21 @@ function AuctionHelper:CreateDashboardFrame()
 	frame.closeButton:SetScript("OnClick", function()
 		frame:Hide()
 	end)
-
 	frame.subtitle = frame.titleBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	frame.subtitle:SetPoint("RIGHT", frame.closeButton, "LEFT", -10, 0)
 	frame.subtitle:SetJustifyH("RIGHT")
 	frame.subtitle:SetWordWrap(false)
 	frame.subtitle:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
-
 	frame.title = frame.titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 	frame.title:SetPoint("LEFT", frame.icon, "RIGHT", 8, 0)
 	frame.title:SetPoint("RIGHT", frame.subtitle, "LEFT", -12, 0)
 	frame.title:SetJustifyH("LEFT")
 	frame.title:SetWordWrap(false)
 	frame.title:SetText("AuctionHelper")
+end
 
+-- Clicks on the window raise it above Blizzard frames it shares the screen with.
+local function bindLayeringScripts(frame)
 	frame:HookScript("OnMouseDown", function()
 		AuctionHelper:RecordExternalFrameInteraction("addon", "dashboard_mouse_down")
 	end)
@@ -302,56 +297,98 @@ function AuctionHelper:CreateDashboardFrame()
 	frame:HookScript("OnShow", function()
 		AuctionHelper:UpdateDynamicPanelLayering("dashboard_show")
 	end)
+end
 
-	-- Tab strip.
-	frame.tabBar = CreateFrame("Frame", nil, frame)
-	frame.tabBar:SetPoint("TOPLEFT", frame.titleBar, "BOTTOMLEFT", 0, 0)
-	frame.tabBar:SetPoint("TOPRIGHT", frame.titleBar, "BOTTOMRIGHT", 0, 0)
-	frame.tabBar:SetHeight(size.tabs)
-	addRule(frame.tabBar, "BOTTOM", theme.borderSubtle)
-
-	-- Footer: status on the left, stored data on the right, resize grip in the corner.
-	frame.statusBar = CreateFrame("Frame", nil, frame)
-	frame.statusBar:SetPoint("BOTTOMLEFT", 1, 1)
-	frame.statusBar:SetPoint("BOTTOMRIGHT", -1, 1)
-	frame.statusBar:SetHeight(size.footer)
-	addRule(frame.statusBar, "TOP", theme.borderSubtle)
-
-	frame.resizeHandle = CreateFrame("Button", nil, frame.statusBar)
-	frame.resizeHandle:SetSize(14, 14)
-	frame.resizeHandle:SetPoint("BOTTOMRIGHT", -2, 2)
-	frame.resizeHandle:SetNormalTexture("Interface/ChatFrame/UI-ChatIM-SizeGrabber-Up")
-	frame.resizeHandle:SetHighlightTexture("Interface/ChatFrame/UI-ChatIM-SizeGrabber-Highlight")
-	frame.resizeHandle:SetPushedTexture("Interface/ChatFrame/UI-ChatIM-SizeGrabber-Down")
-	frame.resizeHandle:RegisterForDrag("LeftButton")
-	frame.resizeHandle:SetScript("OnDragStart", function()
+-- Resize grip in the footer corner; the new size is saved when the drag ends.
+local function createResizeHandle(frame)
+	local handle = CreateFrame("Button", nil, frame.statusBar)
+	handle:SetSize(14, 14)
+	handle:SetPoint("BOTTOMRIGHT", -2, 2)
+	handle:SetNormalTexture("Interface/ChatFrame/UI-ChatIM-SizeGrabber-Up")
+	handle:SetHighlightTexture("Interface/ChatFrame/UI-ChatIM-SizeGrabber-Highlight")
+	handle:SetPushedTexture("Interface/ChatFrame/UI-ChatIM-SizeGrabber-Down")
+	handle:RegisterForDrag("LeftButton")
+	handle:SetScript("OnDragStart", function()
 		frame:StartSizing("BOTTOMRIGHT")
 	end)
-	frame.resizeHandle:SetScript("OnDragStop", function()
+	handle:SetScript("OnDragStop", function()
 		frame:StopMovingOrSizing()
 		AuctionHelper:SetSetting("appearance.windowWidth", frame:GetWidth())
 		AuctionHelper:SetSetting("appearance.windowHeight", frame:GetHeight())
 	end)
-	frame.resizeHandle:SetScript("OnEnter", function(self)
+	handle:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
 		GameTooltip:SetText("Drag to resize", 1, 1, 1)
 		GameTooltip:Show()
 	end)
-	frame.resizeHandle:SetScript("OnLeave", GameTooltip_Hide)
+	handle:SetScript("OnLeave", GameTooltip_Hide)
+	frame.resizeHandle = handle
+end
 
+-- Footer: status on the left, stored data on the right, resize grip in the corner.
+function AuctionHelper:CreateDashboardStatusBar(frame)
+	local theme = self:GetTheme()
+	frame.statusBar = CreateFrame("Frame", nil, frame)
+	frame.statusBar:SetPoint("BOTTOMLEFT", 1, 1)
+	frame.statusBar:SetPoint("BOTTOMRIGHT", -1, 1)
+	frame.statusBar:SetHeight(theme.size.footer)
+	addRule(frame.statusBar, "TOP", theme.borderSubtle)
+	createResizeHandle(frame)
 	frame.statusRight = frame.statusBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	frame.statusRight:SetPoint("RIGHT", frame.resizeHandle, "LEFT", -8, 0)
 	frame.statusRight:SetJustifyH("RIGHT")
-	frame.statusRight:SetWordWrap(false)
 	frame.statusText = frame.statusBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	frame.statusText:SetPoint("LEFT", inset, 0)
+	frame.statusText:SetPoint("LEFT", theme.spacing.md, 0)
 	frame.statusText:SetPoint("RIGHT", frame.statusRight, "LEFT", -12, 0)
 	frame.statusText:SetJustifyH("LEFT")
-	frame.statusText:SetWordWrap(false)
 	for _, text in ipairs({ frame.statusText, frame.statusRight }) do
+		text:SetWordWrap(false)
 		text:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
 	end
+end
 
+-- One tab button and one hidden content panel per dashboard tab.
+function AuctionHelper:CreateDashboardTabs(frame)
+	local ui, theme = self.ui, self:GetTheme()
+	ui.tabButtons, ui.tabPanels, ui.tabModules, ui.tabInited = {}, {}, {}, {}
+	local previous
+	for _, tab in ipairs(TAB_ORDER) do
+		local button = createTabButton(frame.tabBar, tab.label)
+		if previous then
+			button:SetPoint("LEFT", previous, "RIGHT", theme.spacing.xs, 0)
+		else
+			button:SetPoint("LEFT", frame.tabBar, "LEFT", theme.spacing.md, 0)
+		end
+		previous = button
+		button:SetScript("OnClick", function()
+			AuctionHelper:ShowDashboardTab(tab.id)
+		end)
+		ui.tabButtons[tab.id] = button
+		local panel = CreateFrame("Frame", nil, frame.contentHost)
+		panel:SetAllPoints()
+		panel:Hide()
+		ui.tabPanels[tab.id] = panel
+		ui.tabModules[tab.id] = tab.module()
+	end
+end
+
+function AuctionHelper:CreateDashboardFrame()
+	local ui = self.ui
+	if ui.mainFrame then
+		return ui.mainFrame
+	end
+	local frame = createWindow()
+	ui.mainFrame = frame
+	local theme = self:GetTheme()
+	local inset = theme.spacing.md
+	self:CreateDashboardTitleBar(frame)
+	bindLayeringScripts(frame)
+	frame.tabBar = CreateFrame("Frame", nil, frame)
+	frame.tabBar:SetPoint("TOPLEFT", frame.titleBar, "BOTTOMLEFT", 0, 0)
+	frame.tabBar:SetPoint("TOPRIGHT", frame.titleBar, "BOTTOMRIGHT", 0, 0)
+	frame.tabBar:SetHeight(theme.size.tabs)
+	addRule(frame.tabBar, "BOTTOM", theme.borderSubtle)
+	self:CreateDashboardStatusBar(frame)
 	-- Content: everything between the tab strip and the footer, inset on every side.
 	frame.contentHost = CreateFrame("Frame", nil, frame)
 	frame.contentHost:SetPoint("TOPLEFT", frame.tabBar, "BOTTOMLEFT", inset, -inset)
@@ -359,34 +396,7 @@ function AuctionHelper:CreateDashboardFrame()
 	if frame.contentHost.SetClipsChildren then
 		frame.contentHost:SetClipsChildren(true)
 	end
-
-	ui.tabButtons = {}
-	ui.tabPanels = {}
-	ui.tabModules = {}
-	ui.tabInited = {}
-	local previous
-	for _, tab in ipairs(TAB_ORDER) do
-		local button = createTabButton(frame.tabBar, tab.label)
-		if previous then
-			button:SetPoint("LEFT", previous, "RIGHT", theme.spacing.xs, 0)
-		else
-			button:SetPoint("LEFT", frame.tabBar, "LEFT", inset, 0)
-		end
-		previous = button
-		button:SetScript("OnClick", function()
-			AuctionHelper:ShowDashboardTab(tab.id)
-		end)
-		ui.tabButtons[tab.id] = button
-
-		local panel = CreateFrame("Frame", nil, frame.contentHost)
-		panel:SetAllPoints()
-		panel:Hide()
-		ui.tabPanels[tab.id] = panel
-
-		local module = tab.module()
-		ui.tabModules[tab.id] = module
-	end
-
+	self:CreateDashboardTabs(frame)
 	self:ApplyWindowScale()
 	self:ApplyThemeToUI()
 	self:UpdateDynamicPanelLayering("dashboard_created")
@@ -403,34 +413,44 @@ function AuctionHelper:AccountGoldLabel()
 	return gold and ("Gold on all characters " .. self:FormatCopperShort(gold)) or ""
 end
 
+-- Status bar, left: what is running now, else how fresh the AH prices are.
+function AuctionHelper:GetShellActivityText()
+	local state = self:GetState()
+	if state.scanInProgress then
+		return "Scanning " .. tostring(state.currentProfession and state.currentProfession.professionName or "professions") .. "…"
+	end
+	if not self.GetLastFullAuctionScanAt then
+		return ""
+	end
+	local lastScanAt = self:GetLastFullAuctionScanAt()
+	return lastScanAt and ("Prices from full AH scan " .. self:FormatScanTimestamp(lastScanAt))
+		or "No full AH scan yet · open the auction house to get prices"
+end
+
+-- Status bar, right: stored characters, and when this character's professions were scanned.
+function AuctionHelper:GetShellStoredText()
+	local characters = self.db and self.db.characters or {}
+	local stored = self:TableCount(characters)
+	local text = string.format("%d %s stored", stored, self:Plural(stored, "character"))
+	-- Profession scan time only matters when this character has a profession to scan.
+	if #self:GetPlayerProfessions() == 0 then
+		return text
+	end
+	local charData = characters[self:GetCharacterKey()]
+	local scannedAt = charData and charData.scanFinishedAt
+	if scannedAt and scannedAt > 0 then
+		return text .. " · Professions scanned " .. self:FormatScanTimestamp(scannedAt)
+	end
+	return text .. " · Professions not scanned yet"
+end
+
 function AuctionHelper:RefreshShellStatus()
 	local ui = self.ui
 	if not (ui and ui.mainFrame and ui.mainFrame.statusText) then
 		return
 	end
-	local state = self:GetState()
-	local currentKey = self:GetCharacterKey()
-	local charData = self.db and self.db.characters and self.db.characters[currentKey]
-	-- Left: what is running now, else how fresh the AH prices are.
-	local leftText = ""
-	if state.scanInProgress then
-		leftText = "Scanning " .. tostring(state.currentProfession and state.currentProfession.professionName or "professions") .. "…"
-	elseif self.GetLastFullAuctionScanAt then
-		local lastScanAt = self:GetLastFullAuctionScanAt()
-		leftText = lastScanAt and ("Prices from full AH scan " .. self:FormatScanTimestamp(lastScanAt))
-			or "No full AH scan yet · open the auction house to get prices"
-	end
-	local stored = self:TableCount(self.db and self.db.characters or {})
-	ui.mainFrame.statusText:SetText(leftText)
-	local text = string.format("%d %s stored", stored, self:Plural(stored, "character"))
-	-- Profession scan time only matters when this character has a profession to scan.
-	if #self:GetPlayerProfessions() > 0 then
-		local scannedAt = charData and charData.scanFinishedAt
-		text = text .. ((scannedAt and scannedAt > 0)
-			and (" · Professions scanned " .. self:FormatScanTimestamp(scannedAt))
-			or " · Professions not scanned yet")
-	end
-	ui.mainFrame.statusRight:SetText(text)
+	ui.mainFrame.statusText:SetText(self:GetShellActivityText())
+	ui.mainFrame.statusRight:SetText(self:GetShellStoredText())
 	ui.mainFrame.subtitle:SetText(self:AccountGoldLabel())
 end
 
@@ -450,6 +470,36 @@ function AuctionHelper:ApplyThemeToUI()
 	self:SkinTree(ui.mainFrame)
 end
 
+-- The module drawing a tab (from TAB_ORDER), cached in ui.tabModules.
+function AuctionHelper:GetDashboardTabModule(tabId)
+	local ui = self.ui
+	ui.tabModules = ui.tabModules or {}
+	if ui.tabModules[tabId] then
+		return ui.tabModules[tabId]
+	end
+	for _, tab in ipairs(TAB_ORDER) do
+		if tab.id == tabId then
+			ui.tabModules[tabId] = tab.module and tab.module() or nil
+			return ui.tabModules[tabId]
+		end
+	end
+	return nil
+end
+
+-- Runs a tab module's method guarded, so one broken tab cannot break the window. Returns false on error.
+function AuctionHelper:CallDashboardTabModule(tabId, action, ...)
+	local module = self.ui.tabModules and self.ui.tabModules[tabId]
+	local method = module and module[action]
+	if not method then
+		return true
+	end
+	local ok, err = pcall(method, module, ...)
+	if not ok and self.PrintMessage then
+		self:PrintMessage("Tab '" .. tostring(tabId) .. "' failed to " .. string.lower(action) .. ": " .. tostring(err))
+	end
+	return ok
+end
+
 function AuctionHelper:EnsureDashboardTabCreated(tabId)
 	local ui = self.ui
 	if not ui or not tabId then
@@ -459,26 +509,10 @@ function AuctionHelper:EnsureDashboardTabCreated(tabId)
 	if ui.tabInited[tabId] then
 		return
 	end
-	local module = ui.tabModules and ui.tabModules[tabId]
-	if not module then
-		for _, tab in ipairs(TAB_ORDER) do
-			if tab.id == tabId then
-				module = tab.module and tab.module() or nil
-				ui.tabModules = ui.tabModules or {}
-				ui.tabModules[tabId] = module
-				break
-			end
-		end
-	end
+	self:GetDashboardTabModule(tabId)
 	local panel = ui.tabPanels and ui.tabPanels[tabId]
-	if module and module.Create and panel then
-		local ok, err = pcall(module.Create, module, panel, ui)
-		if not ok then
-			if self.PrintMessage then
-				self:PrintMessage("Tab '" .. tostring(tabId) .. "' failed to create: " .. tostring(err))
-			end
-			return
-		end
+	if panel and not self:CallDashboardTabModule(tabId, "Create", panel, ui) then
+		return
 	end
 	ui.tabInited[tabId] = true
 end
@@ -513,14 +547,7 @@ function AuctionHelper:ShowDashboardTab(tabId)
 	end
 
 	self:EnsureDashboardTabCreated(tabId)
-
-	local module = ui.tabModules and ui.tabModules[tabId]
-	if module and module.Refresh then
-		local ok, err = pcall(module.Refresh, module, ui, self.db)
-		if not ok and self.PrintMessage then
-			self:PrintMessage("Tab '" .. tostring(tabId) .. "' failed to refresh: " .. tostring(err))
-		end
-	end
+	self:CallDashboardTabModule(tabId, "Refresh", ui, self.db)
 	if tabId == "crafts" and ui.craftsFocusQueue and self.FocusCraftsQueuePanel then
 		ui.craftsFocusQueue = false
 		self:FocusCraftsQueuePanel()
@@ -587,204 +614,6 @@ function AuctionHelper:OpenSettingsTab()
 	self.ui.mainFrame:Show()
 	self:RecordExternalFrameInteraction("addon", "open_settings_tab")
 	self:ShowDashboardTab("settings")
-end
-
-function AuctionHelper:EnsureMinimapButton()
-	if not Minimap then
-		return
-	end
-	self:InitDB()
-	local ui = self.ui
-	local showButton = self:GetSetting("general.showMinimapButton", true)
-	if ui.minimapButton then
-		ui.minimapButton:SetShown(showButton)
-		if showButton then
-			self:UpdateMinimapButtonPosition(ui.minimapButton)
-		end
-		return
-	end
-
-	local btn = CreateFrame("Button", addonName .. "MinimapButton", Minimap)
-	-- Standard minimap-button layout (same offsets as LibDBIcon): the tracking-border
-	-- ring sits in the top-left of its texture, so everything anchors TOPLEFT, not CENTER.
-	btn:SetSize(31, 31)
-	btn:SetFrameStrata("MEDIUM")
-	btn:SetFrameLevel(Minimap:GetFrameLevel() + 8)
-	btn:SetHighlightTexture("Interface/Minimap/UI-Minimap-ZoomButton-Highlight", "ADD")
-	btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-	btn:RegisterForDrag("LeftButton")
-
-	local background = btn:CreateTexture(nil, "BACKGROUND")
-	background:SetTexture("Interface/Minimap/UI-Minimap-Background")
-	background:SetSize(20, 20)
-	background:SetPoint("TOPLEFT", 7, -5)
-
-	local icon = btn:CreateTexture(nil, "ARTWORK")
-	icon:SetSize(17, 17)
-	icon:SetPoint("TOPLEFT", 7, -6)
-	icon:SetTexture(ADDON_ICON)
-	icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
-	btn.icon = icon
-
-	local border = btn:CreateTexture(nil, "OVERLAY")
-	border:SetTexture("Interface/Minimap/MiniMap-TrackingBorder")
-	border:SetSize(53, 53)
-	border:SetPoint("TOPLEFT")
-
-	btn:SetScript("OnClick", function(_, mouse)
-		if mouse == "RightButton" then
-			AuctionHelper:OpenSettingsTab()
-		else
-			AuctionHelper:ToggleDashboard()
-		end
-	end)
-	btn:SetScript("OnDragStart", function(self)
-		self:SetScript("OnUpdate", function()
-			AuctionHelper:InitDB()
-			local mx, my = Minimap:GetCenter()
-			local px, py = GetCursorPosition()
-			local scale = Minimap:GetEffectiveScale()
-			px, py = px / scale, py / scale
-			local angle = math.deg(math.atan2(py - my, px - mx))
-			AuctionHelper:SetSetting("integrations.minimapButtonAngle", angle)
-			AuctionHelper:UpdateMinimapButtonPosition(self)
-		end)
-	end)
-	btn:SetScript("OnDragStop", function(self)
-		self:SetScript("OnUpdate", nil)
-	end)
-	btn:SetScript("OnEnter", function(self)
-		local theme = AuctionHelper:GetTheme()
-		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-		GameTooltip:SetText("AuctionHelper", theme.gold.r, theme.gold.g, theme.gold.b)
-		for _, pair in ipairs({ { "Click", "Open the dashboard" }, { "Right-click", "Open settings" }, { "Drag", "Move this button" } }) do
-			GameTooltip:AddDoubleLine(pair[1], pair[2], theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, 1, 1, 1)
-		end
-		GameTooltip:Show()
-	end)
-	btn:SetScript("OnLeave", GameTooltip_Hide)
-
-	ui.minimapButton = btn
-	btn:SetShown(showButton)
-	self:UpdateMinimapButtonPosition(btn)
-end
-
-function AuctionHelper:UpdateMinimapButtonPosition(button)
-	if not button or not Minimap then
-		return
-	end
-	local deg = tonumber(self:GetSetting("integrations.minimapButtonAngle", 225)) or 225
-	local rad = math.rad(deg)
-	local radius = (math.min(Minimap:GetWidth(), Minimap:GetHeight()) * 0.5) + 5
-	button:ClearAllPoints()
-	button:SetPoint("CENTER", Minimap, "CENTER", math.cos(rad) * radius, math.sin(rad) * radius)
-end
-
-function AuctionHelper:OpenBlizzardSettings()
-	if not self.settingsCategoryId then
-		self:RegisterBlizzardSettings()
-	end
-	if not self.settingsCategoryId then
-		return
-	end
-	if Settings and Settings.OpenToCategory then
-		Settings.OpenToCategory(self.settingsCategoryId)
-		Settings.OpenToCategory(self.settingsCategoryId)
-	end
-end
-
-function AuctionHelper:RegisterBlizzardSettings()
-	if self.settingsCategoryId or not Settings or not Settings.RegisterCanvasLayoutCategory then
-		return
-	end
-
-	local frame = CreateFrame("Frame", nil, nil, "VerticalLayoutFrame")
-	frame.name = "AuctionHelper"
-	frame.spacing = 8
-	frame:SetSize(820, 520)
-
-	local title = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightHuge")
-	title:SetPoint("TOPLEFT", 16, -18)
-	title:SetText("AuctionHelper")
-
-	local subtitle = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
-	subtitle:SetWidth(760)
-	subtitle:SetJustifyH("LEFT")
-	subtitle:SetText("Open the AuctionHelper window. Every option is on its Settings tab; the most used ones are also here.")
-
-	local openButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-	openButton:SetSize(180, 24)
-	openButton:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -12)
-	openButton:SetText("Open AuctionHelper")
-	openButton:SetScript("OnClick", function()
-		AuctionHelper:OpenSettingsTab()
-	end)
-
-	local function createCheckbox(anchor, offsetY, label, getter, setter)
-		local check = CreateFrame("CheckButton", nil, frame, "SettingsCheckBoxTemplate")
-		check:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, offsetY)
-		local labelRegion = check.Text or check.text
-		if not labelRegion then
-			labelRegion = check:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-			labelRegion:SetPoint("LEFT", check, "RIGHT", 4, 0)
-			check.Text = labelRegion
-		end
-		labelRegion:SetText(label)
-		check:SetChecked(getter())
-		check:SetScript("OnClick", function(self)
-			setter(self:GetChecked() == true)
-		end)
-		return check
-	end
-
-	local minimapCheck = createCheckbox(openButton, -14, "Show minimap button", function()
-		return AuctionHelper:GetSetting("general.showMinimapButton", true)
-	end, function(value)
-		AuctionHelper:SetSetting("general.showMinimapButton", value)
-		AuctionHelper:EnsureMinimapButton()
-	end)
-
-	local specCheck = createCheckbox(minimapCheck, -8, "Capture specialization tree", function()
-		return AuctionHelper:GetSetting("capture.captureSpecializationTree", true)
-	end, function(value)
-		AuctionHelper:SetSetting("capture.captureSpecializationTree", value)
-	end)
-
-	local outputCheck = createCheckbox(specCheck, -8, "Include detailed recipe output data", function()
-		return AuctionHelper:GetSetting("capture.includeRecipeOutputItemData", false)
-	end, function(value)
-		AuctionHelper:SetSetting("capture.includeRecipeOutputItemData", value)
-	end)
-
-	local scaleButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-	scaleButton:SetSize(180, 24)
-	scaleButton:SetPoint("TOPLEFT", outputCheck, "BOTTOMLEFT", 4, -12)
-	local function refreshScaleButton()
-		scaleButton:SetText(string.format(
-			"Window scale: %d%%",
-			math.floor((AuctionHelper:GetSetting("appearance.windowScale", 1) or 1) * 100 + 0.5)
-		))
-	end
-	scaleButton:SetScript("OnClick", function()
-		local options = AuctionHelper:GetWindowScaleOptions()
-		local current = tonumber(AuctionHelper:GetSetting("appearance.windowScale", 1)) or 1
-		local nextIndex = 1
-		for index, option in ipairs(options) do
-			if math.abs(option.value - current) < 0.001 then
-				nextIndex = (index % #options) + 1
-				break
-			end
-		end
-		AuctionHelper:SetSetting("appearance.windowScale", options[nextIndex].value)
-		AuctionHelper:ApplyWindowScale()
-		refreshScaleButton()
-	end)
-	refreshScaleButton()
-
-	local category = Settings.RegisterCanvasLayoutCategory(frame, "AuctionHelper")
-	self.settingsCategoryId = category:GetID()
-	Settings.RegisterAddOnCategory(category)
 end
 
 -- Every docked panel and popup is re-skinned after it refreshes, so controls created during a refresh

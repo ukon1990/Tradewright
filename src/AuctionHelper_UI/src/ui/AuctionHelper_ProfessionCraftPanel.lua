@@ -2,6 +2,17 @@ local addonName, AuctionHelper = ...
 
 local PROFESSION_PANEL_WATCHER_KEY = "professionCraftPanel"
 
+local function openCraftingOrderPart(pe)
+	local openOrder = pe.GetOpenCraftingOrder and pe:GetOpenCraftingOrder() or nil
+	return openOrder and tostring(openOrder.orderID) or "0"
+end
+
+local function openProfessionTransaction(pe)
+	local form = pe.GetOpenProfessionSchematicForm and pe:GetOpenProfessionSchematicForm() or nil
+	return form and form.GetTransaction and form:GetTransaction() or nil
+end
+
+-- "recipe|scenario|order[|conc0/conc1]": changes whenever the open craft would evaluate differently.
 function AuctionHelper:GetProfessionCraftOperationSignature()
 	if not self.IS_SUPPORTED then
 		return nil
@@ -10,18 +21,9 @@ function AuctionHelper:GetProfessionCraftOperationSignature()
 	if not recipeID then
 		return nil
 	end
-
-	local scenario = self:GetOpenProfessionScenario()
-	local form = self.GetOpenProfessionSchematicForm and self:GetOpenProfessionSchematicForm() or nil
-	local transaction = form and form.GetTransaction and form:GetTransaction() or nil
-	local openOrder = self.GetOpenCraftingOrder and self:GetOpenCraftingOrder() or nil
-	local orderPart = openOrder and tostring(openOrder.orderID) or "0"
-	if not transaction then
-		return tostring(recipeID) .. "|" .. tostring(scenario) .. "|" .. orderPart
-	end
-
-	local parts = { tostring(recipeID), tostring(scenario), orderPart }
-	if type(transaction.IsApplyingConcentration) == "function" then
+	local parts = { tostring(recipeID), tostring(self:GetOpenProfessionScenario()), openCraftingOrderPart(self) }
+	local transaction = openProfessionTransaction(self)
+	if transaction and type(transaction.IsApplyingConcentration) == "function" then
 		parts[#parts + 1] = transaction:IsApplyingConcentration() and "conc1" or "conc0"
 	end
 	return table.concat(parts, "|")
@@ -162,6 +164,38 @@ local function anchorProfessionPanelToggleButton(toggle, pf)
 	toggle:SetFrameLevel(baseLevel + 50)
 end
 
+-- Hides the panel with its toggle button and collapsed tab.
+local function hideProfessionPanel(panel)
+	panel:Hide()
+	if panel.panelToggleBtn then
+		panel.panelToggleBtn:Hide()
+	end
+	if panel.collapseTab then
+		panel.collapseTab:Hide()
+	end
+end
+
+local function hookRecipeSelection(page, scheduleRefresh)
+	if type(page.SelectRecipe) == "function" then
+		hooksecurefunc(page, "SelectRecipe", scheduleRefresh)
+	end
+	if type(rawget(page, "SetSelectedRecipeID")) == "function" then
+		hooksecurefunc(page, "SetSelectedRecipeID", scheduleRefresh)
+	end
+	page:HookScript("OnShow", scheduleRefresh)
+end
+
+-- The signature the state watcher compares: the open craft's, while its form or a crafting order is open.
+local function watchedOperationSignature()
+	local pe = AuctionHelper
+	local form = pe.GetOpenProfessionSchematicForm and pe:GetOpenProfessionSchematicForm() or nil
+	local formShown = form and not (form.IsShown and not form:IsShown())
+	if formShown or (pe.GetOpenCraftingOrder and pe:GetOpenCraftingOrder()) then
+		return pe:GetProfessionCraftOperationSignature()
+	end
+	return nil
+end
+
 function AuctionHelper:InitProfessionCraftEconomyHooks()
 	if self._professionCraftEconomyHooks or not self.IS_SUPPORTED then
 		return
@@ -174,49 +208,22 @@ function AuctionHelper:InitProfessionCraftEconomyHooks()
 	local function scheduleRefresh()
 		AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
 	end
-	local page = pf.CraftingPage
-	if page then
-		if type(page.SelectRecipe) == "function" then
-			hooksecurefunc(page, "SelectRecipe", scheduleRefresh)
-		end
-		if type(rawget(page, "SetSelectedRecipeID")) == "function" then
-			hooksecurefunc(page, "SetSelectedRecipeID", scheduleRefresh)
-		end
-		page:HookScript("OnShow", scheduleRefresh)
+	if pf.CraftingPage then
+		hookRecipeSelection(pf.CraftingPage, scheduleRefresh)
 	end
 	pf:HookScript("OnShow", scheduleRefresh)
 	pf:HookScript("OnHide", function()
 		if AuctionHelper._professionCraftPanel then
-			AuctionHelper._professionCraftPanel:Hide()
-			if AuctionHelper._professionCraftPanel.panelToggleBtn then
-				AuctionHelper._professionCraftPanel.panelToggleBtn:Hide()
-			end
-			if AuctionHelper._professionCraftPanel.collapseTab then
-				AuctionHelper._professionCraftPanel.collapseTab:Hide()
-			end
+			hideProfessionPanel(AuctionHelper._professionCraftPanel)
 		end
 	end)
-
 	if EventRegistry and EventRegistry.RegisterCallback then
 		EventRegistry:RegisterCallback("ProfessionsFrame.TabSet", function()
 			scheduleRefresh()
 		end, AuctionHelper)
 	end
-
 	-- Watch live operation state so concentration/reagent makeup changes refresh immediately.
-	self:StartStateWatcher(PROFESSION_PANEL_WATCHER_KEY, 0.5, function()
-		local form = AuctionHelper.GetOpenProfessionSchematicForm and AuctionHelper:GetOpenProfessionSchematicForm() or nil
-		if not form or (form.IsShown and not form:IsShown()) then
-			local openOrder = AuctionHelper.GetOpenCraftingOrder and AuctionHelper:GetOpenCraftingOrder() or nil
-			if openOrder then
-				return AuctionHelper:GetProfessionCraftOperationSignature()
-			end
-			return nil
-		end
-		return AuctionHelper:GetProfessionCraftOperationSignature()
-	end, function()
-		AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
-	end)
+	self:StartStateWatcher(PROFESSION_PANEL_WATCHER_KEY, 0.5, watchedOperationSignature, scheduleRefresh)
 end
 
 --- Dock to the right of ProfessionsFrame (same pattern as AH / Mail side panels).
@@ -270,17 +277,8 @@ local function queueOpenRecipe(amount)
 	end
 end
 
-local function createRecipeView(pe, f)
-	local host = CreateFrame("Frame", nil, f)
-	host:SetPoint("TOPLEFT", f, "TOPLEFT", PAD, -(pe:GetTheme().size.header + 1 + PAD))
-	host:SetPoint("BOTTOMRIGHT", f.footer, "TOPRIGHT", -(PAD - 1), PAD)
-	f.infoHost = host
-
-	host.empty = pe:CreateEmptyState(host)
-	host.empty:SetAllPoints()
-	host.body = CreateFrame("Frame", nil, host)
-	host.body:SetAllPoints()
-
+-- Item header, sale / materials / profit stats, key facts and the materials heading.
+local function createRecipeSummary(pe, host)
 	host.header = pe:CreateDetailHeader(host.body)
 	host.header:SetPoint("TOPLEFT")
 	host.header:SetPoint("TOPRIGHT")
@@ -298,7 +296,10 @@ local function createRecipeView(pe, f)
 	host.materialsHeading = pe:CreateHeading(host.body, "Materials per craft")
 	host.materialsHeading:SetPoint("TOPLEFT", host.facts, "BOTTOMLEFT", 0, -10)
 	host.materialsHeading:SetPoint("TOPRIGHT", host.facts, "BOTTOMRIGHT", 0, -10)
+end
 
+-- Bottom row: quantity box and Add to queue on the left, Scan and Export on the right.
+local function createRecipeActions(pe, f, host)
 	host.actions = CreateFrame("Frame", nil, host)
 	host.actions:SetPoint("BOTTOMLEFT")
 	host.actions:SetPoint("BOTTOMRIGHT")
@@ -330,7 +331,9 @@ local function createRecipeView(pe, f)
 		pe:ScanOpenProfession()
 	end, { tooltip = "Store every recipe and reagent of this profession." })
 	f.scanBtn:SetPoint("RIGHT", f.exportBtn, "LEFT", -8, 0)
+end
 
+local function createRecipeMaterials(pe, host)
 	host.materials = pe:CreateReusableTable(host.body, {
 		autoFitToScroll = true,
 		footer = true,
@@ -353,41 +356,36 @@ local function createRecipeView(pe, f)
 			end },
 		pe:MoneyColumn({ id = "cost", label = "Cost", width = 76, sortable = false }),
 	})
+end
+
+local function createRecipeView(pe, f)
+	local host = CreateFrame("Frame", nil, f)
+	host:SetPoint("TOPLEFT", f, "TOPLEFT", PAD, -(pe:GetTheme().size.header + 1 + PAD))
+	host:SetPoint("BOTTOMRIGHT", f.footer, "TOPRIGHT", -(PAD - 1), PAD)
+	f.infoHost = host
+
+	host.empty = pe:CreateEmptyState(host)
+	host.empty:SetAllPoints()
+	host.body = CreateFrame("Frame", nil, host)
+	host.body:SetAllPoints()
+	createRecipeSummary(pe, host)
+	createRecipeActions(pe, f, host)
+	createRecipeMaterials(pe, host)
 	return host
 end
 
-function AuctionHelper:EnsureProfessionCraftEconomyPanel()
-	if self._professionCraftPanel then
-		self:LayoutProfessionCraftEconomyPanel(self._professionCraftPanel)
-		return self._professionCraftPanel
-	end
-	if not self.IS_SUPPORTED then
-		return nil
-	end
-	local pf = _G.ProfessionsFrame
-	if not pf then
-		return nil
-	end
-	local pe = self
-	local theme = self:GetTheme()
-
-	local f = CreateFrame("Frame", addonName .. "ProfessionEconomyBlock", pf, "BackdropTemplate")
-	f:SetFrameStrata("MEDIUM")
-	f:SetWidth(PANEL_WIDTH)
-	self:LayoutProfessionCraftEconomyPanel(f)
-	self:StyleWindow(f)
-	f:SetClampedToScreen(true)
-
-	-- Header: title and the Recipe / Queue switch.
-	f.tabQueue = self:CreateButton(f, "Queue", function()
+-- Title bar: the title and the Recipe / Queue switch.
+local function createPanelHeader(pe, f)
+	local theme = pe:GetTheme()
+	f.tabQueue = pe:CreateButton(f, "Queue", function()
 		pe:SetProfessionPanelActiveTab("queue", true)
 	end, { small = true })
 	f.tabQueue:SetPoint("RIGHT", f, "TOPRIGHT", -PAD, -(theme.size.header / 2))
-	f.tabInfo = self:CreateButton(f, "Recipe", function()
+	f.tabInfo = pe:CreateButton(f, "Recipe", function()
 		pe:SetProfessionPanelActiveTab("info", true)
 	end, { small = true })
 	f.tabInfo:SetPoint("RIGHT", f.tabQueue, "LEFT", 1, 0)
-	f.title = self:CreateText(f, "GameFontNormalLarge", "gold")
+	f.title = pe:CreateText(f, "GameFontNormalLarge", "gold")
 	f.title:SetPoint("LEFT", f, "TOPLEFT", PAD, -(theme.size.header / 2) - 1)
 	f.title:SetPoint("RIGHT", f.tabInfo, "LEFT", -12, 0)
 	f.title:SetText("AuctionHelper")
@@ -396,8 +394,11 @@ function AuctionHelper:EnsureProfessionCraftEconomyPanel()
 	headerRule:SetPoint("TOPRIGHT", -1, -theme.size.header)
 	headerRule:SetHeight(1)
 	headerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+end
 
-	-- Footer: when this profession was scanned.
+-- Footer: when this profession was scanned.
+local function createPanelFooter(pe, f)
+	local theme = pe:GetTheme()
 	f.footer = CreateFrame("Frame", nil, f)
 	f.footer:SetPoint("BOTTOMLEFT", 1, 1)
 	f.footer:SetPoint("BOTTOMRIGHT", -1, 1)
@@ -407,14 +408,17 @@ function AuctionHelper:EnsureProfessionCraftEconomyPanel()
 	footerRule:SetPoint("TOPRIGHT")
 	footerRule:SetHeight(1)
 	footerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
-	f.footerText = self:CreateText(f.footer, "GameFontHighlightSmall", "textMuted")
+	f.footerText = pe:CreateText(f.footer, "GameFontHighlightSmall", "textMuted")
 	f.footerText:SetPoint("LEFT", PAD, 0)
 	f.footerText:SetPoint("RIGHT", -PAD, 0)
+end
 
-	-- Toggle on the profession window's title bar, left of its close button.
+-- Toggle on the profession window's title bar, left of its close button.
+local function createPanelToggle(pe, pf)
+	local theme = pe:GetTheme()
 	local panelToggle = CreateFrame("Button", addonName .. "ProfessionPanelToggle", pf, "UIPanelButtonTemplate")
 	panelToggle:SetText("Hide panel")
-	self:SkinButton(panelToggle)
+	pe:SkinButton(panelToggle)
 	panelToggle:SetSize(80, theme.size.controlSmall)
 	anchorProfessionPanelToggleButton(panelToggle, pf)
 	panelToggle:HookScript("OnEnter", function(button)
@@ -431,7 +435,30 @@ function AuctionHelper:EnsureProfessionCraftEconomyPanel()
 			pe:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
 		end
 	end)
-	f.panelToggleBtn = panelToggle
+	return panelToggle
+end
+
+function AuctionHelper:EnsureProfessionCraftEconomyPanel()
+	if self._professionCraftPanel then
+		self:LayoutProfessionCraftEconomyPanel(self._professionCraftPanel)
+		return self._professionCraftPanel
+	end
+	if not self.IS_SUPPORTED then
+		return nil
+	end
+	local pf = _G.ProfessionsFrame
+	if not pf then
+		return nil
+	end
+	local f = CreateFrame("Frame", addonName .. "ProfessionEconomyBlock", pf, "BackdropTemplate")
+	f:SetFrameStrata("MEDIUM")
+	f:SetWidth(PANEL_WIDTH)
+	self:LayoutProfessionCraftEconomyPanel(f)
+	self:StyleWindow(f)
+	f:SetClampedToScreen(true)
+	createPanelHeader(self, f)
+	createPanelFooter(self, f)
+	f.panelToggleBtn = createPanelToggle(self, pf)
 
 	createRecipeView(self, f)
 	self:CreateProfessionQueueView(f)
@@ -537,104 +564,80 @@ local function renderProfessionEmpty(panel, message)
 	panel.footerText:SetText("")
 end
 
-function AuctionHelper:RefreshProfessionCraftEconomyPanel(force)
-	if not self.IS_SUPPORTED then
-		return
-	end
-	local now = GetTime and GetTime() or 0
-	if self._refreshingProfessionCraftPanel then
-		return
-	end
-	if not force and self._lastProfessionCraftRefreshAt and (now - self._lastProfessionCraftRefreshAt) < 0.10 then
-		self:ScheduleRefreshProfessionCraftEconomyPanel(0.10)
-		return
-	end
-	self._refreshingProfessionCraftPanel = true
-	self._lastProfessionCraftRefreshAt = now
+local REFRESH_THROTTLE_SEC = 0.10
+local SELECT_RECIPE_TEXT = "Select a recipe to see its profit and materials."
+-- What the empty panel says for each reason EvaluateSelectedProfessionRecipe gives.
+local EMPTY_REASON_TEXT = {
+	no_data = "This recipe is not stored yet. Press Scan, or wait for the recipe list to finish loading.",
+	no_recipe = SELECT_RECIPE_TEXT,
+	not_ready = "The profession window is still loading.",
+	no_eval = "Profit for this recipe could not be worked out yet. Select it again or press Scan.",
+	no_profession = "The profession for this recipe could not be found. Press Scan.",
+}
 
-	local pf = _G.ProfessionsFrame
-	if not pf or not pf:IsShown() then
-		if self._professionCraftPanel then
-			self._professionCraftPanel:Hide()
-			if self._professionCraftPanel.panelToggleBtn then
-				self._professionCraftPanel.panelToggleBtn:Hide()
-			end
-			if self._professionCraftPanel.collapseTab then
-				self._professionCraftPanel.collapseTab:Hide()
-			end
-		end
-		self._lastProfessionEvalContext = nil
-		self._refreshingProfessionCraftPanel = nil
-		return
-	end
-
-	local panel = self:EnsureProfessionCraftEconomyPanel()
-	if not panel then
-		self._refreshingProfessionCraftPanel = nil
-		return
-	end
-	self:LayoutProfessionCraftEconomyPanel(panel)
-
-	local expanded = self:GetSetting("professions.sidePanelExpanded", true) ~= false
-	self:UpdateProfessionPanelToggleButton(expanded)
-	if not expanded then
-		panel:Hide()
-		self:RefreshProfessionQueueCard(panel)
-		if self.CraftingOrderViewRefreshButtons then
-			self:CraftingOrderViewRefreshButtons()
-		end
-		self._refreshingProfessionCraftPanel = nil
-		return
-	end
-
-	local activeTab = self.ui and self.ui.professionPanelActiveTab
-		or self:GetSetting("professions.sidePanelTab", "info")
-	self:SetProfessionPanelActiveTab(activeTab, false)
-
-	local ctx, reason = self:EvaluateSelectedProfessionRecipe()
-	self._lastProfessionEvalContext = ctx
-
-	if not ctx then
-		panel:Show()
-		local msg = "Select a recipe to see its profit and materials."
-		if reason == "no_data" then
-			msg = "This recipe is not stored yet. Press Scan, or wait for the recipe list to finish loading."
-		elseif reason == "no_recipe" then
-			msg = "Select a recipe to see its profit and materials."
-		elseif reason == "not_ready" then
-			msg = "The profession window is still loading."
-		elseif reason == "no_eval" then
-			msg = "Profit for this recipe could not be worked out yet. Select it again or press Scan."
-		elseif reason == "no_profession" then
-			msg = "The profession for this recipe could not be found. Press Scan."
-		elseif reason == "not_retail" then
-			panel:Hide()
-			if panel.panelToggleBtn then
-				panel.panelToggleBtn:Hide()
-			end
-			if panel.collapseTab then
-				panel.collapseTab:Hide()
-			end
-			self._refreshingProfessionCraftPanel = nil
-			return
-		end
-		renderProfessionEmpty(panel, msg)
-		self:RefreshProfessionQueueCard(panel)
-		panel.addButton:SetEnabled(false)
-		if self.CraftingOrderViewRefreshButtons then
-			self:CraftingOrderViewRefreshButtons()
-		end
-		self._refreshingProfessionCraftPanel = nil
-		return
-	end
-
-	panel.addButton:SetEnabled(true)
-	renderProfessionRecipe(self, panel, ctx)
-
+function AuctionHelper:RefreshProfessionSideParts(panel)
 	self:RefreshProfessionQueueCard(panel)
 	if self.CraftingOrderViewRefreshButtons then
 		self:CraftingOrderViewRefreshButtons()
 	end
+end
+
+-- No recipe to show: a message for the reason, or (Forever, no profit view) no panel at all.
+function AuctionHelper:RenderProfessionPanelEmpty(panel, reason)
+	if reason == "not_retail" then
+		return hideProfessionPanel(panel)
+	end
 	panel:Show()
+	renderProfessionEmpty(panel, EMPTY_REASON_TEXT[reason] or SELECT_RECIPE_TEXT)
+	self:RefreshProfessionSideParts(panel)
+	panel.addButton:SetEnabled(false)
+end
+
+function AuctionHelper:RenderProfessionCraftEconomyPanel()
+	local professionsFrame = _G.ProfessionsFrame
+	if not professionsFrame or not professionsFrame:IsShown() then
+		if self._professionCraftPanel then
+			hideProfessionPanel(self._professionCraftPanel)
+		end
+		self._lastProfessionEvalContext = nil
+		return
+	end
+	local panel = self:EnsureProfessionCraftEconomyPanel()
+	if not panel then
+		return
+	end
+	self:LayoutProfessionCraftEconomyPanel(panel)
+	local expanded = self:GetSetting("professions.sidePanelExpanded", true) ~= false
+	self:UpdateProfessionPanelToggleButton(expanded)
+	if not expanded then
+		panel:Hide()
+		return self:RefreshProfessionSideParts(panel)
+	end
+	self:SetProfessionPanelActiveTab(self.ui and self.ui.professionPanelActiveTab or self:GetSetting("professions.sidePanelTab", "info"), false)
+	local context, reason = self:EvaluateSelectedProfessionRecipe()
+	self._lastProfessionEvalContext = context
+	if not context then
+		return self:RenderProfessionPanelEmpty(panel, reason)
+	end
+	panel.addButton:SetEnabled(true)
+	renderProfessionRecipe(self, panel, context)
+	self:RefreshProfessionSideParts(panel)
+	panel:Show()
+end
+
+--- Redraws the side panel of the profession window; calls closer than REFRESH_THROTTLE_SEC are
+--- folded into one unless `force`.
+function AuctionHelper:RefreshProfessionCraftEconomyPanel(force)
+	if not self.IS_SUPPORTED or self._refreshingProfessionCraftPanel then
+		return
+	end
+	local now = GetTime and GetTime() or 0
+	if not force and self._lastProfessionCraftRefreshAt and (now - self._lastProfessionCraftRefreshAt) < REFRESH_THROTTLE_SEC then
+		self:ScheduleRefreshProfessionCraftEconomyPanel(REFRESH_THROTTLE_SEC)
+		return
+	end
+	self._refreshingProfessionCraftPanel = true
+	self._lastProfessionCraftRefreshAt = now
+	self:RenderProfessionCraftEconomyPanel()
 	self._refreshingProfessionCraftPanel = nil
 end

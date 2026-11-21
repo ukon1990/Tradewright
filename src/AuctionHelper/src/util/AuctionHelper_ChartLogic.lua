@@ -77,7 +77,7 @@ function ChartLogic.Bounds(series, secondarySeries, quantitySeries)
 end
 
 --- Pixel mapping inside `box = { left, bottom, width, height }`: `{ low, high, step, qHigh, minT, maxT,
---- xAt(t), yAt(value), yAtQ(quantity) }`. Quantities get their own 0..qHigh axis when hasQuantity.
+--- xAt(t), yAt(value), yAtQuantity(quantity) }`. Quantities get their own 0..qHigh axis when hasQuantity.
 function ChartLogic.Scales(bounds, box, tickCount, hasQuantity)
 	local low, high, step = ChartLogic.NiceScale(bounds.minV, bounds.maxV, tickCount, true)
 	local qHigh = hasQuantity and select(2, ChartLogic.NiceScale(0, math.max(1, bounds.maxQ or 1), tickCount, true)) or 1
@@ -89,7 +89,7 @@ function ChartLogic.Scales(bounds, box, tickCount, hasQuantity)
 	function scales.yAt(v)
 		return box.bottom + (v - low) / (high - low) * box.height
 	end
-	function scales.yAtQ(v)
+	function scales.yAtQuantity(v)
 		return box.bottom + (v / qHigh) * box.height
 	end
 	return scales
@@ -117,6 +117,6 @@ function ChartLogic.HitTargets(scales, series, secondarySeries, quantitySeries)
 	end
 	add(series, "primary", scales.yAt)
 	add(secondarySeries, "secondary", scales.yAt)
-	add(quantitySeries, "quantity", scales.yAtQ)
+	add(quantitySeries, "quantity", scales.yAtQuantity)
 	return targets
 end

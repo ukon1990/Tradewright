@@ -123,110 +123,132 @@ local function recentRows(pe, events)
 	return rows
 end
 
+local SalesDashboardMixin = {}
+
 function AuctionHelper:CreateSalesDashboard(parent)
 	local pe = self
-	local money = function(copper) return pe:FormatCopperShort(copper) end
-	local count = function(n) return pe:FormatNumberGrouped(n) end
 	local dash = CreateFrame("Frame", nil, parent)
+	for name, method in pairs(SalesDashboardMixin) do
+		dash[name] = method
+	end
+	dash.pe = pe
 	dash:SetAllPoints()
-
 	dash.statsRow = CreateFrame("Frame", nil, dash)
 	dash.statsRow:SetPoint("TOPLEFT")
 	dash.statsRow:SetPoint("TOPRIGHT")
 	dash.statsRow:SetHeight(STATS_HEIGHT)
 	dash.stats = pe:CreateStats(dash.statsRow, { "earned", "sales", "bestEarner", "mostOften" })
-
-	-- Gold per day, with the period switch that drives the whole view.
-	dash.chart = pe:CreateDashboardCard(dash, "Gold from sales, per day")
-	dash.chart:SetPoint("TOPLEFT", dash.statsRow, "BOTTOMLEFT", 0, -GAP)
-	dash.chart:SetPoint("TOPRIGHT", dash.statsRow, "BOTTOMRIGHT", 0, -GAP)
-	dash.chart:SetHeight(CHART_HEIGHT)
-	dash.periodButtons = pe:CreatePeriodButtons(dash.chart, function() dash:Refresh() end)
-	dash.graph = pe:CreateTimeSeriesGraph(dash.chart, {
-		showTitle = false,
-		plotHeight = CHART_HEIGHT - 76,
-		emptyText = "No sales in this period yet.",
-	})
-	dash.graph:SetPoint("BOTTOMLEFT", dash.chart, "BOTTOMLEFT", PAD, 8)
-	dash.graph:SetYFormatter(function(value) return money(tonumber(value) or 0) end)
-	dash.graph:SetTooltipBuilder(function(tip, hit)
-		local point = hit and hit.pt or hit
-		tip:AddLine(date("%Y-%m-%d", point.at), 1, 1, 1)
-		tip:AddLine(pe:FormatCopperFull(tonumber(point.value) or 0))
-	end)
-
+	dash:CreateChartCard()
 	-- What sells: one row per item, sortable by how much, how many and how often.
 	dash.items = pe:CreateTableCard(dash, {
 		title = "What sells",
 		columns = itemsColumns(pe),
 		table = salesTableOptions(pe, "net", function(row) return itemTooltipPairs(pe, row) end),
 	})
-
-	-- Latest sales, newest first.
 	dash.recent = pe:CreateTableCard(dash, {
 		title = "Latest sales",
 		columns = recentColumns(pe),
 		table = salesTableOptions(pe, "ts", function(row) return recentTooltipPairs(pe, row) end),
 	})
-
-	function dash:Layout()
-		pe:LayoutEvenRow(self.statsRow, self.stats, 0, GAP)
-		self.graph:SetWidth(math.max(80, self.chart:GetWidth() - PAD * 2))
-		local half = math.max(200, (self:GetWidth() - GAP) / 2)
-		self.items:ClearAllPoints()
-		self.items:SetPoint("TOPLEFT", self.chart, "BOTTOMLEFT", 0, -GAP)
-		self.items:SetPoint("BOTTOMLEFT")
-		self.items:SetWidth(half)
-		self.recent:ClearAllPoints()
-		self.recent:SetPoint("TOPLEFT", self.items, "TOPRIGHT", GAP, 0)
-		self.recent:SetPoint("BOTTOMRIGHT")
-	end
-
-	function dash:Refresh()
-		local days = pe:StylePeriodButtons(self.periodButtons)
-		-- The ledger lives in the Inventory module; without it the view stays empty.
-		local summary = pe.GetSalesSummary and pe:GetSalesSummary(days > 0 and days or nil)
-			or pe.ForeverLogic.SummarizeSales({}, time(), nil)
-		local totals = summary.totals
-
-		local bestEarner, mostOften
-		for _, item in ipairs(summary.items) do
-			item._rowIdentity = tostring(item.itemID or item.name)
-			item.name = item.name or pe:GetItemDisplayName(item.itemID)
-			if not bestEarner or item.net > bestEarner.net then
-				bestEarner = item
-			end
-			if not mostOften or item.sales > mostOften.sales then
-				mostOften = item
-			end
-		end
-		self.stats.earned:SetValues("Earned from sales", money(totals.net),
-			string.format("%s a day · %s paid in auction cut", money(totals.net / summary.spanDays), money(totals.gross - totals.net)),
-			totals.net > 0 and "success" or nil)
-		self.stats.sales:SetValues("Sales", count(totals.sales),
-			string.format("%s items of %s kinds", count(totals.units), count(#summary.items)))
-		self.stats.bestEarner:SetValues("Best earner", bestEarner and bestEarner.name or "-",
-			bestEarner and (money(bestEarner.net) .. " earned") or "Nothing sold in this period", bestEarner and "gold" or nil)
-		self.stats.mostOften:SetValues("Sells most often", mostOften and mostOften.name or "-",
-			mostOften and string.format("%s sales, %.1f a week", count(mostOften.sales), mostOften.perWeek) or "Nothing sold in this period")
-
-		self.graph:SetAccentColor(pe:GetTheme().accent)
-		self.graph:SetSeries(summary.daily)
-		self.graph:SetSecondarySeries({})
-		self.graph:SetQuantitySeries({})
-		self.graph:Refresh()
-
-		addOrigins(summary.items, summary.recent, pe:GetSaleOrigins())
-		self.items.table:SetRows(summary.items)
-		self.items.table:Refresh()
-		self.recent.table:SetRows(recentRows(pe, summary.recent))
-		self.recent.table:Refresh()
-		self:Layout()
-	end
-
 	dash:SetScript("OnSizeChanged", function()
 		dash:Layout()
 	end)
 	dash:Layout()
 	return dash
+end
+
+-- Gold per day, with the period switch that drives the whole view.
+function SalesDashboardMixin:CreateChartCard()
+	local pe = self.pe
+	self.chart = pe:CreateDashboardCard(self, "Gold from sales, per day")
+	self.chart:SetPoint("TOPLEFT", self.statsRow, "BOTTOMLEFT", 0, -GAP)
+	self.chart:SetPoint("TOPRIGHT", self.statsRow, "BOTTOMRIGHT", 0, -GAP)
+	self.chart:SetHeight(CHART_HEIGHT)
+	self.periodButtons = pe:CreatePeriodButtons(self.chart, function() self:Refresh() end)
+	self.graph = pe:CreateTimeSeriesGraph(self.chart, {
+		showTitle = false,
+		plotHeight = CHART_HEIGHT - 76,
+		emptyText = "No sales in this period yet.",
+	})
+	self.graph:SetPoint("BOTTOMLEFT", self.chart, "BOTTOMLEFT", PAD, 8)
+	self.graph:SetYFormatter(function(value) return pe:FormatCopperShort(tonumber(value) or 0) end)
+	self.graph:SetTooltipBuilder(function(tip, hit)
+		local point = hit and hit.pt or hit
+		tip:AddLine(date("%Y-%m-%d", point.at), 1, 1, 1)
+		tip:AddLine(pe:FormatCopperFull(tonumber(point.value) or 0))
+	end)
+end
+
+function SalesDashboardMixin:Layout()
+	self.pe:LayoutEvenRow(self.statsRow, self.stats, 0, GAP)
+	self.graph:SetWidth(math.max(80, self.chart:GetWidth() - PAD * 2))
+	local half = math.max(200, (self:GetWidth() - GAP) / 2)
+	self.items:ClearAllPoints()
+	self.items:SetPoint("TOPLEFT", self.chart, "BOTTOMLEFT", 0, -GAP)
+	self.items:SetPoint("BOTTOMLEFT")
+	self.items:SetWidth(half)
+	self.recent:ClearAllPoints()
+	self.recent:SetPoint("TOPLEFT", self.items, "TOPRIGHT", GAP, 0)
+	self.recent:SetPoint("BOTTOMRIGHT")
+end
+
+-- Names the summary items and returns the one that earned most and the one sold most often.
+local function topItems(pe, items)
+	local bestEarner, mostOften
+	for _, item in ipairs(items) do
+		item._rowIdentity = tostring(item.itemID or item.name)
+		item.name = item.name or pe:GetItemDisplayName(item.itemID)
+		if not bestEarner or item.net > bestEarner.net then
+			bestEarner = item
+		end
+		if not mostOften or item.sales > mostOften.sales then
+			mostOften = item
+		end
+	end
+	return bestEarner, mostOften
+end
+
+function SalesDashboardMixin:RefreshTotals(summary)
+	local pe, totals = self.pe, summary.totals
+	local function money(copper) return pe:FormatCopperShort(copper) end
+	self.stats.earned:SetValues("Earned from sales", money(totals.net),
+		string.format("%s a day · %s paid in auction cut", money(totals.net / summary.spanDays), money(totals.gross - totals.net)),
+		totals.net > 0 and "success" or nil)
+	self.stats.sales:SetValues("Sales", pe:FormatNumberGrouped(totals.sales),
+		string.format("%s items of %s kinds", pe:FormatNumberGrouped(totals.units), pe:FormatNumberGrouped(#summary.items)))
+end
+
+function SalesDashboardMixin:RefreshTopItems(items)
+	local pe = self.pe
+	local bestEarner, mostOften = topItems(pe, items)
+	local nothing = "Nothing sold in this period"
+	if bestEarner then
+		self.stats.bestEarner:SetValues("Best earner", bestEarner.name, pe:FormatCopperShort(bestEarner.net) .. " earned", "gold")
+		self.stats.mostOften:SetValues("Sells most often", mostOften.name,
+			string.format("%s sales, %.1f a week", pe:FormatNumberGrouped(mostOften.sales), mostOften.perWeek))
+	else
+		self.stats.bestEarner:SetValues("Best earner", "-", nothing, nil)
+		self.stats.mostOften:SetValues("Sells most often", "-", nothing)
+	end
+end
+
+function SalesDashboardMixin:Refresh()
+	local pe = self.pe
+	local days = pe:StylePeriodButtons(self.periodButtons)
+	-- The ledger lives in the Inventory module; without it the view stays empty.
+	local summary = pe.GetSalesSummary and pe:GetSalesSummary(days > 0 and days or nil)
+		or pe.ForeverLogic.SummarizeSales({}, time(), nil)
+	self:RefreshTotals(summary)
+	self:RefreshTopItems(summary.items)
+	self.graph:SetAccentColor(pe:GetTheme().accent)
+	self.graph:SetSeries(summary.daily)
+	self.graph:SetSecondarySeries({})
+	self.graph:SetQuantitySeries({})
+	self.graph:Refresh()
+	addOrigins(summary.items, summary.recent, pe:GetSaleOrigins())
+	self.items.table:SetRows(summary.items)
+	self.items.table:Refresh()
+	self.recent.table:SetRows(recentRows(pe, summary.recent))
+	self.recent.table:Refresh()
+	self:Layout()
 end

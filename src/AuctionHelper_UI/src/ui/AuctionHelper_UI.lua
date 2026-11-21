@@ -41,12 +41,16 @@ function AuctionHelper:GetDashboardSidebarCharacterLabel(characterKey, charData,
 	return tostring(characterKey)
 end
 
+local function classColor(meta)
+	return meta and meta.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[meta.class]
+end
+
 -- Character name without realm, in its class color when known.
 function AuctionHelper:GetCharacterNameMarkup(characterKey)
 	local data = self.db and self.db.characters and self.db.characters[characterKey]
 	local meta = data and data.meta
 	local name = meta and meta.name or (tostring(characterKey or "?"):match("^([^%-]+)") or "?")
-	local color = meta and meta.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[meta.class]
+	local color = classColor(meta)
 	if color then
 		return self:Colorize(name, color)
 	end
@@ -75,6 +79,14 @@ local itemNameCache = {}
 local itemNameRequested = {}
 local itemNameRefreshPending = false
 
+-- Asks the client to load an unknown item, once per item.
+local function requestItemData(id)
+	if type(id) == "number" and not itemNameRequested[id] and C_Item and C_Item.RequestLoadItemDataByID then
+		itemNameRequested[id] = true
+		pcall(C_Item.RequestLoadItemDataByID, id)
+	end
+end
+
 -- `noRequest`: return "#id" for unknown items without asking the client (bulk list building).
 function AuctionHelper:GetItemDisplayName(itemID, noRequest)
 	if not itemID then
@@ -91,9 +103,8 @@ function AuctionHelper:GetItemDisplayName(itemID, noRequest)
 		self:LearnItemName(id, desc.name)
 		return desc.name
 	end
-	if not noRequest and type(id) == "number" and not itemNameRequested[id] and C_Item and C_Item.RequestLoadItemDataByID then
-		itemNameRequested[id] = true
-		pcall(C_Item.RequestLoadItemDataByID, id)
+	if not noRequest then
+		requestItemData(id)
 	end
 	return "#" .. tostring(itemID)
 end
@@ -179,59 +190,60 @@ function AuctionHelper:RefreshExportProgressPctLine(f)
 	f.pctStr:SetText(string.format("%d%%", math.floor((f.bar:GetValue() or 0) * 100 + 0.5)))
 end
 
+-- While data is gathered there is no real progress to report: creep the bar towards the end of the
+-- gather slice over a few seconds so the window does not look stuck.
+local function creepGatherProgress(frame)
+	if frame.barMode ~= "gather" or not frame:IsShown() then
+		return
+	end
+	local gatherWeight = AuctionHelper.EXPORT_PROGRESS_GATHER_WEIGHT or 0.30
+	local cap = AuctionHelper.EXPORT_PROGRESS_GATHER_CREEP_CAP or 0.95
+	local creepSeconds = AuctionHelper.EXPORT_PROGRESS_GATHER_CREEP_MAX_SEC or 5
+	local elapsed = GetTime() - (frame.gatherStartTime or GetTime())
+	local overall = gatherWeight * math.min(cap, elapsed / math.max(0.001, creepSeconds))
+	frame.lastOverall = math.max(frame.lastOverall or 0, overall)
+	frame.bar:SetValue(frame.lastOverall)
+	AuctionHelper:RefreshExportProgressPctLine(frame)
+end
+
+local function createExportProgressFrame(pe)
+	local theme = pe:GetTheme()
+	local f = CreateFrame("Frame", addonName .. "ExportProgress", UIParent, "BackdropTemplate")
+	f:SetSize(340, theme.size.header + 1 + 12 + 14 + 8 + 14 + 12)
+	f:SetPoint("CENTER", UIParent, "CENTER", 0, 100)
+	f:SetFrameStrata("DIALOG")
+	f:SetFrameLevel(500)
+	f:SetClampedToScreen(true)
+	pe:StyleWindow(f)
+	f.title = pe:CreateText(f, "GameFontNormalLarge", "gold")
+	f.title:SetPoint("LEFT", f, "TOPLEFT", 12, -(theme.size.header / 2) - 1)
+	f.title:SetPoint("RIGHT", f, "TOPRIGHT", -12, -(theme.size.header / 2) - 1)
+	local rule = f:CreateTexture(nil, "BORDER")
+	rule:SetPoint("TOPLEFT", 1, -theme.size.header)
+	rule:SetPoint("TOPRIGHT", -1, -theme.size.header)
+	rule:SetHeight(1)
+	rule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	f.phaseStr = pe:CreateText(f, "GameFontHighlightSmall")
+	f.phaseStr:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -(theme.size.header + 13))
+	f.phaseStr:SetPoint("TOPRIGHT", f, "TOPRIGHT", -12, -(theme.size.header + 13))
+	f.pctStr = pe:CreateText(f, "GameFontHighlightSmall", "textMuted", "RIGHT")
+	f.pctStr:SetPoint("TOPRIGHT", f.phaseStr, "BOTTOMRIGHT", 0, -8)
+	f.pctStr:SetWidth(36)
+	f.bar = CreateFrame("StatusBar", nil, f)
+	f.bar:SetPoint("TOPLEFT", f.phaseStr, "BOTTOMLEFT", 0, -8)
+	f.bar:SetPoint("RIGHT", f.pctStr, "LEFT", -8, 0)
+	pe:StyleProgressBar(f.bar)
+	f.bar:SetValue(0)
+	f:SetScript("OnUpdate", creepGatherProgress)
+	return f
+end
+
 --- Floating progress while export gathers data and packs compressed exports (staged monotonic bar).
 function AuctionHelper:ShowExportProgress(scopeLabel)
 	self.ui = self.ui or {}
 	local ui = self.ui
+	ui.exportProgressFrame = ui.exportProgressFrame or createExportProgressFrame(self)
 	local f = ui.exportProgressFrame
-	if not f then
-		local theme = self:GetTheme()
-		f = CreateFrame("Frame", addonName .. "ExportProgress", UIParent, "BackdropTemplate")
-		f:SetSize(340, theme.size.header + 1 + 12 + 14 + 8 + 14 + 12)
-		f:SetPoint("CENTER", UIParent, "CENTER", 0, 100)
-		f:SetFrameStrata("DIALOG")
-		f:SetFrameLevel(500)
-		f:SetClampedToScreen(true)
-		self:StyleWindow(f)
-		f.title = self:CreateText(f, "GameFontNormalLarge", "gold")
-		f.title:SetPoint("LEFT", f, "TOPLEFT", 12, -(theme.size.header / 2) - 1)
-		f.title:SetPoint("RIGHT", f, "TOPRIGHT", -12, -(theme.size.header / 2) - 1)
-		local rule = f:CreateTexture(nil, "BORDER")
-		rule:SetPoint("TOPLEFT", 1, -theme.size.header)
-		rule:SetPoint("TOPRIGHT", -1, -theme.size.header)
-		rule:SetHeight(1)
-		rule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
-		f.phaseStr = self:CreateText(f, "GameFontHighlightSmall")
-		f.phaseStr:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -(theme.size.header + 13))
-		f.phaseStr:SetPoint("TOPRIGHT", f, "TOPRIGHT", -12, -(theme.size.header + 13))
-		f.pctStr = self:CreateText(f, "GameFontHighlightSmall", "textMuted", "RIGHT")
-		f.pctStr:SetPoint("TOPRIGHT", f.phaseStr, "BOTTOMRIGHT", 0, -8)
-		f.pctStr:SetWidth(36)
-		f.bar = CreateFrame("StatusBar", nil, f)
-		f.bar:SetPoint("TOPLEFT", f.phaseStr, "BOTTOMLEFT", 0, -8)
-		f.bar:SetPoint("RIGHT", f.pctStr, "LEFT", -8, 0)
-		self:StyleProgressBar(f.bar)
-		f.bar:SetValue(0)
-
-		f:SetScript("OnUpdate", function(sf)
-			if sf.barMode ~= "gather" or not sf:IsShown() then
-				return
-			end
-			local wG = AuctionHelper.EXPORT_PROGRESS_GATHER_WEIGHT or 0.30
-			local cap = AuctionHelper.EXPORT_PROGRESS_GATHER_CREEP_CAP or 0.95
-			local tmax = AuctionHelper.EXPORT_PROGRESS_GATHER_CREEP_MAX_SEC or 5
-			local t0 = sf.gatherStartTime or GetTime()
-			local elapsed = GetTime() - t0
-			local sliceFrac = math.min(cap, elapsed / math.max(0.001, tmax))
-			local overall = wG * sliceFrac
-			sf.lastOverall = math.max(sf.lastOverall or 0, overall)
-			sf.bar:SetValue(sf.lastOverall)
-			AuctionHelper:RefreshExportProgressPctLine(sf)
-		end)
-
-		ui.exportProgressFrame = f
-	end
-
 	f.scopeLabel = scopeLabel or "export"
 	f.title:SetText("Exporting " .. tostring(f.scopeLabel))
 	f.indeterminateBar = false

@@ -174,6 +174,30 @@ do
 	check("Empty eval: footer default profession", panel.footerText.text == "Profession scanned atnil")
 end
 
+do
+	local pe = newAddon(true, {})
+	local recipeID, order, transaction = 101, nil, nil
+	pe.GetOpenProfessionRecipeID = function() return recipeID end
+	pe.GetOpenProfessionScenario = function() return "best" end
+	pe.GetOpenCraftingOrder = function() return order end
+	pe.GetOpenProfessionSchematicForm = function()
+		return { GetTransaction = function() return transaction end }
+	end
+	check("Signature: recipe, scenario, no order", pe:GetProfessionCraftOperationSignature() == "101|best|0")
+	order = { orderID = 7 }
+	check("Signature: open order id", pe:GetProfessionCraftOperationSignature() == "101|best|7")
+	transaction = { IsApplyingConcentration = function() return true end }
+	check("Signature: concentration on", pe:GetProfessionCraftOperationSignature() == "101|best|7|conc1")
+	transaction = { IsApplyingConcentration = function() return false end }
+	check("Signature: concentration off", pe:GetProfessionCraftOperationSignature() == "101|best|7|conc0")
+	transaction = {}
+	check("Signature: transaction without concentration", pe:GetProfessionCraftOperationSignature() == "101|best|7")
+	recipeID = nil
+	check("Signature: no recipe open", pe:GetProfessionCraftOperationSignature() == nil)
+	pe.IS_SUPPORTED, recipeID = false, 101
+	check("Signature: unsupported client", pe:GetProfessionCraftOperationSignature() == nil)
+end
+
 if failed > 0 then
 	print(string.format("%d check(s) failed", failed))
 	os.exit(1)

@@ -1,10 +1,12 @@
 local _, AuctionHelper = ...
 
 local TableMixin = {}
+AuctionHelper.TableMixin = TableMixin -- methods are spread over the Table*.lua files
 AuctionHelper.ReusableTables = setmetatable({}, { __mode = "k" }) -- every table, to redraw item names as they load
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local CELL_PAD = 5
+TableMixin.CELL_PAD = CELL_PAD
 
 local function shallowCopy(list)
 	local out = {}
@@ -72,18 +74,19 @@ function TableMixin:SetColumns(columns)
 	self:Refresh()
 end
 
+function TableMixin:ColumnIndex(columnId)
+	for index, column in ipairs(self.columns or {}) do
+		if column.id == columnId then
+			return index
+		end
+	end
+end
+
 function TableMixin:ReorderColumns(sourceId, targetId)
 	if not sourceId or not targetId or sourceId == targetId then
 		return
 	end
-	local sourceIndex, targetIndex
-	for index, column in ipairs(self.columns or {}) do
-		if column.id == sourceId then
-			sourceIndex = index
-		elseif column.id == targetId then
-			targetIndex = index
-		end
-	end
+	local sourceIndex, targetIndex = self:ColumnIndex(sourceId), self:ColumnIndex(targetId)
 	if not sourceIndex or not targetIndex then
 		return
 	end
@@ -163,6 +166,50 @@ end
 
 -- Sorts once per change of rows or sort column: each row's sort key is computed a single time
 -- (not inside the comparator), and the result is reused until SetRows or a sort change.
+-- A stable tiebreak so equal sort keys keep one order across refreshes.
+local function rowIdentity(row)
+	if row._rowIdentity == nil then
+		if row.aggregatedInventory then
+			row._rowIdentity = tostring(row.itemID or "")
+		else
+			row._rowIdentity = string.format("%s:%s", tostring(row.characterKey or ""), tostring(row.itemID or ""))
+		end
+	end
+	return tostring(row._rowIdentity)
+end
+
+local function compareKeys(a, b)
+	if type(a) ~= type(b) then
+		a, b = tonumber(a) or 0, tonumber(b) or 0
+	end
+	return a < b and -1 or (a > b and 1 or 0)
+end
+
+-- A comparator for table.sort: the column's own `compare`, or its precomputed sort keys.
+function TableMixin:RowComparator(column, rows)
+	local keys, ids = {}, {}
+	for _, row in ipairs(rows) do
+		ids[row] = rowIdentity(row)
+		if not column.compare then
+			local value = self:GetSortValue(column, row)
+			keys[row] = type(value) == "number" and value or normalizeText(value)
+		end
+	end
+	local asc, context = self.sortAsc, self.context or {}
+	return function(left, right)
+		local cmp
+		if column.compare then
+			cmp = column.compare(left, right, context, self) or 0
+		else
+			cmp = compareKeys(keys[left], keys[right])
+		end
+		if cmp == 0 then
+			return ids[left] < ids[right]
+		end
+		return (asc and cmp < 0) or (not asc and cmp > 0)
+	end
+end
+
 function TableMixin:GetSortedRows()
 	if self._sorted and self._sortedFrom == self.rows and self._sortedKey == self.sortKey and self._sortedAsc == self.sortAsc then
 		return self._sorted
@@ -170,136 +217,10 @@ function TableMixin:GetSortedRows()
 	local rows = shallowCopy(self.rows)
 	local column = self.sortKey and self:GetColumn(self.sortKey)
 	if column then
-		local keys, ids = {}, {}
-		for _, row in ipairs(rows) do
-			if row._rowIdentity == nil then
-				if row.aggregatedInventory then
-					row._rowIdentity = tostring(row.itemID or "")
-				else
-					row._rowIdentity = string.format("%s:%s", tostring(row.characterKey or ""), tostring(row.itemID or ""))
-				end
-			end
-			ids[row] = tostring(row._rowIdentity)
-			if not column.compare then
-				local value = self:GetSortValue(column, row)
-				keys[row] = type(value) == "number" and value or normalizeText(value)
-			end
-		end
-		local asc = self.sortAsc
-		local context = self.context or {}
-		table.sort(rows, function(left, right)
-			local cmp
-			if column.compare then
-				cmp = column.compare(left, right, context, self) or 0
-			else
-				local a, b = keys[left], keys[right]
-				if type(a) ~= type(b) then
-					a, b = tonumber(a) or 0, tonumber(b) or 0
-				end
-				cmp = a < b and -1 or (a > b and 1 or 0)
-			end
-			if cmp == 0 then
-				local a, b = ids[left], ids[right]
-				return a < b
-			end
-			if asc then
-				return cmp < 0
-			end
-			return cmp > 0
-		end)
+		table.sort(rows, self:RowComparator(column, rows))
 	end
 	self._sorted, self._sortedFrom, self._sortedKey, self._sortedAsc = rows, self.rows, self.sortKey, self.sortAsc
 	return rows
-end
-
-function TableMixin:ShowHeaderTooltip(button)
-	local column = button and button.column or nil
-	if not column then
-		return
-	end
-
-	local lines = column.tooltipLines
-	if type(column.getTooltipLines) == "function" then
-		lines = column.getTooltipLines(self.context or {}, self)
-	end
-	local text = column.tooltipText
-	local hasLines = type(lines) == "table" and #lines > 0
-	if not column.tooltipTitle and not text and not hasLines then
-		return
-	end
-
-	local theme = AuctionHelper:GetTheme()
-	local gold, muted = theme.gold, theme.textMuted
-	GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
-	GameTooltip:SetText(column.tooltipTitle or column.label or column.id or "Column", gold.r, gold.g, gold.b)
-	if text and text ~= "" then
-		GameTooltip:AddLine(text, muted.r, muted.g, muted.b, true)
-	end
-	if hasLines then
-		for _, line in ipairs(lines) do
-			if type(line) == "table" then
-				GameTooltip:AddLine(line.text or "", line.r or muted.r, line.g or muted.g, line.b or muted.b, line.wrap == true)
-			else
-				GameTooltip:AddLine(tostring(line), muted.r, muted.g, muted.b, true)
-			end
-		end
-	end
-	GameTooltip:Show()
-end
-
-function TableMixin:AcquireHeaderButton(index)
-	local button = self.headerButtons[index]
-	if button then
-		return button
-	end
-
-	button = CreateFrame("Button", nil, self.header)
-	button:SetHeight(self.headerHeight)
-	button.text = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	button.text:SetJustifyH("LEFT")
-	button.text:SetWordWrap(false)
-	button.text:SetPoint("LEFT", button, "LEFT", CELL_PAD, 0)
-	button.text:SetPoint("RIGHT", button, "RIGHT", -CELL_PAD, 0)
-	button.arrow = button:CreateTexture(nil, "OVERLAY")
-	button.arrow:SetTexture("Interface\\Buttons\\UI-SortArrow")
-	button.arrow:SetSize(9, 8)
-	button.arrow:Hide()
-	button:RegisterForDrag("LeftButton")
-	button:SetScript("OnClick", function(btn)
-		if btn.columnId then
-			self:ToggleSort(btn.columnId)
-		end
-	end)
-	button:SetScript("OnEnter", function(btn)
-		self:ShowHeaderTooltip(btn)
-	end)
-	button:SetScript("OnLeave", function()
-		GameTooltip:Hide()
-	end)
-	button:SetScript("OnDragStart", function(btn)
-		if not btn.columnId then
-			return
-		end
-		self.dragColumnId = btn.columnId
-		btn:SetAlpha(0.45)
-	end)
-	button:SetScript("OnDragStop", function(btn)
-		local sourceId = self.dragColumnId
-		self.dragColumnId = nil
-		btn:SetAlpha(1)
-		if not sourceId then
-			return
-		end
-		for _, target in ipairs(self.headerButtons or {}) do
-			if target ~= btn and target:IsShown() and target.columnId and target:IsMouseOver() then
-				self:ReorderColumns(sourceId, target.columnId)
-				break
-			end
-		end
-	end)
-
-	self.headerButtons[index] = button
-	return button
 end
 
 function TableMixin:CreateDefaultCell(rowFrame, column)
@@ -364,152 +285,6 @@ function TableMixin:AcquireCell(row, column)
 	return cell
 end
 
-function TableMixin:GetLayoutColumnWidth(column)
-	if not column then
-		return 80
-	end
-	local w = self._layoutColumnWidths and self._layoutColumnWidths[column.id]
-	if w then
-		return w
-	end
-	return tonumber(column.width) or 80
-end
-
--- Layout rule: fixed columns keep their width; flex columns share what is left (never below
--- minWidth). When even that does not fit, `optional` columns are dropped: those marked
--- `dropFirst` before any other, then from the right.
-function TableMixin:RecomputeLayoutColumnWidths()
-	local visible = self:GetVisibleColumns()
-	self._layoutColumnWidths = {}
-	self._droppedColumns = {}
-	if #visible == 0 then
-		self.contentWidth = self.paddingX * 2
-		return
-	end
-
-	local function fixedWidth(col)
-		return tonumber(col.width) or 80
-	end
-	local function flexWeight(col)
-		return math.max(0, tonumber(col.flex) or 0)
-	end
-
-	if not self.autoFitToScroll or not self.scrollFrame then
-		local sum = 0
-		for _, col in ipairs(visible) do
-			self._layoutColumnWidths[col.id] = fixedWidth(col)
-			sum = sum + fixedWidth(col)
-		end
-		self.contentWidth = self.paddingX * 2 + sum
-		return
-	end
-
-	local viewport = math.max(80, math.floor((self.scrollFrame:GetWidth() or 400) - self.paddingX * 2))
-	local columns = {}
-	for _, col in ipairs(visible) do
-		columns[#columns + 1] = col
-	end
-
-	local function measure()
-		local fixed, minFlex, totalFlex = 0, 0, 0
-		for _, col in ipairs(columns) do
-			if flexWeight(col) > 0 then
-				minFlex = minFlex + (tonumber(col.minWidth) or 60)
-				totalFlex = totalFlex + flexWeight(col)
-			else
-				fixed = fixed + fixedWidth(col)
-			end
-		end
-		return fixed, minFlex, totalFlex
-	end
-
-	local fixed, minFlex, totalFlex = measure()
-	while fixed + minFlex > viewport do
-		local dropIndex
-		for index = #columns, 1, -1 do
-			local col = columns[index]
-			if col.optional and (col.dropFirst or not dropIndex) then
-				dropIndex = index
-				if col.dropFirst then
-					break
-				end
-			end
-		end
-		if not dropIndex then
-			break
-		end
-		self._droppedColumns[columns[dropIndex].id] = true
-		table.remove(columns, dropIndex)
-		fixed, minFlex, totalFlex = measure()
-	end
-
-	local spare = viewport - fixed
-	local sum = 0
-	for _, col in ipairs(columns) do
-		local width = fixedWidth(col)
-		if flexWeight(col) > 0 then
-			width = math.max(tonumber(col.minWidth) or 60, math.floor(spare * flexWeight(col) / totalFlex))
-		end
-		self._layoutColumnWidths[col.id] = width
-		sum = sum + width
-	end
-	self.contentWidth = self.paddingX * 2 + sum
-end
-
-function TableMixin:GetLayoutColumns()
-	local out = {}
-	for _, col in ipairs(self:GetVisibleColumns()) do
-		if not (self._droppedColumns and self._droppedColumns[col.id]) then
-			out[#out + 1] = col
-		end
-	end
-	return out
-end
-
-function TableMixin:UpdateHeader()
-	self:RecomputeLayoutColumnWidths()
-	local visibleColumns = self:GetLayoutColumns()
-	local x = self.paddingX
-	local theme = AuctionHelper:GetTheme()
-
-	for index, column in ipairs(visibleColumns) do
-		local button = self:AcquireHeaderButton(index)
-		local hasTooltip = column.tooltipTitle or column.tooltipText or column.tooltipLines or column.getTooltipLines
-		button.column = column
-		button.columnId = column.sortable and column.id or nil
-		button:ClearAllPoints()
-		button:SetPoint("TOPLEFT", self.header, "TOPLEFT", x, 0)
-		local lw = self:GetLayoutColumnWidth(column)
-		button:SetWidth(lw)
-		button:EnableMouse(column.sortable == true or hasTooltip ~= nil)
-
-		local sorted = column.sortable and self.sortKey == column.id
-		local color = sorted and theme.gold or theme.textMuted
-		button.text:SetText(column.label or column.id)
-		button.text:SetJustifyH(column.justifyH or "LEFT")
-		button.text:SetTextColor(color.r, color.g, color.b)
-		button.text:ClearAllPoints()
-		button.arrow:ClearAllPoints()
-		button.text:SetPoint("LEFT", button, "LEFT", CELL_PAD, 0)
-		button.text:SetPoint("RIGHT", button, "RIGHT", sorted and -(CELL_PAD + 11) or -CELL_PAD, 0)
-		button.arrow:SetPoint("RIGHT", button, "RIGHT", -CELL_PAD, 0)
-		button.arrow:SetShown(sorted)
-		if sorted then
-			button.arrow:SetVertexColor(theme.gold.r, theme.gold.g, theme.gold.b)
-			button.arrow:SetTexCoord(0, 0.5625, self.sortAsc and 1 or 0, self.sortAsc and 0 or 1)
-		end
-		button:Show()
-
-		x = x + lw
-	end
-
-	for index = #visibleColumns + 1, #self.headerButtons do
-		self.headerButtons[index]:Hide()
-	end
-
-	self.header:SetHeight(self.headerHeight)
-end
-
 function TableMixin:IsRowSelected(rowData)
 	if type(self.isRowSelected) == "function" then
 		return self.isRowSelected(rowData, self) == true
@@ -526,60 +301,98 @@ function TableMixin:SetSelectedRow(rowData)
 	end
 end
 
+-- Places one cell region at `x` in the row, `width` wide; font strings get the cell padding.
+function TableMixin:PlaceCell(rowFrame, region, x, width)
+	local isFontString = region.GetObjectType and region:GetObjectType() == "FontString"
+	local pad = isFontString and CELL_PAD or 0
+	region:ClearAllPoints()
+	region:SetPoint("LEFT", rowFrame, "LEFT", x + pad, 0)
+	if region.SetWidth then
+		region:SetWidth(width - pad * 2)
+	end
+	if region.SetHeight and region ~= rowFrame then
+		region:SetHeight(self.rowHeight)
+	end
+	region:Show()
+end
+
+function TableMixin:CellText(column, rowData)
+	if type(column.getText) == "function" then
+		return column.getText(rowData, self.context or {}, self) or ""
+	end
+	return rowData and rowData[column.field or column.id] or ""
+end
+
+function TableMixin:FillCell(cell, column, rowData)
+	local text = tostring(self:CellText(column, rowData))
+	if type(cell) == "table" and cell.text and cell.text.SetText then
+		cell.text:SetText(text)
+	elseif cell and cell.SetText then
+		cell:SetText(text)
+	end
+end
+
+function TableMixin:IsColumnShown(columnId)
+	local column = self:GetColumn(columnId)
+	if not column or not isColumnVisible(column, self.context or {}) then
+		return false
+	end
+	return not (self._droppedColumns and self._droppedColumns[columnId])
+end
+
 function TableMixin:UpdateRow(rowFrame, rowData, rowIndex)
-	local visibleColumns = self:GetLayoutColumns()
 	local x = self.paddingX
 	rowFrame.rowData = rowData
 	rowFrame:SetWidth(self.contentWidth)
 	rowFrame.selectedFill:SetShown(self:IsRowSelected(rowData))
-
-	for _, column in ipairs(visibleColumns) do
+	for _, column in ipairs(self:GetLayoutColumns()) do
 		local cell = self:AcquireCell(rowFrame, column)
-		local region = getCellRegion(cell)
 		local width = self:GetLayoutColumnWidth(column)
-		local isFontString = region.GetObjectType and region:GetObjectType() == "FontString"
-		local pad = isFontString and CELL_PAD or 0
-		region:ClearAllPoints()
-		region:SetPoint("LEFT", rowFrame, "LEFT", x + pad, 0)
-		if region.SetWidth then
-			region:SetWidth(width - pad * 2)
-		end
-		if region.SetHeight and region ~= rowFrame then
-			region:SetHeight(self.rowHeight)
-		end
-		region:Show()
-
+		self:PlaceCell(rowFrame, getCellRegion(cell), x, width)
 		if type(column.updateCell) == "function" then
 			column.updateCell(cell, rowData, self.context or {}, self, rowFrame, rowIndex)
 		else
-			local text = ""
-			if type(column.getText) == "function" then
-				text = column.getText(rowData, self.context or {}, self) or ""
-			elseif rowData then
-				text = rowData[column.field or column.id] or ""
-			end
-
-			if type(cell) == "table" and cell.text and cell.text.SetText then
-				cell.text:SetText(tostring(text))
-			elseif cell and cell.SetText then
-				cell:SetText(tostring(text))
-			end
+			self:FillCell(cell, column, rowData)
 		end
-
-		x = x + self:GetLayoutColumnWidth(column)
+		x = x + width
 	end
-
 	for columnId, cell in pairs(rowFrame.cells) do
-		local column = self:GetColumn(columnId)
-		local region = getCellRegion(cell)
-		if not column or not isColumnVisible(column, self.context or {}) or (self._droppedColumns and self._droppedColumns[columnId]) then
-			region:Hide()
+		if not self:IsColumnShown(columnId) then
+			getCellRegion(cell):Hide()
 		end
 	end
-
 	rowFrame:ClearAllPoints()
 	rowFrame:SetPoint("TOPLEFT", self.scrollChild, "TOPLEFT", 0, -((rowIndex - 1) * self.rowHeight))
 	rowFrame:Show()
+end
+
+-- The scroll frame's height, or a default while it has not been laid out yet.
+function TableMixin:GetViewportHeight()
+	local height = self.scrollFrame:GetHeight()
+	return (height and height > 40) and height or 320
+end
+
+-- First and last display row to draw: the rows in view plus `virtualOverscan` rows on each side.
+function TableMixin:GetVirtualRowRange(count)
+	local scroll = self.scrollFrame:GetVerticalScroll() or 0
+	local rowH = self.rowHeight
+	local overscan = self.virtualOverscan or 6
+	local firstVisible = math.floor(scroll / rowH) + 1
+	local lastVisible = math.min(count, math.ceil((scroll + self:GetViewportHeight()) / rowH))
+	local first = math.max(1, firstVisible - overscan)
+	local last = math.min(count, lastVisible + overscan)
+	if first > last then
+		-- Scrolled past the end (rows were removed): draw the last rows instead of nothing.
+		first = math.max(1, count - overscan * 2)
+		last = count
+	end
+	return first, last
+end
+
+function TableMixin:HideRowsFrom(slot)
+	for index = slot, #self.rowPool do
+		self.rowPool[index]:Hide()
+	end
 end
 
 function TableMixin:RefreshVirtualRowWindow()
@@ -589,24 +402,10 @@ function TableMixin:RefreshVirtualRowWindow()
 	local displayRows = self.displayRows or {}
 	local count = #displayRows
 	if count == 0 then
-		for slot = 1, #self.rowPool do
-			self.rowPool[slot]:Hide()
-		end
+		self:HideRowsFrom(1)
 		return
 	end
-	local scroll = self.scrollFrame:GetVerticalScroll() or 0
-	local rawH = self.scrollFrame:GetHeight()
-	local viewH = (rawH and rawH > 40) and rawH or 320
-	local rowH = self.rowHeight
-	local overscan = self.virtualOverscan or 6
-	local firstVis = math.floor(scroll / rowH) + 1
-	local lastVis = math.min(count, math.ceil((scroll + viewH) / rowH))
-	local first = math.max(1, firstVis - overscan)
-	local last = math.min(count, lastVis + overscan)
-	if first > last then
-		first = math.max(1, count - overscan * 2)
-		last = count
-	end
+	local first, last = self:GetVirtualRowRange(count)
 	local poolSlots = last - first + 1
 	for slot = 1, poolSlots do
 		local i = first + slot - 1
@@ -614,9 +413,7 @@ function TableMixin:RefreshVirtualRowWindow()
 		self:UpdateRow(row, displayRows[i], i)
 		row:Show()
 	end
-	for slot = poolSlots + 1, #self.rowPool do
-		self.rowPool[slot]:Hide()
-	end
+	self:HideRowsFrom(poolSlots + 1)
 end
 
 function TableMixin:GetVisibleRows()
@@ -629,11 +426,9 @@ function TableMixin:GetVisibleRows()
 		return {}
 	end
 	local scroll = self.scrollFrame:GetVerticalScroll() or 0
-	local rawH = self.scrollFrame:GetHeight()
-	local viewH = (rawH and rawH > 40) and rawH or 320
 	local rowH = self.rowHeight or 20
 	local first = math.max(1, math.floor(scroll / rowH) + 1)
-	local last = math.min(count, math.ceil((scroll + viewH) / rowH))
+	local last = math.min(count, math.ceil((scroll + self:GetViewportHeight()) / rowH))
 	local out = {}
 	for index = first, last do
 		out[#out + 1] = rows[index]
@@ -641,15 +436,12 @@ function TableMixin:GetVisibleRows()
 	return out
 end
 
-function TableMixin:RefreshRows(opts)
-	opts = opts or {}
-	self.displayRows = self:GetSortedRows()
-
+-- maxRows is the page size. Paging needs the footer for its controls; without one only the
+-- first page is shown. Narrows displayRows to the current page.
+function TableMixin:ApplyPage()
 	local count = #self.displayRows
 	self.totalRowCount = count
-	-- maxRows is the page size. Paging needs the footer for its controls; without one only the
-	-- first page is shown.
-	self.page, self.pageCount, self.pageFirst, self.pageLast = AuctionHelper.ForeverLogic.PageBounds(count, self.maxRows,
+	self.page, self.pageCount, self.pageFirst, self.pageLast = AuctionHelper.FilterLogic.PageBounds(count, self.maxRows,
 		self.pager and self.page or 1)
 	if self.pageCount > 1 then
 		local pageRows = {}
@@ -657,49 +449,44 @@ function TableMixin:RefreshRows(opts)
 			pageRows[#pageRows + 1] = self.displayRows[index]
 		end
 		self.displayRows = pageRows
-		count = #pageRows
 	end
+end
 
+-- Sizes the scroll child for `count` rows, then scrolls to the top or back to `previousScroll`
+-- (clamped, since the content may have shrunk).
+function TableMixin:SizeScrollContent(count, resetScroll, previousScroll)
+	self.scrollChild:SetWidth(self.contentWidth)
+	self.scrollChild:SetHeight(math.max(self.rowHeight, count * self.rowHeight + 4))
+	if not self.scrollFrame then
+		return
+	end
+	if resetScroll then
+		self.scrollFrame:SetVerticalScroll(0)
+		return
+	end
+	local maxScroll = math.max(0, (self.scrollChild:GetHeight() or 0) - (self.scrollFrame:GetHeight() or 0))
+	self.scrollFrame:SetVerticalScroll(math.min(previousScroll, maxScroll))
+end
+
+function TableMixin:RefreshRows(opts)
+	opts = opts or {}
+	self.displayRows = self:GetSortedRows()
+	self:ApplyPage()
+	local count = #self.displayRows
 	local resetScroll = opts.resetVerticalScroll == true
-	local prevScroll = 0
-	if self.scrollFrame and not resetScroll then
-		prevScroll = self.scrollFrame:GetVerticalScroll() or 0
-	end
-
-	local function applyScrollAfterContentSize()
-		if not self.scrollFrame or not self.scrollChild then
-			return
-		end
-		if resetScroll then
-			self.scrollFrame:SetVerticalScroll(0)
-			return
-		end
-		local childH = self.scrollChild:GetHeight() or 0
-		local viewH = self.scrollFrame:GetHeight() or 0
-		local maxScroll = math.max(0, childH - viewH)
-		self.scrollFrame:SetVerticalScroll(math.min(prevScroll, maxScroll))
-	end
+	local previousScroll = self.scrollFrame and not resetScroll and self.scrollFrame:GetVerticalScroll() or 0
 
 	if self.useViewportVirtualization then
-		self.scrollChild:SetWidth(self.contentWidth)
-		self.scrollChild:SetHeight(math.max(self.rowHeight, count * self.rowHeight + 4))
-		applyScrollAfterContentSize()
+		self:SizeScrollContent(count, resetScroll, previousScroll)
 		self:RefreshVirtualRowWindow()
 		return
 	end
-
 	for index, rowData in ipairs(self.displayRows) do
 		local row = self:AcquireRow(index)
 		self:UpdateRow(row, rowData, index)
 	end
-
-	for index = count + 1, #self.rowPool do
-		self.rowPool[index]:Hide()
-	end
-
-	self.scrollChild:SetWidth(self.contentWidth)
-	self.scrollChild:SetHeight(math.max(self.rowHeight, count * self.rowHeight + 4))
-	applyScrollAfterContentSize()
+	self:HideRowsFrom(count + 1)
+	self:SizeScrollContent(count, resetScroll, previousScroll)
 end
 
 function TableMixin:SetEmptyText(title, hint)
@@ -715,54 +502,6 @@ function TableMixin:UpdateEmptyState()
 	self.emptyFrame.hint:SetText(self.emptyHint or "Change the search or filters.")
 end
 
---- Shows another page of a table that has more rows than its page size.
-function TableMixin:SetPage(page)
-	self.page = page
-	self:Refresh({ resetVerticalScroll = true })
-end
-
--- Footer text: `left` is replaced by "Showing A-B of M" when the rows span more than one page.
-function TableMixin:SetFooterText(left, right)
-	if not self.footer then
-		return
-	end
-	self.footerLeftOverride = left
-	self.footer.right:SetText(right or "")
-	self:UpdateFooter()
-end
-
-function TableMixin:UpdateFooter()
-	if not self.footer then
-		return
-	end
-	local pe = AuctionHelper
-	local left, right = self.footer.left, self.footer.right
-	local paged = (self.pageCount or 1) > 1
-	left:SetText(paged and string.format("Showing %s-%s of %s", pe:FormatNumberGrouped(self.pageFirst), pe:FormatNumberGrouped(self.pageLast),
-		pe:FormatNumberGrouped(self.totalRowCount)) or self.footerLeftOverride or "")
-	local pager = self.pager
-	if not pager then
-		return
-	end
-	pager:SetShown(paged)
-	left:ClearAllPoints()
-	right:ClearAllPoints()
-	left:SetPoint("LEFT", 8, 0)
-	if paged then
-		-- Pager at the right edge. "Showing A-B of N" keeps its full width, and the caller's text
-		-- gets what is left between the two, cut short when the table is narrow.
-		pager.label:SetText(string.format("Page %d of %d", self.page, self.pageCount))
-		pager.prev:SetEnabled(self.page > 1)
-		pager.next:SetEnabled(self.page < self.pageCount)
-		pager:SetWidth(pager.prev:GetWidth() + pager.next:GetWidth() + math.ceil(pager.label:GetStringWidth()) + 16)
-		right:SetPoint("LEFT", left, "RIGHT", 12, 0)
-		right:SetPoint("RIGHT", pager, "LEFT", -12, 0)
-	else
-		right:SetPoint("RIGHT", self.footer, "RIGHT", -pe:GetTheme().size.scrollGutter, 0)
-		left:SetPoint("RIGHT", right, "LEFT", -12, 0)
-	end
-end
-
 function TableMixin:Refresh(opts)
 	self:UpdateHeader()
 	self:RefreshRows(opts)
@@ -770,46 +509,37 @@ function TableMixin:Refresh(opts)
 	self:UpdateFooter()
 end
 
-function AuctionHelper:CreateReusableTable(parent, options)
-	options = options or {}
+-- Settings copied from `options` onto the table as they are.
+local OPTION_FIELDS = {
+	"isRowSelected", "maxRows", "sortKey", "onSortChanged", "onColumnReordered",
+	"onRowEnter", "onRowLeave", "onRowClick", "emptyTitle", "emptyHint",
+}
 
-	local widget = setmetatable({}, { __index = TableMixin })
-	widget.columns, widget.columnsById = {}, {}
-	widget.rows, widget.context = {}, {}
-	AuctionHelper.ReusableTables[widget] = true
-	widget.rowPool = {}
-	widget.headerButtons = {}
+function TableMixin:InitTableState(options)
 	local sizes = AuctionHelper:GetTheme().size
-	widget.paddingX = options.paddingX or 4
-	widget.rowHeight = math.max(options.rowHeight or sizes.row, sizes.row)
-	widget.headerHeight = options.headerHeight or sizes.tableHead
-	widget.isRowSelected = options.isRowSelected
-	widget.maxRows = options.maxRows
-	widget.sortKey = options.sortKey
-	widget.sortAsc = options.sortAsc ~= false
-	widget.onSortChanged = options.onSortChanged
-	widget.onColumnReordered = options.onColumnReordered
-	widget.onRowEnter = options.onRowEnter
-	widget.onRowLeave = options.onRowLeave
-	widget.onRowClick = options.onRowClick
-	widget.contentWidth = 0
-	widget.autoFitToScroll = options.autoFitToScroll == true
-	widget._layoutColumnWidths = {}
-	widget.useViewportVirtualization = options.viewportVirtualize == true
-
-	local theme = AuctionHelper:GetTheme()
-	local gutter = theme.size.scrollGutter
-	local frame = CreateFrame("Frame", nil, parent)
-	widget.frame = frame
-	if frame.SetClipsChildren then
-		frame:SetClipsChildren(true)
+	self.columns, self.columnsById = {}, {}
+	self.rows, self.context = {}, {}
+	self.rowPool = {}
+	self.headerButtons = {}
+	for _, field in ipairs(OPTION_FIELDS) do
+		self[field] = options[field]
 	end
-	AuctionHelper:AddSurface(frame, { r = 0, g = 0, b = 0, a = 0 }, theme.borderSubtle)
+	self.paddingX = options.paddingX or 4
+	self.rowHeight = math.max(options.rowHeight or sizes.row, sizes.row)
+	self.headerHeight = options.headerHeight or sizes.tableHead
+	self.sortAsc = options.sortAsc ~= false
+	self.contentWidth = 0
+	self.autoFitToScroll = options.autoFitToScroll == true
+	self._layoutColumnWidths = {}
+	self.useViewportVirtualization = options.viewportVirtualize == true
+end
 
-	local header = CreateFrame("Frame", nil, frame)
-	header:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
-	header:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -1)
-	header:SetHeight(widget.headerHeight)
+function TableMixin:CreateHeaderBar()
+	local theme = AuctionHelper:GetTheme()
+	local header = CreateFrame("Frame", nil, self.frame)
+	header:SetPoint("TOPLEFT", self.frame, "TOPLEFT", 1, -1)
+	header:SetPoint("TOPRIGHT", self.frame, "TOPRIGHT", -1, -1)
+	header:SetHeight(self.headerHeight)
 	local headerFill = header:CreateTexture(nil, "BACKGROUND")
 	headerFill:SetAllPoints()
 	headerFill:SetColorTexture(theme.surface2.r, theme.surface2.g, theme.surface2.b, 1)
@@ -818,71 +548,34 @@ function AuctionHelper:CreateReusableTable(parent, options)
 	headerRule:SetPoint("BOTTOMRIGHT")
 	headerRule:SetHeight(1)
 	headerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
-	widget.header = header
+	self.header = header
+end
 
-	local footerHeight = 0
-	if options.footer then
-		footerHeight = theme.size.footer
-		local footer = CreateFrame("Frame", nil, frame)
-		footer:SetPoint("BOTTOMLEFT", 1, 1)
-		footer:SetPoint("BOTTOMRIGHT", -1, 1)
-		footer:SetHeight(footerHeight)
-		local fill = footer:CreateTexture(nil, "BACKGROUND")
-		fill:SetAllPoints()
-		fill:SetColorTexture(theme.surface2.r, theme.surface2.g, theme.surface2.b, 1)
-		local rule = footer:CreateTexture(nil, "BORDER")
-		rule:SetPoint("TOPLEFT")
-		rule:SetPoint("TOPRIGHT")
-		rule:SetHeight(1)
-		rule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
-		footer.right = footer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		footer.right:SetPoint("RIGHT", -gutter, 0)
-		footer.right:SetJustifyH("RIGHT")
-		footer.right:SetWordWrap(false)
-		footer.left = footer:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		footer.left:SetPoint("LEFT", 8, 0)
-		footer.left:SetPoint("RIGHT", footer.right, "LEFT", -12, 0)
-		footer.left:SetJustifyH("LEFT")
-		footer.left:SetWordWrap(false)
-		for _, text in ipairs({ footer.left, footer.right }) do
-			text:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
-		end
-		widget.footer = footer
-		-- Tables with a page size get Prev / "Page N of M" / Next, shown once there is a second page.
-		if widget.maxRows then
-			local pager = CreateFrame("Frame", nil, footer)
-			pager:SetPoint("RIGHT", -gutter, 0)
-			pager:SetHeight(footerHeight)
-			pager.next = AuctionHelper:CreateButton(pager, "Next", function() widget:SetPage(widget.page + 1) end, { small = true })
-			pager.next:SetPoint("RIGHT")
-			pager.label = pager:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-			pager.label:SetPoint("RIGHT", pager.next, "LEFT", -8, 0)
-			pager.label:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
-			pager.prev = AuctionHelper:CreateButton(pager, "Prev", function() widget:SetPage(widget.page - 1) end, { small = true })
-			pager.prev:SetPoint("RIGHT", pager.label, "LEFT", -8, 0)
-			for _, button in ipairs({ pager.prev, pager.next }) do
-				button:SetHeight(footerHeight - 6)
-			end
-			pager:Hide()
-			widget.pager = pager
-		end
-	end
-
-	local scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
+function TableMixin:CreateScrollArea(footerHeight)
+	local gutter = AuctionHelper:GetTheme().size.scrollGutter
+	local scrollFrame = CreateFrame("ScrollFrame", nil, self.frame, "UIPanelScrollFrameTemplate")
 	-- SetHeight(0) means "no height" in WoW, so a headerless table anchors to the frame instead.
-	if widget.headerHeight > 0 then
-		scrollFrame:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, 0)
+	if self.headerHeight > 0 then
+		scrollFrame:SetPoint("TOPLEFT", self.header, "BOTTOMLEFT", 0, 0)
 	else
-		header:Hide()
-		scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+		self.header:Hide()
+		scrollFrame:SetPoint("TOPLEFT", self.frame, "TOPLEFT", 1, -1)
 	end
-	scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -(gutter + 1), footerHeight + 1)
-	widget.scrollFrame = scrollFrame
-	AuctionHelper:SkinTree(frame)
+	scrollFrame:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMRIGHT", -(gutter + 1), footerHeight + 1)
+	self.scrollFrame = scrollFrame
+	AuctionHelper:SkinTree(self.frame)
+	local scrollChild = CreateFrame("Frame", nil, scrollFrame)
+	scrollChild:SetWidth(1)
+	scrollChild:SetHeight(self.rowHeight)
+	scrollFrame:SetScrollChild(scrollChild)
+	self.scrollChild = scrollChild
+end
 
-	local empty = CreateFrame("Frame", nil, frame)
-	empty:SetPoint("TOPLEFT", scrollFrame, "TOPLEFT", 24, -24)
-	empty:SetPoint("BOTTOMRIGHT", scrollFrame, "BOTTOMRIGHT", -24, 24)
+function TableMixin:CreateEmptyState()
+	local muted = AuctionHelper:GetTheme().textMuted
+	local empty = CreateFrame("Frame", nil, self.frame)
+	empty:SetPoint("TOPLEFT", self.scrollFrame, "TOPLEFT", 24, -24)
+	empty:SetPoint("BOTTOMRIGHT", self.scrollFrame, "BOTTOMRIGHT", -24, 24)
 	empty.title = empty:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	empty.title:SetPoint("BOTTOM", empty, "CENTER", 0, 2)
 	empty.title:SetPoint("LEFT")
@@ -891,39 +584,55 @@ function AuctionHelper:CreateReusableTable(parent, options)
 	empty.hint:SetPoint("TOP", empty, "CENTER", 0, -4)
 	empty.hint:SetPoint("LEFT")
 	empty.hint:SetPoint("RIGHT")
-	empty.hint:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	empty.hint:SetTextColor(muted.r, muted.g, muted.b)
 	empty:Hide()
-	widget.emptyFrame = empty
-	widget.emptyTitle = options.emptyTitle
-	widget.emptyHint = options.emptyHint
-
-	local scrollChild = CreateFrame("Frame", nil, scrollFrame)
-	scrollChild:SetWidth(1)
-	scrollChild:SetHeight(widget.rowHeight)
-	scrollFrame:SetScrollChild(scrollChild)
-	widget.scrollChild = scrollChild
-
-	if widget.useViewportVirtualization then
-		scrollFrame:SetScript("OnVerticalScroll", function()
-			widget:RefreshVirtualRowWindow()
-		end)
-		scrollFrame:HookScript("OnSizeChanged", function()
-			if widget.autoFitToScroll then
-				widget:Refresh()
-			else
-				widget:RefreshVirtualRowWindow()
-			end
-		end)
-	elseif widget.autoFitToScroll then
-		scrollFrame:HookScript("OnSizeChanged", function()
-			widget:Refresh()
-		end)
-	end
-
-	frame:HookScript("OnSizeChanged", function()
-		widget:Refresh()
-	end)
-
-	return widget
+	self.emptyFrame = empty
 end
 
+-- Redraw on resize; virtualized tables also redraw the visible row window on scroll.
+function TableMixin:BindResizeScripts()
+	local scrollFrame = self.scrollFrame
+	if self.useViewportVirtualization then
+		scrollFrame:SetScript("OnVerticalScroll", function()
+			self:RefreshVirtualRowWindow()
+		end)
+	end
+	if self.useViewportVirtualization or self.autoFitToScroll then
+		scrollFrame:HookScript("OnSizeChanged", function()
+			if self.autoFitToScroll then
+				self:Refresh()
+			else
+				self:RefreshVirtualRowWindow()
+			end
+		end)
+	end
+	self.frame:HookScript("OnSizeChanged", function()
+		self:Refresh()
+	end)
+end
+
+--- A sortable, reorderable, optionally paged and virtualized table. See OPTION_FIELDS and
+--- InitTableState for `options`; `options.footer` adds a footer (and a pager with `maxRows`).
+function AuctionHelper:CreateReusableTable(parent, options)
+	options = options or {}
+	local widget = setmetatable({}, { __index = TableMixin })
+	AuctionHelper.ReusableTables[widget] = true
+	widget:InitTableState(options)
+	local theme = AuctionHelper:GetTheme()
+	local frame = CreateFrame("Frame", nil, parent)
+	widget.frame = frame
+	if frame.SetClipsChildren then
+		frame:SetClipsChildren(true)
+	end
+	AuctionHelper:AddSurface(frame, { r = 0, g = 0, b = 0, a = 0 }, theme.borderSubtle)
+	widget:CreateHeaderBar()
+	local footerHeight = 0
+	if options.footer then
+		footerHeight = theme.size.footer
+		widget:CreateFooter(footerHeight)
+	end
+	widget:CreateScrollArea(footerHeight)
+	widget:CreateEmptyState()
+	widget:BindResizeScripts()
+	return widget
+end

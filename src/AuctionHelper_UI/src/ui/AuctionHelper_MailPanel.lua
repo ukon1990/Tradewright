@@ -7,11 +7,7 @@ if not AuctionHelper.IS_RETAIL then
 	end
 end
 
-local ATTACHMENTS_MAX = ATTACHMENTS_MAX_SEND or 12
 local AUTO_SEND_DELAY = 0.5
-local AUTO_SEND_TIMEOUT = 6
-local MAIL_SUBJECTS = { materials = "AuctionHelper mats", crafts = "AuctionHelper crafts", surplus = "AuctionHelper surplus" }
-local MAIL_BODY = "Sent with AuctionHelper."
 
 function AuctionHelper:GetMailCharacterLabel(characterKey)
 	if self.GetDashboardSidebarCharacterLabel then
@@ -33,281 +29,6 @@ local function roleText(pe)
 	return "Everything sellable here can go to your auction house / bank character, " .. pe:GetMailCharacterLabel(seller) .. "."
 end
 
-local function clearMailAttachments()
-	for i = 1, ATTACHMENTS_MAX do
-		if GetSendMailItem and GetSendMailItem(i) then
-			ClickSendMailItemButton(i, true)
-		end
-	end
-end
-
-local function setMailField(box, text)
-	if box and box.SetText then
-		box:SetText(text)
-	end
-end
-
-local function findBagSlotForItem(itemID)
-	local foundBag, foundSlot, stack
-	AuctionHelper:ForEachBagSlot(nil, function(bag, slot, info)
-		if info and tonumber(info.itemID) == tonumber(itemID) and (tonumber(info.stackCount) or 0) > 0 then
-			foundBag, foundSlot, stack = bag, slot, tonumber(info.stackCount)
-			return true
-		end
-	end)
-	return foundBag, foundSlot, stack
-end
-
-local function attachItemQuantity(itemID, quantity)
-	quantity = math.max(1, math.floor(tonumber(quantity) or 0))
-	local remaining = quantity
-	while remaining > 0 do
-		local bag, slot, stack = findBagSlotForItem(itemID)
-		if not bag then
-			return false, quantity - remaining
-		end
-		local take = math.min(remaining, stack)
-		if take < stack and C_Container.SplitContainerItem then
-			C_Container.SplitContainerItem(bag, slot, take)
-			bag, slot = findBagSlotForItem(itemID)
-			if not bag then
-				return false, quantity - remaining
-			end
-		end
-		C_Container.PickupContainerItem(bag, slot)
-		ClickSendMailItemButton()
-		remaining = remaining - take
-	end
-	return true, quantity
-end
-
--- Largest stack of an item by ID. C_Item.GetItemMaxStackSize wants an item location, not an ID.
-local function itemStackSize(itemID)
-	local size = C_Item and C_Item.GetItemMaxStackSizeByID and C_Item.GetItemMaxStackSizeByID(itemID)
-	if not size and GetItemInfo then
-		size = select(8, GetItemInfo(itemID))
-	end
-	return tonumber(size)
-end
-
-function AuctionHelper:GetItemStackSize(itemID)
-	return itemStackSize(itemID)
-end
-
-local function buildMailParcels(destinations)
-	local parcels = {}
-	for _, dest in ipairs(destinations or {}) do
-		local parcelItems = {}
-		local parcelCount = 0
-		local function flush()
-			if #parcelItems > 0 then
-				parcels[#parcels + 1] = {
-					mailName = dest.mailName,
-					characterKey = dest.characterKey,
-					kind = dest.kind,
-					items = parcelItems,
-				}
-				parcelItems = {}
-				parcelCount = 0
-			end
-		end
-		for _, item in ipairs(dest.items or {}) do
-			local qtyLeft = tonumber(item.quantity) or 0
-			while qtyLeft > 0 do
-				if parcelCount >= ATTACHMENTS_MAX then
-					flush()
-				end
-				local attachQty = math.min(qtyLeft, itemStackSize(item.itemID) or 200)
-				parcelItems[#parcelItems + 1] = {
-					itemID = item.itemID,
-					quantity = attachQty,
-					name = item.name,
-				}
-				parcelCount = parcelCount + 1
-				qtyLeft = qtyLeft - attachQty
-			end
-		end
-		flush()
-	end
-	return parcels
-end
-
---- How many mails the destinations take (12 attachments each, stacks split at their size).
-function AuctionHelper:CountMailParcels(destinations)
-	return #buildMailParcels(destinations)
-end
-
--- An automatic send has no click behind it. If the client ignores it, hand back to the buttons.
-local function watchAutoSend(st)
-	local index = st.index
-	C_Timer.After(AUTO_SEND_TIMEOUT, function()
-		if st.running and st.auto and st.index == index then
-			AuctionHelper:CancelMailSendQueue()
-			AuctionHelper:PrintMessage("Could not mail the materials automatically. Use Prepare all in the mail panel.")
-		end
-	end)
-end
-
--- Attaches a parcel and fills in To, Subject and body in the game's Send Mail window. Automatic
--- sends go out at once; the buttons leave the mail for the player to check and send.
-local function fillParcel(pe, parcel, st)
-	clearMailAttachments()
-	for _, item in ipairs(parcel.items or {}) do
-		if not attachItemQuantity(item.itemID, item.quantity) then
-			pe:PrintMessage(string.format("Could not attach all of %s for %s.", tostring(item.name or item.itemID), tostring(parcel.mailName)))
-		end
-	end
-	local subject = string.format("%s %d/%d", MAIL_SUBJECTS[parcel.kind] or MAIL_SUBJECTS.materials, st.index, st.total)
-	setMailField(SendMailNameEditBox, parcel.mailName)
-	setMailField(SendMailSubjectEditBox, subject)
-	setMailField(SendMailBodyEditBox, MAIL_BODY)
-	if st.auto and SendMail then
-		SendMail(parcel.mailName, subject, MAIL_BODY)
-		watchAutoSend(st)
-	end
-end
-
-function AuctionHelper:EnsureMailSendQueueState()
-	self._mailSendQueue = self._mailSendQueue or {
-		parcels = {},
-		index = 0,
-		running = false,
-		cancel = false,
-		sent = 0,
-		total = 0,
-	}
-	return self._mailSendQueue
-end
-
---- Stops the queue at once. A send the client never answers would otherwise leave it running.
-function AuctionHelper:CancelMailSendQueue()
-	local st = self:EnsureMailSendQueueState()
-	st.cancel = true
-	st.running = false
-	if MailFrame and MailFrame:IsShown() then
-		clearMailAttachments()
-		for _, box in ipairs({ SendMailNameEditBox, SendMailSubjectEditBox, SendMailBodyEditBox }) do
-			setMailField(box, "")
-		end
-	end
-	if self.ui and self.ui.mailPanel and self.ui.mailPanel:IsShown() then
-		self:RefreshMailPanel()
-	end
-end
-
-function AuctionHelper:AdvanceMailSendQueue(success)
-	local st = self:EnsureMailSendQueueState()
-	if not st.running then
-		return
-	end
-	if success then
-		st.sent = (st.sent or 0) + 1
-		local parcel = st.parcels and st.parcels[st.index]
-		if parcel and self.OnMailParcelSent then
-			self:OnMailParcelSent(parcel)
-		end
-	end
-	st.index = (st.index or 0) + 1
-	if st.cancel or st.index > #(st.parcels or {}) then
-		st.running = false
-		if st.auto and MailFrameTab1 and MailFrameTab1.Click then
-			MailFrameTab1:Click()
-		end
-		if self.RefreshMailPanel then
-			self:RefreshMailPanel()
-		end
-		if st.sent and st.sent > 0 then
-			self:PrintMessage(string.format("AuctionHelper mailed %d parcel(s).", st.sent))
-		end
-		if self.ScheduleLiveInventoryRefresh then
-			self:ScheduleLiveInventoryRefresh()
-		end
-		return
-	end
-	C_Timer.After(0.35, function()
-		AuctionHelper:ProcessNextMailParcel()
-	end)
-end
-
-function AuctionHelper:ProcessNextMailParcel()
-	local st = self:EnsureMailSendQueueState()
-	if st.cancel or not st.running then
-		st.running = false
-		return
-	end
-	local parcel = st.parcels and st.parcels[st.index]
-	if not parcel then
-		self:AdvanceMailSendQueue(false)
-		return
-	end
-	if self.RefreshMailPanel then
-		self:RefreshMailPanel()
-	end
-	if not MailFrame or not MailFrame:IsShown() then
-		self:PrintMessage("Open the mailbox to send materials.")
-		st.running = false
-		st.cancel = true
-		return
-	end
-	if MailFrameTab2 and MailFrameTab2.Click then
-		MailFrameTab2:Click()
-	end
-	fillParcel(self, parcel, st)
-end
-
-function AuctionHelper:StartMailSendQueue(destinations, auto)
-	local parcels = buildMailParcels(destinations)
-	if #parcels == 0 then
-		if not auto then
-			self:PrintMessage("No materials to mail from your bags.")
-		end
-		return false
-	end
-	local st = self:EnsureMailSendQueueState()
-	st.parcels = parcels
-	st.index = 1
-	st.sent = 0
-	st.total = #parcels
-	st.running = true
-	st.cancel = false
-	st.auto = auto == true
-	self:ProcessNextMailParcel()
-	return true
-end
-
---- On the auction house / bank character, mails every crafter whose materials are all in the bags.
---- Runs once per mailbox visit; incomplete sets wait for the Send buttons.
-function AuctionHelper:AutoSendReadyMaterials()
-	if not (self.IsSellerCharacter and self:IsSellerCharacter()) or self:GetSetting("mail.autoSendMaterials", true) == false
-		or self:EnsureMailSendQueueState().running then
-		return
-	end
-	local ready, names = {}, {}
-	for _, dest in ipairs(self:BuildShoppingMailSendPlan()) do
-		if dest.complete then
-			ready[#ready + 1] = dest
-			names[#names + 1] = string.format("%s (%s)", self:GetMailCharacterLabel(dest.characterKey), self:FormatNumberGrouped(dest.totalQuantity))
-		end
-	end
-	if self:StartMailSendQueue(ready, true) then
-		self:PrintMessage("Mailing collected materials to " .. table.concat(names, ", ") .. ".")
-	end
-end
-
---- Materials and crafted items; the surplus only goes from its review panel.
-local function readyDestinations(plan)
-	local ready = {}
-	for _, dest in ipairs(plan) do
-		if dest.kind ~= "surplus" and (tonumber(dest.totalQuantity) or 0) > 0 then
-			ready[#ready + 1] = dest
-		end
-	end
-	return ready
-end
-
-function AuctionHelper:StartMailSendAll()
-	return self:StartMailSendQueue(readyDestinations(self:BuildMailPanelPlan()))
-end
 
 local MAIL_PAD = 12
 local MAIL_ROW = 48
@@ -420,7 +141,7 @@ end
 
 -- Footer: what Prepare all covers, or where the surplus goes from.
 local function footerText(pe, plan)
-	local ready, items = readyDestinations(plan), 0
+	local ready, items = pe:GetReadyMailDestinations(plan), 0
 	for _, dest in ipairs(ready) do
 		items = items + dest.totalQuantity
 	end
@@ -431,53 +152,46 @@ local function footerText(pe, plan)
 end
 
 -- Progress text: a count beside the bar for automatic sends, a prompt for a prepared mail.
-local function progressLabel(panel, st, done)
-	if st.auto then
+local function progressLabel(panel, queueState, done)
+	if queueState.auto then
 		panel.progressText:SetPoint("RIGHT", panel.progressBar, "LEFT", -8, 0)
-		return string.format("Sending %d of %d", done, st.total)
+		return string.format("Sending %d of %d", done, queueState.total)
 	end
 	panel.progressText:SetPoint("RIGHT", panel.progressRow, "RIGHT")
-	return string.format("Mail %d of %d ready: press Send in the mailbox", st.index, st.total)
+	return string.format("Mail %d of %d ready: press Send in the mailbox", queueState.index, queueState.total)
 end
 
 -- Progress while a queue runs; returns whether one does.
-local function refreshProgress(panel, st)
-	local active = st.running == true and (st.total or 0) > 0
+local function refreshProgress(panel, queueState)
+	local active = queueState.running == true and (queueState.total or 0) > 0
 	panel.progressRow:SetShown(active)
 	if not active then
 		return false
 	end
-	local done = math.min(st.total, math.max(0, (st.index or 1) - 1))
-	panel.progressBar:SetShown(st.auto == true)
-	panel.progressBar:SetMinMaxValues(0, st.total)
+	local done = math.min(queueState.total, math.max(0, (queueState.index or 1) - 1))
+	panel.progressBar:SetShown(queueState.auto == true)
+	panel.progressBar:SetMinMaxValues(0, queueState.total)
 	panel.progressBar:SetValue(done)
-	panel.progressText:SetText(progressLabel(panel, st, done))
+	panel.progressText:SetText(progressLabel(panel, queueState, done))
 	return true
 end
 
-function AuctionHelper:EnsureMailPanel()
-	self.ui = self.ui or {}
-	if self.ui.mailPanel and self.ui.mailPanel:IsObjectType("Frame") then
-		return self.ui.mailPanel
-	end
-	local mail = _G.MailFrame
-	if not mail then
-		return nil
-	end
-	local pe = self
-	local theme = self:GetTheme()
-	local panel = CreateFrame("Frame", addonName .. "MailPanel", mail, "BackdropTemplate")
-	panel:SetWidth(320)
-	panel:SetPoint("TOPLEFT", mail, "TOPRIGHT", 8, -20)
-	panel:SetPoint("BOTTOMLEFT", mail, "BOTTOMRIGHT", 8, 16)
-	self:StyleWindow(panel)
-	panel:SetClampedToScreen(true)
-	panel:Hide()
+-- A 1px rule across `parent`, `offsetY` below its top and `inset` in from each side.
+local function addRule(parent, inset, offsetY)
+	local border = AuctionHelper:GetTheme().borderSubtle
+	local rule = parent:CreateTexture(nil, "BORDER")
+	rule:SetPoint("TOPLEFT", inset, offsetY)
+	rule:SetPoint("TOPRIGHT", -inset, offsetY)
+	rule:SetHeight(1)
+	rule:SetColorTexture(border.r, border.g, border.b, 1)
+end
 
-	-- Header: title and the collapse button.
+-- Header: title and the collapse button.
+function AuctionHelper:CreateMailPanelHeader(panel)
+	local header = self:GetTheme().size.header
 	local collapse = CreateFrame("Button", nil, panel, "UIPanelCloseButton")
 	collapse:ClearAllPoints()
-	collapse:SetPoint("RIGHT", panel, "TOPRIGHT", -6, -(theme.size.header / 2))
+	collapse:SetPoint("RIGHT", panel, "TOPRIGHT", -6, -(header / 2))
 	self:SkinCloseButton(collapse)
 	collapse:SetScript("OnEnter", function(button)
 		GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
@@ -487,36 +201,23 @@ function AuctionHelper:EnsureMailPanel()
 	collapse:SetScript("OnLeave", GameTooltip_Hide)
 	panel.toggleBtn = collapse
 	local title = self:CreateText(panel, "GameFontNormalLarge", "gold")
-	title:SetPoint("LEFT", panel, "TOPLEFT", MAIL_PAD, -(theme.size.header / 2) - 1)
+	title:SetPoint("LEFT", panel, "TOPLEFT", MAIL_PAD, -(header / 2) - 1)
 	title:SetPoint("RIGHT", collapse, "LEFT", -12, 0)
 	title:SetText("AuctionHelper mail")
-	local headerRule = panel:CreateTexture(nil, "BORDER")
-	headerRule:SetPoint("TOPLEFT", 1, -theme.size.header)
-	headerRule:SetPoint("TOPRIGHT", -1, -theme.size.header)
-	headerRule:SetHeight(1)
-	headerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	addRule(panel, 1, -header)
+end
 
-	-- Shown in place of the panel when it is collapsed: one small button at the mailbox edge.
-	local expand = self:CreateButton(mail, "AuctionHelper", nil, { small = true })
-	expand:SetPoint("TOPLEFT", mail, "TOPRIGHT", 8, -20)
-	expand:Hide()
-	panel.collapseTab = expand
-
-	-- Footer: how much is ready.
+-- Footer with how much is ready; Prepare all and Cancel above it, and the progress above those.
+function AuctionHelper:CreateMailPanelFooter(panel)
+	local pe = self
 	panel.footer = CreateFrame("Frame", nil, panel)
 	panel.footer:SetPoint("BOTTOMLEFT", 1, 1)
 	panel.footer:SetPoint("BOTTOMRIGHT", -1, 1)
-	panel.footer:SetHeight(theme.size.footer)
-	local footerRule = panel.footer:CreateTexture(nil, "BORDER")
-	footerRule:SetPoint("TOPLEFT")
-	footerRule:SetPoint("TOPRIGHT")
-	footerRule:SetHeight(1)
-	footerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	panel.footer:SetHeight(self:GetTheme().size.footer)
+	addRule(panel.footer, 0, 0)
 	panel.footerText = self:CreateText(panel.footer, "GameFontHighlightSmall", "textMuted")
 	panel.footerText:SetPoint("LEFT", MAIL_PAD, 0)
 	panel.footerText:SetPoint("RIGHT", -MAIL_PAD, 0)
-
-	-- Actions above the footer: Send all and Cancel; progress above them while sending.
 	local actions = CreateFrame("Frame", nil, panel)
 	actions:SetPoint("BOTTOMLEFT", panel.footer, "TOPLEFT", MAIL_PAD - 1, MAIL_PAD)
 	actions:SetPoint("BOTTOMRIGHT", panel.footer, "TOPRIGHT", -(MAIL_PAD - 1), MAIL_PAD)
@@ -536,11 +237,14 @@ function AuctionHelper:EnsureMailPanel()
 	panel.progressBar:SetPoint("LEFT", 118, 0)
 	panel.progressBar:SetPoint("RIGHT")
 	self:StyleProgressBar(panel.progressBar)
+end
 
-	-- Body: one sentence, then the destination list.
+-- Body: one sentence, then the scrolling destination list (or its empty state).
+function AuctionHelper:CreateMailPanelBody(panel)
+	local top = -(self:GetTheme().size.header + 1 + MAIL_PAD)
 	panel.summary = self:CreateParagraph(panel)
-	panel.summary:SetPoint("TOPLEFT", panel, "TOPLEFT", MAIL_PAD, -(theme.size.header + 1 + MAIL_PAD))
-	panel.summary:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -MAIL_PAD, -(theme.size.header + 1 + MAIL_PAD))
+	panel.summary:SetPoint("TOPLEFT", panel, "TOPLEFT", MAIL_PAD, top)
+	panel.summary:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -MAIL_PAD, top)
 	panel.summary:SetText("Reagents in your bags that your queue needs on other characters.")
 	local scroll = CreateFrame("ScrollFrame", addonName .. "MailPanelScroll", panel, "UIPanelScrollFrameTemplate")
 	scroll:SetPoint("TOPLEFT", panel.summary, "BOTTOMLEFT", 0, -10)
@@ -557,21 +261,50 @@ function AuctionHelper:EnsureMailPanel()
 	panel.empty:SetPoint("BOTTOMRIGHT", scroll, "BOTTOMRIGHT", 14, 0)
 	panel.empty:SetMessage("Nothing to mail", "Your bags hold nothing to send to another character.")
 	panel.rows = {}
-	self:SkinTree(panel)
+end
 
+-- Collapsed, the panel is replaced by one small button at the mailbox edge.
+function AuctionHelper:BindMailPanelCollapse(panel, mail)
+	local pe = self
+	local expand = self:CreateButton(mail, "AuctionHelper", nil, { small = true })
+	expand:SetPoint("TOPLEFT", mail, "TOPRIGHT", 8, -20)
+	expand:Hide()
+	panel.collapseTab = expand
 	local function applyExpanded(expanded)
 		expanded = expanded ~= false
 		pe:SetSetting("mail.sidePanelExpanded", expanded)
 		panel:SetShown(expanded)
 		expand:SetShown(not expanded)
 	end
-	collapse:SetScript("OnClick", function() applyExpanded(false) end)
+	panel.toggleBtn:SetScript("OnClick", function() applyExpanded(false) end)
 	expand:SetScript("OnClick", function()
 		applyExpanded(true)
 		pe:RefreshMailPanel()
 	end)
-
 	panel.applyExpanded = applyExpanded
+end
+
+function AuctionHelper:EnsureMailPanel()
+	self.ui = self.ui or {}
+	if self.ui.mailPanel and self.ui.mailPanel:IsObjectType("Frame") then
+		return self.ui.mailPanel
+	end
+	local mail = _G.MailFrame
+	if not mail then
+		return nil
+	end
+	local panel = CreateFrame("Frame", addonName .. "MailPanel", mail, "BackdropTemplate")
+	panel:SetWidth(320)
+	panel:SetPoint("TOPLEFT", mail, "TOPRIGHT", 8, -20)
+	panel:SetPoint("BOTTOMLEFT", mail, "BOTTOMRIGHT", 8, 16)
+	self:StyleWindow(panel)
+	panel:SetClampedToScreen(true)
+	panel:Hide()
+	self:CreateMailPanelHeader(panel)
+	self:CreateMailPanelFooter(panel)
+	self:CreateMailPanelBody(panel)
+	self:SkinTree(panel)
+	self:BindMailPanelCollapse(panel, mail)
 	self.ui.mailPanel = panel
 	return panel
 end
@@ -608,10 +341,10 @@ function AuctionHelper:RefreshMailPanel()
 	panel.content:SetHeight(math.max(MAIL_ROW, #plan * MAIL_ROW))
 	panel.empty:SetShown(#plan == 0)
 	panel.footerText:SetText(footerText(self, plan))
-	local st = self:EnsureMailSendQueueState()
-	local sending = refreshProgress(panel, st)
-	panel.sendAllBtn:SetEnabled(#readyDestinations(plan) > 0 and not sending)
-	panel.cancelBtn:SetEnabled(st.running == true)
+	local queueState = self:EnsureMailSendQueueState()
+	local sending = refreshProgress(panel, queueState)
+	panel.sendAllBtn:SetEnabled(#self:GetReadyMailDestinations(plan) > 0 and not sending)
+	panel.cancelBtn:SetEnabled(queueState.running == true)
 	self:RefreshMailReviewPanel(plan)
 end
 
@@ -640,30 +373,6 @@ function AuctionHelper:OnMailFrameHide()
 	end
 	if self.CancelMailSendQueue then
 		self:CancelMailSendQueue()
-	end
-end
-
-local function nameOnly(name)
-	return tostring(name or ""):match("^[^%-]+") or ""
-end
-
---- A send went through. While mails are prepared, a mail the player sent to someone else is not
---- the prepared parcel: that parcel is filled in again instead of counted as sent.
-function AuctionHelper:OnMailSendSuccess()
-	local st = self:EnsureMailSendQueueState()
-	local parcel = st.running and st.parcels and st.parcels[st.index]
-	if parcel and not st.auto and nameOnly(self._lastMailTo):lower() ~= nameOnly(parcel.mailName):lower() then
-		C_Timer.After(0.35, function() AuctionHelper:ProcessNextMailParcel() end)
-		return
-	end
-	self:AdvanceMailSendQueue(true)
-end
-
---- A failed automatic send moves on; a prepared mail stays as it is for the player to fix or cancel.
-function AuctionHelper:OnMailSendFailed()
-	self:PrintMessage("Mail send failed.")
-	if self:EnsureMailSendQueueState().auto then
-		self:AdvanceMailSendQueue(false)
 	end
 end
 

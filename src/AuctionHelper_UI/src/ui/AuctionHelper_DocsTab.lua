@@ -30,12 +30,8 @@ function DocsTab:Layout(panel)
 	panel.bodyContent:SetHeight(math.ceil(panel.bodyTitle:GetStringHeight() + panel.body:GetStringHeight()) + 24)
 end
 
-function DocsTab:Create(container, uiState)
-	local pe = AuctionHelper
-	local panel = CreateFrame("Frame", nil, container)
-	panel:SetAllPoints()
-	uiState.docsPanel = panel
-
+-- The topic column on the left: a heading over a selectable list.
+local function createTopicList(pe, panel)
 	panel.topics = CreateFrame("Frame", nil, panel)
 	panel.topics:SetPoint("TOPLEFT")
 	panel.topics:SetPoint("BOTTOMLEFT")
@@ -51,7 +47,10 @@ function DocsTab:Create(container, uiState)
 	end)
 	panel.topicList.frame:SetPoint("TOPLEFT", panel.topicHeading, "BOTTOMLEFT", 0, -8)
 	panel.topicList.frame:SetPoint("BOTTOMRIGHT", panel.topics, "BOTTOMRIGHT", 0, 0)
+end
 
+-- The article on the right: a scrolling title and body.
+local function createArticle(pe, panel)
 	panel.article = pe:CreateInset(panel)
 	panel.article:SetPoint("TOPLEFT", panel.topics, "TOPRIGHT", GAP, 0)
 	panel.article:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
@@ -69,7 +68,15 @@ function DocsTab:Create(container, uiState)
 	panel.body = pe:CreateParagraph(panel.bodyContent, "textPrimary")
 	panel.body:SetPoint("TOPLEFT", panel.bodyTitle, "BOTTOMLEFT", 0, -10)
 	panel.body:SetSpacing(2)
+end
 
+function DocsTab:Create(container, uiState)
+	local pe = AuctionHelper
+	local panel = CreateFrame("Frame", nil, container)
+	panel:SetAllPoints()
+	uiState.docsPanel = panel
+	createTopicList(pe, panel)
+	createArticle(pe, panel)
 	panel:SetScript("OnSizeChanged", function()
 		DocsTab:Layout(panel)
 	end)
@@ -77,6 +84,14 @@ function DocsTab:Create(container, uiState)
 end
 
 function DocsTab:ApplyTheme()
+end
+
+local function topicItems(sections)
+	local items = {}
+	for index, section in ipairs(sections) do
+		items[index] = { key = index, label = section.title or ("Topic " .. index) }
+	end
+	return items
 end
 
 function DocsTab:Refresh()
@@ -87,11 +102,7 @@ function DocsTab:Refresh()
 	end
 	local sections = pe.GetDocumentationSections and pe:GetDocumentationSections() or {}
 	panel.selectedIndex = math.max(1, math.min(panel.selectedIndex or 1, #sections))
-	local items = {}
-	for index, section in ipairs(sections) do
-		items[index] = { key = index, label = section.title or ("Topic " .. index) }
-	end
-	panel.topicList:SetItems(items)
+	panel.topicList:SetItems(topicItems(sections))
 
 	local selected = sections[panel.selectedIndex]
 	panel.bodyTitle:SetText(selected and selected.title or "Docs")

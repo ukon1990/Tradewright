@@ -266,158 +266,194 @@ local function createMoversCard(pe, dash)
 	createMoverButtons(pe, dash)
 end
 
+local GoldDashboardMixin = {}
+local TOP_ROWS = 30
+-- With price history, the sell card lists items at least this much above their usual price.
+local SELL_ABOVE_USUAL = 0.1
+local STALE_SCAN_SEC = 24 * 3600
+
 function AuctionHelper:CreateGoldDashboard(parent)
 	local pe = self
 	local dash = CreateFrame("Frame", nil, parent)
+	for name, method in pairs(GoldDashboardMixin) do
+		dash[name] = method
+	end
+	dash.pe = pe
 	dash:SetAllPoints()
 	pe.ui.goldDashboard = dash
-
 	dash.statsRow = CreateFrame("Frame", nil, dash)
 	dash.statsRow:SetPoint("TOPLEFT")
 	dash.statsRow:SetPoint("TOPRIGHT")
 	dash.statsRow:SetHeight(58)
 	dash.stats = pe:CreateStats(dash.statsRow, { "gold", "stockValue", "profitableCrafts", "deals", "marketData" })
-
 	createDealsCard(pe, dash)
 	createCraftsCard(pe, dash)
 	createSellCard(pe, dash)
 	createMoversCard(pe, dash)
-
-	function dash:Layout()
-		local width, height = self:GetWidth(), self:GetHeight()
-		pe:LayoutEvenRow(self.statsRow, self.stats, 0, GAP)
-		local cardWidth = math.max(200, (width - GAP) / 2)
-		local cardHeight = math.max(MIN_CARD_HEIGHT, (height - 58 - GAP * 2) / 2)
-		for index, card in ipairs({ self.deals, self.crafts, self.sell, self.movers }) do
-			local col, row = (index - 1) % 2, math.floor((index - 1) / 2)
-			card:ClearAllPoints()
-			card:SetPoint("TOPLEFT", self.statsRow, "BOTTOMLEFT", col * (cardWidth + GAP), -GAP - row * (cardHeight + GAP))
-			card:SetSize(cardWidth, cardHeight)
-		end
-	end
-
-	function dash:RefreshCrafts()
-		local rows = pe:BuildCraftOpportunityRows() or {}
-		local profitable = {}
-		for _, row in ipairs(rows) do
-			if (tonumber(row.profit) or 0) > 0 and row.matCost then
-				row._rowIdentity = row.rowKey or tostring(row.recipeID)
-				profitable[#profitable + 1] = row
-			end
-		end
-		local top = pe.ForeverLogic.TopN(profitable, 30, "profit")
-		local state = pe:GetState()
-		local tbl = self.crafts.table
-		if #top == 0 and state.craftEvalInProgress and state.craftEvalWorkList and #state.craftEvalWorkList > 0 then
-			local done = math.max(0, (state.craftEvalIdx or 1) - 1)
-			tbl:SetEmptyText("Working out craft profit", string.format("%d of %d recipes checked…", done, #state.craftEvalWorkList))
-		else
-			tbl:SetEmptyText("No profitable crafts", "Scan your professions and the auction house to compare material cost with sale price.")
-		end
-		tbl:SetRows(top)
-		tbl:Refresh()
-		local best = top[1]
-		self.stats.profitableCrafts:SetValues("Profitable crafts", pe:FormatNumberGrouped(#profitable),
-			best and ("Best " .. pe:FormatCopperShort(best.profit) .. " each") or "None found yet", #profitable > 0 and "success" or nil)
-	end
-
-	function dash:RefreshMovers()
-		local mode = pe:GetSetting("gold.moversView", "risers")
-		for _, button in ipairs(dash.moverButtons) do
-			pe:StyleShellButton(button, button.mode == mode)
-		end
-		local insights = self.insights
-		self.movers.table:SetRows(insights and insights[mode] or {})
-		self.movers.table:Refresh()
-	end
-
-	function dash:RefreshSell(insights)
-		local rows, stockValue, priced, anyHistory = {}, 0, 0, false
-		for _, inv in ipairs(pe:BuildInventoryRowsAggregatedByItem(pe.db, {}, "") or {}) do
-			local market = insights and insights.byItemID[tonumber(inv.itemID)]
-			local total = tonumber(inv.total) or 0
-			if market and total > 0 then
-				local value = market.price * total
-				stockValue = stockValue + value
-				priced = priced + 1
-				anyHistory = anyHistory or market.change ~= nil
-				rows[#rows + 1] = {
-					_rowIdentity = tostring(inv.itemID),
-					itemID = tonumber(inv.itemID),
-					storageKey = market.storageKey,
-					name = inv.name,
-					total = total, bags = inv.bags, bank = inv.bank,
-					price = market.price,
-					change = market.change,
-					value = value,
-				}
-			end
-		end
-		-- With history: items selling above their usual price. Without: what is worth the most.
-		if anyHistory then
-			local above = {}
-			for _, row in ipairs(rows) do
-				if row.change and row.change >= 0.1 then
-					above[#above + 1] = row
-				end
-			end
-			rows = above
-		end
-		self.sell.table:SetRows(pe.ForeverLogic.TopN(rows, 30, "value"))
-		self.sell.table:Refresh()
-		self.stats.stockValue:SetValues("Stock value", insights and pe:FormatCopperShort(stockValue) or "…",
-			string.format("%s item types priced", pe:FormatNumberGrouped(priced)))
-	end
-
-	function dash:Refresh()
-		-- Market insights live in the Auction Data module; without it the market cards stay empty.
-		self.materials = pe.GetRecipeMaterialSet and pe:GetRecipeMaterialSet() or {}
-		local insights = pe.GetMarketInsights and pe:GetMarketInsights(function()
-			if self:IsVisible() then
-				self:Refresh()
-			end
-		end) or nil
-		self.insights = insights
-
-		-- Account gold and its 7-day change.
-		local gold = pe:GetCurrentGoldSummaryForOverview(ACCT_KEY) or 0
-		local series = pe:GetOverviewWalletGraphSeries(ACCT_KEY, "7d", "balance") or {}
-		local first = series[1] and tonumber(series[1].value)
-		local note = "No history yet"
-		if first then
-			local delta = gold - first
-			note = (delta >= 0 and pe:Colorize("+" .. pe:FormatCopperShort(delta), "success") or pe:Colorize(pe:FormatCopperShort(delta), "danger")) .. " in 7 days"
-		end
-		self.stats.gold:SetValues("Gold, all characters", pe:FormatCopperShort(gold), note)
-
-		-- Deals and data freshness.
-		if insights then
-			local best = insights.deals[1]
-			self.stats.deals:SetValues("Deals found", pe:FormatNumberGrouped(insights.dealCount),
-				best and string.format("Best %s below usual", pe:FormatPercent(best.discount)) or "None right now",
-				insights.dealCount > 0 and "gold" or nil)
-			local lastScanAt = pe.GetLastFullAuctionScanAt and pe:GetLastFullAuctionScanAt()
-			local stale = not lastScanAt or time() - lastScanAt > 24 * 3600
-			self.stats.marketData:SetValues("Market data", lastScanAt and pe:FormatScanTimestamp(lastScanAt) or "No full scan",
-				string.format("%s items", pe:FormatNumberGrouped(insights.itemCount)), stale and "warning" or nil)
-		else
-			local progress = pe:GetState().marketInsightsProgress or 0
-			local working = string.format("Reading scans %d%%", progress * 100)
-			self.stats.deals:SetValues("Deals found", "…", working)
-			self.stats.marketData:SetValues("Market data", "…", working)
-		end
-
-		self.deals.table:SetRows(insights and insights.deals or {})
-		self.deals.table:Refresh()
-		self:RefreshSell(insights)
-		self:RefreshMovers()
-		self:RefreshCrafts()
-		self:Layout()
-	end
-
 	dash:SetScript("OnSizeChanged", function()
 		dash:Layout()
 	end)
 	dash:Layout()
 	return dash
+end
+
+function GoldDashboardMixin:Layout()
+	local width, height = self:GetWidth(), self:GetHeight()
+	self.pe:LayoutEvenRow(self.statsRow, self.stats, 0, GAP)
+	local cardWidth = math.max(200, (width - GAP) / 2)
+	local cardHeight = math.max(MIN_CARD_HEIGHT, (height - 58 - GAP * 2) / 2)
+	for index, card in ipairs({ self.deals, self.crafts, self.sell, self.movers }) do
+		local col, row = (index - 1) % 2, math.floor((index - 1) / 2)
+		card:ClearAllPoints()
+		card:SetPoint("TOPLEFT", self.statsRow, "BOTTOMLEFT", col * (cardWidth + GAP), -GAP - row * (cardHeight + GAP))
+		card:SetSize(cardWidth, cardHeight)
+	end
+end
+
+local function profitableCraftRows(rows)
+	local profitable = {}
+	for _, row in ipairs(rows) do
+		if (tonumber(row.profit) or 0) > 0 and row.matCost then
+			row._rowIdentity = row.rowKey or tostring(row.recipeID)
+			profitable[#profitable + 1] = row
+		end
+	end
+	return profitable
+end
+
+-- While craft profit is still being worked out the empty table says how far it got.
+function GoldDashboardMixin:SetCraftsEmptyText(isEmpty)
+	local state = self.pe:GetState()
+	local workList = state.craftEvalInProgress and state.craftEvalWorkList
+	if isEmpty and workList and #workList > 0 then
+		local done = math.max(0, (state.craftEvalIdx or 1) - 1)
+		self.crafts.table:SetEmptyText("Working out craft profit", string.format("%d of %d recipes checked…", done, #workList))
+	else
+		self.crafts.table:SetEmptyText("No profitable crafts", "Scan your professions and the auction house to compare material cost with sale price.")
+	end
+end
+
+function GoldDashboardMixin:RefreshCrafts()
+	local pe = self.pe
+	local profitable = profitableCraftRows(pe:BuildCraftOpportunityRows() or {})
+	local top = pe.ForeverLogic.TopN(profitable, TOP_ROWS, "profit")
+	self:SetCraftsEmptyText(#top == 0)
+	self.crafts.table:SetRows(top)
+	self.crafts.table:Refresh()
+	local best = top[1]
+	self.stats.profitableCrafts:SetValues("Profitable crafts", pe:FormatNumberGrouped(#profitable),
+		best and ("Best " .. pe:FormatCopperShort(best.profit) .. " each") or "None found yet", #profitable > 0 and "success" or nil)
+end
+
+function GoldDashboardMixin:RefreshMovers()
+	local pe = self.pe
+	local mode = pe:GetSetting("gold.moversView", "risers")
+	for _, button in ipairs(self.moverButtons) do
+		pe:StyleShellButton(button, button.mode == mode)
+	end
+	local insights = self.insights
+	self.movers.table:SetRows(insights and insights[mode] or {})
+	self.movers.table:Refresh()
+end
+
+-- Held items with a market price, valued at it. Returns the rows, their total value and whether any has history.
+local function pricedStockRows(pe, insights)
+	local rows, stockValue, anyHistory = {}, 0, false
+	for _, inv in ipairs(pe:BuildInventoryRowsAggregatedByItem(pe.db, {}, "") or {}) do
+		local market = insights and insights.byItemID[tonumber(inv.itemID)]
+		local total = tonumber(inv.total) or 0
+		if market and total > 0 then
+			local value = market.price * total
+			stockValue = stockValue + value
+			anyHistory = anyHistory or market.change ~= nil
+			rows[#rows + 1] = {
+				_rowIdentity = tostring(inv.itemID), itemID = tonumber(inv.itemID), storageKey = market.storageKey, name = inv.name,
+				total = total, bags = inv.bags, bank = inv.bank, price = market.price, change = market.change, value = value,
+			}
+		end
+	end
+	return rows, stockValue, anyHistory
+end
+
+local function aboveUsualPrice(rows)
+	local above = {}
+	for _, row in ipairs(rows) do
+		if row.change and row.change >= SELL_ABOVE_USUAL then
+			above[#above + 1] = row
+		end
+	end
+	return above
+end
+
+function GoldDashboardMixin:RefreshSell(insights)
+	local pe = self.pe
+	local rows, stockValue, anyHistory = pricedStockRows(pe, insights)
+	local priced = #rows
+	-- With history: items selling above their usual price. Without: what is worth the most.
+	if anyHistory then
+		rows = aboveUsualPrice(rows)
+	end
+	self.sell.table:SetRows(pe.ForeverLogic.TopN(rows, TOP_ROWS, "value"))
+	self.sell.table:Refresh()
+	self.stats.stockValue:SetValues("Stock value", insights and pe:FormatCopperShort(stockValue) or "…",
+		string.format("%s item types priced", pe:FormatNumberGrouped(priced)))
+end
+
+-- Account gold and its 7-day change.
+function GoldDashboardMixin:RefreshGoldStat()
+	local pe = self.pe
+	local gold = pe:GetCurrentGoldSummaryForOverview(ACCT_KEY) or 0
+	local series = pe:GetOverviewWalletGraphSeries(ACCT_KEY, "7d", "balance") or {}
+	local first = series[1] and tonumber(series[1].value)
+	local note = "No history yet"
+	if first then
+		local delta = gold - first
+		note = (delta >= 0 and pe:Colorize("+" .. pe:FormatCopperShort(delta), "success") or pe:Colorize(pe:FormatCopperShort(delta), "danger")) .. " in 7 days"
+	end
+	self.stats.gold:SetValues("Gold, all characters", pe:FormatCopperShort(gold), note)
+end
+
+-- Deals found and data freshness, or the progress while market insights are read.
+function GoldDashboardMixin:RefreshMarketStats(insights)
+	local pe = self.pe
+	if not insights then
+		local working = string.format("Reading scans %d%%", (pe:GetState().marketInsightsProgress or 0) * 100)
+		self.stats.deals:SetValues("Deals found", "…", working)
+		self.stats.marketData:SetValues("Market data", "…", working)
+		return
+	end
+	local best = insights.deals[1]
+	self.stats.deals:SetValues("Deals found", pe:FormatNumberGrouped(insights.dealCount),
+		best and string.format("Best %s below usual", pe:FormatPercent(best.discount)) or "None right now",
+		insights.dealCount > 0 and "gold" or nil)
+	self:RefreshMarketDataStat(insights)
+end
+
+-- When the last full scan ran, in warning colour once it is a day old.
+function GoldDashboardMixin:RefreshMarketDataStat(insights)
+	local pe = self.pe
+	local lastScanAt = pe.GetLastFullAuctionScanAt and pe:GetLastFullAuctionScanAt()
+	local stale = not lastScanAt or time() - lastScanAt > STALE_SCAN_SEC
+	self.stats.marketData:SetValues("Market data", lastScanAt and pe:FormatScanTimestamp(lastScanAt) or "No full scan",
+		string.format("%s items", pe:FormatNumberGrouped(insights.itemCount)), stale and "warning" or nil)
+end
+
+function GoldDashboardMixin:Refresh()
+	local pe = self.pe
+	-- Market insights live in the Auction Data module; without it the market cards stay empty.
+	self.materials = pe.GetRecipeMaterialSet and pe:GetRecipeMaterialSet() or {}
+	local insights = pe.GetMarketInsights and pe:GetMarketInsights(function()
+		if self:IsVisible() then
+			self:Refresh()
+		end
+	end) or nil
+	self.insights = insights
+	self:RefreshGoldStat()
+	self:RefreshMarketStats(insights)
+	self.deals.table:SetRows(insights and insights.deals or {})
+	self.deals.table:Refresh()
+	self:RefreshSell(insights)
+	self:RefreshMovers()
+	self:RefreshCrafts()
+	self:Layout()
 end

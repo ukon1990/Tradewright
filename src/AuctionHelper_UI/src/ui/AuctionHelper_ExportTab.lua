@@ -67,17 +67,8 @@ function ExportTab:Layout(panel)
 	end
 end
 
-function ExportTab:Create(container, uiState)
-	local pe = AuctionHelper
-	local panel = CreateFrame("Frame", nil, container)
-	panel:SetAllPoints()
-	uiState.exportPanel = panel
-
-	panel.intro = pe:CreateParagraph(panel)
-	panel.intro:SetPoint("TOPLEFT")
-	panel.intro:SetPoint("TOPRIGHT")
-	panel.intro:SetText("Each button opens the export window with a compressed package to copy. The same package is saved to SavedVariables on /reload.")
-
+-- The left column: one group of export buttons each for this character, the account and compact packages.
+local function createExportGroups(pe, panel)
 	panel.left = CreateFrame("Frame", nil, panel)
 	panel.left:SetPoint("TOPLEFT", panel.intro, "BOTTOMLEFT", 0, -GAP)
 	panel.left:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 0)
@@ -103,7 +94,10 @@ function ExportTab:Create(container, uiState)
 	})
 	panel.compactGroup.body:SetText("Smaller packages for the website, one topic each.")
 	panel.groups = { panel.characterGroup, panel.accountGroup, panel.compactGroup }
+end
 
+-- The right column: the scanned professions of this character, each exportable on its own.
+local function createProfessionTable(pe, panel)
 	panel.right = CreateFrame("Frame", nil, panel)
 	panel.right:SetPoint("TOPLEFT", panel.left, "TOPRIGHT", GAP, 0)
 	panel.right:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
@@ -119,6 +113,20 @@ function ExportTab:Create(container, uiState)
 	panel.profTable.frame:SetPoint("TOPLEFT", panel.profHeading, "BOTTOMLEFT", 0, -8)
 	panel.profTable.frame:SetPoint("BOTTOMRIGHT", panel.right, "BOTTOMRIGHT", 0, 0)
 	panel.profTable:SetColumns(pe:CreateProfessionColumns())
+end
+
+function ExportTab:Create(container, uiState)
+	local pe = AuctionHelper
+	local panel = CreateFrame("Frame", nil, container)
+	panel:SetAllPoints()
+	uiState.exportPanel = panel
+
+	panel.intro = pe:CreateParagraph(panel)
+	panel.intro:SetPoint("TOPLEFT")
+	panel.intro:SetPoint("TOPRIGHT")
+	panel.intro:SetText("Each button opens the export window with a compressed package to copy. The same package is saved to SavedVariables on /reload.")
+	createExportGroups(pe, panel)
+	createProfessionTable(pe, panel)
 
 	panel:SetScript("OnSizeChanged", function()
 		ExportTab:Layout(panel)
@@ -130,6 +138,15 @@ end
 function ExportTab:ApplyTheme()
 end
 
+-- "Name · Realm, 3 professions stored." for the character group.
+local function characterSummary(pe, key, charData)
+	local meta = charData and charData.meta or {}
+	local professionCount = pe:TableCount(charData and charData.professions or {})
+	return string.format("%s, %d %s stored.",
+		meta.name and meta.realm and (meta.name .. " · " .. meta.realm) or tostring(key),
+		professionCount, pe:Plural(professionCount, "profession"))
+end
+
 function ExportTab:Refresh()
 	local pe = AuctionHelper
 	local panel = pe.ui.exportPanel
@@ -138,11 +155,7 @@ function ExportTab:Refresh()
 	end
 	local key = pe:GetCharacterKey()
 	local charData = pe.db and pe.db.characters and pe.db.characters[key]
-	local meta = charData and charData.meta or {}
-	local professionCount = pe:TableCount(charData and charData.professions or {})
-	panel.characterGroup.body:SetText(string.format("%s, %d %s stored.",
-		meta.name and meta.realm and (meta.name .. " · " .. meta.realm) or tostring(key),
-		professionCount, pe:Plural(professionCount, "profession")))
+	panel.characterGroup.body:SetText(characterSummary(pe, key, charData))
 
 	local rows = pe:BuildProfessionRows(charData)
 	panel.profTable:SetRows(rows)
