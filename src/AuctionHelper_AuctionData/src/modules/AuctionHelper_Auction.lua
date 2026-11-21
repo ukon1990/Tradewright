@@ -2010,14 +2010,6 @@ function AuctionHelper:FilterAuctionCraftCartRows(rows)
 	return out
 end
 
-local function moneyColumn(pe, id, label, field, optional)
-	return {
-		id = id, label = label, justifyH = "RIGHT", width = 78, sortable = true, defaultSort = "desc", optional = optional,
-		sortValue = function(row) return tonumber(row and row[field]) or -1 end,
-		getText = function(row) return row and row[field] and pe:FormatCopperShort(row[field]) or "-" end,
-	}
-end
-
 function AuctionHelper:BuildAuctionCartColumns()
 	local pe = self
 	local function count(id, label, field, optional)
@@ -2043,8 +2035,8 @@ function AuctionHelper:BuildAuctionCartColumns()
 		}),
 		have,
 		count("quantityToBuy", "Buy", "quantityToBuy"),
-		moneyColumn(pe, "estimatedUnitPrice", "Each", "estimatedUnitPrice", true),
-		moneyColumn(pe, "estimatedBuyCost", "Cost", "estimatedBuyCost"),
+		pe:MoneyColumn({ id = "estimatedUnitPrice", label = "Each", width = 78, optional = true }),
+		pe:MoneyColumn({ id = "estimatedBuyCost", label = "Cost", width = 78 }),
 	}
 end
 
@@ -3088,8 +3080,8 @@ function AuctionHelper:BuildOwnedAuctionColumns()
 			end,
 			sortValue = function(row) return row and row.itemName end,
 		}),
-		moneyColumn(pe, "unitPrice", "Each", "unitPrice", true),
-		moneyColumn(pe, "value", "Total", "value"),
+		pe:MoneyColumn({ id = "unitPrice", label = "Each", width = 78, optional = true }),
+		pe:MoneyColumn({ id = "value", label = "Total", width = 78 }),
 		{
 			id = "status", label = "Status", width = 104, sortable = true, defaultSort = "desc",
 			tooltipTitle = "Status", tooltipText = "Sold, or how your price compares with the lowest one scanned this visit.",

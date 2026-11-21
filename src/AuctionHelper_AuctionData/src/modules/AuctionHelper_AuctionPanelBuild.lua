@@ -312,16 +312,11 @@ local function buildSellSearchFilters(panel, ui, w)
 end
 
 local function buildClassDropdowns(self, panel, ui, w)
-	ui.ahClassDropdown = self:CreateMultiSelectDropdown(panel, {
+	ui.ahClassDropdown = self:CreateFilterDropdown(panel, {
 		label = "Class",
 		allLabel = "All classes",
 		width = 114,
-		getSelection = function()
-			return ui.ahClassFilterValues or {}
-		end,
-		setSelection = function(selection)
-			ui.ahClassFilterValues = selection or {}
-		end,
+		uiKey = "ahClassFilterValues",
 		onChanged = function()
 			ui.ahSubclassFilterValues = {}
 			AuctionHelper:RefreshAuctionHousePanel()
@@ -329,16 +324,11 @@ local function buildClassDropdowns(self, panel, ui, w)
 	})
 	ui.ahClassDropdown:SetPoint("TOPLEFT", w.search, "BOTTOMLEFT", 0, -8)
 	panel.classDropdown = ui.ahClassDropdown
-	ui.ahSubclassDropdown = self:CreateMultiSelectDropdown(panel, {
+	ui.ahSubclassDropdown = self:CreateFilterDropdown(panel, {
 		label = "Subclass",
 		allLabel = "All subclasses",
 		width = 114,
-		getSelection = function()
-			return ui.ahSubclassFilterValues or {}
-		end,
-		setSelection = function(selection)
-			ui.ahSubclassFilterValues = selection or {}
-		end,
+		uiKey = "ahSubclassFilterValues",
 		onChanged = function()
 			AuctionHelper:RefreshAuctionHousePanel()
 		end,
@@ -361,19 +351,14 @@ end
 
 local function buildExpansionDropdown(self, panel, ui)
 	ui.ahExpansionFilterValues = copyBoolMap(self:GetSetting("auction.selectedExpansions", {}))
-	ui.ahExpansionDropdown = self:CreateMultiSelectDropdown(panel, {
+	ui.ahExpansionDropdown = self:CreateFilterDropdown(panel, {
 		label = "Expansion",
 		width = 114,
 		allLabel = "All expansions",
+		uiKey = "ahExpansionFilterValues",
+		setting = "auction.selectedExpansions",
 		getOptions = function()
 			return AuctionHelper:GetExpansionFilterOptions()
-		end,
-		getSelection = function()
-			return ui.ahExpansionFilterValues or {}
-		end,
-		setSelection = function(selection)
-			ui.ahExpansionFilterValues = selection or {}
-			AuctionHelper:SetSetting("auction.selectedExpansions", selection)
 		end,
 		onChanged = function()
 			AuctionHelper:RefreshAuctionHousePanel()

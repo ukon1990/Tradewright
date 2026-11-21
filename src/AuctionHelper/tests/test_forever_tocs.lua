@@ -35,7 +35,7 @@ for _, m in ipairs(modules) do
 		check(m[1] .. " Blizzard_Professions not hard Dep", not toc:match("## Dependencies:[^\n]*Blizzard_Professions"))
 		if m[1] == "AuctionHelper_UI" then
 			check("UI TOC lists MarketUI", toc:find("AuctionHelper_MarketUI.lua", 1, true) ~= nil)
-			check("UI TOC lists MarketTab", toc:find("AuctionHelper_MarketTab.lua", 1, true) ~= nil)
+			check("UI TOC lists TabOrder", toc:find("AuctionHelper_TabOrder.lua", 1, true) ~= nil)
 		end
 	end
 end

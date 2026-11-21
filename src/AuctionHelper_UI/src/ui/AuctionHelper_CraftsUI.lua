@@ -215,29 +215,24 @@ function AuctionHelper:RenderCraftsDetails(row)
 	self:LayoutCraftsPanel(panel)
 end
 
-local function createSelect(pe, parent, width, options, settingKey, default, onChanged, tooltip)
-	return pe:CreateSingleSelectDropdown(parent, {
-		width = width,
-		getOptions = function() return options end,
-		getValue = function() return pe:GetSetting(settingKey, default) end,
-		setValue = function(value) pe:SetSetting(settingKey, value) end,
-		onChanged = onChanged or function() pe:RefreshCraftsTab() end,
-		tooltip = tooltip,
-	})
+local PROFIT_CHOICES = {
+	{ value = "all", label = "Any profit" }, { value = "profitable", label = "Profitable" }, { value = "negative", label = "Losing money" },
+	{ value = "missing_price", label = "Missing price" }, { value = "uncraftable", label = "Can't craft now" },
+}
+local SOURCE_CHOICES = {
+	{ value = "owned_first", label = "Owned first" }, { value = "market_only", label = "Market only" }, { value = "mixed", label = "Mixed" },
+}
+local BASIS_CHOICES = { { value = "auto", label = "Auto" }, { value = "market", label = "Market" }, { value = "ledger", label = "Ledger" } }
+local SCENARIO_CHOICES = { { value = "default", label = "No concentration" }, { value = "concentration", label = "With concentration" } }
+
+local function refreshCrafts(pe)
+	return function() pe:RefreshCraftsTab() end
 end
 
-local function createFilter(pe, parent, width, allLabel, getOptions, field, settingKey)
-	return pe:CreateMultiSelectDropdown(parent, {
-		width = width,
-		allLabel = allLabel,
-		getOptions = getOptions,
-		getSelection = function() return pe.ui[field] end,
-		setSelection = function(selection)
-			pe.ui[field] = selection
-			pe:SetSetting(settingKey, selection)
-		end,
-		onChanged = function() pe:RefreshCraftsTab() end,
-	})
+-- A craft filter whose selection is kept in `ui[uiKey]` and saved in `setting`.
+local function createFilter(pe, parent, options)
+	options.onChanged = refreshCrafts(pe)
+	return pe:CreateFilterDropdown(parent, options)
 end
 
 -- A label to the left of a control, as one 26px-high group.
@@ -397,23 +392,23 @@ function AuctionHelper:EnsureCraftsPanel(mainFrame)
 		pe:SetSetting("crafts.profitState", "all")
 		pe:RefreshCraftsTab()
 	end, { tooltip = "Clear the search and every filter." })
-	ui.craftsProfitDropdown = createSelect(self, panel.filters, 112, {
-		{ value = "all", label = "Any profit" },
-		{ value = "profitable", label = "Profitable" },
-		{ value = "negative", label = "Losing money" },
-		{ value = "missing_price", label = "Missing price" },
-		{ value = "uncraftable", label = "Can't craft now" },
-	}, "crafts.profitState", "all")
-	ui.craftsCategoryDropdown = createFilter(self, panel.filters, 120, "All categories",
-		function() return pe:GetCraftCategoryFilterOptions(ui.craftsUnfilteredRows or {}) end, "craftsCategoryFilterValues", "crafts.categoryFilter")
-	ui.craftsProfessionDropdown = createFilter(self, panel.filters, 128, "All professions",
-		function() return pe:GetCraftProfessionFilterOptions() end, "craftsProfessionFilterValues", "crafts.professionFilter")
-	ui.craftsCharacterDropdown = createFilter(self, panel.filters, 132, "All characters",
-		function() return pe:GetInventoryCharacterFilterOptions() end, "craftsCharacterFilterValues", "crafts.characterFilter")
+	ui.craftsProfitDropdown = self:CreateSettingDropdown(panel.filters, {
+		setting = "crafts.profitState", default = "all", width = 112, choices = PROFIT_CHOICES, onChanged = refreshCrafts(self),
+	})
+	ui.craftsCategoryDropdown = createFilter(self, panel.filters, { width = 120, allLabel = "All categories",
+		getOptions = function() return pe:GetCraftCategoryFilterOptions(ui.craftsUnfilteredRows or {}) end,
+		uiKey = "craftsCategoryFilterValues", setting = "crafts.categoryFilter" })
+	ui.craftsProfessionDropdown = createFilter(self, panel.filters, { width = 128, allLabel = "All professions",
+		getOptions = function() return pe:GetCraftProfessionFilterOptions() end,
+		uiKey = "craftsProfessionFilterValues", setting = "crafts.professionFilter" })
+	ui.craftsCharacterDropdown = createFilter(self, panel.filters, { width = 132, allLabel = "All characters",
+		getOptions = function() return pe:GetInventoryCharacterFilterOptions() end,
+		uiKey = "craftsCharacterFilterValues", setting = "crafts.characterFilter" })
 	local chain = { panel.refreshButton, ui.craftsClearBtn, ui.craftsProfitDropdown, ui.craftsCategoryDropdown, ui.craftsProfessionDropdown }
 	if self.IS_RETAIL then
-		ui.craftsExpansionDropdown = createFilter(self, panel.filters, 120, "All expansions",
-			function() return pe:GetExpansionFilterOptions() end, "craftsExpansionFilterValues", "crafts.selectedExpansions")
+		ui.craftsExpansionDropdown = createFilter(self, panel.filters, { width = 120, allLabel = "All expansions",
+			getOptions = function() return pe:GetExpansionFilterOptions() end,
+			uiKey = "craftsExpansionFilterValues", setting = "crafts.selectedExpansions" })
 		chain[#chain + 1] = ui.craftsExpansionDropdown
 	end
 	chain[#chain + 1] = ui.craftsCharacterDropdown
@@ -429,32 +424,31 @@ function AuctionHelper:EnsureCraftsPanel(mainFrame)
 	panel.options:SetPoint("TOPLEFT", panel.filters, "BOTTOMLEFT", 0, -8)
 	panel.options:SetPoint("TOPRIGHT", panel.filters, "BOTTOMRIGHT", 0, -8)
 	panel.options:SetHeight(26)
-	panel.sourceDropdown = createSelect(self, panel, 110, {
-		{ value = "owned_first", label = "Owned first" },
-		{ value = "market_only", label = "Market only" },
-		{ value = "mixed", label = "Mixed" },
-	}, "crafts.reagentSourceMode", "owned_first", nil, "Which materials count as already paid for")
-	panel.basisDropdown = createSelect(self, panel, 92, {
-		{ value = "auto", label = "Auto" },
-		{ value = "market", label = "Market" },
-		{ value = "ledger", label = "Ledger" },
-	}, "crafts.costBasis", "auto", function(value)
-		pe:SetSetting("crafts.saleBasis", value == "market" and "market" or value == "ledger" and "ledger" or "auto")
-		pe:RefreshCraftsTab()
-	end, "Where sale and cost prices come from")
-	panel.craftsRangeDropdown = createSelect(self, panel, 92, self:GetInventoryMetricRangeOptions(), "inventory.metricRange", "30d", function()
-		pe:RenderCraftsDetails(ui.craftsSelectedRowData)
-	end, "Time range for price history")
+	panel.sourceDropdown = self:CreateSettingDropdown(panel, {
+		setting = "crafts.reagentSourceMode", default = "owned_first", width = 110, choices = SOURCE_CHOICES,
+		onChanged = refreshCrafts(self), tooltip = "Which materials count as already paid for",
+	})
+	panel.basisDropdown = self:CreateSettingDropdown(panel, {
+		setting = "crafts.costBasis", default = "auto", width = 92, choices = BASIS_CHOICES,
+		onChanged = function(value)
+			pe:SetSetting("crafts.saleBasis", value == "market" and "market" or value == "ledger" and "ledger" or "auto")
+			pe:RefreshCraftsTab()
+		end,
+		tooltip = "Where sale and cost prices come from",
+	})
+	panel.craftsRangeDropdown = self:CreateSettingDropdown(panel, {
+		setting = "inventory.metricRange", default = "30d", width = 92, choices = self:GetInventoryMetricRangeOptions(),
+		onChanged = function() pe:RenderCraftsDetails(ui.craftsSelectedRowData) end, tooltip = "Time range for price history",
+	})
 	local groups = {
 		labelled(self, panel.options, "Materials", panel.sourceDropdown),
 		labelled(self, panel.options, "Price basis", panel.basisDropdown),
 		labelled(self, panel.options, "History", panel.craftsRangeDropdown),
 	}
 	if self.IS_RETAIL then
-		panel.scenarioDropdown = createSelect(self, panel, 140, {
-			{ value = "default", label = "No concentration" },
-			{ value = "concentration", label = "With concentration" },
-		}, "crafts.scenario", "default")
+		panel.scenarioDropdown = self:CreateSettingDropdown(panel, {
+			setting = "crafts.scenario", default = "default", width = 140, choices = SCENARIO_CHOICES, onChanged = refreshCrafts(self),
+		})
 		groups[#groups + 1] = labelled(self, panel.options, "Scenario", panel.scenarioDropdown)
 	end
 	groups[1]:SetPoint("LEFT")
@@ -547,7 +541,7 @@ function AuctionHelper:EnsureCraftsPanel(mainFrame)
 				end
 				return slot.have < slot.need and pe:Colorize(tostring(slot.have), "danger") or tostring(slot.have)
 			end },
-		{ id = "cost", label = "Cost", width = 70, justifyH = "RIGHT", getText = function(slot) return slot.cost and pe:FormatCopperShort(slot.cost) or "-" end },
+		pe:MoneyColumn({ id = "cost", label = "Cost", width = 70, sortable = false }),
 	})
 
 	panel.queueView = self:CreateCraftsQueueView(panel.detailCard)

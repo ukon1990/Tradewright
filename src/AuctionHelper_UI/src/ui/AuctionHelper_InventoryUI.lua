@@ -692,17 +692,10 @@ function AuctionHelper:CreateItemDetailPane(parent, opts)
 	return pane
 end
 
-local function createFilterDropdown(pe, parent, width, allLabel, getOptions, getSelection, setSelection)
-	return pe:CreateMultiSelectDropdown(parent, {
-		width = width,
-		allLabel = allLabel,
-		getOptions = getOptions,
-		getSelection = getSelection,
-		setSelection = setSelection,
-		onChanged = function()
-			pe:RefreshInventoryTab()
-		end,
-	})
+-- An inventory filter whose selection is kept in `ui[uiKey]` (and saved in `setting` when given).
+local function createFilter(pe, parent, options)
+	options.onChanged = options.onChanged or function() pe:RefreshInventoryTab() end
+	return pe:CreateFilterDropdown(parent, options)
 end
 
 function AuctionHelper:EnsureInventoryPanel(mainFrame)
@@ -787,27 +780,17 @@ function AuctionHelper:EnsureInventoryPanel(mainFrame)
 		onChanged = function() AuctionHelper:RefreshInventoryTab() end,
 		tooltip = "Time range for averages and charts",
 	})
-	ui.invTypeDropdown = createFilterDropdown(pe, panel.toolbar, 124, "All item types",
-		function() return pe:GetInventoryTypeFilterOptions(ui.invTypeFilterSeedRows or {}) end,
-		function() return ui.invTypeFilterValues end,
-		function(selection) ui.invTypeFilterValues = selection end)
-	ui.invRoleDropdown = createFilterDropdown(pe, panel.toolbar, 116, "All roles",
-		function() return pe:GetInventoryRoleFilterOptions() end,
-		function() return ui.invRoleFilterValues end,
-		function(selection) ui.invRoleFilterValues = selection end)
-	ui.invCharacterDropdown = createFilterDropdown(pe, panel.toolbar, 136, "All characters",
-		function() return pe:GetInventoryCharacterFilterOptions() end,
-		function() return ui.invCharacterFilterValues end,
-		function(selection) ui.invCharacterFilterValues = selection end)
+	ui.invTypeDropdown = createFilter(pe, panel.toolbar, { width = 124, allLabel = "All item types", uiKey = "invTypeFilterValues",
+		getOptions = function() return pe:GetInventoryTypeFilterOptions(ui.invTypeFilterSeedRows or {}) end })
+	ui.invRoleDropdown = createFilter(pe, panel.toolbar, { width = 116, allLabel = "All roles", uiKey = "invRoleFilterValues",
+		getOptions = function() return pe:GetInventoryRoleFilterOptions() end })
+	ui.invCharacterDropdown = createFilter(pe, panel.toolbar, { width = 136, allLabel = "All characters", uiKey = "invCharacterFilterValues",
+		getOptions = function() return pe:GetInventoryCharacterFilterOptions() end })
 	local chain = { panel.refreshButton, panel.columnsDropdown, panel.rangeDropdown, ui.invTypeDropdown, ui.invRoleDropdown }
 	if self.IS_RETAIL then
-		ui.invExpansionDropdown = createFilterDropdown(pe, panel.toolbar, 124, "All expansions",
-			function() return pe:GetExpansionFilterOptions() end,
-			function() return ui.invExpansionFilterValues end,
-			function(selection)
-				ui.invExpansionFilterValues = selection
-				pe:SetSetting("inventory.selectedExpansions", selection)
-			end)
+		ui.invExpansionDropdown = createFilter(pe, panel.toolbar, { width = 124, allLabel = "All expansions",
+			uiKey = "invExpansionFilterValues", setting = "inventory.selectedExpansions",
+			getOptions = function() return pe:GetExpansionFilterOptions() end })
 		chain[#chain + 1] = ui.invExpansionDropdown
 	end
 	chain[#chain + 1] = ui.invCharacterDropdown
@@ -841,16 +824,10 @@ function AuctionHelper:EnsureInventoryPanel(mainFrame)
 	panel.filterRow:SetPoint("TOPLEFT", panel.toolbar, "BOTTOMLEFT", 0, -8)
 	panel.filterRow:SetPoint("TOPRIGHT", panel.toolbar, "BOTTOMRIGHT", 0, -8)
 	panel.filterRow:SetHeight(26)
-	ui.invQualityDropdown = self:CreateMultiSelectDropdown(panel.filterRow, {
-		width = 128, allLabel = "Any quality",
-		getOptions = function() return pe:GetQualityFilterOptions() end,
-		getSelection = function() return ui.invQualityFilterValues end,
-		setSelection = function(selection) ui.invQualityFilterValues = selection end,
-		onChanged = saveAndRefresh,
-	})
+	ui.invQualityDropdown = createFilter(pe, panel.filterRow, { width = 128, allLabel = "Any quality", uiKey = "invQualityFilterValues",
+		getOptions = function() return pe:GetQualityFilterOptions() end, onChanged = saveAndRefresh })
 	ui.invQualityDropdown:SetPoint("LEFT")
-	ui.invLocationDropdown = self:CreateMultiSelectDropdown(panel.filterRow, {
-		width = 136, allLabel = "Bags and bank",
+	ui.invLocationDropdown = createFilter(pe, panel.filterRow, { width = 136, allLabel = "Bags and bank", uiKey = "invLocationFilterValues",
 		getOptions = function()
 			local options = { { value = "bags", label = "In bags" }, { value = "bank", label = "In the bank" } }
 			if pe.IS_RETAIL then
@@ -858,10 +835,7 @@ function AuctionHelper:EnsureInventoryPanel(mainFrame)
 			end
 			return options
 		end,
-		getSelection = function() return ui.invLocationFilterValues end,
-		setSelection = function(selection) ui.invLocationFilterValues = selection end,
-		onChanged = saveAndRefresh,
-	})
+		onChanged = saveAndRefresh })
 	panel.hasPrice = self:CreateCheckbox(panel.filterRow, "Has a price", function(checked)
 		ui.invHasPriceOnly = checked
 		saveAndRefresh()

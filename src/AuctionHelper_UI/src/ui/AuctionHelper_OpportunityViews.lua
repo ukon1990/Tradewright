@@ -5,10 +5,6 @@ local AuctionHelper = select(2, ...)
 -- setStats(pe, stats, rows, insights) with the four stat tiles left to right, footer(pe, rows, insights), emptyTitle, emptyHint.
 -- Both lists sort on a column with the id "profit", so the table keeps its sort across a switch.
 
-local function percent(fraction)
-	return string.format("%d%%", math.floor((fraction or 0) * 100 + 0.5))
-end
-
 -- "12" for a busy item, "0.4" for a slow one.
 local function perDayText(pe, perDay)
 	if perDay >= 10 then
@@ -43,14 +39,6 @@ local function sellsLines(pe, row)
 		{ "Estimated from", sellsSourceText(pe, row), pe.FlipLogic.SellsUnsure(row) and "warning" or nil }
 end
 
-local function moneyColumn(pe, id, label, field, width)
-	return {
-		id = id, label = label, justifyH = "RIGHT", width = width or 76, sortable = true, defaultSort = "desc",
-		sortValue = function(row) return row[field] or 0 end,
-		getText = function(row) return pe:FormatCopperShort(row[field]) end,
-	}
-end
-
 local function signedColumn(pe, label, field)
 	return {
 		id = "profit", label = label, justifyH = "RIGHT", width = 84, sortable = true, defaultSort = "desc",
@@ -61,9 +49,8 @@ end
 
 -- An early row's second line starts with how few days its usual price rests on.
 local function itemColumn(pe, detail)
-	return pe:CreateItemColumn({
+	return pe:ItemColumn({
 		label = "Item", defaultSort = "asc",
-		getItemID = function(row) return row.itemID end,
 		getName = function(row) return pe:GetItemDisplayName(row.itemID) end,
 		getDetail = function(row)
 			if row.early then
@@ -136,7 +123,7 @@ end
 
 -- Second line of a flip row: how far under usual, and the caveat that matters most.
 local function flipDetail(pe, row)
-	local detail = percent(row.discount) .. " under usual"
+	local detail = pe:FormatPercent(row.discount) .. " under usual"
 	if row.fewSales then
 		return detail .. " · few sales seen"
 	elseif row.slow then
@@ -150,8 +137,8 @@ end
 local function flipColumns(pe)
 	return {
 		itemColumn(pe, flipDetail),
-		moneyColumn(pe, "price", "Buy at", "price"),
-		moneyColumn(pe, "usual", "Usual", "usual"),
+		pe:MoneyColumn({ id = "price", label = "Buy at", width = 76 }),
+		pe:MoneyColumn({ id = "usual", label = "Usual", width = 76 }),
 		{
 			id = "buyQty", label = "Buy", justifyH = "RIGHT", width = 44, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.buyQty or 0 end,
@@ -168,9 +155,9 @@ local function flipDetailRows(pe, row)
 	return {
 		{ "Cheapest now", pe:FormatCopperFull(row.price) },
 		{ string.format("Usual price, %d days", row.usualDays or 0), pe:FormatCopperFull(row.usual) },
-		{ string.format("Sale after %s cut", percent(1 - row.saleNet / row.usual)), pe:FormatCopperFull(row.saleNet) },
+		{ string.format("Sale after %s cut", pe:FormatPercent(1 - row.saleNet / row.usual)), pe:FormatCopperFull(row.saleNet) },
 		{ "Profit each", pe:FormatSignedMoney(row.profitEach), "success" },
-		{ "Return", percent(row.roi) },
+		{ "Return", pe:FormatPercent(row.roi) },
 		{ "", "" },
 		{ "Listed under " .. pe:FormatCopperShort(row.limitPrice), row.listedUnder and pe:FormatNumberGrouped(row.listedUnder) or "-" },
 		sells, source,
@@ -194,7 +181,7 @@ local function flipStats(pe, stats, rows, insights)
 	profitTile:SetValues(string.format("Expected profit, all %d", settled), pe:FormatSignedMoney(profit), note, "success")
 	goldNeededTile:SetValues("Gold needed", pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), "You have " .. pe:FormatCopperShort(GetMoney()))
 	coverageStat(pe, coverageTile, insights)
-	cutTile:SetValues("Auction cut", percent(opts.cut), "Last scan " .. lastScanText(pe, insights))
+	cutTile:SetValues("Auction cut", pe:FormatPercent(opts.cut), "Last scan " .. lastScanText(pe, insights))
 end
 
 local flips = {
@@ -206,7 +193,7 @@ local flips = {
 	detailRows = flipDetailRows,
 	riskText = withDataWarnings(flipRiskText),
 	setStats = flipStats,
-	subtitle = function(_, row) return percent(row.discount) .. " under its usual price" end,
+	subtitle = function(pe, row) return pe:FormatPercent(row.discount) .. " under its usual price" end,
 	tooltipPairs = function(pe, row) return { { "Profit each after the cut", pe:FormatSignedMoney(row and row.profitEach) } } end,
 	footer = function(pe, rows, insights)
 		return string.format("%d flips from %s items", #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
@@ -226,8 +213,8 @@ end
 local function vendorColumns(pe)
 	return {
 		itemColumn(pe, vendorDetail),
-		moneyColumn(pe, "price", "Listed at", "price"),
-		moneyColumn(pe, "vendorSell", "Vendor pays", "vendorSell", 84),
+		pe:MoneyColumn({ id = "price", label = "Listed at", width = 76 }),
+		pe:MoneyColumn({ id = "vendorSell", label = "Vendor pays", width = 84 }),
 		{
 			id = "qty", label = "Qty", justifyH = "RIGHT", width = 50, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.qty or 0 end,
@@ -301,9 +288,9 @@ end
 local function gapColumns(pe)
 	return {
 		itemColumn(pe, gapDetail),
-		moneyColumn(pe, "price", "Cheapest", "price", 70),
-		moneyColumn(pe, "nextPrice", "Next price", "nextPrice", 70),
-		moneyColumn(pe, "cost", "To clear", "cost", 74),
+		pe:MoneyColumn({ id = "price", label = "Cheapest", width = 70 }),
+		pe:MoneyColumn({ id = "nextPrice", label = "Next price", width = 70 }),
+		pe:MoneyColumn({ id = "cost", label = "To clear", width = 74 }),
 		signedColumn(pe, "Gain if it holds", "gain"),
 		sellsColumn(pe, 66),
 	}
@@ -355,7 +342,7 @@ local gaps = {
 	detailRows = gapDetailRows,
 	riskText = withDataWarnings(gapRiskText),
 	setStats = gapStats,
-	subtitle = function(_, row) return "Risky · next price is " .. percent(row.gapPct) .. " higher" end,
+	subtitle = function(pe, row) return "Risky · next price is " .. pe:FormatPercent(row.gapPct) .. " higher" end,
 	tooltipPairs = function(pe, row) return { { "Cost to clear", pe:FormatCopperFull(row and row.cost) } } end,
 	footer = function(pe, rows, insights)
 		return string.format("%d price gaps from %s items", #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
@@ -421,11 +408,11 @@ end
 local function sellColumns(pe)
 	return {
 		itemColumn(pe, sellDetail),
-		moneyColumn(pe, "price", "Price", "price", 70),
+		pe:MoneyColumn({ id = "price", label = "Price", width = 70 }),
 		{
 			id = "premium", label = "Vs usual", justifyH = "RIGHT", width = 60, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.premium or 0 end,
-			getText = function(row) return "+" .. percent(row.premium) end,
+			getText = function(row) return "+" .. pe:FormatPercent(row.premium) end,
 		},
 		{
 			id = "total", label = "Owned", justifyH = "RIGHT", width = 56, sortable = true, defaultSort = "desc",
@@ -442,7 +429,7 @@ local function sellDetailRows(pe, row)
 	return {
 		{ "Lowest price now", pe:FormatCopperFull(row.price) },
 		{ "Usual price", pe:FormatCopperFull(row.usual) },
-		{ "Above usual by", percent(row.premium), "success" },
+		{ "Above usual by", pe:FormatPercent(row.premium), "success" },
 		{ "", "" },
 		{ "You own", pe:FormatNumberGrouped(row.total) },
 		{ "Where", whereText(pe, row) },
@@ -480,7 +467,7 @@ local sell = {
 	detailRows = sellDetailRows,
 	riskText = withDataWarnings(sellRiskText),
 	setStats = sellStats,
-	subtitle = function(_, row) return percent(row.premium) .. " above its usual price" end,
+	subtitle = function(pe, row) return pe:FormatPercent(row.premium) .. " above its usual price" end,
 	tooltipPairs = function(pe, row) return { { "Worth after the cut", pe:FormatCopperFull(row and row.worth) } } end,
 	footer = function(_, rows)
 		return string.format("%d of your items", #rows), "Worth = owned at today's lowest price, after the cut"

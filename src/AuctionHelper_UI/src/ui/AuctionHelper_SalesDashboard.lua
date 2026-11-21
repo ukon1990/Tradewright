@@ -9,73 +9,10 @@ local PAD = 10
 local STATS_HEIGHT = 58
 local CHART_HEIGHT = 190
 local RECENT_ROWS = 100
-local PERIODS = { { 7, "7 days" }, { 30, "30 days" }, { 90, "90 days" }, { 0, "All time" } }
 
-local function numberColumn(id, label, width, format, optional)
+-- Table options shared by both cards: rows sort high to low on `sortKey`, item rows link on shift-click.
+local function salesTableOptions(pe, sortKey, tooltipPairs)
 	return {
-		id = id, label = label, justifyH = "RIGHT", width = width, sortable = true, defaultSort = "desc", optional = optional,
-		sortValue = function(row) return tonumber(row[id]) or -1 end,
-		getText = function(row) return row[id] and format(row[id]) or "-" end,
-	}
-end
-
--- Shared with the Income view (AuctionHelper_IncomeDashboard.lua).
-AuctionHelper.DashboardNumberColumn = numberColumn
-
---- An inset card with a heading at its top left.
-function AuctionHelper:CreateDashboardCard(parent, title)
-	local card = self:CreateInset(parent)
-	card.heading = self:CreateHeading(card, title)
-	card.heading:SetPoint("TOPLEFT", PAD, -PAD)
-	card.heading:SetPoint("RIGHT", -PAD, 0)
-	return card
-end
-
---- One stat tile (CreateStat) per name, left to right. The result holds them in order (for LayoutEvenRow) and by name.
-function AuctionHelper:CreateStats(parent, names)
-	local stats = {}
-	for index, name in ipairs(names) do
-		stats[index] = self:CreateStat(parent)
-		stats[name] = stats[index]
-	end
-	return stats
-end
-
---- 7 days / 30 days / 90 days / All time at the card's top right, ending its heading. The choice
---- is one setting shared by the Sales and Income views; `onChange` redraws the view.
-function AuctionHelper:CreatePeriodButtons(card, onChange)
-	local buttons, previous = {}, nil
-	for index = #PERIODS, 1, -1 do
-		local days = PERIODS[index][1]
-		local button = self:CreateButton(card, PERIODS[index][2], function()
-			self:SetSetting("sales.periodDays", days)
-			onChange()
-		end, { small = true })
-		button.days = days
-		if previous then
-			button:SetPoint("RIGHT", previous, "LEFT", 1, 0)
-		else
-			button:SetPoint("TOPRIGHT", -PAD, -7)
-		end
-		previous = button
-		buttons[#buttons + 1] = button
-	end
-	card.heading:SetPoint("RIGHT", previous, "LEFT", -8, 0)
-	return buttons
-end
-
---- Highlights the chosen period and returns its days (0 = all time).
-function AuctionHelper:StylePeriodButtons(buttons)
-	local days = tonumber(self:GetSetting("sales.periodDays", 30)) or 30
-	for _, button in ipairs(buttons) do
-		self:StyleShellButton(button, button.days == days)
-	end
-	return days
-end
-
-local function attachTable(pe, card, columns, sortKey, tooltipPairs)
-	local tbl = pe:CreateReusableTable(card, {
-		autoFitToScroll = true,
 		rowHeight = 24,
 		sortKey = sortKey,
 		sortAsc = false,
@@ -86,19 +23,12 @@ local function attachTable(pe, card, columns, sortKey, tooltipPairs)
 				pe:ShowItemRowTooltip(rowFrame, row.itemID, tooltipPairs(row), row.itemID and "Shift-click to link." or nil)
 			end
 		end,
-		onRowLeave = function()
-			GameTooltip:Hide()
-		end,
 		onRowClick = function(_, row)
 			if row then
 				pe:HandleItemRowModifiedClick(row.itemID)
 			end
 		end,
-	})
-	tbl:SetColumns(columns)
-	tbl.frame:SetPoint("TOPLEFT", card.heading, "BOTTOMLEFT", 0, -10)
-	tbl.frame:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -PAD, PAD)
-	card.table = tbl
+	}
 end
 
 local ORIGINS = { "crafted", "resold", "farmed", "unknown" }
@@ -141,6 +71,37 @@ local function itemTooltipPairs(pe, row)
 	}
 end
 
+local function itemsColumns(pe)
+	local count = function(n) return pe:FormatNumberGrouped(n) end
+	return {
+		pe:ItemColumn({ minWidth = 120 }),
+		pe:NumberColumn({ id = "sales", label = "Sales", width = 46, format = count }),
+		pe:NumberColumn({ id = "units", label = "Units", width = 46, format = count, optional = true }),
+		pe:MoneyColumn({ id = "net", label = "Earned", width = 78 }),
+		pe:MoneyColumn({ id = "avgUnit", label = "Each", width = 70, optional = true }),
+		pe:NumberColumn({ id = "perWeek", label = "A week", width = 56, format = function(n) return string.format("%.1f", n) end }),
+	}
+end
+
+local function recentColumns(pe)
+	return {
+		pe:ItemColumn({ minWidth = 120 }),
+		pe:MoneyColumn({ id = "net", label = "Earned", width = 78 }),
+		{ id = "ts", label = "When", justifyH = "RIGHT", width = 104, sortable = true, defaultSort = "desc",
+			sortValue = function(row) return row.ts end,
+			getText = function(row) return pe:FormatScanTimestamp(row.ts) end },
+	}
+end
+
+local function recentTooltipPairs(pe, row)
+	return {
+		{ "Earned after cut", pe:FormatCopperFull(row.net) },
+		{ "Sold for", pe:FormatCopperFull(row.gross) },
+		{ "Buyer", row.buyer or "several buyers" },
+		{ "Sold by", row.characterKey },
+	}
+end
+
 -- The latest sales as table rows, newest first.
 local function recentRows(pe, events)
 	local rows = {}
@@ -166,13 +127,6 @@ function AuctionHelper:CreateSalesDashboard(parent)
 	local pe = self
 	local money = function(copper) return pe:FormatCopperShort(copper) end
 	local count = function(n) return pe:FormatNumberGrouped(n) end
-	local itemColumn = function()
-		return pe:CreateItemColumn({
-			minWidth = 120,
-			getItemID = function(row) return row.itemID end,
-			getName = function(row) return row.name end,
-		})
-	end
 	local dash = CreateFrame("Frame", nil, parent)
 	dash:SetAllPoints()
 
@@ -202,32 +156,18 @@ function AuctionHelper:CreateSalesDashboard(parent)
 	end)
 
 	-- What sells: one row per item, sortable by how much, how many and how often.
-	dash.items = pe:CreateDashboardCard(dash, "What sells")
-	attachTable(pe, dash.items, {
-		itemColumn(),
-		numberColumn("sales", "Sales", 46, count),
-		numberColumn("units", "Units", 46, count, true),
-		numberColumn("net", "Earned", 78, money),
-		numberColumn("avgUnit", "Each", 70, money, true),
-		numberColumn("perWeek", "A week", 56, function(n) return string.format("%.1f", n) end),
-	}, "net", function(row) return itemTooltipPairs(pe, row) end)
+	dash.items = pe:CreateTableCard(dash, {
+		title = "What sells",
+		columns = itemsColumns(pe),
+		table = salesTableOptions(pe, "net", function(row) return itemTooltipPairs(pe, row) end),
+	})
 
 	-- Latest sales, newest first.
-	dash.recent = pe:CreateDashboardCard(dash, "Latest sales")
-	attachTable(pe, dash.recent, {
-		itemColumn(),
-		numberColumn("net", "Earned", 78, money),
-		{ id = "ts", label = "When", justifyH = "RIGHT", width = 104, sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row.ts end,
-			getText = function(row) return pe:FormatScanTimestamp(row.ts) end },
-	}, "ts", function(row)
-		return {
-			{ "Earned after cut", pe:FormatCopperFull(row.net) },
-			{ "Sold for", pe:FormatCopperFull(row.gross) },
-			{ "Buyer", row.buyer or "several buyers" },
-			{ "Sold by", row.characterKey },
-		}
-	end)
+	dash.recent = pe:CreateTableCard(dash, {
+		title = "Latest sales",
+		columns = recentColumns(pe),
+		table = salesTableOptions(pe, "ts", function(row) return recentTooltipPairs(pe, row) end),
+	})
 
 	function dash:Layout()
 		pe:LayoutEvenRow(self.statsRow, self.stats, 0, GAP)

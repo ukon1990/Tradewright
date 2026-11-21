@@ -11,6 +11,8 @@ Bootstrap.lua
 src\ui\AuctionHelper_Widgets.lua
 src\ui\AuctionHelper_Chart.lua
 src\ui\AuctionHelper_Table.lua
+src\ui\AuctionHelper_Columns.lua
+src\ui\AuctionHelper_DashboardWidgets.lua
 src\ui\AuctionHelper_UI.lua
 src\ui\AuctionHelper_InventoryUI.lua
 src\ui\AuctionHelper_CraftsUI.lua
@@ -24,14 +26,11 @@ src\ui\AuctionHelper_GoldDashboard.lua
 src\ui\AuctionHelper_SalesDashboard.lua
 src\ui\AuctionHelper_IncomeDashboard.lua
 src\ui\AuctionHelper_OverviewTab.lua
-src\ui\AuctionHelper_InventoryTab.lua
 src\ui\AuctionHelper_MarketUI.lua
 src\ui\AuctionHelper_MarketChart.lua
-src\ui\AuctionHelper_MarketTab.lua
 src\ui\AuctionHelper_OpportunityHelp.lua
 src\ui\AuctionHelper_OpportunityViews.lua
 src\ui\AuctionHelper_OpportunitiesTab.lua
-src\ui\AuctionHelper_CraftsTab.lua
 src\ui\AuctionHelper_ExportTab.lua
 src\ui\AuctionHelper_DocsTab.lua
 src\ui\AuctionHelper_SettingsTab.lua

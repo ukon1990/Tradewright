@@ -436,7 +436,7 @@ local function createRecipeView(pe, f)
 				end
 				return pe:FormatNumberGrouped(slot.have)
 			end },
-		{ id = "cost", label = "Cost", width = 76, justifyH = "RIGHT", getText = function(slot) return slot.cost and pe:FormatCopperShort(slot.cost) or "-" end },
+		pe:MoneyColumn({ id = "cost", label = "Cost", width = 76, sortable = false }),
 	})
 	return host
 end

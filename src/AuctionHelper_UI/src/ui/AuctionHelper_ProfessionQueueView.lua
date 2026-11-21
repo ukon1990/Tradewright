@@ -169,9 +169,7 @@ local function reagentColumns(pe)
 		numberColumn(pe, "needed", "Need", 36),
 		numberColumn(pe, "have", "Have", 36),
 		numberColumn(pe, "quantity", "Buy", 34),
-		{ id = "totalCost", label = "Cost", width = 68, justifyH = "RIGHT", sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row.totalCost or -1 end,
-			getText = function(row) return row.totalCost and pe:FormatCopperShort(row.totalCost) or "-" end },
+		pe:MoneyColumn({ id = "totalCost", label = "Cost", width = 68 }),
 		vendorColumn(pe),
 	}
 end

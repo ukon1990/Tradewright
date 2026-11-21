@@ -74,14 +74,10 @@ local function usualColumns(pe)
 		local usual = usualOf(row)
 		return usual and row.price and (row.price - usual) / usual
 	end
-	return {
-		id = "usual", label = "Usual", justifyH = "RIGHT", width = 86, sortable = true, defaultSort = "desc",
-		sortValue = function(row) return usualOf(row) or 0 end,
-		getText = function(row) return usualOf(row) and pe:FormatCopperShort(usualOf(row)) or "-" end,
-	}, {
+	return pe:MoneyColumn({ id = "usual", label = "Usual", width = 86, value = usualOf }), {
 		id = "vsUsual", label = "Vs usual", justifyH = "RIGHT", width = 64, sortable = true, defaultSort = "asc",
 		sortValue = function(row) return vsUsual(row) or 0 end,
-		getText = function(row) return vsUsual(row) and string.format("%+d%%", math.floor(vsUsual(row) * 100 + 0.5)) or "-" end,
+		getText = function(row) return pe:FormatSignedPercent(vsUsual(row)) end,
 	}
 end
 
@@ -143,13 +139,6 @@ end
 
 function AuctionHelper:BuildMarketTableColumns()
 	local pe = self
-	local function money(id, label, field, fallback)
-		return {
-			id = id, label = label, justifyH = "RIGHT", width = 86, sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row[field] or (fallback and row[fallback]) or 0 end,
-			getText = function(row) return pe:FormatCopperShort(row[field] or (fallback and row[fallback])) end,
-		}
-	end
 	local function count(id, label, field, width, optional)
 		return {
 			id = id, label = label, justifyH = "RIGHT", width = width, sortable = true, defaultSort = "desc", optional = optional,
@@ -168,8 +157,8 @@ function AuctionHelper:BuildMarketTableColumns()
 			getName = function(row) return pe:GetItemDisplayName(row.itemID) end,
 			sortValue = function(row) return row.name or "" end,
 		}),
-		money("price", "Lowest", "price"),
-		money("marketHigh", "Highest", "marketHigh", "price"),
+		pe:MoneyColumn({ id = "price", label = "Lowest", width = 86 }),
+		pe:MoneyColumn({ id = "marketHigh", label = "Highest", width = 86, value = function(row) return row.marketHigh or row.price end }),
 		usual, vsUsual, sellsColumn(pe),
 		count("sampleSize", "Qty", "sampleSize", 60),
 		count("listingCount", "Listings", "listingCount", 60, true),

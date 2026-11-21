@@ -27,14 +27,14 @@
  "files": {
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 2557,
   "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": 778,
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5538,
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5530,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": 779,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1198,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1241,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": 2428,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_LiveUpdate.lua": 708,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_CraftsUI.lua": 803,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": 1032,
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_CraftsUI.lua": 797,
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": 1006,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": 701,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": 929,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_UIShell.lua": 809,
@@ -1665,7 +1665,7 @@
    },
    "AuctionHelper:EnsureCraftsPanel": {
     "lines": [
-     246
+     245
     ]
    },
    "AuctionHelper:GetCraftsColumnDefinitions": {
@@ -1706,16 +1706,6 @@
     "ccn": [
      12
     ]
-   },
-   "createFilter": {
-    "params": [
-     7
-    ]
-   },
-   "createSelect": {
-    "params": [
-     8
-    ]
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_DocsTab.lua": {
@@ -1745,7 +1735,7 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_GoldDashboard.lua": {
    "AuctionHelper:CreateGoldDashboard": {
     "lines": [
-     284
+     155
     ]
    },
    "dash:Refresh": {
@@ -1765,11 +1755,6 @@
     "ccn": [
      14
     ]
-   },
-   "moneyColumn": {
-    "params": [
-     6
-    ]
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": {
@@ -1785,7 +1770,7 @@
    },
    "AuctionHelper:EnsureInventoryPanel": {
     "lines": [
-     233
+     214
     ],
     "ccn": [
      17
@@ -1823,11 +1808,6 @@
     ],
     "params": [
      6
-    ]
-   },
-   "createFilterDropdown": {
-    "params": [
-     7
     ]
    },
    "pane:ShowItem": {
@@ -1973,7 +1953,7 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_SalesDashboard.lua": {
    "AuctionHelper:CreateSalesDashboard": {
     "lines": [
-     128
+     107
     ]
    },
    "dash:Refresh": {

@@ -305,11 +305,11 @@ end
 local function createSelect(pe, parent, item)
 	local row = CreateFrame("Frame", nil, parent)
 	row:SetHeight(26)
-	row.select = pe:CreateSingleSelectDropdown(row, {
+	row.select = pe:CreateSettingDropdown(row, {
+		setting = item.path,
+		default = item.default,
 		width = SELECT_WIDTH,
-		getOptions = function() return item.options end,
-		getValue = function() return pe:GetSetting(item.path, item.default) end,
-		setValue = function(value) pe:SetSetting(item.path, value) end,
+		getChoices = function() return item.options end,
 		onChanged = function()
 			runOnChange(pe, item)
 			SettingsTab:Refresh()

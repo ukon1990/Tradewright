@@ -127,11 +127,7 @@ end
 
 -- The item column, with group rows ("Trade Goods · 24 items") in gold in place of an item.
 local function itemColumn(pe)
-	local column = pe:CreateItemColumn({
-		minWidth = 120, sortable = false,
-		getItemID = function(row) return row.itemID end,
-		getName = function(row) return row.name end,
-	})
+	local column = pe:ItemColumn({ minWidth = 120, sortable = false })
 	local update = column.updateCell
 	column.updateCell = function(cell, row)
 		cell.icon:SetShown(not row.group)

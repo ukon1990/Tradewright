@@ -16,10 +16,6 @@ local SOURCE_LABELS = {
 }
 local ORIGINS = { { "crafted", "Crafted" }, { "resold", "Resold" }, { "farmed", "Farmed" }, { "unknown", "Not known" } }
 
-local function percent(fraction)
-	return fraction and string.format("%.0f%%", fraction * 100) or "-"
-end
-
 local function textColumn(id, label)
 	return {
 		id = id, label = label, flex = 1, minWidth = 110, sortable = true,
@@ -38,9 +34,9 @@ local function showTooltip(owner, title, lines)
 	GameTooltip:Show()
 end
 
-local function attachTable(pe, card, spec)
-	local tbl = pe:CreateReusableTable(card, {
-		autoFitToScroll = true,
+-- Rows sort high to low on `spec.sortKey`; hovering a row lists `spec.tooltip(row)`.
+local function incomeTableOptions(spec)
+	return {
 		rowHeight = 24,
 		sortKey = spec.sortKey,
 		sortAsc = false,
@@ -51,38 +47,28 @@ local function attachTable(pe, card, spec)
 				showTooltip(rowFrame, row.label, spec.tooltip(row))
 			end
 		end,
-		onRowLeave = function()
-			GameTooltip:Hide()
-		end,
-	})
-	tbl:SetColumns(spec.columns)
-	tbl.frame:SetPoint("TOPLEFT", card.heading, "BOTTOMLEFT", 0, -10)
-	tbl.frame:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -PAD, PAD)
-	card.table = tbl
+	}
 end
 
 local function sourceColumns(pe)
-	local column = pe.DashboardNumberColumn
-	local money = function(copper) return pe:FormatCopperShort(copper) end
 	local signed = function(copper) return pe:FormatSignedMoney(copper) end
 	return {
 		textColumn("label", "Source"),
-		column("gain", "In", 78, money),
-		column("spend", "Out", 78, money, true),
-		column("net", "Net", 84, signed),
-		column("share", "Share", 52, percent),
-		column("perDay", "A day", 78, signed, true),
+		pe:MoneyColumn({ id = "gain", label = "In", width = 78 }),
+		pe:MoneyColumn({ id = "spend", label = "Out", width = 78, optional = true }),
+		pe:NumberColumn({ id = "net", label = "Net", width = 84, format = signed }),
+		pe:PercentColumn({ id = "share", label = "Share", width = 52 }),
+		pe:NumberColumn({ id = "perDay", label = "A day", width = 78, format = signed, optional = true }),
 	}
 end
 
 local function typeColumns(pe)
-	local column = pe.DashboardNumberColumn
 	return {
 		textColumn("label", "Item type"),
-		column("sales", "Sales", 46, function(n) return pe:FormatNumberGrouped(n) end),
-		column("net", "Earned", 78, function(copper) return pe:FormatCopperShort(copper) end),
-		column("share", "Share", 52, percent),
-		column("sellRate", "Sold", 46, percent, true),
+		pe:NumberColumn({ id = "sales", label = "Sales", width = 46, format = function(n) return pe:FormatNumberGrouped(n) end }),
+		pe:MoneyColumn({ id = "net", label = "Earned", width = 78 }),
+		pe:PercentColumn({ id = "share", label = "Share", width = 52 }),
+		pe:PercentColumn({ id = "sellRate", label = "Sold", width = 46, optional = true }),
 	}
 end
 
@@ -143,11 +129,11 @@ local function createHeader(pe, dash)
 	dash.chart:SetPoint("TOPRIGHT", dash.statsRow, "BOTTOMRIGHT", 0, -GAP)
 	dash.chart:SetHeight(CHART_HEIGHT)
 	dash.periodButtons = pe:CreatePeriodButtons(dash.chart, function() dash:Refresh() end)
-	dash.character = pe:CreateSingleSelectDropdown(dash.chart, {
+	dash.character = pe:CreateSettingDropdown(dash.chart, {
+		setting = "income.character",
+		default = "all",
 		width = 150,
-		getOptions = function() return pe:GetInventoryCharacterFilterOptions() end,
-		getValue = function() return pe:GetSetting("income.character", "all") end,
-		setValue = function(value) pe:SetSetting("income.character", value) end,
+		getChoices = function() return pe:GetInventoryCharacterFilterOptions() end,
 		onChanged = function() dash:Refresh() end,
 		tooltip = "Whose gold to show",
 	})
@@ -164,19 +150,25 @@ local function createHeader(pe, dash)
 end
 
 local function createTables(pe, dash)
-	dash.sources = pe:CreateDashboardCard(dash, "Where gold comes from")
-	attachTable(pe, dash.sources, {
-		columns = sourceColumns(pe), sortKey = "gain",
-		emptyTitle = "No gold tracked yet",
-		emptyHint = "Gold is tracked from the moment this view was added: sell, loot, quest, collect mail.",
-		tooltip = function(row) return sourceTooltip(pe, dash, row) end,
+	dash.sources = pe:CreateTableCard(dash, {
+		title = "Where gold comes from",
+		columns = sourceColumns(pe),
+		table = incomeTableOptions({
+			sortKey = "gain",
+			emptyTitle = "No gold tracked yet",
+			emptyHint = "Gold is tracked from the moment this view was added: sell, loot, quest, collect mail.",
+			tooltip = function(row) return sourceTooltip(pe, dash, row) end,
+		}),
 	})
-	dash.types = pe:CreateDashboardCard(dash, "What item types earn")
-	attachTable(pe, dash.types, {
-		columns = typeColumns(pe), sortKey = "net",
-		emptyTitle = "No auction sales in this period",
-		emptyHint = "A sale is added when you collect its gold from the mailbox.",
-		tooltip = function(row) return typeTooltip(pe, row) end,
+	dash.types = pe:CreateTableCard(dash, {
+		title = "What item types earn",
+		columns = typeColumns(pe),
+		table = incomeTableOptions({
+			sortKey = "net",
+			emptyTitle = "No auction sales in this period",
+			emptyHint = "A sale is added when you collect its gold from the mailbox.",
+			tooltip = function(row) return typeTooltip(pe, row) end,
+		}),
 	})
 end
 
@@ -189,7 +181,7 @@ local function refreshStats(pe, dash, summary, rows)
 	local net = summary.gain - summary.spend
 	dash.stats.net:SetValues("Net", pe:FormatSignedMoney(net), "Earned minus spent", net >= 0 and "success" or "danger")
 	if biggest then
-		dash.stats.biggestSource:SetValues("Biggest source", biggest.label, string.format("%s of all gold in", percent(biggest.share)), "gold")
+		dash.stats.biggestSource:SetValues("Biggest source", biggest.label, string.format("%s of all gold in", pe:FormatPercent(biggest.share)), "gold")
 	else
 		dash.stats.biggestSource:SetValues("Biggest source", "-", "Nothing earned in this period")
 	end

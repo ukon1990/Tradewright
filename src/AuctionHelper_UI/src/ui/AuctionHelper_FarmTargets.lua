@@ -100,23 +100,12 @@ local function salesColumns(pe)
 		sortValue = function(row) return row.sellsPerDay or -1 end,
 		getText = function(row) return row.sellsPerDay and perDayText(pe, row.sellsPerDay) or "?" end,
 	}
-	local traded = {
-		id = "traded", label = "Traded a day", justifyH = "RIGHT", width = 86, sortable = true, defaultSort = "desc",
-		sortValue = pe.FarmLogic.TargetRank,
-		getText = function(row) return row.tradedPerDay and pe:FormatCopperShort(row.tradedPerDay) or "-" end,
-	}
+	local traded = pe:MoneyColumn({ id = "traded", label = "Traded a day", field = "tradedPerDay", width = 86, sortValue = pe.FarmLogic.TargetRank })
 	return sells, traded
 end
 
 local function targetColumns(pe)
 	local sells, traded = salesColumns(pe)
-	local function money(id, label, field, width)
-		return {
-			id = id, label = label, justifyH = "RIGHT", width = width, sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row[field] or -1 end,
-			getText = function(row) return row[field] and pe:FormatCopperShort(row[field]) or "-" end,
-		}
-	end
 	return {
 		pe:CreateItemColumn({
 			label = "Item", defaultSort = "asc",
@@ -124,12 +113,12 @@ local function targetColumns(pe)
 			getName = function(row) return pe:GetItemDisplayName(row.itemID) end,
 			getDetail = function(row) return targetDetail(pe, row) end,
 		}),
-		money("usual", "Usual price", "usual", 80),
+		pe:MoneyColumn({ id = "usual", label = "Usual price", width = 80 }),
 		sells, traded,
 		{
 			id = "listed", label = "Listed", justifyH = "RIGHT", width = 56, sortable = true, defaultSort = "asc", optional = true,
 			sortValue = function(row) return row.supplyChange or 0 end,
-			getText = function(row) return row.supplyChange and string.format("%+d%%", math.floor(row.supplyChange * 100 + 0.5)) or "-" end,
+			getText = function(row) return pe:FormatSignedPercent(row.supplyChange) end,
 		},
 		{
 			id = "source", label = "Where you got it", width = 190, minWidth = 120, sortable = true, defaultSort = "asc",
@@ -141,7 +130,7 @@ local function targetColumns(pe)
 				return string.format("%s, %.1f an hour", row.source, row.sourcePerHour)
 			end,
 		},
-		money("yours", "Yours, an hour", "yoursPerHour", 90),
+		pe:MoneyColumn({ id = "yours", label = "Yours, an hour", field = "yoursPerHour", width = 90 }),
 	}
 end
 

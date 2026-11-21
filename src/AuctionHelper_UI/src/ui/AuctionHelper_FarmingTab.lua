@@ -20,21 +20,7 @@ local function duration(seconds)
 	return minutes .. "m"
 end
 
-local function signedPercent(fraction)
-	if not fraction then
-		return "-"
-	end
-	return string.format("%+d%%", math.floor(fraction * 100 + 0.5))
-end
-
 local function farmColumns(pe)
-	local function perHour(id, label, field)
-		return {
-			id = id, label = label, justifyH = "RIGHT", width = 74, sortable = true, defaultSort = "desc",
-			sortValue = function(row) return row[field] or 0 end,
-			getText = function(row) return pe:FormatCopperShort(row[field]) end,
-		}
-	end
 	return {
 		{
 			id = "name", label = "Farm", width = 200, minWidth = 140, flex = 1, sortable = true, defaultSort = "asc",
@@ -54,12 +40,12 @@ local function farmColumns(pe)
 			sortValue = function(row) return row.activeSeconds end,
 			getText = function(row) return duration(row.activeSeconds) end,
 		},
-		perHour("then", "Then", "thenPerHour"),
-		perHour("now", "Now", "nowPerHour"),
+		pe:MoneyColumn({ id = "then", label = "Then", field = "thenPerHour", width = 74 }),
+		pe:MoneyColumn({ id = "now", label = "Now", field = "nowPerHour", width = 74 }),
 		{
 			id = "change", label = "Change", justifyH = "RIGHT", width = 60, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.changePct or 0 end,
-			getText = function(row) return signedPercent(row.changePct) end,
+			getText = function(row) return pe:FormatSignedPercent(row.changePct) end,
 		},
 	}
 end

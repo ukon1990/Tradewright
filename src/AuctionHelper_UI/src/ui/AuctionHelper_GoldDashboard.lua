@@ -5,26 +5,9 @@ local _, AuctionHelper = ...
 -- which builds in the background; crafts come from the cached crafts engine (never forced).
 
 local GAP = 12
-local PAD = 10
 local ROW = 36
 local MIN_CARD_HEIGHT = 150
 local ACCT_KEY = AuctionHelper.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
-
--- "+18%" in green or "-12%" in red; `invert` swaps the colours (a lower price is good when buying).
-local function percent(pe, fraction, invert)
-	if not fraction then
-		return "-"
-	end
-	local text = string.format("%+.0f%%", fraction * 100)
-	if math.abs(fraction) < 0.005 then
-		return text
-	end
-	local good = fraction > 0
-	if invert then
-		good = not good
-	end
-	return pe:Colorize(text, good and "success" or "danger")
-end
 
 local function ageText(ts)
 	if not ts then
@@ -39,36 +22,19 @@ local function ageText(ts)
 	return string.format("seen %dd ago", math.floor(age / 86400))
 end
 
-local function moneyColumn(pe, id, label, field, width, optional)
-	return {
-		id = id, label = label, justifyH = "RIGHT", width = width, optional = optional,
-		getText = function(row) return row[field] and pe:FormatCopperShort(row[field]) or "-" end,
-	}
-end
-
 local function itemColumn(pe, getDetail)
-	return pe:CreateItemColumn({
-		sortable = false,
-		minWidth = 120,
-		getItemID = function(row) return row.itemID end,
-		getName = function(row) return row.name or pe:GetItemDisplayName(row.itemID) end,
-		getDetail = getDetail,
-	})
+	return pe:ItemColumn({ sortable = false, minWidth = 120, getDetail = getDetail })
 end
 
-local function createCard(pe, parent, title, viewAllLabel, onViewAll)
-	local card = pe:CreateInset(parent)
-	card.viewAll = pe:CreateButton(card, viewAllLabel, onViewAll, { small = true })
-	card.viewAll:SetPoint("TOPRIGHT", -PAD, -7)
-	card.heading = pe:CreateHeading(card, title)
-	card.heading:SetPoint("TOPLEFT", PAD, -PAD)
-	card.heading:SetPoint("RIGHT", card.viewAll, "LEFT", -8, 0)
-	return card
+local function moneyColumn(pe, spec)
+	spec.sortable = false
+	return pe:MoneyColumn(spec)
 end
 
-local function attachTable(pe, card, columns, opts)
-	local tbl = pe:CreateReusableTable(card, {
-		autoFitToScroll = true,
+-- Item rows: the tooltip lists `opts.tooltipPairs(row)` under `opts.hint`; a click that is not a
+-- modified click (link, dress up) goes to `opts.onClick(row, button)`.
+local function itemTableOptions(pe, opts)
+	return {
 		rowHeight = ROW,
 		emptyTitle = opts.emptyTitle,
 		emptyHint = opts.emptyHint,
@@ -78,21 +44,13 @@ local function attachTable(pe, card, columns, opts)
 				pe:ShowItemRowTooltip(rowFrame, row.itemID, opts.tooltipPairs and opts.tooltipPairs(row), hint)
 			end
 		end,
-		onRowLeave = function()
-			GameTooltip:Hide()
-		end,
 		onRowClick = function(_, row, button)
 			if not row or pe:HandleItemRowModifiedClick(row.itemID) then
 				return
 			end
 			opts.onClick(row, button)
 		end,
-	})
-	tbl:SetColumns(columns)
-	tbl.frame:SetPoint("TOPLEFT", card.heading, "BOTTOMLEFT", 0, -10)
-	tbl.frame:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -PAD, PAD)
-	card.table = tbl
-	return tbl
+	}
 end
 
 local function openMarket(pe, row)
@@ -137,106 +95,134 @@ local function rowHint(pe, buyable)
 	end
 end
 
-function AuctionHelper:CreateGoldDashboard(parent)
-	local pe = self
-	local dash = CreateFrame("Frame", nil, parent)
-	dash:SetAllPoints()
-	pe.ui.goldDashboard = dash
-
-	dash.statsRow = CreateFrame("Frame", nil, dash)
-	dash.statsRow:SetPoint("TOPLEFT")
-	dash.statsRow:SetPoint("TOPRIGHT")
-	dash.statsRow:SetHeight(58)
-	dash.stats = pe:CreateStats(dash.statsRow, { "gold", "stockValue", "profitableCrafts", "deals", "marketData" })
-
-	-- Deals to buy.
-	dash.deals = createCard(pe, dash, "Deals to buy", "Market", function() pe:ShowDashboardTab("market") end)
-	attachTable(pe, dash.deals, {
-		itemColumn(pe, function(row)
-			local parts = { "vs " .. (row.refSource or "usual"), ageText(row.seenAt) }
-			if dash.materials and dash.materials[row.itemID] then
-				parts[#parts + 1] = pe:Colorize("your material", "gold")
-			end
-			return table.concat(parts, " · ")
-		end),
-		moneyColumn(pe, "price", "Price", "price", 70),
-		moneyColumn(pe, "ref", "Usual", "ref", 70, true),
-		{ id = "off", label = "Off", justifyH = "RIGHT", width = 48,
-			getText = function(row) return percent(pe, row.discount and -row.discount, true) end },
-	}, {
-		emptyTitle = "No deals right now",
-		emptyHint = "Deals show when an item is listed well below its usual price. Scan the auction house a few times to learn usual prices.",
-		hint = rowHint(pe, true),
-		onClick = rowClickHandler(pe, true),
-		tooltipPairs = function(row)
-			return {
-				{ "Usual price (" .. (row.refSource or "?") .. ")", pe:FormatCopperFull(row.ref) },
-				{ "Resale profit after cut", pe:FormatSignedMoney(row.gain) },
-				{ "Listed", string.format("%s in %s auctions", pe:FormatNumberGrouped(row.quantity), pe:FormatNumberGrouped(row.listed)) },
-			}
-		end,
-	})
-
-	-- Best crafts now.
-	dash.crafts = createCard(pe, dash, "Best crafts now", "Crafts", function() pe:ShowDashboardTab("crafts") end)
-	attachTable(pe, dash.crafts, {
-		pe:CreateItemColumn({
-			sortable = false,
-			minWidth = 120,
-			getItemID = function(row) return row.outputItemID end,
-			getIcon = function(row) return row.outputIcon end,
-			getName = function(row) return (pe:GetCraftRowLabels(row)) end,
-			getDetail = function(row) return select(2, pe:GetCraftRowLabels(row)) end,
+local function createDealsCard(pe, dash)
+	dash.deals = pe:CreateTableCard(dash, {
+		title = "Deals to buy",
+		viewAllLabel = "Market",
+		onViewAll = function() pe:ShowDashboardTab("market") end,
+		columns = {
+			itemColumn(pe, function(row)
+				local parts = { "vs " .. (row.refSource or "usual"), ageText(row.seenAt) }
+				if dash.materials and dash.materials[row.itemID] then
+					parts[#parts + 1] = pe:Colorize("your material", "gold")
+				end
+				return table.concat(parts, " · ")
+			end),
+			moneyColumn(pe, { id = "price", label = "Price", width = 70 }),
+			moneyColumn(pe, { id = "ref", label = "Usual", width = 70, optional = true }),
+			{ id = "off", label = "Off", justifyH = "RIGHT", width = 48,
+				getText = function(row) return pe:FormatPercentChange(row.discount and -row.discount, true) end },
+		},
+		table = itemTableOptions(pe, {
+			emptyTitle = "No deals right now",
+			emptyHint = "Deals show when an item is listed well below its usual price. Scan the auction house a few times to learn usual prices.",
+			hint = rowHint(pe, true),
+			onClick = rowClickHandler(pe, true),
+			tooltipPairs = function(row)
+				return {
+					{ "Usual price (" .. (row.refSource or "?") .. ")", pe:FormatCopperFull(row.ref) },
+					{ "Resale profit after cut", pe:FormatSignedMoney(row.gain) },
+					{ "Listed", string.format("%s in %s auctions", pe:FormatNumberGrouped(row.quantity), pe:FormatNumberGrouped(row.listed)) },
+				}
+			end,
 		}),
-		{ id = "profit", label = "Profit", justifyH = "RIGHT", width = 80,
-			getText = function(row) return pe:FormatSignedMoney(row.profit) end },
-		{ id = "roi", label = "ROI", justifyH = "RIGHT", width = 48, optional = true,
-			getText = function(row) return row.roi and string.format("%.0f%%", row.roi) or "-" end },
-	}, {
-		emptyTitle = "No profitable crafts",
-		emptyHint = "Scan your professions and the auction house to compare material cost with sale price.",
-		hint = "Click to open in Crafts. Shift-click to link.",
-		onClick = function(row) pe:OpenCraftRow(row) end,
 	})
-	-- Craft rows carry the output in outputItemID; give the shared row handlers an itemID.
-	dash.crafts.table.onRowEnter = function(rowFrame, row)
-		if row then
-			pe:ShowCraftRowTooltip(rowFrame, row)
-		end
-	end
-	dash.crafts.table.onRowClick = function(_, row)
-		if row and not pe:HandleItemRowModifiedClick(row.outputItemID) then
-			pe:OpenCraftRow(row)
-		end
-	end
+end
 
-	-- Sell what I own.
-	dash.sell = createCard(pe, dash, "Sell what I own", "Inventory", function() pe:ShowDashboardTab("inventory") end)
-	attachTable(pe, dash.sell, {
+-- Craft rows carry the output in outputItemID, so they get their own row handlers.
+local function createCraftsCard(pe, dash)
+	dash.crafts = pe:CreateTableCard(dash, {
+		title = "Best crafts now",
+		viewAllLabel = "Crafts",
+		onViewAll = function() pe:ShowDashboardTab("crafts") end,
+		columns = {
+			pe:CreateItemColumn({
+				sortable = false,
+				minWidth = 120,
+				getItemID = function(row) return row.outputItemID end,
+				getIcon = function(row) return row.outputIcon end,
+				getName = function(row) return (pe:GetCraftRowLabels(row)) end,
+				getDetail = function(row) return select(2, pe:GetCraftRowLabels(row)) end,
+			}),
+			{ id = "profit", label = "Profit", justifyH = "RIGHT", width = 80,
+				getText = function(row) return pe:FormatSignedMoney(row.profit) end },
+			-- roi is already a percent (not a fraction), so it skips PercentColumn.
+			{ id = "roi", label = "ROI", justifyH = "RIGHT", width = 48, optional = true,
+				getText = function(row) return row.roi and string.format("%.0f%%", row.roi) or "-" end },
+		},
+		table = {
+			rowHeight = ROW,
+			emptyTitle = "No profitable crafts",
+			emptyHint = "Scan your professions and the auction house to compare material cost with sale price.",
+			onRowEnter = function(rowFrame, row)
+				if row then
+					pe:ShowCraftRowTooltip(rowFrame, row)
+				end
+			end,
+			onRowClick = function(_, row)
+				if row and not pe:HandleItemRowModifiedClick(row.outputItemID) then
+					pe:OpenCraftRow(row)
+				end
+			end,
+		},
+	})
+end
+
+local function createSellCard(pe, dash)
+	dash.sell = pe:CreateTableCard(dash, {
+		title = "Sell what I own",
+		viewAllLabel = "Inventory",
+		onViewAll = function() pe:ShowDashboardTab("inventory") end,
+		columns = {
+			itemColumn(pe, function(row)
+				local note = row.change and (row.change >= 0.1 and "above its usual price" or "near its usual price") or "no price history yet"
+				return string.format("%s owned · %s", pe:FormatNumberGrouped(row.total), note)
+			end),
+			moneyColumn(pe, { id = "price", label = "Price", width = 70, optional = true }),
+			{ id = "change", label = "Vs usual", justifyH = "RIGHT", width = 60,
+				getText = function(row) return pe:FormatPercentChange(row.change) end },
+			moneyColumn(pe, { id = "value", label = "Worth", width = 76 }),
+		},
+		table = itemTableOptions(pe, {
+			emptyTitle = "Nothing to sell yet",
+			emptyHint = "Refresh your inventory and scan the auction house to price what you own.",
+			hint = rowHint(pe, false),
+			onClick = rowClickHandler(pe, false),
+			tooltipPairs = function(row)
+				return {
+					{ "You own", string.format("%s (bags %s, bank %s)", pe:FormatNumberGrouped(row.total),
+						pe:FormatNumberGrouped(row.bags or 0), pe:FormatNumberGrouped(row.bank or 0)) },
+					{ "Worth now", pe:FormatCopperFull(row.value) },
+				}
+			end,
+		}),
+	})
+end
+
+local function moversColumns(pe)
+	local function supplyView()
+		return pe:GetSetting("gold.moversView", "risers") == "supply"
+	end
+	return {
 		itemColumn(pe, function(row)
-			local note = row.change and (row.change >= 0.1 and "above its usual price" or "near its usual price") or "no price history yet"
-			return string.format("%s owned · %s", pe:FormatNumberGrouped(row.total), note)
+			if supplyView() then
+				return string.format("%s listed, usually %s", pe:FormatNumberGrouped(row.qtyNow or 0), pe:FormatNumberGrouped(row.qtyAvg7d or 0))
+			end
+			return (row.usualDays and "Usual price " or "7-day average ") .. pe:FormatCopperShort(row.avg7d or 0)
 		end),
-		moneyColumn(pe, "price", "Price", "price", 70, true),
-		{ id = "change", label = "Vs usual", justifyH = "RIGHT", width = 60,
-			getText = function(row) return percent(pe, row.change) end },
-		moneyColumn(pe, "value", "Worth", "value", 76),
-	}, {
-		emptyTitle = "Nothing to sell yet",
-		emptyHint = "Refresh your inventory and scan the auction house to price what you own.",
-		hint = rowHint(pe, false),
-		onClick = rowClickHandler(pe, false),
-		tooltipPairs = function(row)
-			return {
-				{ "You own", string.format("%s (bags %s, bank %s)", pe:FormatNumberGrouped(row.total),
-					pe:FormatNumberGrouped(row.bags or 0), pe:FormatNumberGrouped(row.bank or 0)) },
-				{ "Worth now", pe:FormatCopperFull(row.value) },
-			}
-		end,
-	})
+		moneyColumn(pe, { id = "price", label = "Price", width = 70 }),
+		{ id = "change", label = "Change", justifyH = "RIGHT", width = 60,
+			getText = function(row)
+				if supplyView() then
+					return pe:FormatPercentChange(row.supplyChange, true)
+				end
+				return pe:FormatPercentChange(row.change)
+			end },
+	}
+end
 
-	-- Market movers.
-	dash.movers = createCard(pe, dash, "Market movers", "Market", function() pe:ShowDashboardTab("market") end)
+-- Supply / Falling / Rising switch between the heading and the Market button.
+local function createMoverButtons(pe, dash)
 	dash.moverButtons = {}
 	local previous
 	for _, mode in ipairs({ { "supply", "Supply" }, { "fallers", "Falling" }, { "risers", "Rising" } }) do
@@ -254,34 +240,48 @@ function AuctionHelper:CreateGoldDashboard(parent)
 		dash.moverButtons[#dash.moverButtons + 1] = button
 	end
 	dash.movers.heading:SetPoint("RIGHT", previous, "LEFT", -8, 0)
-	attachTable(pe, dash.movers, {
-		itemColumn(pe, function(row)
-			if pe:GetSetting("gold.moversView", "risers") == "supply" then
-				return string.format("%s listed, usually %s", pe:FormatNumberGrouped(row.qtyNow or 0), pe:FormatNumberGrouped(row.qtyAvg7d or 0))
-			end
-			return (row.usualDays and "Usual price " or "7-day average ") .. pe:FormatCopperShort(row.avg7d or 0)
-		end),
-		moneyColumn(pe, "price", "Price", "price", 70),
-		{ id = "change", label = "Change", justifyH = "RIGHT", width = 60,
-			getText = function(row)
-				if pe:GetSetting("gold.moversView", "risers") == "supply" then
-					return percent(pe, row.supplyChange, true)
-				end
-				return percent(pe, row.change)
-			end },
-	}, {
-		emptyTitle = "No big moves",
-		emptyHint = "Movers compare today's price and supply with the usual level in your scans.",
-		hint = rowHint(pe, true),
-		onClick = rowClickHandler(pe, true),
-		tooltipPairs = function(row)
-			return {
-				{ row.usualDays and "Usual price" or "7-day average", pe:FormatCopperFull(row.avg7d) },
-				{ row.usualDays and "Usual range" or "7-day range", string.format("%s – %s", pe:FormatCopperShort(row.low7d or 0), pe:FormatCopperShort(row.high7d or 0)) },
-				{ "Listed now", string.format("%s, usually %s", pe:FormatNumberGrouped(row.qtyNow or 0), pe:FormatNumberGrouped(row.qtyAvg7d or 0)) },
-			}
-		end,
+end
+
+local function createMoversCard(pe, dash)
+	dash.movers = pe:CreateTableCard(dash, {
+		title = "Market movers",
+		viewAllLabel = "Market",
+		onViewAll = function() pe:ShowDashboardTab("market") end,
+		columns = moversColumns(pe),
+		table = itemTableOptions(pe, {
+			emptyTitle = "No big moves",
+			emptyHint = "Movers compare today's price and supply with the usual level in your scans.",
+			hint = rowHint(pe, true),
+			onClick = rowClickHandler(pe, true),
+			tooltipPairs = function(row)
+				return {
+					{ row.usualDays and "Usual price" or "7-day average", pe:FormatCopperFull(row.avg7d) },
+					{ row.usualDays and "Usual range" or "7-day range",
+						string.format("%s – %s", pe:FormatCopperShort(row.low7d or 0), pe:FormatCopperShort(row.high7d or 0)) },
+					{ "Listed now", string.format("%s, usually %s", pe:FormatNumberGrouped(row.qtyNow or 0), pe:FormatNumberGrouped(row.qtyAvg7d or 0)) },
+				}
+			end,
+		}),
 	})
+	createMoverButtons(pe, dash)
+end
+
+function AuctionHelper:CreateGoldDashboard(parent)
+	local pe = self
+	local dash = CreateFrame("Frame", nil, parent)
+	dash:SetAllPoints()
+	pe.ui.goldDashboard = dash
+
+	dash.statsRow = CreateFrame("Frame", nil, dash)
+	dash.statsRow:SetPoint("TOPLEFT")
+	dash.statsRow:SetPoint("TOPRIGHT")
+	dash.statsRow:SetHeight(58)
+	dash.stats = pe:CreateStats(dash.statsRow, { "gold", "stockValue", "profitableCrafts", "deals", "marketData" })
+
+	createDealsCard(pe, dash)
+	createCraftsCard(pe, dash)
+	createSellCard(pe, dash)
+	createMoversCard(pe, dash)
 
 	function dash:Layout()
 		local width, height = self:GetWidth(), self:GetHeight()
@@ -394,7 +394,7 @@ function AuctionHelper:CreateGoldDashboard(parent)
 		if insights then
 			local best = insights.deals[1]
 			self.stats.deals:SetValues("Deals found", pe:FormatNumberGrouped(insights.dealCount),
-				best and string.format("Best %s below usual", string.format("%.0f%%", best.discount * 100)) or "None right now",
+				best and string.format("Best %s below usual", pe:FormatPercent(best.discount)) or "None right now",
 				insights.dealCount > 0 and "gold" or nil)
 			local lastScanAt = pe.GetLastFullAuctionScanAt and pe:GetLastFullAuctionScanAt()
 			local stale = not lastScanAt or time() - lastScanAt > 24 * 3600
