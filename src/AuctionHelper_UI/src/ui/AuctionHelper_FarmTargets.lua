@@ -1,6 +1,6 @@
 local AuctionHelper = select(2, ...)
 
--- "What to farm" (E09 F72): trade goods ranked by the gold that changes hands in them each day, with
+-- "What to farm": trade goods ranked by the gold that changes hands in them each day, with
 -- the farm where you looted each one before. The addon ships no drop data: the last two columns come
 -- only from your own saved farms.
 

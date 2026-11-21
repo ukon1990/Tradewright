@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- The on/off switch of the bag window (E11 F91). On: the game's bag frames are parked under a
+-- The on/off switch of the bag window. On: the game's bag frames are parked under a
 -- hidden frame and the AuctionHelper window is shown whenever one of them is open, so the bag key,
 -- merchants and mail keep driving the game's own open/close logic. Off: the frames get their
 -- parents back. Nothing global is replaced, so switching needs no reload.

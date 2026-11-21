@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Pure income helpers (E10): which source a change of gold belongs to, and the per-day totals it
+-- Pure income helpers: which source a change of gold belongs to, and the per-day totals it
 -- is kept in. No WoW API here, so the offline tests can load this file on its own.
 local IncomeLogic = {}
 AuctionHelper.IncomeLogic = IncomeLogic
@@ -123,7 +123,7 @@ function IncomeLogic.ParseItemMessage(message, patterns)
 	return nil
 end
 
--- Where sold items came from (F81) --------------------------------------------------------------
+-- Where sold items came from -------------------------------------------------------------------
 
 local ORIGIN_OF_KIND = { craft = "crafted", loot = "farmed", buy = "resold" }
 
@@ -182,7 +182,7 @@ local function byItem(events, kind)
 end
 
 --- Labels each auction sale with where its units came from: crafted, farmed (looted), resold
---- (bought, F44) or unknown, matched oldest first per item against what came before the sale.
+--- (bought) or unknown, matched oldest first per item against what came before the sale.
 --- `acquired[itemID][day] = { craft = n, loot = n }`. Returns { [sale event] = { origin = units } }.
 function IncomeLogic.LabelSaleOrigins(events, acquired)
 	local labels, buysByItem = {}, byItem(events, "buy")
@@ -204,7 +204,7 @@ function IncomeLogic.LabelSaleOrigins(events, acquired)
 	return labels
 end
 
--- Income view (F82) ------------------------------------------------------------------------------
+-- Income view -----------------------------------------------------------------------------------
 
 local function addTo(target, gain, spend)
 	target.gain = (target.gain or 0) + (tonumber(gain) or 0)
@@ -326,7 +326,7 @@ end
 --- Auction sales grouped by item type. classOf(itemID) → key, label (nil when unknown).
 --- Returns rows { key, label, sales, units, net, share, sellRate, items = { [itemID or name] = net } },
 --- most earned first. sellRate = sales / (sales + expired + cancelled), nil while the ledger
---- holds no expired or cancelled auctions at all (F44 not there yet).
+--- holds no expired or cancelled auctions at all.
 function IncomeLogic.SummarizeItemTypes(events, since, characterKey, classOf)
 	local byType, rows, total, tracksMisses = {}, {}, 0, false
 	for _, event in ipairs(events) do

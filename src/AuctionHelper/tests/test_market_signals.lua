@@ -170,7 +170,7 @@ local withDeposit = Flip.BuildFlipRow({ itemID = 9, price = 50, usual = 100, sel
 check("Expected deposit loss is subtracted", withDeposit and withDeposit.profit == 40)
 local sorted = Flip.BuildFlipRows({ noSteps and { itemID = 7, price = 50, usual = 100, sellsPerDay = 9 }, arcanite }, { minProfit = 0 })
 check("Rows are sorted by profit", #sorted == 2 and sorted[1].itemID == 1 and sorted[2].itemID == 7)
--- Profit floor under 1g (F55): buy 2 at 1s 50c, usual 3s, 5% cut → 2 × 285 - 300 = 270 copper
+-- Profit floor under 1g: buy 2 at 1s 50c, usual 3s, 5% cut → 2 × 285 - 300 = 270 copper
 local smallFlip = { itemID = 10, price = 150, usual = 300, sellsPerDay = 9, steps = { 150, 2 } }
 local floor25s = { minProfit = 2500 }
 check("A 25s floor keeps a 45s flip",
@@ -179,7 +179,7 @@ check("A 25s floor drops a 20s flip",
 	Flip.BuildFlipRow({ itemID = 12, price = 7000, usual = 9500, sellsPerDay = 3, steps = { 7000, 1 } }, floor25s) == nil)
 check("Copper floor between rows", Flip.BuildFlipRow(smallFlip, { minProfit = 270 }) ~= nil and Flip.BuildFlipRow(smallFlip, { minProfit = 271 }) == nil)
 check("Default floor is 1g", Flip.BuildFlipRow({ itemID = 13, price = 5000, usual = 20000, sellsPerDay = 3, steps = { 5000, 1 } }) ~= nil)
--- Early rows (F56)
+-- Early rows
 local marked = Flip.CarryOver({ { itemID = 1, profit = 100 }, { itemID = 2, profit = 40, usualDays = 6 } },
 	{ { itemID = 1, early = true, usualDays = 3 }, { itemID = 2, usualDays = 6 } })
 check("Early flag and days copied from the candidate", marked[1].early == true and marked[1].usualDays == 3 and marked[2].early == nil)
@@ -188,7 +188,7 @@ check("Totals leave early rows out", settledProfit == 40 and earlyLeftOut == 1)
 local sourced = Flip.CarryOver({ { itemID = 3 } }, { Flip.SetSells({ itemID = 3 }, { perDay = 4, source = "own", pairs = 0, confidence = "few" }) })[1]
 check("Sales source carried onto the row", sourced.sellsSource == "own" and sourced.sellsPairs == 0 and Flip.SellsUnsure(sourced))
 check("Five pairs from scans are sure", not Flip.SellsUnsure({ sellsSource = "scans", sellsConfidence = "good" }))
--- Why a list is empty (F58)
+-- Why a list is empty
 local drops = {}
 local funnelRows = Flip.BuildFlipRows({
 	{ itemID = 20, price = 90, usual = 100, sellsPerDay = 9 },

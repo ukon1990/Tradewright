@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Flip rows for the Opportunities tab (F50), built from the market insights of the last scans.
+-- Flip rows for the Opportunities tab, built from the market insights of the last scans.
 
 local FULL_DAYS, EARLY_DAYS = 5, 2
 
@@ -9,7 +9,7 @@ local function allowEarly(pe)
 end
 
 --- Usual price for the Opportunities lists: the full one (5+ days) or, with early rows allowed in Settings,
---- one from 2 to 4 days. Returns the usual price, or nil, and whether it is early (F56).
+--- one from 2 to 4 days. Returns the usual price, or nil, and whether it is early.
 function AuctionHelper:GetOpportunityUsual(storageKey)
 	local usual = self:GetUsualPrice(storageKey)
 	if usual or not (allowEarly(self) and self.GetEarlyUsualPrice) then

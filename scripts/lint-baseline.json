@@ -7,7 +7,7 @@
    "W631": 1
   },
   "src/AuctionHelper/src/modules/AuctionHelper_Docs.lua": {
-   "W631": 20
+   "W631": 19
   },
   "src/AuctionHelper/tests/test_forever_logic.lua": {
    "W421": 2,
@@ -35,9 +35,9 @@
   "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": 778,
   "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5582,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": 781,
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1209,
+  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1198,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1241,
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": 2489,
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": 2485,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_LiveUpdate.lua": 708,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_CraftsUI.lua": 815,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": 1041,
@@ -1132,7 +1132,7 @@
    },
    "AuctionHelper:GetItemRecipeRelationships": {
     "lines": [
-     65
+     61
     ],
     "ccn": [
      27
@@ -1145,7 +1145,7 @@
    },
    "AuctionHelper:RecordItemQuantityObservation": {
     "lines": [
-     49
+     42
     ],
     "ccn": [
      24

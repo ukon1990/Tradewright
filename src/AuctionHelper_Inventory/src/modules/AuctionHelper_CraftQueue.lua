@@ -17,7 +17,7 @@ function AuctionHelper:GetCraftQueueStorage()
 	return self.db.craftQueue
 end
 
---- @return table[] ordered list of queue entries (each has .queueKey)
+--- Queue entries in order; each has `.queueKey`.
 function AuctionHelper:GetCraftQueueRows()
 	local storage = self:GetCraftQueueStorage()
 	local list = {}
@@ -53,7 +53,7 @@ function AuctionHelper:RemoveCraftQueueLinesForOpportunityRow(row)
 end
 
 --- Remove non-order craft-queue lines for a recipe ID (any output/scenario on this character's shopping).
---- @return number removed count
+--- Returns how many were removed.
 function AuctionHelper:RemoveCraftQueueLinesForRecipeID(recipeID)
 	recipeID = tonumber(recipeID)
 	if not recipeID then
@@ -303,8 +303,8 @@ local function buildEntryFromEval(ctx, quantity)
 	}
 end
 
---- @param rowOrContext table opportunity row from BuildCraftOpportunityRows OR context from EvaluateSelectedProfessionRecipe + overrides
---- @param quantity number
+--- `rowOrContext` is an opportunity row from BuildCraftOpportunityRows, or a context from
+--- EvaluateSelectedProfessionRecipe plus overrides.
 function AuctionHelper:AddCraftToQueue(rowOrContext, quantity)
 	if type(rowOrContext) ~= "table" then
 		return nil, "bad_arg"
@@ -424,8 +424,8 @@ local function getCharacterSnapshotItemTotal(self, characterKey, itemID)
 	return self:GetCharacterItemTotal(characterKey, itemID)
 end
 
---- @param sources table[] entries with characterKey and quantity
---- @return table[] { characterKey, quantityNeeded, quantityHave, mailQuantity }
+--- `sources`: entries with characterKey and quantity.
+--- Returns rows of { characterKey, quantityNeeded, quantityHave, mailQuantity }.
 function AuctionHelper:BuildReagentMailAllocations(itemID, sources)
 	itemID = tonumber(itemID)
 	if not itemID or type(sources) ~= "table" then
@@ -460,7 +460,7 @@ function AuctionHelper:BuildReagentMailAllocations(itemID, sources)
 end
 
 --- Per-crafter mail plan from the bags and the queue's material needs; see ForeverLogic.BuildMailPlan.
---- @return table[] { characterKey, mailName, items, totalQuantity, missing, complete }
+--- Rows of { characterKey, mailName, items, totalQuantity, missing, complete }.
 function AuctionHelper:BuildShoppingMailSendPlan()
 	local summary = self:BuildCraftQueueSummary()
 	local woSummary = self.BuildCraftingOrderWorkQueueSummary and self:BuildCraftingOrderWorkQueueSummary() or { reagentLines = {} }

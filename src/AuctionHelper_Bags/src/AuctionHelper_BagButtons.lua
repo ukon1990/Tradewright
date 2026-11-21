@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Item slots of the bag window (E11 F92, F94). Live slots are the game's own item buttons, so use,
+-- Item slots of the bag window. Live slots are the game's own item buttons, so use,
 -- drag, split and tooltips run the game's code; read-only slots are plain buttons.
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"

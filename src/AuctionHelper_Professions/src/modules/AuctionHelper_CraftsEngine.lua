@@ -32,9 +32,9 @@ local SKILL_LINE_EXPANSION = {
 }
 
 local EXPANSION_PATTERNS = {
-    { tag = "midnight", patterns = { "midnight" } },
-    { tag = "tww", patterns = { "the war within", "war within", "khaz algar" } },
-    { tag = "df", patterns = { "dragonflight", "dragon isles" } },
+	{ tag = "midnight", patterns = { "midnight" } },
+	{ tag = "tww", patterns = { "the war within", "war within", "khaz algar" } },
+	{ tag = "df", patterns = { "dragonflight", "dragon isles" } },
 }
 
 local ENCHANTING_VELLUM_ITEM_ID = 38682
@@ -430,11 +430,11 @@ function AuctionHelper:ResolveCraftCategoryLabel(skillLineID, categoryID)
 end
 
 local function containsText(haystack, needle)
-    return string.find(string.lower(tostring(haystack or "")), needle, 1, true) ~= nil
+	return string.find(string.lower(tostring(haystack or "")), needle, 1, true) ~= nil
 end
 
 local function craftCharacterLabel(pe, characterKey)
-    return pe:GetDashboardSidebarCharacterLabel(characterKey, pe.db and pe.db.characters and pe.db.characters[characterKey], pe:GetCharacterKey())
+	return pe:GetDashboardSidebarCharacterLabel(characterKey, pe.db and pe.db.characters and pe.db.characters[characterKey], pe:GetCharacterKey())
 end
 
 local function craftIsEnchantRecipe(professionData, recipeData)
@@ -678,12 +678,12 @@ local function cloneReagentPlan(plan)
 end
 
 function AuctionHelper:GetCraftRecommendedCrafter(row)
-    if not row or not row.bestCharacterKey then
-        return nil, nil
-    end
-    local ev = row.perChar and row.perChar[row.bestCharacterKey] or nil
-    local reason = ev and ev.profit ~= nil and "Best profit" or "Fallback available"
-    return craftCharacterLabel(self, row.bestCharacterKey), reason
+	if not row or not row.bestCharacterKey then
+		return nil, nil
+	end
+	local ev = row.perChar and row.perChar[row.bestCharacterKey] or nil
+	local reason = ev and ev.profit ~= nil and "Best profit" or "Fallback available"
+	return craftCharacterLabel(self, row.bestCharacterKey), reason
 end
 
 --- Aggregate item totals across all stored character snapshots.
@@ -1058,277 +1058,277 @@ end
 
 -- EvaluateCraftScenario helpers share one context table `c` (inputs + intermediate results).
 local function resolveCraftEvalQuality(self, c)
-    local recipeData = c.recipeData
-    local info = self:RecipeDataInfo(recipeData)
-    c.learned = not (info and info.learned == false)
-    c.maxQ = schematicMaxQuality(recipeData)
-    c.crafting = recipeData.crafting
-    c.baseQ = reachableQualityIndex(c.crafting, c.maxQ)
-    c.defaultScenarioQ = c.baseQ
-    if c.scenario == "concentration" and c.baseQ < c.maxQ then
-        c.defaultScenarioQ = math.min(c.maxQ, c.baseQ + 1)
-    end
-    c.qualityIndex = math.max(1, math.min(c.maxQ, tonumber(c.opts.targetQualityIndex) or c.defaultScenarioQ))
+	local recipeData = c.recipeData
+	local info = self:RecipeDataInfo(recipeData)
+	c.learned = not (info and info.learned == false)
+	c.maxQ = schematicMaxQuality(recipeData)
+	c.crafting = recipeData.crafting
+	c.baseQ = reachableQualityIndex(c.crafting, c.maxQ)
+	c.defaultScenarioQ = c.baseQ
+	if c.scenario == "concentration" and c.baseQ < c.maxQ then
+		c.defaultScenarioQ = math.min(c.maxQ, c.baseQ + 1)
+	end
+	c.qualityIndex = math.max(1, math.min(c.maxQ, tonumber(c.opts.targetQualityIndex) or c.defaultScenarioQ))
 end
 
 local function resolveCraftEvalOutputItem(self, c)
-    local outputItemID = select(1, outputItemForQuality(c.recipeData, c.qualityIndex))
-    if not outputItemID then
-        outputItemID = resolveCraftOutputItemID(self, c.recipeID, c.recipeData, {
-            forceEnchantingVellum = c.opts.forceEnchantingVellum == true,
-            professionData = c.professionData,
-        })
-    end
-    if not outputItemID and c.opts.allowMissingOutput then
-        -- Shopping/queue still needs a stable key; recipe spell id is unique per line.
-        outputItemID = tonumber(self:GetRecipeSpellID(c.recipeData)) or tonumber(c.recipeID)
-    end
-    c.outputItemID = outputItemID
-    return outputItemID
+	local outputItemID = select(1, outputItemForQuality(c.recipeData, c.qualityIndex))
+	if not outputItemID then
+		outputItemID = resolveCraftOutputItemID(self, c.recipeID, c.recipeData, {
+			forceEnchantingVellum = c.opts.forceEnchantingVellum == true,
+			professionData = c.professionData,
+		})
+	end
+	if not outputItemID and c.opts.allowMissingOutput then
+		-- Shopping/queue still needs a stable key; recipe spell id is unique per line.
+		outputItemID = tonumber(self:GetRecipeSpellID(c.recipeData)) or tonumber(c.recipeID)
+	end
+	c.outputItemID = outputItemID
+	return outputItemID
 end
 
 local function craftEvalVendorBuyCopper(self, c, id)
-    if not c.vendorRecipe then
-        return nil
-    end
-    local vb = self:GetItemVendorPurchaseCopper(id)
-    if vb and vb > 0 then
-        return vb
-    end
-    return nil
+	if not c.vendorRecipe then
+		return nil
+	end
+	local vb = self:GetItemVendorPurchaseCopper(id)
+	if vb and vb > 0 then
+		return vb
+	end
+	return nil
 end
 
 local function craftEvalSaleUnit(self, c, id)
-    local vb = craftEvalVendorBuyCopper(self, c, id)
-    if vb then
-        return vb, "Vendor"
-    end
-    return self:GetMarketEstimateCopper(id, c.tsmMarket, c.fallbackTsm)
+	local vb = craftEvalVendorBuyCopper(self, c, id)
+	if vb then
+		return vb, "Vendor"
+	end
+	return self:GetMarketEstimateCopper(id, c.tsmMarket, c.fallbackTsm)
 end
 
 local function craftEvalMatUnit(self, c, id)
-    local vb = craftEvalVendorBuyCopper(self, c, id)
-    if vb then
-        return vb, "Vendor"
-    end
-    if c.useLedgerMats then
-        local ledgerAvg = self:LedgerAverageUnitBuyCopper(id, nil)
-        if ledgerAvg then
-            return ledgerAvg, "Ledger"
-        end
-    end
-    local marketEstimate, marketSource = self:GetMarketEstimateCopper(id, c.tsmMat, c.fallbackTsm)
-    if marketEstimate and marketEstimate > 0 then
-        return marketEstimate, marketSource
-    end
-    return nil, nil
+	local vb = craftEvalVendorBuyCopper(self, c, id)
+	if vb then
+		return vb, "Vendor"
+	end
+	if c.useLedgerMats then
+		local ledgerAvg = self:LedgerAverageUnitBuyCopper(id, nil)
+		if ledgerAvg then
+			return ledgerAvg, "Ledger"
+		end
+	end
+	local marketEstimate, marketSource = self:GetMarketEstimateCopper(id, c.tsmMat, c.fallbackTsm)
+	if marketEstimate and marketEstimate > 0 then
+		return marketEstimate, marketSource
+	end
+	return nil, nil
 end
 
 local function craftEvalPickUnit(self, c, id)
-    if c.sourceMode == "market_only" then
-        return craftEvalSaleUnit(self, c, id)
-    end
-    return self:CheapestMaterialUnit(id, craftEvalMatUnit(self, c, id))
+	if c.sourceMode == "market_only" then
+		return craftEvalSaleUnit(self, c, id)
+	end
+	return self:CheapestMaterialUnit(id, craftEvalMatUnit(self, c, id))
 end
 
 local function newCraftEvalInventoryLookup(self)
-    local cache = {}
-    return function(itemID)
-        local id = tonumber(itemID)
-        if not id then
-            return { bags = 0, bank = 0, warband = 0, total = 0 }
-        end
-        local cached = cache[id]
-        if cached then
-            return cached
-        end
-        local totals = self:BuildAccountItemInventoryTotals(id)
-        cache[id] = totals
-        return totals
-    end
+	local cache = {}
+	return function(itemID)
+		local id = tonumber(itemID)
+		if not id then
+			return { bags = 0, bank = 0, warband = 0, total = 0 }
+		end
+		local cached = cache[id]
+		if cached then
+			return cached
+		end
+		local totals = self:BuildAccountItemInventoryTotals(id)
+		cache[id] = totals
+		return totals
+	end
 end
 
---- Price/inventory callbacks; pick and cost get separate closures (same rules) like before the split.
+--- Price/inventory callbacks; pick and cost get separate closures with the same rules.
 local function bindCraftEvalPricing(self, c)
-    local st = self.db and self.db.settings or {}
-    c.tsmMarket = st.economyTSMMarketString or "dbmarket"
-    c.fallbackTsm = st.economyTSMFallbackString or "DBMinBuyout"
-    c.tsmMat = st.economyTSMMatString or "Crafting"
-    local costBasis = c.opts.costBasis or "auto"
-    c.useLedgerMats = costBasis == "ledger" or costBasis == "auto"
-    c.saleUnitFn = function(id) return craftEvalSaleUnit(self, c, id) end
-    c.pickUnitFn = function(id) return craftEvalPickUnit(self, c, id) end
-    c.costUnitFn = function(id) return craftEvalPickUnit(self, c, id) end
-    c.inventoryFn = newCraftEvalInventoryLookup(self)
+	local st = self.db and self.db.settings or {}
+	c.tsmMarket = st.economyTSMMarketString or "dbmarket"
+	c.fallbackTsm = st.economyTSMFallbackString or "DBMinBuyout"
+	c.tsmMat = st.economyTSMMatString or "Crafting"
+	local costBasis = c.opts.costBasis or "auto"
+	c.useLedgerMats = costBasis == "ledger" or costBasis == "auto"
+	c.saleUnitFn = function(id) return craftEvalSaleUnit(self, c, id) end
+	c.pickUnitFn = function(id) return craftEvalPickUnit(self, c, id) end
+	c.costUnitFn = function(id) return craftEvalPickUnit(self, c, id) end
+	c.inventoryFn = newCraftEvalInventoryLookup(self)
 end
 
 local function resolveCraftEvalPlan(self, c)
-    local forceVellum = c.opts.forceEnchantingVellum == true
-    local plan, qualityReachable = self:PickCheapestReagentsPerSlotForTargetQuality(
-        c.recipeData, c.professionData, c.pickUnitFn, c.qualityIndex,
-        { reagentPlanOverride = c.opts.reagentPlanOverride, forceEnchantingVellum = forceVellum }
-    )
-    if not plan then
-        return nil
-    end
-    if forceVellum then
-        ensureEnchantingVellumInPlan(plan, c.professionData, c.recipeData, true)
-    end
-    c.plan, c.qualityReachable = plan, qualityReachable
-    c.usesRequiredTarget = reagentPlanHasRequiredTarget(plan)
-    return plan
+	local forceVellum = c.opts.forceEnchantingVellum == true
+	local plan, qualityReachable = self:PickCheapestReagentsPerSlotForTargetQuality(
+		c.recipeData, c.professionData, c.pickUnitFn, c.qualityIndex,
+		{ reagentPlanOverride = c.opts.reagentPlanOverride, forceEnchantingVellum = forceVellum }
+	)
+	if not plan then
+		return nil
+	end
+	if forceVellum then
+		ensureEnchantingVellumInPlan(plan, c.professionData, c.recipeData, true)
+	end
+	c.plan, c.qualityReachable = plan, qualityReachable
+	c.usesRequiredTarget = reagentPlanHasRequiredTarget(plan)
+	return plan
 end
 
 --- saleBasis ledger/auto: replace a market (not vendor) sale price with the ledger sell average.
 local function applyCraftEvalLedgerSale(self, c, saleGross, saleSrc)
-    local saleBasis = c.opts.saleBasis or "auto"
-    if not (saleGross and saleSrc ~= "Vendor sell" and saleBasis ~= "market" and (saleBasis == "ledger" or saleBasis == "auto")) then
-        return saleGross, saleSrc
-    end
-    local avgs, n = self:LedgerAverageUnitSellCopper(c.outputItemID, nil)
-    if avgs and n and n >= 1 then
-        return avgs, "ledger"
-    end
-    return saleGross, saleSrc
+	local saleBasis = c.opts.saleBasis or "auto"
+	if not (saleGross and saleSrc ~= "Vendor sell" and saleBasis ~= "market" and (saleBasis == "ledger" or saleBasis == "auto")) then
+		return saleGross, saleSrc
+	end
+	local avgs, n = self:LedgerAverageUnitSellCopper(c.outputItemID, nil)
+	if avgs and n and n >= 1 then
+		return avgs, "ledger"
+	end
+	return saleGross, saleSrc
 end
 
 local function resolveCraftEvalSale(self, c)
-    local saleGross, saleSrc = self:GetMarketEstimateCopper(c.outputItemID, c.tsmMarket, c.fallbackTsm)
-    if c.vendorRecipe then
-        local vs = self:GetItemVendorSellCopper(c.outputItemID)
-        if vs and vs > 0 then
-            saleGross = vs
-            saleSrc = "Vendor sell"
-        end
-    end
-    saleGross, saleSrc = applyCraftEvalLedgerSale(self, c, saleGross, saleSrc)
-    c.saleGross, c.saleSrc = saleGross, saleSrc
-    c.saleNet = saleGross and self:ApplyAhCutToSaleCopper(saleGross) or nil
+	local saleGross, saleSrc = self:GetMarketEstimateCopper(c.outputItemID, c.tsmMarket, c.fallbackTsm)
+	if c.vendorRecipe then
+		local vs = self:GetItemVendorSellCopper(c.outputItemID)
+		if vs and vs > 0 then
+			saleGross = vs
+			saleSrc = "Vendor sell"
+		end
+	end
+	saleGross, saleSrc = applyCraftEvalLedgerSale(self, c, saleGross, saleSrc)
+	c.saleGross, c.saleSrc = saleGross, saleSrc
+	c.saleNet = saleGross and self:ApplyAhCutToSaleCopper(saleGross) or nil
 end
 
 local function resolveCraftEvalConcentration(c)
-    c.concCost = tonumber(c.crafting and c.crafting.concentrationCost) or nil
-    if c.qualityReachable == false and c.qualityIndex > c.baseQ then
-        c.concentrationNeeded, c.concentrationSkillShortfall =
-            estimateConcentrationNeeded(c.crafting, c.maxQ, c.baseQ, c.qualityIndex, c.plan)
-    end
+	c.concCost = tonumber(c.crafting and c.crafting.concentrationCost) or nil
+	if c.qualityReachable == false and c.qualityIndex > c.baseQ then
+		c.concentrationNeeded, c.concentrationSkillShortfall =
+			estimateConcentrationNeeded(c.crafting, c.maxQ, c.baseQ, c.qualityIndex, c.plan)
+	end
 end
 
 local function craftEvalProfitBlocked(c)
-    if c.matMissingPrice or not c.saleGross then
-        return true
-    end
-    return c.qualityReachable == false and (c.scenario ~= "concentration" or not c.concentrationNeeded)
+	if c.matMissingPrice or not c.saleGross then
+		return true
+	end
+	return c.qualityReachable == false and (c.scenario ~= "concentration" or not c.concentrationNeeded)
 end
 
 local function resolveCraftEvalProfit(c)
-    c.matPerCraft = c.fullMatCost or c.oopMatCost
-    local matPerCraft = c.matPerCraft
-    local profit = (c.saleNet and matPerCraft) and (c.saleNet * c.outQty - matPerCraft) or nil
-    resolveCraftEvalConcentration(c)
-    if craftEvalProfitBlocked(c) then
-        profit = nil
-    end
-    c.profit = profit
-    c.roi = (profit and matPerCraft and matPerCraft > 0) and (profit / matPerCraft) * 100 or nil
+	c.matPerCraft = c.fullMatCost or c.oopMatCost
+	local matPerCraft = c.matPerCraft
+	local profit = (c.saleNet and matPerCraft) and (c.saleNet * c.outQty - matPerCraft) or nil
+	resolveCraftEvalConcentration(c)
+	if craftEvalProfitBlocked(c) then
+		profit = nil
+	end
+	c.profit = profit
+	c.roi = (profit and matPerCraft and matPerCraft > 0) and (profit / matPerCraft) * 100 or nil
 end
 
 local function craftEvalBaseSaleCopper(self, c)
-    local baseItem = select(1, outputItemForQuality(c.recipeData, c.baseQ))
-    if not baseItem then
-        return nil
-    end
-    local baseSale
-    if c.vendorRecipe then
-        baseSale = self:GetItemVendorSellCopper(baseItem)
-    end
-    if not baseSale then
-        baseSale = select(1, self:GetMarketEstimateCopper(baseItem, c.tsmMarket, c.fallbackTsm))
-    end
-    return baseSale
+	local baseItem = select(1, outputItemForQuality(c.recipeData, c.baseQ))
+	if not baseItem then
+		return nil
+	end
+	local baseSale
+	if c.vendorRecipe then
+		baseSale = self:GetItemVendorSellCopper(baseItem)
+	end
+	if not baseSale then
+		baseSale = select(1, self:GetMarketEstimateCopper(baseItem, c.tsmMarket, c.fallbackTsm))
+	end
+	return baseSale
 end
 
 --- Extra profit of the upgraded rank per concentration point (concentration scenario only).
 local function craftEvalProfitPerConcentration(self, c)
-    if not (c.scenario == "concentration" and c.concCost and c.concCost > 0 and c.baseQ < c.maxQ) then
-        return nil
-    end
-    local baseSale = craftEvalBaseSaleCopper(self, c)
-    local baseNet = baseSale and self:ApplyAhCutToSaleCopper(baseSale)
-    local _, missConc = self:ComputeMatCostForReagentPlan(cloneReagentPlan(c.plan), c.saleUnitFn, c.sourceMode, c.inventoryFn)
-    if not missConc and c.saleNet and baseNet then
-        local dProfit = (c.saleNet - baseNet) * c.outQty
-        return dProfit / c.concCost
-    end
-    return nil
+	if not (c.scenario == "concentration" and c.concCost and c.concCost > 0 and c.baseQ < c.maxQ) then
+		return nil
+	end
+	local baseSale = craftEvalBaseSaleCopper(self, c)
+	local baseNet = baseSale and self:ApplyAhCutToSaleCopper(baseSale)
+	local _, missConc = self:ComputeMatCostForReagentPlan(cloneReagentPlan(c.plan), c.saleUnitFn, c.sourceMode, c.inventoryFn)
+	if not missConc and c.saleNet and baseNet then
+		local dProfit = (c.saleNet - baseNet) * c.outQty
+		return dProfit / c.concCost
+	end
+	return nil
 end
 
 --- First required_target entry's item and auto flag (only when the plan has one).
 local function craftEvalRequiredTarget(plan, usesRequiredTarget)
-    if not usesRequiredTarget then
-        return nil, false
-    end
-    for _, entry in ipairs(plan or {}) do
-        if entry.slotClass == "required_target" then
-            return tonumber(entry.itemID), entry.autoSelectedTarget == true
-        end
-    end
-    return nil, false
+	if not usesRequiredTarget then
+		return nil, false
+	end
+	for _, entry in ipairs(plan or {}) do
+		if entry.slotClass == "required_target" then
+			return tonumber(entry.itemID), entry.autoSelectedTarget == true
+		end
+	end
+	return nil, false
 end
 
 local function buildCraftEvalResult(self, c)
-    local recipeID, recipeData, professionData, plan = c.recipeID, c.recipeData, c.professionData, c.plan
-    local ck = c.characterKey
-    local exportRecipeID = self:GetRecipeExportID(recipeData) or tonumber(recipeID) or recipeID
-    local recipeSpellID = self:GetRecipeSpellID(recipeData) or tonumber(recipeID) or recipeID
-    local usesTarget = c.usesRequiredTarget
-    local targetItemID, targetAuto = craftEvalRequiredTarget(plan, usesTarget)
-    return {
-        characterKey = ck, recipeID = exportRecipeID, recipeSpellID = recipeSpellID,
-        recipeName = recipeDisplayName(recipeData),
-        professionName = professionData.professionName, skillLineID = professionData.skillLineID,
-        expansionTag = self:GetCraftExpansionTag(professionData, recipeData, c.outputItemID),
-        learned = c.learned, qualityIndex = c.qualityIndex, baseQualityIndex = c.baseQ,
-        scenarioBaseQualityIndex = c.defaultScenarioQ, qualityReachable = c.qualityReachable ~= false,
-        outputItemID = c.outputItemID, outputQty = c.outQty, outputIcon = c.outputDesc and c.outputDesc.icon,
-        matCost = c.matPerCraft, outOfPocketMatCost = c.oopMatCost, fullMatCost = c.fullMatCost,
-        matMissingPrice = c.matMissingPrice, saleGross = c.saleGross, saleNet = c.saleNet, saleSource = c.saleSrc,
-        profit = c.profit, roi = c.roi, coverage = c.coverage, canCraftNow = c.canCraftNow, reagentPlan = plan,
-        concentrationCost = c.concCost, concentrationNeeded = c.concentrationNeeded,
-        concentrationSkillShortfall = c.concentrationSkillShortfall, profitPerConcentration = c.profitPerConc,
-        categoryID = recipeCategoryId(recipeData), categoryName = recipeCategoryName(recipeData, professionData),
-        scanAt = self.db.characters[ck] and self.db.characters[ck].scanFinishedAt,
-        enchantUsesVellum = usesTarget, requiredTargetReagent = usesTarget,
-        requiredTargetReagentItemID = targetItemID, requiredTargetReagentAuto = targetAuto,
-        liveSelectedPlan = reagentPlanContainsLiveSelection(plan),
-    }
+	local recipeID, recipeData, professionData, plan = c.recipeID, c.recipeData, c.professionData, c.plan
+	local ck = c.characterKey
+	local exportRecipeID = self:GetRecipeExportID(recipeData) or tonumber(recipeID) or recipeID
+	local recipeSpellID = self:GetRecipeSpellID(recipeData) or tonumber(recipeID) or recipeID
+	local usesTarget = c.usesRequiredTarget
+	local targetItemID, targetAuto = craftEvalRequiredTarget(plan, usesTarget)
+	return {
+		characterKey = ck, recipeID = exportRecipeID, recipeSpellID = recipeSpellID,
+		recipeName = recipeDisplayName(recipeData),
+		professionName = professionData.professionName, skillLineID = professionData.skillLineID,
+		expansionTag = self:GetCraftExpansionTag(professionData, recipeData, c.outputItemID),
+		learned = c.learned, qualityIndex = c.qualityIndex, baseQualityIndex = c.baseQ,
+		scenarioBaseQualityIndex = c.defaultScenarioQ, qualityReachable = c.qualityReachable ~= false,
+		outputItemID = c.outputItemID, outputQty = c.outQty, outputIcon = c.outputDesc and c.outputDesc.icon,
+		matCost = c.matPerCraft, outOfPocketMatCost = c.oopMatCost, fullMatCost = c.fullMatCost,
+		matMissingPrice = c.matMissingPrice, saleGross = c.saleGross, saleNet = c.saleNet, saleSource = c.saleSrc,
+		profit = c.profit, roi = c.roi, coverage = c.coverage, canCraftNow = c.canCraftNow, reagentPlan = plan,
+		concentrationCost = c.concCost, concentrationNeeded = c.concentrationNeeded,
+		concentrationSkillShortfall = c.concentrationSkillShortfall, profitPerConcentration = c.profitPerConc,
+		categoryID = recipeCategoryId(recipeData), categoryName = recipeCategoryName(recipeData, professionData),
+		scanAt = self.db.characters[ck] and self.db.characters[ck].scanFinishedAt,
+		enchantUsesVellum = usesTarget, requiredTargetReagent = usesTarget,
+		requiredTargetReagentItemID = targetItemID, requiredTargetReagentAuto = targetAuto,
+		liveSelectedPlan = reagentPlanContainsLiveSelection(plan),
+	}
 end
 
 --- Evaluate one character's learned recipe for a specific quality target.
 function AuctionHelper:EvaluateCraftScenario(characterKey, professionData, recipeID, recipeData, opts)
-    opts = opts or {}
-    local c = {
-        characterKey = characterKey, professionData = professionData, recipeID = recipeID, recipeData = recipeData,
-        opts = opts, scenario = opts.scenario or "default", sourceMode = opts.sourceMode or "owned_first",
-    }
-    resolveCraftEvalQuality(self, c)
-    if not resolveCraftEvalOutputItem(self, c) then
-        return nil
-    end
-    c.vendorRecipe = self:ProfessionRecipeIsVendorSourced(recipeID, recipeData)
-    c.outputDesc = self:ResolveItemDescriptor(c.outputItemID)
-    bindCraftEvalPricing(self, c)
-    if not resolveCraftEvalPlan(self, c) then
-        return nil
-    end
-    c.oopMatCost, c.matMissingPrice, c.coverage, c.fullMatCost =
-        self:ComputeMatCostForReagentPlan(c.plan, c.costUnitFn, c.sourceMode, c.inventoryFn)
-    c.outQty = math.max(1, self:GetRecipeOutputQuantityForCost(recipeData))
-    resolveCraftEvalSale(self, c)
-    resolveCraftEvalProfit(c)
-    c.profitPerConc = craftEvalProfitPerConcentration(self, c)
-    c.canCraftNow = c.learned and c.qualityReachable ~= false and self:ReagentPlanMeetsInventory(c.plan, c.inventoryFn)
-    return buildCraftEvalResult(self, c)
+	opts = opts or {}
+	local c = {
+		characterKey = characterKey, professionData = professionData, recipeID = recipeID, recipeData = recipeData,
+		opts = opts, scenario = opts.scenario or "default", sourceMode = opts.sourceMode or "owned_first",
+	}
+	resolveCraftEvalQuality(self, c)
+	if not resolveCraftEvalOutputItem(self, c) then
+		return nil
+	end
+	c.vendorRecipe = self:ProfessionRecipeIsVendorSourced(recipeID, recipeData)
+	c.outputDesc = self:ResolveItemDescriptor(c.outputItemID)
+	bindCraftEvalPricing(self, c)
+	if not resolveCraftEvalPlan(self, c) then
+		return nil
+	end
+	c.oopMatCost, c.matMissingPrice, c.coverage, c.fullMatCost =
+		self:ComputeMatCostForReagentPlan(c.plan, c.costUnitFn, c.sourceMode, c.inventoryFn)
+	c.outQty = math.max(1, self:GetRecipeOutputQuantityForCost(recipeData))
+	resolveCraftEvalSale(self, c)
+	resolveCraftEvalProfit(c)
+	c.profitPerConc = craftEvalProfitPerConcentration(self, c)
+	c.canCraftNow = c.learned and c.qualityReachable ~= false and self:ReagentPlanMeetsInventory(c.plan, c.inventoryFn)
+	return buildCraftEvalResult(self, c)
 end
 
 -- Prefer OrderView schematic when Crafting Orders tab is showing an order.
@@ -2336,9 +2336,7 @@ function AuctionHelper:EvaluateSelectedProfessionRecipe()
 end
 
 --- Build an eval context for shopping/queue for a recipe (forces Enchanting Vellum for enchants).
---- @param recipeID number|nil
---- @param opts table|nil { skillLineID, skipSelect }
---- @return table|nil, string reason
+--- `opts`: { skillLineID, skipSelect }. Returns the context and "ok", or nil and a reason.
 function AuctionHelper:BuildProfessionRecipeQueueContext(recipeID, opts)
 	self:InitDB()
 	opts = opts or {}
@@ -2407,7 +2405,7 @@ function AuctionHelper:BuildProfessionRecipeQueueContext(recipeID, opts)
 		end
 	end
 
-	-- Belt-and-suspenders: shopping always assumes vellum for enchants.
+	-- Shopping always assumes vellum for enchants, whichever eval the plan came from.
 	if craftIsEnchantRecipe(professionData, recipeData) and type(eval.reagentPlan) == "table" then
 		ensureEnchantingVellumInPlan(eval.reagentPlan, professionData, recipeData, true)
 		eval.requiredTargetReagent = true
@@ -2442,9 +2440,7 @@ end
 
 --- Add the open (or given) profession recipe to the craft/shopping queue.
 --- Enchant recipes always queue Enchanting Vellum as the target reagent.
---- @param quantity number|nil
---- @param opts table|nil { recipeID, skillLineID, quiet }
---- @return string|nil queueKey, string|nil err
+--- `opts`: { recipeID, skillLineID, quiet }. Returns the queue key, or nil and an error.
 function AuctionHelper:QueueOpenProfessionRecipe(quantity, opts)
 	opts = opts or {}
 	quantity = math.max(1, math.floor(tonumber(quantity) or 1))

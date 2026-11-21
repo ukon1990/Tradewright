@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Gold changes by source (E10 F80). Every change of the character's gold is filed under vendor,
+-- Gold changes by source. Every change of the character's gold is filed under vendor,
 -- quest, loot, auction, mail, trade or other, from the windows that were open and the events
 -- around it, and added to per-day totals in `ledger.income[characterKey][day][source]`.
 -- This only listens; it never acts for the player.
@@ -21,7 +21,7 @@ local WINDOW_EVENTS = {
 -- One-off events: event -> moment.
 local MOMENT_EVENTS = { QUEST_TURNED_IN = "quest", CHAT_MSG_MONEY = "loot" }
 
--- The player's own "You create:" and "You receive loot:" lines (F81), in the client's language.
+-- The player's own "You create:" and "You receive loot:" lines, in the client's language.
 -- The "x%d" forms come first so a stack is not read as a single item.
 local ITEM_MESSAGES = {}
 for _, entry in ipairs({

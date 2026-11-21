@@ -2,7 +2,7 @@ local _, AuctionHelper = ...
 
 -- Holdings: everything each character carries and banks, and its gold, saved per character in the
 -- inventory database (AuctionHelperInventoryDB.holdings). Unlike inventorySnapshot, which only
--- counts items of scanned recipes, this counts every item. The bags module reads it (E11 F94).
+-- counts items of scanned recipes, this counts every item. The bags module reads it.
 --
 -- holdings[characterKey] = { name, seenAt, money, bags = { [itemID] = count },
 --                            bank = { [itemID] = count }, bankSeenAt }

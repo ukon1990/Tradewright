@@ -1,17 +1,18 @@
 local _, AuctionHelper = ...
 
---- Plain-text sections for the in-game Documentation tab (see docs/EXPORT_PACKAGE_FORMAT.md for the package decode reference).
+--- Plain-text sections for the in-game Documentation tab.
 AuctionHelper.DOCUMENTATION_SECTIONS = {
 	{
 		id = "overview",
 		title = "Overview",
 		body = [=[EXPORT FORMAT
-AuctionHelper exports are compact machine-readable packages, not JSON.
-
-Current package format:
-• prefix: AHCBOR1:
-• payload encoding: CBOR + Deflate + Base64
-• transport: one compact string for SavedVariables copy/paste or script ingestion
+AuctionHelper exports are machine-readable packages, not JSON: one string for copy/paste or SavedVariables.
+The form depends on the client:
+• WoW Forever (the client has no CBOR encoder): prefix AHLUA1: then plain Lua text, "return { … }".
+  Strip the prefix and load the rest as a Lua chunk to get the table.
+• Retail: prefix AHCBOR1: then CBOR + Deflate + Base64.
+  Strip the prefix, Base64 decode, Deflate decompress, then CBOR decode.
+meta.format ("AHLUA1" or "AHCBOR1") and meta.encoding ("lua-text" or "cbor+deflate+base64") name the form.
 
 Every exported package still originates from a table with top-level meta fields such as:
 • scope — which slice was exported
@@ -28,7 +29,8 @@ Dashboard: use "All characters (account)" in the sidebar for an account roster a
 
 For a fresh complete current-character package, use "Fresh scan + full dump" on the Export tab or `/auctionhelper full`. This enables specialization capture, scans every learned profession, then exports recipes plus the full known/unknown specialization definitions, descriptions, and current allocations.
 
-Repository docs: Interface/AddOns/AuctionHelper/docs/EXPORT_PACKAGE_FORMAT.md — decode flow, compact scope field legends, paging reconstruction, and SavedVariables notes. Strip the AHCBOR1 prefix, Base64 decode, Deflate decompress, then CBOR decode.]=],
+The source repository's docs/EXPORT_PACKAGE_FORMAT.md (not installed with the addon) has the compact scope
+field legends, paging reconstruction and SavedVariables notes.]=],
 	},
 	{
 		id = "scopes",
@@ -128,7 +130,7 @@ Current AH comes from your auction house scans. With TSM loaded, prices use your
 		id = "savedvars_paging",
 		title = "SavedVariables & paging",
 		body = [=[LAST EXPORT (AuctionHelperLastExport)
-After export, if under the byte limit, the full compact package string is stored for the next /reload or logout. Fields: savedAt, byteLength, scope, optional characterKey and professionIdentifier, format, encoding, module, and payload.
+After export, if under the byte limit, the full package string is stored for the next /reload or logout. Fields: savedAt, byteLength, scope, optional characterKey and professionIdentifier, format, encoding, module, and payload.
 
 File: WTF/Account/<account>/SavedVariables/AuctionHelper.lua.
 

@@ -2294,7 +2294,7 @@ local function searchClassicAuctionFrame(itemName)
 	return pcall(AuctionFrameBrowse_Search) == true
 end
 
---- Show an item's buy page in the open auction house (F30). Searches only; buying stays a player click.
+--- Show an item's buy page in the open auction house. Searches only; buying stays a player click.
 function AuctionHelper:OpenItemInAuctionHouse(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID or not self:IsAuctionHouseFrameOpen() then

@@ -10,11 +10,11 @@ local function trim(s)
 end
 
 local function isPlaceholderItemLabel(s)
-    local t = trim(s)
-    if t == "" or t == "?" then
-        return true
-    end
-    return string.match(t, "^#%d+$") ~= nil
+	local t = trim(s)
+	if t == "" or t == "?" then
+		return true
+	end
+	return string.match(t, "^#%d+$") ~= nil
 end
 
 local GAP = 12

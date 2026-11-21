@@ -269,7 +269,7 @@ local function applyDebugDefaults(debug, general)
 	if general.persistLastExport == nil then general.persistLastExport = true end
 end
 
--- The profit floor moved from whole gold to copper (F55); keep a floor the player already picked.
+-- The profit floor moved from whole gold to copper; keep a floor the player already picked.
 local function migrateMinProfit(st)
 	local opportunities = st.opportunities
 	if type(opportunities) == "table" and opportunities.minProfitCopper == nil and tonumber(opportunities.minProfitGold) then

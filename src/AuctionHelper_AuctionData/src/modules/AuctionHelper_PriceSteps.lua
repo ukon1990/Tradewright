@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Cheapest price steps of each item, kept from a full scan (F41).
+-- Cheapest price steps of each item, kept from a full scan.
 -- `auction.priceSteps[itemID] = { t = seenAt, l = { price1, qty1, price2, qty2, … } }`, cheapest first.
 -- Full scans store one entry per item ID, so the steps are keyed the same way.
 

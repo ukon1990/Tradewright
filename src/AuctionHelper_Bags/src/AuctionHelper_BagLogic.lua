@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Pure bag helpers (E11): which category an item belongs to, how the slots are grouped and laid
+-- Pure bag helpers: which category an item belongs to, how the slots are grouped and laid
 -- out, and the totals. No WoW API here, so the offline tests can load this file on its own.
 local BagLogic = {}
 AuctionHelper.BagLogic = BagLogic
@@ -261,7 +261,7 @@ function BagLogic.BestLootSwap(loot, drop)
 	return best
 end
 
--- Selecting stacks and acting on several at once (E12 F100).
+-- Selecting stacks and acting on several at once.
 
 function BagLogic.SlotKey(bag, slot)
 	return bag * 1000 + slot

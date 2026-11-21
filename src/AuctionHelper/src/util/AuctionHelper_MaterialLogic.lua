@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
---- Pure helpers for choosing the cheapest way to get a crafting material (F60). No WoW API.
+--- Pure helpers for choosing the cheapest way to get a crafting material. No WoW API.
 local MaterialLogic = {}
 AuctionHelper.MaterialLogic = MaterialLogic
 

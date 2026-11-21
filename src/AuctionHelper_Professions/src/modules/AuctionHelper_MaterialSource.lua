@@ -1,7 +1,7 @@
 local _, AuctionHelper = ...
 
 -- Cheapest way to get a crafting material: buy it, or craft it with a recipe one of your characters
--- knows (F60). Vendor prices stay with the engine's own rule for vendor-sourced reagents.
+-- knows. Vendor prices stay with the engine's own rule for vendor-sourced reagents.
 --
 -- The craft cost comes from the crafts engine's own last finished evaluation, so it already follows the
 -- engine's rules (quality, optional reagents). That makes it one evaluation behind: a material that is

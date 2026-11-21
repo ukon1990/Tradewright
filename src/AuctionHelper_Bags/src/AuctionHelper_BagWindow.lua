@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Bag window (E11 F92, F94; E12 F101): header, character tabs, search, category headings with item
+-- Bag window: header, character tabs, search, category headings with item
 -- slots (or the item log), an optional bag row and a footer. The logged-in character's bags are live, and with the
 -- bank open so are its bank and the warband bank; everything else is a read-only list from the
 -- holdings in the inventory database.

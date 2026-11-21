@@ -1,6 +1,6 @@
 local addonName, AuctionHelper = ...
 
--- Farm window (E09 F70): a small movable window that shows the run in progress. It appears when a run
+-- Farm window: a small movable window that shows the run in progress. It appears when a run
 -- starts and hides when the run stops; `/ahfarm` toggles it.
 
 local PAD = 10

@@ -1,5 +1,16 @@
 local _, AuctionHelper = ...
 
+-- Item history in SavedVariables, `db.itemHistory[tostring(itemID)]`, one bucket per hour keyed by the
+-- hour's start (Unix time). Bucket fields use one-letter keys to keep the file small:
+--   market / crafting buckets (copper per unit):
+--     c = count of observations, s = sum of the values, l = last value,
+--     n = min (lowest value), x = max (highest value), o = source label of the last observation
+--   quantity buckets: c = { [characterKey] = row }, one row per character:
+--     b = bags, k = bank, w = warband bank, t = total, a = when it was seen (Unix time)
+-- Older saved data used the long names (count, sum, last, min, max, source, perChar, bags, bank,
+-- warband, total, at); readers accept both and writers convert to the short keys.
+-- `db.walletHistory` keeps the long names (count, sum, last, min, max) and is not compacted.
+
 local RANGE_TO_SECONDS = {
 	["24h"] = 24 * 60 * 60,
 	["7d"] = 7 * 24 * 60 * 60,
@@ -20,6 +31,7 @@ local function trimHistoryBuckets(bucketMap, keepAfter)
 	end
 end
 
+-- A bucket's average is sum / count; a bucket without observations falls back to its last value.
 local function sortedBucketList(bucketMap, cutoff)
 	local list = {}
 	for key, bucket in pairs(bucketMap or {}) do
@@ -56,6 +68,8 @@ function AuctionHelper:GetItemHistoryRetentionSeconds()
 	return days * 24 * 60 * 60
 end
 
+-- Over the hour buckets of a range: average of the bucket averages, the latest last value, and
+-- change = latest minus the first bucket's average (nil with fewer than two buckets).
 local function summarizeSeries(list)
 	local total = 0
 	local count = 0
@@ -84,6 +98,7 @@ local function isCharacterSelectionEmpty(selection)
 	return type(selection) ~= "table" or next(selection) == nil
 end
 
+-- No selection (nil or empty) means every character.
 local function isCharacterSelected(selection, characterKey)
 	if isCharacterSelectionEmpty(selection) then
 		return true
@@ -155,6 +170,7 @@ function AuctionHelper:GetItemCraftQualityRank(itemID, selectedCharacters, rankI
 								end
 							end
 						end
+						-- A primary output that is not among the quality variants has no tiers: rank 1.
 						if tonumber(self:RecipeOutputsPrimaryItemId(outputs)) == itemID then
 							return 1
 						end
@@ -258,6 +274,8 @@ function AuctionHelper:EnsureItemHistory(itemID)
 	return row
 end
 
+-- Drops buckets older than the retention setting, rewrites the rest with the short keys (legend at
+-- the top of the file) and drops empty buckets.
 function AuctionHelper:CompactItemHistoryStorage()
 	local cutoff = time() - self:GetItemHistoryRetentionSeconds()
 	for itemKey, row in pairs(self.db.itemHistory or {}) do
@@ -320,6 +338,8 @@ function AuctionHelper:CompactItemHistoryStorage()
 	end
 end
 
+-- The same value from the same source as the latest one is skipped: every inventory redraw records
+-- the current price again, so only changes are counted.
 local function historyObservationIsRedundant(store, value, source)
 	local latest = store and store.latest
 	if not latest then
@@ -354,18 +374,9 @@ function AuctionHelper:RecordItemHistoryObservation(itemID, historyKey, value, s
 	bucket.n = bucket.n and math.min(bucket.n, n) or bucket.min and math.min(bucket.min, n) or n
 	bucket.x = bucket.x and math.max(bucket.x, n) or bucket.max and math.max(bucket.max, n) or n
 	bucket.o = source or bucket.o or bucket.source
-	bucket.count = nil
-	bucket.sum = nil
-	bucket.last = nil
-	bucket.min = nil
-	bucket.max = nil
-	bucket.source = nil
+	bucket.count, bucket.sum, bucket.last, bucket.min, bucket.max, bucket.source = nil, nil, nil, nil, nil, nil
 	store.buckets[tostring(bucketAt)] = bucket
-	store.latest = {
-		value = n,
-		at = observedAt,
-		source = source,
-	}
+	store.latest = { value = n, at = observedAt, source = source }
 	trimHistoryBuckets(store.buckets, time() - self:GetItemHistoryRetentionSeconds())
 end
 
@@ -446,18 +457,14 @@ function AuctionHelper:GetItemRecipeRelationships(itemID, selectedCharacters)
 		end
 	end
 
-	table.sort(relationships.producedBy, function(left, right)
+	local function byProfessionThenRecipe(left, right)
 		if left.professionName == right.professionName then
 			return tostring(left.recipeName) < tostring(right.recipeName)
 		end
 		return tostring(left.professionName) < tostring(right.professionName)
-	end)
-	table.sort(relationships.usedBy, function(left, right)
-		if left.professionName == right.professionName then
-			return tostring(left.recipeName) < tostring(right.recipeName)
-		end
-		return tostring(left.professionName) < tostring(right.professionName)
-	end)
+	end
+	table.sort(relationships.producedBy, byProfessionThenRecipe)
+	table.sort(relationships.usedBy, byProfessionThenRecipe)
 
 	return relationships
 end
@@ -641,17 +648,14 @@ function AuctionHelper:RecordItemQuantityObservation(itemID, characterKey, bags,
 		t = tonumber(total) or 0,
 		a = observedAt,
 	}
+	-- Unchanged counts only move the "latest" markers; a bucket is written only when something changed.
 	local lastRow = store.latestByChar[characterKey]
 	if type(lastRow) == "table"
 		and quantityRowValue(lastRow, "b", "bags") == currentRow.b
 		and quantityRowValue(lastRow, "k", "bank") == currentRow.k
 		and quantityRowValue(lastRow, "w", "warband") == currentRow.w
 		and quantityRowValue(lastRow, "t", "total") == currentRow.t then
-		store.latest = {
-			value = currentRow.t,
-			at = observedAt,
-			characterKey = characterKey,
-		}
+		store.latest = { value = currentRow.t, at = observedAt, characterKey = characterKey }
 		store.latestByChar[characterKey] = currentRow
 		return
 	end
@@ -661,11 +665,7 @@ function AuctionHelper:RecordItemQuantityObservation(itemID, characterKey, bags,
 	bucket.c[characterKey] = currentRow
 	bucket.perChar = nil
 	store.buckets[tostring(bucketAt)] = bucket
-	store.latest = {
-		value = currentRow.t,
-		at = observedAt,
-		characterKey = characterKey,
-	}
+	store.latest = { value = currentRow.t, at = observedAt, characterKey = characterKey }
 	store.latestByChar[characterKey] = currentRow
 	trimHistoryBuckets(store.buckets, time() - self:GetItemHistoryRetentionSeconds())
 end
@@ -781,19 +781,14 @@ function AuctionHelper:RecordWalletObservation(characterKey, copper, observedAt)
 	store.buckets = store.buckets or {}
 	observedAt = tonumber(observedAt) or time()
 	local bucketAt = observedAt - (observedAt % 3600)
-	local bucket = store.buckets[tostring(bucketAt)] or {
-		count = 0,
-		sum = 0,
-		last = nil,
-		min = nil,
-		max = nil,
-	}
+	local bucket = store.buckets[tostring(bucketAt)] or {}
 	bucket.count = (bucket.count or 0) + 1
 	bucket.sum = (bucket.sum or 0) + n
 	bucket.last = n
 	bucket.min = bucket.min and math.min(bucket.min, n) or n
 	bucket.max = bucket.max and math.max(bucket.max, n) or n
 	store.buckets[tostring(bucketAt)] = bucket
+	-- Gold history keeps a year regardless of the item-history retention setting.
 	trimHistoryBuckets(store.buckets, time() - RANGE_TO_SECONDS["1y"])
 	self:NotifyWalletHistoryUpdate()
 end
@@ -833,15 +828,7 @@ function AuctionHelper:RecordQuantityObservationsFromSnapshot(characterData)
 	for itemKey, entry in pairs(snap.items) do
 		local itemID = tonumber(itemKey)
 		if itemID then
-			self:RecordItemQuantityObservation(
-				itemID,
-				key,
-				entry.bags,
-				entry.bank,
-				entry.warband,
-				entry.total,
-				at
-			)
+			self:RecordItemQuantityObservation(itemID, key, entry.bags, entry.bank, entry.warband, entry.total, at)
 		end
 	end
 end
@@ -903,6 +890,8 @@ function AuctionHelper:WalletBalanceSeriesToEarned(balanceSeries)
 	return out
 end
 
+-- Account gold per hour: at each hour any character was seen, the sum of every character's last
+-- known balance at or before that hour (a character not seen yet adds nothing).
 function AuctionHelper:BuildAccountWalletBalanceSeries(rangeKey)
 	self:InitDB()
 	local cutoff = self:GetHistoryRangeCutoff(rangeKey)

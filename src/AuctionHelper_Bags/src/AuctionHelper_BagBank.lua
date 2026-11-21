@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- The bank in the bag window (E12 F101). The game ends the bank session when its bank window
+-- The bank in the bag window. The game ends the bank session when its bank window
 -- hides, so with the setting on that window stays open and is only made invisible. Opening the
 -- bank then opens the bag window on its Bank view. Nothing is replaced: off gives the window back.
 

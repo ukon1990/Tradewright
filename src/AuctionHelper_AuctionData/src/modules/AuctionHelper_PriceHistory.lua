@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Daily price history and the usual price built from it (F40).
+-- Daily price history and the usual price built from it.
 -- `auction.history.daily[storageKey][dayTs] = { p, lo, hi, q, n }`; `auction.history.dailyThrough` is the
 -- start of the first day that has not been rolled up yet.
 

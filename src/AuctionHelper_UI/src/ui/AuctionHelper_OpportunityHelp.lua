@@ -1,6 +1,6 @@
 local AuctionHelper = select(2, ...)
 
--- Help for the Opportunities lists (F58): "How this list works" in the side pane with no row selected,
+-- Help for the Opportunities lists: "How this list works" in the side pane with no row selected,
 -- and an empty list's funnel, which names the rule that left nothing and the setting or step that fixes it.
 -- A step's `label` and `fix` are text or `function(pe, insights)`.
 

@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
---- Pure farm-run maths (E09). A run is `{ name, zone, startedAt, endedAt, pausedSeconds, pausedAt,
+--- Pure farm-run maths. A run is `{ name, zone, startedAt, endedAt, pausedSeconds, pausedAt,
 --- coin, vendorSold, items = { [itemID] = qty } }`. No WoW API.
 local FarmLogic = {}
 AuctionHelper.FarmLogic = FarmLogic

@@ -234,7 +234,7 @@ function FlipLogic.BuildSellNowRows(items, opts)
 	return rows
 end
 
--- ---------- How sure a row is: early prices (F56), where sales come from (F57) ----------
+-- ---------- How sure a row is: early prices, where sales come from ----------
 
 -- Fields about the data behind a row, copied from its candidate.
 local CARRIED = { "early", "usualDays", "usualLow", "usualHigh", "sellsSource", "sellsPairs", "sellsConfidence" }
@@ -262,7 +262,7 @@ function FlipLogic.CarryOver(rows, candidates)
 	return rows
 end
 
--- ---------- Why a list is empty (F58) ----------
+-- ---------- Why a list is empty ----------
 
 --- The flip funnel: how many items are left after each rule, from the candidate counts and the drops
 --- counted by `BuildFlipRows`. A list of `{ key, count }` in the order the rules apply.

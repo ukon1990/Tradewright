@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Bag row of the bag window (E11 F93): the backpack, the bags and the reagent bag as cells.
+-- Bag row of the bag window: the backpack, the bags and the reagent bag as cells.
 -- Hovering a bag lights its items; dropping a bag swaps it in; right-click lists replacements.
 -- The calls are the ones the game's own bag bar makes, so the game's rules apply.
 

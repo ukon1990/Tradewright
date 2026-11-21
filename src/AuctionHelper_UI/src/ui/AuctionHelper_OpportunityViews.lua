@@ -17,7 +17,7 @@ local function perDayText(pe, perDay)
 	return string.format("%.1f", perDay)
 end
 
--- "Sells a day", with a "?" when the estimate rests on few scan pairs or on own sales alone (F57).
+-- "Sells a day", with a "?" when the estimate rests on few scan pairs or on own sales alone.
 local function sellsColumn(pe, width)
 	return {
 		id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = width, sortable = true, defaultSort = "desc",
@@ -59,7 +59,7 @@ local function signedColumn(pe, label, field)
 	}
 end
 
--- An early row's second line starts with how few days its usual price rests on (F56).
+-- An early row's second line starts with how few days its usual price rests on.
 local function itemColumn(pe, detail)
 	return pe:CreateItemColumn({
 		label = "Item", defaultSort = "asc",
@@ -74,7 +74,7 @@ local function itemColumn(pe, detail)
 	})
 end
 
--- What the sales estimate cannot tell, when it rests on little (F57).
+-- What the sales estimate cannot tell, when it rests on little.
 local function sellsCaveat(row)
 	if row.sellsSource == "own" then
 		return " Only your own sales are known. Scan at least twice within a day to see the whole market."

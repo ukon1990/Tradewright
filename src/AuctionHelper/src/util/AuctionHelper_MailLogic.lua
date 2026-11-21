@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Pure mail helpers (F23, F24): what a character's surplus mail sends, and the rows of the review
+-- Pure mail helpers: what a character's surplus mail sends, and the rows of the review
 -- panel that shows and changes it. No WoW API here, so the offline tests can load this file alone.
 local MailLogic = {}
 AuctionHelper.MailLogic = MailLogic

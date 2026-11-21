@@ -4,9 +4,15 @@ AuctionHelper exports are not JSON.
 
 ## Wire format
 
-Each export is a single string:
+Each export is a single string in one of two forms, chosen by the client:
 
-`AHCBOR1:<base64>`
+- WoW Forever (no `C_EncodingUtil` CBOR encoder): `AHLUA1:return { ... }` — plain Lua text.
+  Strip the `AHLUA1:` prefix and load the rest as a Lua chunk; it returns the table.
+  `meta.format = "AHLUA1"`, `meta.encoding = "lua-text"`.
+- Retail: `AHCBOR1:<base64>`, described below.
+  `meta.format = "AHCBOR1"`, `meta.encoding = "cbor+deflate+base64"`.
+
+### AHCBOR1
 
 Where the payload is:
 1. CBOR-serialized Lua table

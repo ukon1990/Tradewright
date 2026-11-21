@@ -1,7 +1,7 @@
 local _, AuctionHelper = ...
 
--- Bag data (E11): reads the carried bags for the bag window, and turns the per-character holdings
--- of the inventory database (AuctionHelper_Holdings.lua) into items for the read-only tabs (F94).
+-- Bag data: reads the carried bags for the bag window, and turns the per-character holdings
+-- of the inventory database (AuctionHelper_Holdings.lua) into items for the read-only tabs.
 
 local BACKPACK = 0
 

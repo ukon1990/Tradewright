@@ -1,7 +1,7 @@
 local _, AuctionHelper = ...
 
 -- The price chart of the Market item view: the last 48 scanned hours, or 14 or 90 days of daily prices
--- with the usual price drawn as a flat line (F40).
+-- with the usual price drawn as a flat line.
 
 local DAY = 24 * 3600
 local RANGES = {

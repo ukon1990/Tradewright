@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Farm runs (E09 F70): while a run is active, the player's own loot, looted coin and vendor sales are
+-- Farm runs: while a run is active, the player's own loot, looted coin and vendor sales are
 -- recorded. This only listens to what the player does; it never moves, loots or sells for them.
 -- The run lives in `ledger.farm.current` so it survives a reload; saved runs go to `ledger.farm.farms`.
 

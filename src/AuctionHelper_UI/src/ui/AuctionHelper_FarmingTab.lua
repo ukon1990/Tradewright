@@ -1,6 +1,6 @@
 local AuctionHelper = select(2, ...)
 
--- Farming tab (E09 F71, F72): saved farms with their gold an hour when run and at today's prices,
+-- Farming tab: saved farms with their gold an hour when run and at today's prices,
 -- and the "What to farm" list from AuctionHelper_FarmTargets.lua.
 
 local FarmingTab = {}

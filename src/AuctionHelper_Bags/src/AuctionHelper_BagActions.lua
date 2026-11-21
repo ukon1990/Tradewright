@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Acting on one stack or several (E12 F102, F104): move to the bank, the warband bank or the bags,
+-- Acting on one stack or several: move to the bank, the warband bank or the bags,
 -- sell to a vendor, destroy. A move is the same two calls as dragging a stack to a free slot.
 -- Selling uses the item and so runs only while a merchant window is open. One stack per tick.
 

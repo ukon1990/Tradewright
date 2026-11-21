@@ -1,8 +1,8 @@
 local _, AuctionHelper = ...
 
--- Income (Overview → Income, E10 F82): where gold comes from and where it goes. Headline numbers,
+-- Income (Overview → Income): where gold comes from and where it goes. Headline numbers,
 -- gold in and out per day, one row per source, and the item types that earn at the auction house.
--- Sources come from the gold-change log (F80), the auction split from sale origins (F81).
+-- Sources come from the gold-change log, the auction split from sale origins.
 
 local GAP = 12
 local PAD = 10

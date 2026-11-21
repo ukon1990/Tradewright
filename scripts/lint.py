@@ -5,6 +5,8 @@ Checks:
   * luacheck (config: .luacheckrc) over all of src/  -> per-file warning counts
   * file length, function length, cyclomatic complexity and parameter count
     for hand-written Lua (src/**, excluding tests/ and generated data/)
+  * no Lua comment cites a feature or epic id (F12, E09) in src/** including tests/,
+    excluding generated data/; no baseline, any hit fails
 
 Existing debt is recorded in the baseline; the check fails only when something is
 new or got worse. Improvements are reported so the baseline can be tightened.
@@ -28,6 +30,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = ROOT / "scripts" / "lint-baseline.json"
+ID_FIXTURE = ROOT / "scripts" / "lint-fixtures" / "feature_id_comment.lua"
 
 # Limits (keep in sync with .agents/skills/wow-addon-issue-work/focus/code-quality.md)
 LIMITS = {"file_lines": 700, "lines": 40, "ccn": 10, "params": 5}
@@ -49,6 +52,7 @@ KEYWORDS = {
     "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while",
 }
 NAME_PARTS = {".", ":"}
+ISSUE_ID_RE = re.compile(r"\b[FE]\d{2,3}\b")
 
 
 def tokens(src: str):
@@ -58,6 +62,29 @@ def tokens(src: str):
         kind = "name" if m.group("name") else "op" if m.group("op") else None
         if kind:
             yield kind, m.group(0), bisect.bisect_left(newlines, m.start()) + 1
+
+
+def issue_id_comments(path: Path) -> list[tuple[int, str]]:
+    """Return (line, id) for every feature/epic id inside a comment of a Lua file."""
+    src = path.read_text(encoding="utf-8", errors="replace")
+    hits = []
+    for m in TOKEN_RE.finditer(src):
+        if m.group(0).startswith("--"):
+            for found in ISSUE_ID_RE.finditer(m.group(0)):
+                hits.append((src.count("\n", 0, m.start() + found.start()) + 1, found.group(0)))
+    return hits
+
+
+def issue_id_fails() -> list[str]:
+    """Comment ids in src/** (tests included, generated data/ excluded), plus a fixture self-check."""
+    if issue_id_comments(ID_FIXTURE) != [(2, "E09"), (2, "F70")]:
+        return [f"{rel(ID_FIXTURE)}: self-check failed - expected E09 and F70 on line 2 only"]
+    files = sorted(p for p in (ROOT / "src").rglob("*.lua") if "data" not in p.relative_to(ROOT).parts)
+    return [
+        f"{rel(path)}:{line}: comment cites feature/epic id {found} - the issue and commit carry it"
+        for path in files
+        for line, found in issue_id_comments(path)
+    ]
 
 
 def scan_functions(path: Path) -> list[dict]:
@@ -218,6 +245,7 @@ def main() -> int:
     base = json.loads(BASELINE.read_text(encoding="utf-8")) if BASELINE.exists() else {}
     base = {k: base.get(k, {}) for k in ("luacheck", "files", "functions")}
     fails, changed = compare(state, base, findings, records)
+    fails += issue_id_fails()
     warnings = sum(sum(c.values()) for c in state["luacheck"].values())
     nfuncs = sum(len(v) for v in state["functions"].values())
     print(

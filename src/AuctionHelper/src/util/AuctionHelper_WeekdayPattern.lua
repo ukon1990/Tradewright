@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
---- Weekday price pattern learned from an item's own daily history (F53). Pure, offline-testable.
+--- Weekday price pattern learned from an item's own daily history. Pure, offline-testable.
 --- Method: divide each day's price by the median of the 7 days centred on it, take the median ratio per
 --- weekday, and show the result only when the data supports it. No pattern ships with the addon.
 local WeekdayPattern = {}

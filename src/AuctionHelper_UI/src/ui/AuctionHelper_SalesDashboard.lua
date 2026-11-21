@@ -93,7 +93,7 @@ end
 
 local ORIGINS = { "crafted", "resold", "farmed", "unknown" }
 
--- "6 crafted, 4 farmed": where the item's sold units came from (E10 F81).
+-- "6 crafted, 4 farmed": where the item's sold units came from.
 local function originText(origins)
 	local parts = {}
 	for _, origin in ipairs(ORIGINS) do

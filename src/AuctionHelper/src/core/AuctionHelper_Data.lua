@@ -2423,7 +2423,7 @@ local SLASH_HELP_LINES = {
 		.. " | professions_compact | inventory | inventory_compact | auction_snapshot | auction_history | crafting_costs"
 		.. " | spec_catalog | meta | profession <id|name> | profession_recipes <id|name> | profession_talents <id|name>",
 	"Settings: spectree on|off | recipeoutput on|off | invbatch <n> (0 = sync snapshot). Auction: status|enable|disable|refresh [crafts]|dump.",
-	"Export: data is packed as AHCBOR1 (CBOR + Deflate + Base64). Full payload is written to AuctionHelperLastExport after /reload"
+	"Export: AHLUA1 (plain Lua text) on Forever, AHCBOR1 (CBOR + Deflate + Base64) on retail. Full payload is written to AuctionHelperLastExport after /reload"
 		.. " — see timing lines when debug is on.",
 }
 

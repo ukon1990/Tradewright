@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Recipe cooldowns (F62). Read from the client while a profession window is open and kept per character
+-- Recipe cooldowns. Read from the client while a profession window is open and kept per character
 -- in `db.characters[characterKey].recipeCooldowns[recipeID] = readyAt` (server time).
 -- A recipe is only known to have a cooldown once the client has reported one for it, so nothing is
 -- assumed about recipes that have never been on cooldown while the addon was watching.

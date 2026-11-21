@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- "Make room" button of the bag window (E11 F95): when no normal bag slot is free, it deletes the
+-- "Make room" button of the bag window: when no normal bag slot is free, it deletes the
 -- stack worth least, one stack per click. Junk goes on the first click; anything else must be
 -- clicked twice. The stack is picked again at the moment of the click, never from an old redraw.
 

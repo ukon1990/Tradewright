@@ -1,7 +1,8 @@
 local _, AuctionHelper = ...
 
 -- Who mails what to whom: the auction house / bank character ("seller") of each realm, and the
--- plans the mailbox panel sends. The decisions are pure functions in ForeverLogic.
+-- plans the mailbox panel sends. The decisions are pure functions, mostly in MailLogic (the seller
+-- choice and the return-to-seller plan are in ForeverLogic).
 
 -- WoW Forever has no realms: the second part of its character keys is a surname, so all of its
 -- characters are one group and share one auction house / bank character.
@@ -150,7 +151,7 @@ local function heldQuantities(pe, plan)
 	return held
 end
 
--- The surplus row, shown on every character but the seller even when nothing goes: its review rows (F24) with names
+-- The surplus row, shown on every character but the seller even when nothing goes: its review rows with names
 -- and prices, their summary, and the items that go.
 local function surplusDestination(pe, plan, bags, seller)
 	local rows = pe.MailLogic.BuildReviewRows(bags, characterStore(pe, "keepByCharacter"), heldQuantities(pe, plan),

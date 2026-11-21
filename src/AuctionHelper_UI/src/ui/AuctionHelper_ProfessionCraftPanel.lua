@@ -222,7 +222,7 @@ function AuctionHelper:UpdateProfessionPanelToggleButton(expanded)
 		toggle:Show()
 		toggle:SetText(expanded and "Hide panel" or "Show panel")
 	end
-	-- Legacy skinny side tab (kept hidden; toggle lives on the profession title bar).
+	-- The side tab stays hidden: the toggle lives on the profession title bar.
 	if panel.collapseTab then
 		panel.collapseTab:Hide()
 	end

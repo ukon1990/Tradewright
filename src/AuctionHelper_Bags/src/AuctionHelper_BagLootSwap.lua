@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Loot swap (E11 F95): when loot does not fit because the bags are full, and the loot is worth
+-- Loot swap: when loot does not fit because the bags are full, and the loot is worth
 -- more than the cheapest stack carried, a prompt offers to delete that stack and take the loot.
 -- Nothing is deleted without the player clicking Swap.
 

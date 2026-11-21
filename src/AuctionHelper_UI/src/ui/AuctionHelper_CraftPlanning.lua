@@ -1,6 +1,6 @@
 local AuctionHelper = select(2, ...)
 
--- Crafts tab columns for planning (F61, F62): sells a day, how many to make, and recipe cooldowns.
+-- Crafts tab columns for planning: sells a day, how many to make, and recipe cooldowns.
 
 -- A cooldown recipe can be made once when ready and not at all while waiting.
 local COOLDOWN_CAP = { ready = 1, waiting = 0 }

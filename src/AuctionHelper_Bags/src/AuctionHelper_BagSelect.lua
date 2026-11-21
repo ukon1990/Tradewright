@@ -1,6 +1,6 @@
 local _, AuctionHelper = ...
 
--- Selecting stacks in the bag window (E12 F103, F104). The slots are the game's item buttons and
+-- Selecting stacks in the bag window. The slots are the game's item buttons and
 -- must keep running the game's own click code, so nothing here touches them: a transparent catcher
 -- lies over the slots while Ctrl or Alt is held, or while something is selected, and takes the
 -- clicks. Click: select or unselect. Right-click: the actions menu.

@@ -35,7 +35,6 @@ function AuctionHelper:PersistDebugLine(category, title, line)
 	debugDb.lastWriteAt = time()
 end
 
---- @return boolean
 function AuctionHelper:IsDebugEnabled()
 	self:InitDB()
 	return self:GetSetting("debug.enabled", false) == true

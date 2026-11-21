@@ -104,13 +104,13 @@ local function openMarket(pe, row)
 	pe:OpenMarketItem(row.storageKey)
 end
 
--- F30: left click shows the item details window. Right click on a deal or mover opens its auction
+-- Left click shows the item details window. Right click on a deal or mover opens its auction
 -- house buy page while the auction house is open; otherwise (and always for owned items) Market.
 local function canBuyNow(pe, buyable)
 	return buyable and pe.IsAuctionHouseFrameOpen and pe.OpenItemInAuctionHouse and pe:IsAuctionHouseFrameOpen() or false
 end
 
---- Click on an item row `{ itemID, storageKey }`: details window, auction house buy page or Market (F30).
+--- Click on an item row `{ itemID, storageKey }`: details window, auction house buy page or Market.
 --- `buyable` rows go to the auction house on right-click while it is open. Shared with other item lists.
 function AuctionHelper:HandleDealRowClick(row, button, buyable)
 	local target = self.ForeverLogic.ResolveDealRowClick(button, canBuyNow(self, buyable))

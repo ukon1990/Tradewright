@@ -55,7 +55,7 @@ function AuctionHelper:GetTSMItemString(itemID)
 	return nil
 end
 
---- @return number|nil copper
+--- Price in copper, or nil.
 function AuctionHelper:GetTSMCustomPriceCopper(customPriceStr, itemID)
 	if not customPriceStr or customPriceStr == "" or not itemID then
 		return nil
@@ -78,7 +78,7 @@ function AuctionHelper:GetTSMCustomPriceCopper(customPriceStr, itemID)
 	return n
 end
 
---- @return number|nil copper (per item auction scan estimate)
+--- Per-item auction scan estimate in copper, or nil.
 function AuctionHelper:GetAuctionatorPriceCopper(itemID)
 	if not itemID or not self:IsAuctionatorLoaded() then
 		return nil
