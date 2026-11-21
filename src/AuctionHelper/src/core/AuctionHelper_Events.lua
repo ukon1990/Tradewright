@@ -1,6 +1,13 @@
 local addonName, AuctionHelper = ...
 
-function AuctionHelper:ADDON_LOADED(loadedAddonName)
+-- Methods that live in another module (Bags, retail-only files) may be missing; skip them silently.
+local function callOptional(self, method, ...)
+	if self[method] then
+		self[method](self, ...)
+	end
+end
+
+local function onAddonLoaded(self, loadedAddonName)
 	local tracked = {
 		[addonName] = true,
 		["AuctionHelper_AuctionData"] = true,
@@ -27,7 +34,7 @@ function AuctionHelper:ADDON_LOADED(loadedAddonName)
 	end
 end
 
-function AuctionHelper:PLAYER_LOGIN()
+local function onPlayerLogin(self)
 	if self.RecordWalletObservation then
 		C_Timer.After(0.5, function()
 			AuctionHelper:RecordWalletObservation(AuctionHelper:GetCharacterKey(), GetMoney(), time())
@@ -42,87 +49,60 @@ function AuctionHelper:PLAYER_LOGIN()
 	self:EnsureMinimapButton()
 	self:RegisterBlizzardSettings()
 	self:InitProfessionCraftEconomyHooks()
-	if self.InitItemTooltipPricingHooks then
-		self:InitItemTooltipPricingHooks()
-	end
-	if self.InitCraftingOrdersFilters then
-		self:InitCraftingOrdersFilters()
-	end
-	if self.InitDynamicLayeringHooks then
-		self:InitDynamicLayeringHooks()
-	end
-	if self.InitMailPanelHooks then
-		self:InitMailPanelHooks()
-	end
-	self:PrintMessage("Loaded. /ah (or /auctionhelper) opens the main window. Exports are compact AuctionHelper packages and can be written to AuctionHelperLastExport on /reload.")
+	callOptional(self, "InitItemTooltipPricingHooks")
+	callOptional(self, "InitCraftingOrdersFilters")
+	callOptional(self, "InitDynamicLayeringHooks")
+	callOptional(self, "InitMailPanelHooks")
+	self:PrintMessage("Loaded. /ah (or /auctionhelper) opens the main window. Exports are compact AuctionHelper packages"
+		.. " and can be written to AuctionHelperLastExport on /reload.")
 end
 
-function AuctionHelper:TRADE_SKILL_SHOW()
-	if self.InitCraftingOrdersFilters then
-		self:InitCraftingOrdersFilters()
+local PROFESSION_PANEL_REFRESH_DELAY = 0.05
+
+local function refreshProfessionPanel(self, layeringReason)
+	callOptional(self, "ScheduleRefreshProfessionCraftEconomyPanel", PROFESSION_PANEL_REFRESH_DELAY)
+	if layeringReason then
+		callOptional(self, "UpdateDynamicPanelLayering", layeringReason)
 	end
+end
+
+local function onTradeSkillShow(self)
+	callOptional(self, "InitCraftingOrdersFilters")
 	self:TryScanCurrentProfession()
 	self:RememberOpenProfessionSkillLineID()
 	self:InitProfessionCraftEconomyHooks()
-	if self.ScheduleRefreshProfessionCraftEconomyPanel then
-		self:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
-	end
-	if self.RecordExternalFrameInteraction then
-		self:RecordExternalFrameInteraction("ProfessionsFrame", "trade_skill_show")
-	end
+	refreshProfessionPanel(self)
+	callOptional(self, "RecordExternalFrameInteraction", "ProfessionsFrame", "trade_skill_show")
 end
 
-function AuctionHelper:TRADE_SKILL_LIST_UPDATE()
+local function onTradeSkillListUpdate(self)
 	self:TryScanCurrentProfession()
 	self:RememberOpenProfessionSkillLineID()
-	if self.ScheduleRefreshProfessionCraftEconomyPanel then
-		self:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
-	end
-	if self.UpdateDynamicPanelLayering then
-		self:UpdateDynamicPanelLayering("trade_skill_list_update")
-	end
+	refreshProfessionPanel(self, "trade_skill_list_update")
 end
 
-function AuctionHelper:UPDATE_TRADESKILL_CAST_STOPPED()
-	if self.ScheduleRefreshProfessionCraftEconomyPanel then
-		self:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
-	end
-	if self.UpdateDynamicPanelLayering then
-		self:UpdateDynamicPanelLayering("trade_skill_cast_stopped")
-	end
+local function onTradeSkillCastStopped(self)
+	refreshProfessionPanel(self, "trade_skill_cast_stopped")
 end
 
-function AuctionHelper:TRADE_SKILL_CLOSE()
+local function onTradeSkillClose(self)
 	self:TryScanCurrentProfession()
 	self:ApplyLiveProfessionMergeOnWindowClose()
-	if self.ScheduleRefreshProfessionCraftEconomyPanel then
-		self:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
-	end
-	if self.UpdateDynamicPanelLayering then
-		self:UpdateDynamicPanelLayering("trade_skill_close")
-	end
+	refreshProfessionPanel(self, "trade_skill_close")
 end
 
-function AuctionHelper:PLAYER_INTERACTION_MANAGER_FRAME_SHOW(interactionType)
-	if self.UpdateDynamicPanelLayering then
-		self:UpdateDynamicPanelLayering("interaction_show_" .. tostring(interactionType))
-	end
+local function onInteractionFrameShow(self, interactionType)
+	callOptional(self, "UpdateDynamicPanelLayering", "interaction_show_" .. tostring(interactionType))
 end
 
-function AuctionHelper:PLAYER_INTERACTION_MANAGER_FRAME_HIDE(interactionType)
-	if self.UpdateDynamicPanelLayering then
-		self:UpdateDynamicPanelLayering("interaction_hide_" .. tostring(interactionType))
-	end
+local function onInteractionFrameHide(self, interactionType)
+	callOptional(self, "UpdateDynamicPanelLayering", "interaction_hide_" .. tostring(interactionType))
 end
 
-function AuctionHelper:BAG_UPDATE_DELAYED()
+local function onBagUpdateDelayed(self)
 	self:ScheduleLiveInventoryRefresh()
-	if self.ClearSettledAuctionCartPurchaseCredits then
-		self:ClearSettledAuctionCartPurchaseCredits()
-	end
-	if self.OnAuctionBagUpdate then
-		self:OnAuctionBagUpdate()
-	end
+	callOptional(self, "ClearSettledAuctionCartPurchaseCredits")
+	callOptional(self, "OnAuctionBagUpdate")
 	if self.RefreshAuctionHousePanel and self.IsAuctionHouseFrameOpen and self:IsAuctionHouseFrameOpen() then
 		self:RefreshAuctionHousePanel()
 	end
@@ -131,233 +111,96 @@ function AuctionHelper:BAG_UPDATE_DELAYED()
 	end
 end
 
-function AuctionHelper:BANKFRAME_OPENED()
-	self:ScheduleLiveInventoryRefresh()
+local function onAuctionCreated(self)
+	self:DebugLog("AH", "event: AUCTION_HOUSE_AUCTION_CREATED", { "source=auction_created" })
+	callOptional(self, "OnAuctionHouseAuctionCreated")
 end
 
-function AuctionHelper:AUCTION_HOUSE_SHOW()
-	if self.OnAuctionHouseShow then
-		self:OnAuctionHouseShow()
-	end
+local function onAuctionSold(self)
+	self:DebugLog("AH", "event: AUCTION_HOUSE_AUCTION_SOLD", { "source=auction_sold" })
+	callOptional(self, "OnAuctionHouseAuctionSold")
 end
 
-function AuctionHelper:AUCTION_HOUSE_CLOSED()
-	if self.OnAuctionHouseClosed then
-		self:OnAuctionHouseClosed()
-	end
-end
-
-function AuctionHelper:AUCTION_HOUSE_AUCTION_CREATED()
-	self:DebugLog("AH", "event: AUCTION_HOUSE_AUCTION_CREATED", {
-		"source=auction_created",
-	})
-	if self.OnAuctionHouseAuctionCreated then
-		self:OnAuctionHouseAuctionCreated()
-	end
-end
-
-function AuctionHelper:AUCTION_HOUSE_AUCTION_SOLD()
-	self:DebugLog("AH", "event: AUCTION_HOUSE_AUCTION_SOLD", {
-		"source=auction_sold",
-	})
-	if self.OnAuctionHouseAuctionSold then
-		self:OnAuctionHouseAuctionSold()
-	end
-end
-
-function AuctionHelper:MAIL_INBOX_UPDATE()
-	if self.OnMailInboxUpdate then
-		self:OnMailInboxUpdate()
-	end
-end
-
-function AuctionHelper:AUCTION_CANCELED()
-	if self.OnAuctionCanceled then
-		self:OnAuctionCanceled()
-	end
-end
-
-function AuctionHelper:OWNED_AUCTIONS_UPDATED()
-	self:DebugLog("AH", "event: OWNED_AUCTIONS_UPDATED", {
-		"source=owned_auctions_updated",
-	})
-	if self.OnOwnedAuctionsUpdated then
-		self:OnOwnedAuctionsUpdated()
-	end
+local function onOwnedAuctionsUpdated(self)
+	self:DebugLog("AH", "event: OWNED_AUCTIONS_UPDATED", { "source=owned_auctions_updated" })
+	callOptional(self, "OnOwnedAuctionsUpdated")
 	-- Retail-safe fallback signal for AH post/sold/cancel changes.
-	if self.PrimeAuctionPanelRows then
-		self:PrimeAuctionPanelRows()
-	end
-	if self.RefreshAuctionHousePanel then
-		self:RefreshAuctionHousePanel()
-	end
+	callOptional(self, "PrimeAuctionPanelRows")
+	callOptional(self, "RefreshAuctionHousePanel")
 end
 
-function AuctionHelper:AUCTION_HOUSE_BROWSE_RESULTS_UPDATED(...)
-	if self.OnAuctionHouseBrowseResultsUpdated then
-		self:OnAuctionHouseBrowseResultsUpdated(...)
-	end
-end
-
-function AuctionHelper:AUCTION_HOUSE_BROWSE_RESULTS_ADDED(...)
-	if self.OnAuctionHouseBrowseResultsUpdated then
-		self:OnAuctionHouseBrowseResultsUpdated(...)
-	end
-end
-
-function AuctionHelper:COMMODITY_SEARCH_RESULTS_UPDATED(...)
-	if self.OnCommoditySearchResultsUpdated then
-		self:OnCommoditySearchResultsUpdated(...)
-	end
-end
-
-function AuctionHelper:ITEM_SEARCH_RESULTS_UPDATED(...)
-	if self.OnItemSearchResultsUpdated then
-		self:OnItemSearchResultsUpdated(...)
-	end
-end
-
-function AuctionHelper:REPLICATE_ITEM_LIST_UPDATE(...)
-	if self.OnReplicateItemListUpdate then
-		self:OnReplicateItemListUpdate(...)
-	end
-end
-
-function AuctionHelper:AUCTION_ITEM_LIST_UPDATE(...)
-	if self.OnAuctionItemListUpdate then
-		self:OnAuctionItemListUpdate(...)
-	end
-end
-
-function AuctionHelper:COMMODITY_PURCHASE_SUCCEEDED(...)
-	if self.OnCommodityPurchaseSucceeded then
-		self:OnCommodityPurchaseSucceeded(...)
-	end
-end
-
-function AuctionHelper:COMMODITY_PURCHASED(...)
-	if self.OnCommodityPurchased then
-		self:OnCommodityPurchased(...)
-	end
-end
-
-function AuctionHelper:ITEM_PURCHASED(...)
-	if self.OnItemPurchased then
-		self:OnItemPurchased(...)
-	end
-end
-
-function AuctionHelper:AUCTION_HOUSE_PURCHASE_COMPLETED(...)
-	if self.OnAuctionHousePurchaseCompleted then
-		self:OnAuctionHousePurchaseCompleted(...)
-	end
-end
-
-function AuctionHelper:COMMODITY_PURCHASE_FAILED(...)
-	if self.OnCommodityPurchaseFailed then
-		self:OnCommodityPurchaseFailed(...)
-	end
-end
-
-function AuctionHelper:TRADE_SKILL_ITEM_CRAFTED_RESULT(...)
-	if self.OnProfessionRecipeCraftedResult then
-		self:OnProfessionRecipeCraftedResult(...)
-	end
-end
-
-function AuctionHelper:NEW_RECIPE_LEARNED()
-	self:ScheduleLiveProfessionRefresh()
-end
-
-function AuctionHelper:PLAYER_MONEY()
+local function onPlayerMoney(self)
 	if self.RecordWalletObservation then
 		self:RecordWalletObservation(self:GetCharacterKey(), GetMoney(), time())
 	end
-	if self.RefreshShellStatus then
-		self:RefreshShellStatus()
+	callOptional(self, "RefreshShellStatus")
+end
+
+-- Fulfil, release and reject all close the order on our side, but only when the server accepted it.
+local function onCraftingOrderResponse(self, result, orderID)
+	if Enum.CraftingOrderResult and result == Enum.CraftingOrderResult.Ok then
+		callOptional(self, "OnCraftingOrderFulfilled", orderID)
 	end
 end
 
-function AuctionHelper:CRAFTINGORDERS_FULFILL_ORDER_RESPONSE(result, orderID)
-	local ok = Enum.CraftingOrderResult and result == Enum.CraftingOrderResult.Ok
-	if ok and self.OnCraftingOrderFulfilled then
-		self:OnCraftingOrderFulfilled(orderID)
-	end
-end
+-- Event -> handler. A string names an AuctionHelper method that gets the event's arguments;
+-- it is looked up when the event fires and skipped while missing. A function is called with (self, ...).
+local EVENT_HANDLERS = {
+	ADDON_LOADED = onAddonLoaded,
+	PLAYER_LOGIN = onPlayerLogin,
+	PLAYER_MONEY = onPlayerMoney,
+	NEW_RECIPE_LEARNED = "ScheduleLiveProfessionRefresh",
 
-function AuctionHelper:CRAFTINGORDERS_RELEASE_ORDER_RESPONSE(result, orderID)
-	local ok = Enum.CraftingOrderResult and result == Enum.CraftingOrderResult.Ok
-	if ok and self.OnCraftingOrderFulfilled then
-		self:OnCraftingOrderFulfilled(orderID)
-	end
-end
+	TRADE_SKILL_SHOW = onTradeSkillShow,
+	TRADE_SKILL_LIST_UPDATE = onTradeSkillListUpdate,
+	UPDATE_TRADESKILL_CAST_STOPPED = onTradeSkillCastStopped,
+	TRADE_SKILL_CLOSE = onTradeSkillClose,
+	TRADE_SKILL_ITEM_CRAFTED_RESULT = "OnProfessionRecipeCraftedResult",
+	PLAYER_INTERACTION_MANAGER_FRAME_SHOW = onInteractionFrameShow,
+	PLAYER_INTERACTION_MANAGER_FRAME_HIDE = onInteractionFrameHide,
 
-function AuctionHelper:CRAFTINGORDERS_REJECT_ORDER_RESPONSE(result, orderID)
-	local ok = Enum.CraftingOrderResult and result == Enum.CraftingOrderResult.Ok
-	if ok and self.OnCraftingOrderFulfilled then
-		self:OnCraftingOrderFulfilled(orderID)
-	end
-end
+	BAG_UPDATE_DELAYED = onBagUpdateDelayed,
+	BANKFRAME_OPENED = "ScheduleLiveInventoryRefresh",
 
-function AuctionHelper:MAIL_SEND_SUCCESS()
-	if self.OnMailSendSuccess then
-		self:OnMailSendSuccess()
-	end
-end
+	AUCTION_HOUSE_SHOW = "OnAuctionHouseShow",
+	AUCTION_HOUSE_CLOSED = "OnAuctionHouseClosed",
+	AUCTION_HOUSE_AUCTION_CREATED = onAuctionCreated,
+	AUCTION_HOUSE_AUCTION_SOLD = onAuctionSold,
+	OWNED_AUCTIONS_UPDATED = onOwnedAuctionsUpdated,
+	AUCTION_CANCELED = "OnAuctionCanceled",
+	AUCTION_HOUSE_BROWSE_RESULTS_UPDATED = "OnAuctionHouseBrowseResultsUpdated",
+	AUCTION_HOUSE_BROWSE_RESULTS_ADDED = "OnAuctionHouseBrowseResultsUpdated",
+	COMMODITY_SEARCH_RESULTS_UPDATED = "OnCommoditySearchResultsUpdated",
+	ITEM_SEARCH_RESULTS_UPDATED = "OnItemSearchResultsUpdated",
+	REPLICATE_ITEM_LIST_UPDATE = "OnReplicateItemListUpdate",
+	AUCTION_ITEM_LIST_UPDATE = "OnAuctionItemListUpdate",
+	COMMODITY_PURCHASE_SUCCEEDED = "OnCommodityPurchaseSucceeded",
+	COMMODITY_PURCHASE_FAILED = "OnCommodityPurchaseFailed",
+	COMMODITY_PURCHASED = "OnCommodityPurchased",
+	ITEM_PURCHASED = "OnItemPurchased",
+	AUCTION_HOUSE_PURCHASE_COMPLETED = "OnAuctionHousePurchaseCompleted",
 
-function AuctionHelper:MAIL_FAILED()
-	if self.OnMailSendFailed then
-		self:OnMailSendFailed()
-	end
-end
+	CRAFTINGORDERS_FULFILL_ORDER_RESPONSE = onCraftingOrderResponse,
+	CRAFTINGORDERS_RELEASE_ORDER_RESPONSE = onCraftingOrderResponse,
+	CRAFTINGORDERS_REJECT_ORDER_RESPONSE = onCraftingOrderResponse,
+
+	MAIL_INBOX_UPDATE = "OnMailInboxUpdate",
+	MAIL_SEND_SUCCESS = "OnMailSendSuccess",
+	MAIL_FAILED = "OnMailSendFailed",
+}
+AuctionHelper.EVENT_HANDLERS = EVENT_HANDLERS
 
 AuctionHelper.frame:SetScript("OnEvent", function(_, event, ...)
-	if AuctionHelper.DebugLogEvent then
-		AuctionHelper:DebugLogEvent(event, ...)
-	end
-	if AuctionHelper[event] then
-		AuctionHelper[event](AuctionHelper, ...)
+	callOptional(AuctionHelper, "DebugLogEvent", event, ...)
+	local handler = EVENT_HANDLERS[event]
+	if type(handler) == "string" then
+		callOptional(AuctionHelper, handler, ...)
+	elseif handler then
+		handler(AuctionHelper, ...)
 	end
 end)
 
-local function safeRegisterEvent(eventName)
-	local ok = pcall(AuctionHelper.frame.RegisterEvent, AuctionHelper.frame, eventName)
-	return ok
+for event in pairs(EVENT_HANDLERS) do
+	-- pcall: some events do not exist on every client (Forever lacks the retail AH and crafting orders).
+	pcall(AuctionHelper.frame.RegisterEvent, AuctionHelper.frame, event)
 end
-
-AuctionHelper.frame:RegisterEvent("ADDON_LOADED")
-AuctionHelper.frame:RegisterEvent("PLAYER_LOGIN")
-AuctionHelper.frame:RegisterEvent("PLAYER_MONEY")
-AuctionHelper.frame:RegisterEvent("TRADE_SKILL_SHOW")
-AuctionHelper.frame:RegisterEvent("TRADE_SKILL_LIST_UPDATE")
-AuctionHelper.frame:RegisterEvent("UPDATE_TRADESKILL_CAST_STOPPED")
-AuctionHelper.frame:RegisterEvent("TRADE_SKILL_CLOSE")
-AuctionHelper.frame:RegisterEvent("BAG_UPDATE_DELAYED")
-AuctionHelper.frame:RegisterEvent("BANKFRAME_OPENED")
-AuctionHelper.frame:RegisterEvent("AUCTION_HOUSE_SHOW")
-AuctionHelper.frame:RegisterEvent("AUCTION_HOUSE_CLOSED")
-safeRegisterEvent("AUCTION_HOUSE_AUCTION_CREATED")
-safeRegisterEvent("AUCTION_HOUSE_AUCTION_SOLD")
-safeRegisterEvent("OWNED_AUCTIONS_UPDATED")
-safeRegisterEvent("AUCTION_CANCELED")
-safeRegisterEvent("MAIL_INBOX_UPDATE")
-safeRegisterEvent("AUCTION_HOUSE_BROWSE_RESULTS_UPDATED")
-safeRegisterEvent("AUCTION_HOUSE_BROWSE_RESULTS_ADDED")
-safeRegisterEvent("COMMODITY_SEARCH_RESULTS_UPDATED")
-safeRegisterEvent("ITEM_SEARCH_RESULTS_UPDATED")
-safeRegisterEvent("REPLICATE_ITEM_LIST_UPDATE")
-safeRegisterEvent("AUCTION_ITEM_LIST_UPDATE")
-safeRegisterEvent("COMMODITY_PURCHASE_SUCCEEDED")
-safeRegisterEvent("COMMODITY_PURCHASE_FAILED")
-safeRegisterEvent("COMMODITY_PURCHASED")
-safeRegisterEvent("ITEM_PURCHASED")
-safeRegisterEvent("AUCTION_HOUSE_PURCHASE_COMPLETED")
-safeRegisterEvent("TRADE_SKILL_ITEM_CRAFTED_RESULT")
-AuctionHelper.frame:RegisterEvent("NEW_RECIPE_LEARNED")
-AuctionHelper.frame:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_SHOW")
-AuctionHelper.frame:RegisterEvent("PLAYER_INTERACTION_MANAGER_FRAME_HIDE")
-safeRegisterEvent("CRAFTINGORDERS_FULFILL_ORDER_RESPONSE")
-safeRegisterEvent("CRAFTINGORDERS_RELEASE_ORDER_RESPONSE")
-safeRegisterEvent("CRAFTINGORDERS_REJECT_ORDER_RESPONSE")
-safeRegisterEvent("MAIL_SEND_SUCCESS")
-safeRegisterEvent("MAIL_FAILED")

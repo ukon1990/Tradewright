@@ -373,7 +373,7 @@ local function createRecipeView(pe, f)
 	host.statsRow:SetPoint("TOPLEFT", host.header, "BOTTOMLEFT", 0, -10)
 	host.statsRow:SetPoint("TOPRIGHT", host.header, "BOTTOMRIGHT", 0, -10)
 	host.statsRow:SetHeight(58)
-	host.stats = { pe:CreateStat(host.statsRow), pe:CreateStat(host.statsRow), pe:CreateStat(host.statsRow) }
+	host.stats = pe:CreateStats(host.statsRow, { "saleAfterCut", "materials", "profit" })
 	host.statsRow:SetScript("OnSizeChanged", function()
 		pe:LayoutEvenRow(host.statsRow, host.stats, 0, 8)
 	end)
@@ -553,9 +553,9 @@ local function renderProfessionRecipe(pe, panel, ctx)
 		host.header.badge:SetBadge(missing > 0 and ("Missing " .. missing) or "Missing", "danger")
 	end
 
-	host.stats[1]:SetValues("Sale after cut", ev.saleNet and pe:FormatCopperShort(ev.saleNet) or "-")
-	host.stats[2]:SetValues("Materials", ev.matCost and pe:FormatCopperShort(ev.matCost) or "-")
-	host.stats[3]:SetValues("Profit", pe:FormatSignedMoney(ev.profit), nil, (tonumber(ev.profit) or 0) < 0 and "danger" or "success")
+	host.stats.saleAfterCut:SetValues("Sale after cut", ev.saleNet and pe:FormatCopperShort(ev.saleNet) or "-")
+	host.stats.materials:SetValues("Materials", ev.matCost and pe:FormatCopperShort(ev.matCost) or "-")
+	host.stats.profit:SetValues("Profit", pe:FormatSignedMoney(ev.profit), nil, (tonumber(ev.profit) or 0) < 0 and "danger" or "success")
 	pe:LayoutEvenRow(host.statsRow, host.stats, 0, 8)
 
 	local cut = math.floor((pe:GetCraftsAhCutFraction() or 0) * 100 + 0.5)

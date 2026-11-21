@@ -1824,9 +1824,7 @@ function AuctionHelper:ComputeCopyBoxPagingSegmentsYielding(fullJson, maxWrapped
 				hi = mid - 1
 			end
 		end
-		if best < 1 then
-			best = 1
-		end
+		best = math.max(best, 1)
 		while best >= 1 do
 			local frag = string.sub(fullJson, pos, pos + best - 1)
 			if #self:BuildCopyBoxPagedWrapperJson(pageIdx, placeholder, frag) <= maxWrappedBytes then
@@ -1834,9 +1832,7 @@ function AuctionHelper:ComputeCopyBoxPagingSegmentsYielding(fullJson, maxWrapped
 			end
 			best = best - 1
 		end
-		if best < 1 then
-			best = 1
-		end
+		best = math.max(best, 1)
 		table.insert(segments, { pos, best })
 		pos = pos + best
 		pageIdx = pageIdx + 1
@@ -2177,10 +2173,7 @@ function AuctionHelper:ShowCopyBox(text, opts)
 				)
 				return
 			end
-			local np = #computedSegments
-			if np < 1 then
-				np = 1
-			end
+			local np = math.max(#computedSegments, 1)
 			local useEnv = np > 1
 			if not useEnv then
 				copyFrame._pagingMode = "raw"
@@ -2204,6 +2197,22 @@ function AuctionHelper:ShowCopyBox(text, opts)
 	end
 end
 
+-- Export scope -> what the progress window calls it. Profession slices fill in the profession at %s.
+local EXPORT_SCOPE_LABELS = {
+	account = "account", account_summary = "account summary",
+	professions = "professions (character)", professions_compact = "professions compact",
+	professions_recipes = "professions recipes (character)", professions_talents = "professions talents (character)",
+	inventory = "inventory (character)", inventory_compact = "inventory compact",
+	auction_snapshot = "auction snapshot", auction_history = "auction history", crafting_costs = "crafting costs",
+	spec_catalog = "spec catalog (Midnight bundled)", character_meta = "character meta",
+	profession = "profession (%s)", profession_recipes = "profession recipes (%s)", profession_talents = "profession talents (%s)",
+}
+
+local function exportScopeLabel(scope, identifier)
+	local label = EXPORT_SCOPE_LABELS[scope]
+	return label and string.format(label, tostring(identifier or "?")) or tostring(scope or "character")
+end
+
 function AuctionHelper:Export(scope, identifier)
 	local st = self:GetState()
 	if st.exportJsonBusy then
@@ -2211,24 +2220,7 @@ function AuctionHelper:Export(scope, identifier)
 		return
 	end
 
-	local scopeLabel = scope == "account" and "account"
-		or scope == "account_summary" and "account summary"
-		or scope == "professions" and "professions (character)"
-		or scope == "professions_recipes" and "professions recipes (character)"
-		or scope == "professions_talents" and "professions talents (character)"
-		or scope == "professions_compact" and "professions compact"
-		or scope == "inventory" and "inventory (character)"
-		or scope == "inventory_compact" and "inventory compact"
-		or scope == "auction_snapshot" and "auction snapshot"
-		or scope == "auction_history" and "auction history"
-		or scope == "crafting_costs" and "crafting costs"
-		or scope == "spec_catalog" and "spec catalog (Midnight bundled)"
-		or scope == "character_meta" and "character meta"
-		or (scope == "profession" and string.format("profession (%s)", tostring(identifier or "?")))
-		or (scope == "profession_recipes" and string.format("profession recipes (%s)", tostring(identifier or "?")))
-		or (scope == "profession_talents" and string.format("profession talents (%s)", tostring(identifier or "?")))
-		or tostring(scope or "character")
-	self:ShowExportProgress(scopeLabel)
+	self:ShowExportProgress(exportScopeLabel(scope, identifier))
 
 	local dbg = self:IsDebugEnabled()
 	debugprofilestart()
@@ -2259,37 +2251,23 @@ function AuctionHelper:Export(scope, identifier)
 	end
 
 	if #payload > self.MAX_EXPORT_BYTES then
-		self:PrintMessage(string.format(
-			"Compressed export is %d bytes. Use a smaller scope if needed.",
-			#payload
-		))
+		self:PrintMessage(string.format("Compressed export is %d bytes. Use a smaller scope if needed.", #payload))
 	end
 
 	local savedOk = self:SaveExportToSavedVariables(payload, meta)
 	local unsavedHint
 	if not savedOk and #payload > self.MAX_SAVEDEXPORT_BYTES then
-		unsavedHint = string.format(
-			"Full compressed export was not saved (over %d byte SavedVariables limit). Try smaller scopes such as professions_recipes, profession_talents, inventory, or a single profession.",
-			self.MAX_SAVEDEXPORT_BYTES
-		)
+		unsavedHint = string.format("Full compressed export was not saved (over %d byte SavedVariables limit). Try smaller scopes"
+			.. " such as professions_recipes, profession_talents, inventory, or a single profession.", self.MAX_SAVEDEXPORT_BYTES)
 	end
 
 	debugprofilestart()
-	self:ShowCopyBox(payload, {
-		fullByteLength = #payload,
-		savedToVariables = savedOk,
-		unsavedHint = unsavedHint,
-	})
+	self:ShowCopyBox(payload, { fullByteLength = #payload, savedToVariables = savedOk, unsavedHint = unsavedHint })
 	local msUi = debugprofilestop()
 
 	if dbg then
-		self:PrintMessage(string.format(
-			"Export timing: gather=%.1fms pack=%.1fms copyUI=%.1fms (package %d bytes)",
-			msGather,
-			msEncode,
-			msUi,
-			#payload
-		))
+		self:PrintMessage(string.format("Export timing: gather=%.1fms pack=%.1fms copyUI=%.1fms (package %d bytes)",
+			msGather, msEncode, msUi, #payload))
 	end
 
 	local formatLabel = (meta and meta.format) or (type(payload) == "string" and payload:sub(1, 7) == "AHLUA1:" and "AHLUA1") or self.EXPORT_FORMAT or "AHCBOR1"
@@ -2324,82 +2302,102 @@ function AuctionHelper:PrintStatus()
 		self:TableCount(characterData.professions)))
 end
 
+local ON_OFF_ARGS = { on = true, ["1"] = true, ["true"] = true, off = false, ["0"] = false, ["false"] = false }
+
+-- `/auctionhelper settings <usageName> on|off` for one boolean setting.
+local function onOffSetting(key, default, usageName, label)
+	return function(self, arg)
+		local value = ON_OFF_ARGS[arg]
+		if value == nil then
+			self:PrintMessage(string.format("Usage: /auctionhelper settings %s on|off", usageName))
+			return
+		end
+		self:SetSetting(key, value)
+		self:PrintMessage(string.format("%s: %s.", label, self:GetSetting(key, default) and "on" or "off"))
+	end
+end
+
+local setSpecTreeCapture = onOffSetting("capture.captureSpecializationTree", true, "spectree", "Specialization tree capture")
+local setRecipeOutputCapture = onOffSetting("capture.includeRecipeOutputItemData", false, "recipeoutput", "Recipe output item API dump")
+
+local function setInventoryBatchSize(self, arg)
+	local size = tonumber(arg)
+	if not size or size < 0 then
+		self:PrintMessage("Usage: /auctionhelper settings invbatch <n>  (0 = one frame; 50–100 spreads GetItemCount work)")
+		return
+	end
+	self:SetSetting("capture.inventorySnapshotBatchSize", math.floor(size))
+	self:PrintMessage(string.format("Inventory snapshot batch size: %d.", self:GetSetting("capture.inventorySnapshotBatchSize", 0)))
+end
+
+-- `/auctionhelper settings <sub> <arg>` (sub lower-cased) -> handler(self, arg).
+local SETTINGS_SUBCOMMANDS = {
+	spectree = setSpecTreeCapture, specialization = setSpecTreeCapture,
+	recipeoutput = setRecipeOutputCapture, rawoutput = setRecipeOutputCapture,
+	invbatch = setInventoryBatchSize, inventorybatch = setInventoryBatchSize,
+}
+
 function AuctionHelper:HandleSettingsSlash(rest)
 	self:InitDB()
 	local sub, arg = rest:match("^(%S+)%s*(.*)$")
-	sub = string.lower(sub or "")
-	arg = self:Trim(arg or "")
-	if sub == "spectree" or sub == "specialization" then
-		if arg == "on" or arg == "1" or arg == "true" then
-			self:SetSetting("capture.captureSpecializationTree", true)
-		elseif arg == "off" or arg == "0" or arg == "false" then
-			self:SetSetting("capture.captureSpecializationTree", false)
-		else
-			self:PrintMessage("Usage: /auctionhelper settings spectree on|off")
-			return
-		end
-		self:PrintMessage(string.format("Specialization tree capture: %s.", self:GetSetting("capture.captureSpecializationTree", true) and "on" or "off"))
+	local handler = SETTINGS_SUBCOMMANDS[string.lower(sub or "")]
+	if handler then
+		handler(self, self:Trim(arg or ""))
 		return
 	end
-
-	if sub == "recipeoutput" or sub == "rawoutput" then
-		if arg == "on" or arg == "1" or arg == "true" then
-			self:SetSetting("capture.includeRecipeOutputItemData", true)
-		elseif arg == "off" or arg == "0" or arg == "false" then
-			self:SetSetting("capture.includeRecipeOutputItemData", false)
-		else
-			self:PrintMessage("Usage: /auctionhelper settings recipeoutput on|off")
-			return
-		end
-		self:PrintMessage(string.format("Recipe output item API dump: %s.", self:GetSetting("capture.includeRecipeOutputItemData", false) and "on" or "off"))
-		return
-	end
-
-	if sub == "invbatch" or sub == "inventorybatch" then
-		local n = tonumber(arg)
-		if not n or n < 0 then
-			self:PrintMessage("Usage: /auctionhelper settings invbatch <n>  (0 = one frame; 50–100 spreads GetItemCount work)")
-			return
-		end
-		self:SetSetting("capture.inventorySnapshotBatchSize", math.floor(n))
-		self:PrintMessage(string.format("Inventory snapshot batch size: %d.", self:GetSetting("capture.inventorySnapshotBatchSize", 0)))
-		return
-	end
-
 	self:PrintMessage("Usage: /auctionhelper settings spectree on|off | recipeoutput on|off | invbatch <n>")
 end
 
+-- The auction subcommand handlers return true when they ran; false falls through to the usage line.
+local function printAuctionStatus(self)
+	local enabled = self:GetSetting("auction.enabled", true)
+	local rows = self.BuildAuctionInventoryRows and self:BuildAuctionInventoryRows() or {}
+	self:PrintMessage(string.format("Auction module: %s. Inventory rows: %d.", enabled and "enabled" or "disabled", #rows))
+	return true
+end
+
+local function setAuctionModuleEnabled(self, enabled)
+	self:SetSetting("auction.enabled", enabled)
+	self:PrintMessage(enabled and "Auction module enabled." or "Auction module disabled.")
+	return true
+end
+
+local function refreshAuctionPrices(self, target)
+	target = string.lower(target)
+	if (target == "crafts" or target == "craft") and self.QueueCraftEconomyAuctionRefresh then
+		self:QueueCraftEconomyAuctionRefresh({})
+		self:PrintMessage("Queued craft refresh.")
+		return true
+	end
+	if self.BuildAuctionVisibleItemIDs and self.QueueVisibleAuctionRefresh then
+		self:QueueVisibleAuctionRefresh(self:BuildAuctionVisibleItemIDs())
+		self:PrintMessage("Queued visible auction refresh.")
+		return true
+	end
+	return false
+end
+
+local function runAuctionDump(self, mode)
+	if not self.StartAuctionDump then
+		return false
+	end
+	self:RunAuctionDumpSlash(mode)
+	return true
+end
+
+-- `/auctionhelper auction <sub> <arg>` (sub lower-cased) -> handler(self, arg).
+local AUCTION_SUBCOMMANDS = {
+	[""] = printAuctionStatus, status = printAuctionStatus,
+	enable = function(self) return setAuctionModuleEnabled(self, true) end,
+	disable = function(self) return setAuctionModuleEnabled(self, false) end,
+	refresh = refreshAuctionPrices,
+	dump = runAuctionDump,
+}
+
 function AuctionHelper:HandleAuctionSlash(rest)
-	rest = self:Trim(rest or "")
-	local sub, arg = rest:match("^(%S+)%s*(.*)$")
-	sub = string.lower(sub or "")
-	arg = self:Trim(arg or "")
-	if sub == "" or sub == "status" then
-		local enabled = self:GetSetting("auction.enabled", true)
-		local rows = self.BuildAuctionInventoryRows and self:BuildAuctionInventoryRows() or {}
-		self:PrintMessage(string.format("Auction module: %s. Inventory rows: %d.", enabled and "enabled" or "disabled", #rows))
-		return
-	end
-	if sub == "enable" or sub == "disable" then
-		self:SetSetting("auction.enabled", sub == "enable")
-		self:PrintMessage("Auction module " .. sub .. "d.")
-		return
-	end
-	if sub == "refresh" then
-		local target = string.lower(arg or "")
-		if (target == "crafts" or target == "craft") and self.QueueCraftEconomyAuctionRefresh then
-			self:QueueCraftEconomyAuctionRefresh({})
-			self:PrintMessage("Queued craft refresh.")
-			return
-		end
-		if self.BuildAuctionVisibleItemIDs and self.QueueVisibleAuctionRefresh then
-			self:QueueVisibleAuctionRefresh(self:BuildAuctionVisibleItemIDs())
-			self:PrintMessage("Queued visible auction refresh.")
-			return
-		end
-	end
-	if sub == "dump" and self.StartAuctionDump then
-		self:RunAuctionDumpSlash(arg)
+	local sub, arg = self:Trim(rest or ""):match("^(%S+)%s*(.*)$")
+	local handler = AUCTION_SUBCOMMANDS[string.lower(sub or "")]
+	if handler and handler(self, self:Trim(arg or "")) then
 		return
 	end
 	self:PrintMessage("Usage: /auctionhelper auction [status|enable|disable|refresh [crafts]|dump [visible|full]]")

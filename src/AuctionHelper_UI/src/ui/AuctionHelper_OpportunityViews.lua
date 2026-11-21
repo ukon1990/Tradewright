@@ -2,7 +2,7 @@ local AuctionHelper = select(2, ...)
 
 -- The lists of the Opportunities tab. Each view supplies: id, label, getRows(pe, onReady) → rows, insights, funnel,
 -- columns(pe), detailRows(pe, row), riskText(pe, row), subtitle(pe, row), tooltipPairs(pe, row),
--- setStats(pe, stats, rows, insights), footer(pe, rows, insights), emptyTitle, emptyHint.
+-- setStats(pe, stats, rows, insights) with the four stat tiles left to right, footer(pe, rows, insights), emptyTitle, emptyHint.
 -- Both lists sort on a column with the id "profit", so the table keeps its sort across a switch.
 
 local function percent(fraction)
@@ -188,12 +188,13 @@ local function flipRiskText(pe, row)
 end
 
 local function flipStats(pe, stats, rows, insights)
+	local profitTile, goldNeededTile, coverageTile, cutTile = unpack(stats)
 	local opts = pe:GetFlipOptions()
 	local profit, note, settled = settledSum(pe, rows, "profit", "After the auction cut")
-	stats[1]:SetValues(string.format("Expected profit, all %d", settled), pe:FormatSignedMoney(profit), note, "success")
-	stats[2]:SetValues("Gold needed", pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), "You have " .. pe:FormatCopperShort(GetMoney()))
-	coverageStat(pe, stats[3], insights)
-	stats[4]:SetValues("Auction cut", percent(opts.cut), "Last scan " .. lastScanText(pe, insights))
+	profitTile:SetValues(string.format("Expected profit, all %d", settled), pe:FormatSignedMoney(profit), note, "success")
+	goldNeededTile:SetValues("Gold needed", pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), "You have " .. pe:FormatCopperShort(GetMoney()))
+	coverageStat(pe, coverageTile, insights)
+	cutTile:SetValues("Auction cut", percent(opts.cut), "Last scan " .. lastScanText(pe, insights))
 end
 
 local flips = {
@@ -260,10 +261,11 @@ local function vendorRiskText(_, row)
 end
 
 local function vendorStats(pe, stats, rows, insights)
-	stats[1]:SetValues(string.format("Gain, all %d", #rows), pe:FormatSignedMoney(sumOf(rows, "gain")), "Sold to a vendor, no auction cut", "success")
-	stats[2]:SetValues("Gold needed", pe:FormatCopperShort(sumOf(rows, "cost")), "You have " .. pe:FormatCopperShort(GetMoney()))
-	stats[3]:SetValues("Items", tostring(#rows), "Listed under their vendor price")
-	stats[4]:SetValues("Last scan", lastScanText(pe, insights), "Listings may have changed since")
+	local gainTile, goldNeededTile, itemsTile, lastScanTile = unpack(stats)
+	gainTile:SetValues(string.format("Gain, all %d", #rows), pe:FormatSignedMoney(sumOf(rows, "gain")), "Sold to a vendor, no auction cut", "success")
+	goldNeededTile:SetValues("Gold needed", pe:FormatCopperShort(sumOf(rows, "cost")), "You have " .. pe:FormatCopperShort(GetMoney()))
+	itemsTile:SetValues("Items", tostring(#rows), "Listed under their vendor price")
+	lastScanTile:SetValues("Last scan", lastScanText(pe, insights), "Listings may have changed since")
 end
 
 local vendor = {
@@ -336,11 +338,12 @@ local function gapRiskText(pe, row)
 end
 
 local function gapStats(pe, stats, rows, insights)
+	local gainTile, goldNeededTile, riskTile, lastScanTile = unpack(stats)
 	local gain, note, settled = settledSum(pe, rows, "gain", "After the auction cut")
-	stats[1]:SetValues(string.format("Gain if all %d hold", settled), pe:FormatSignedMoney(gain), note, "warning")
-	stats[2]:SetValues("Gold needed", pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), "You have " .. pe:FormatCopperShort(GetMoney()))
-	stats[3]:SetValues("Risky", "Read first", "Pays only if nobody lists under you", "warning")
-	stats[4]:SetValues("Last scan", lastScanText(pe, insights), "Listings may have changed since")
+	gainTile:SetValues(string.format("Gain if all %d hold", settled), pe:FormatSignedMoney(gain), note, "warning")
+	goldNeededTile:SetValues("Gold needed", pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), "You have " .. pe:FormatCopperShort(GetMoney()))
+	riskTile:SetValues("Risky", "Read first", "Pays only if nobody lists under you", "warning")
+	lastScanTile:SetValues("Last scan", lastScanText(pe, insights), "Listings may have changed since")
 end
 
 local gaps = {
@@ -460,11 +463,12 @@ local function sellRiskText(pe, row)
 end
 
 local function sellStats(pe, stats, rows, insights)
+	local worthTile, coverageTile, thresholdTile, lastScanTile = unpack(stats)
 	local worth, note, settled = settledSum(pe, rows, "worth", "After the auction cut")
-	stats[1]:SetValues(string.format("Worth, all %d", settled), pe:FormatCopperShort(worth), note, "success")
-	coverageStat(pe, stats[2], insights)
-	stats[3]:SetValues("Counts as above usual", "10% or more", "Against the usual price of your scans")
-	stats[4]:SetValues("Last scan", lastScanText(pe, insights), "Prices may have changed since")
+	worthTile:SetValues(string.format("Worth, all %d", settled), pe:FormatCopperShort(worth), note, "success")
+	coverageStat(pe, coverageTile, insights)
+	thresholdTile:SetValues("Counts as above usual", "10% or more", "Against the usual price of your scans")
+	lastScanTile:SetValues("Last scan", lastScanText(pe, insights), "Prices may have changed since")
 end
 
 local sell = {

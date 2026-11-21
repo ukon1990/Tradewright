@@ -137,10 +137,7 @@ local function createHeader(pe, dash)
 	dash.statsRow:SetPoint("TOPLEFT")
 	dash.statsRow:SetPoint("TOPRIGHT")
 	dash.statsRow:SetHeight(STATS_HEIGHT)
-	dash.stats = {}
-	for index = 1, 4 do
-		dash.stats[index] = pe:CreateStat(dash.statsRow)
-	end
+	dash.stats = pe:CreateStats(dash.statsRow, { "earned", "spent", "net", "biggestSource" })
 	dash.chart = pe:CreateDashboardCard(dash, "Gold in and out, per day")
 	dash.chart:SetPoint("TOPLEFT", dash.statsRow, "BOTTOMLEFT", 0, -GAP)
 	dash.chart:SetPoint("TOPRIGHT", dash.statsRow, "BOTTOMRIGHT", 0, -GAP)
@@ -186,15 +183,15 @@ end
 local function refreshStats(pe, dash, summary, rows)
 	local money = function(copper) return pe:FormatCopperShort(copper) end
 	local biggest = rows[1] and rows[1].gain > 0 and rows[1] or nil
-	dash.stats[1]:SetValues("Earned", money(summary.gain), string.format("%s a day", money(summary.gain / dash.spanDays)),
+	dash.stats.earned:SetValues("Earned", money(summary.gain), string.format("%s a day", money(summary.gain / dash.spanDays)),
 		summary.gain > 0 and "success" or nil)
-	dash.stats[2]:SetValues("Spent", money(summary.spend), string.format("%s a day", money(summary.spend / dash.spanDays)))
+	dash.stats.spent:SetValues("Spent", money(summary.spend), string.format("%s a day", money(summary.spend / dash.spanDays)))
 	local net = summary.gain - summary.spend
-	dash.stats[3]:SetValues("Net", pe:FormatSignedMoney(net), "Earned minus spent", net >= 0 and "success" or "danger")
+	dash.stats.net:SetValues("Net", pe:FormatSignedMoney(net), "Earned minus spent", net >= 0 and "success" or "danger")
 	if biggest then
-		dash.stats[4]:SetValues("Biggest source", biggest.label, string.format("%s of all gold in", percent(biggest.share)), "gold")
+		dash.stats.biggestSource:SetValues("Biggest source", biggest.label, string.format("%s of all gold in", percent(biggest.share)), "gold")
 	else
-		dash.stats[4]:SetValues("Biggest source", "-", "Nothing earned in this period")
+		dash.stats.biggestSource:SetValues("Biggest source", "-", "Nothing earned in this period")
 	end
 end
 

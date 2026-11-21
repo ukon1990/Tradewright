@@ -147,10 +147,7 @@ function AuctionHelper:CreateGoldDashboard(parent)
 	dash.statsRow:SetPoint("TOPLEFT")
 	dash.statsRow:SetPoint("TOPRIGHT")
 	dash.statsRow:SetHeight(58)
-	dash.stats = {}
-	for index = 1, 5 do
-		dash.stats[index] = pe:CreateStat(dash.statsRow)
-	end
+	dash.stats = pe:CreateStats(dash.statsRow, { "gold", "stockValue", "profitableCrafts", "deals", "marketData" })
 
 	-- Deals to buy.
 	dash.deals = createCard(pe, dash, "Deals to buy", "Market", function() pe:ShowDashboardTab("market") end)
@@ -320,7 +317,7 @@ function AuctionHelper:CreateGoldDashboard(parent)
 		tbl:SetRows(top)
 		tbl:Refresh()
 		local best = top[1]
-		self.stats[3]:SetValues("Profitable crafts", pe:FormatNumberGrouped(#profitable),
+		self.stats.profitableCrafts:SetValues("Profitable crafts", pe:FormatNumberGrouped(#profitable),
 			best and ("Best " .. pe:FormatCopperShort(best.profit) .. " each") or "None found yet", #profitable > 0 and "success" or nil)
 	end
 
@@ -368,7 +365,7 @@ function AuctionHelper:CreateGoldDashboard(parent)
 		end
 		self.sell.table:SetRows(pe.ForeverLogic.TopN(rows, 30, "value"))
 		self.sell.table:Refresh()
-		self.stats[2]:SetValues("Stock value", insights and pe:FormatCopperShort(stockValue) or "…",
+		self.stats.stockValue:SetValues("Stock value", insights and pe:FormatCopperShort(stockValue) or "…",
 			string.format("%s item types priced", pe:FormatNumberGrouped(priced)))
 	end
 
@@ -382,7 +379,7 @@ function AuctionHelper:CreateGoldDashboard(parent)
 		end) or nil
 		self.insights = insights
 
-		-- 1. Account gold and its 7-day change.
+		-- Account gold and its 7-day change.
 		local gold = pe:GetCurrentGoldSummaryForOverview(ACCT_KEY) or 0
 		local series = pe:GetOverviewWalletGraphSeries(ACCT_KEY, "7d", "balance") or {}
 		local first = series[1] and tonumber(series[1].value)
@@ -391,23 +388,23 @@ function AuctionHelper:CreateGoldDashboard(parent)
 			local delta = gold - first
 			note = (delta >= 0 and pe:Colorize("+" .. pe:FormatCopperShort(delta), "success") or pe:Colorize(pe:FormatCopperShort(delta), "danger")) .. " in 7 days"
 		end
-		self.stats[1]:SetValues("Gold, all characters", pe:FormatCopperShort(gold), note)
+		self.stats.gold:SetValues("Gold, all characters", pe:FormatCopperShort(gold), note)
 
-		-- 4 and 5. Deals and data freshness.
+		-- Deals and data freshness.
 		if insights then
 			local best = insights.deals[1]
-			self.stats[4]:SetValues("Deals found", pe:FormatNumberGrouped(insights.dealCount),
+			self.stats.deals:SetValues("Deals found", pe:FormatNumberGrouped(insights.dealCount),
 				best and string.format("Best %s below usual", string.format("%.0f%%", best.discount * 100)) or "None right now",
 				insights.dealCount > 0 and "gold" or nil)
 			local lastScanAt = pe.GetLastFullAuctionScanAt and pe:GetLastFullAuctionScanAt()
 			local stale = not lastScanAt or time() - lastScanAt > 24 * 3600
-			self.stats[5]:SetValues("Market data", lastScanAt and pe:FormatScanTimestamp(lastScanAt) or "No full scan",
+			self.stats.marketData:SetValues("Market data", lastScanAt and pe:FormatScanTimestamp(lastScanAt) or "No full scan",
 				string.format("%s items", pe:FormatNumberGrouped(insights.itemCount)), stale and "warning" or nil)
 		else
 			local progress = pe:GetState().marketInsightsProgress or 0
 			local working = string.format("Reading scans %d%%", progress * 100)
-			self.stats[4]:SetValues("Deals found", "…", working)
-			self.stats[5]:SetValues("Market data", "…", working)
+			self.stats.deals:SetValues("Deals found", "…", working)
+			self.stats.marketData:SetValues("Market data", "…", working)
 		end
 
 		self.deals.table:SetRows(insights and insights.deals or {})

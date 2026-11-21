@@ -201,10 +201,7 @@ local function buildPanel(pe, container)
 	panel.statsRow:SetPoint("TOPLEFT", panel.toolbar, "BOTTOMLEFT", 0, -GAP)
 	panel.statsRow:SetPoint("TOPRIGHT", panel.toolbar, "BOTTOMRIGHT", 0, -GAP)
 	panel.statsRow:SetHeight(58)
-	panel.stats = {}
-	for index = 1, 4 do
-		panel.stats[index] = pe:CreateStat(panel.statsRow)
-	end
+	panel.stats = pe:CreateStats(panel.statsRow, { "bestFarm", "farmed", "timeFarming", "runs" })
 	panel.detail = buildDetail(pe, panel)
 	panel.detail:SetPoint("TOPRIGHT", panel.statsRow, "BOTTOMRIGHT", 0, -GAP)
 	panel.detail:SetPoint("BOTTOMRIGHT")
@@ -230,10 +227,10 @@ local function refreshStats(pe, panel, rows)
 		end
 		seconds, value, runs = seconds + row.activeSeconds, value + row.valueWhenSaved, runs + row.runs
 	end
-	panel.stats[1]:SetValues("Best farm at today's prices", best and (pe:FormatCopperShort(best.nowPerHour) .. " an hour") or "-", best and best.name or "")
-	panel.stats[2]:SetValues("Farmed, all runs", pe:FormatCopperShort(value), "Worth when saved", "success")
-	panel.stats[3]:SetValues("Time farming", duration(seconds), "Pauses not counted")
-	panel.stats[4]:SetValues("Runs", tostring(runs), string.format("%d farms", #rows))
+	panel.stats.bestFarm:SetValues("Best farm at today's prices", best and (pe:FormatCopperShort(best.nowPerHour) .. " an hour") or "-", best and best.name or "")
+	panel.stats.farmed:SetValues("Farmed, all runs", pe:FormatCopperShort(value), "Worth when saved", "success")
+	panel.stats.timeFarming:SetValues("Time farming", duration(seconds), "Pauses not counted")
+	panel.stats.runs:SetValues("Runs", tostring(runs), string.format("%d farms", #rows))
 	pe:LayoutEvenRow(panel.statsRow, panel.stats, 0, GAP)
 end
 

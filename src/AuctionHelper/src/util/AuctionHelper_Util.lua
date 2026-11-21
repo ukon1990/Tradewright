@@ -378,8 +378,26 @@ function AuctionHelper:ResolveItemDescriptor(itemID)
 	return desc
 end
 
+-- Enum.ItemBind members that keep an item off the auction house. Clients without a member skip it.
+local UNTRADEABLE_BIND_TYPE_NAMES = {
+	"OnAcquire", "Quest", "ToWoWAccount", "ToBnetAccount", "ToWoWAccountUntilEquipped", "ToBnetAccountUntilEquipped",
+	"ToWarband",
+}
+
+local function isUntradeableBindType(bindType)
+	local bindTypes = Enum and Enum.ItemBind
+	if bindTypes then
+		for _, name in ipairs(UNTRADEABLE_BIND_TYPE_NAMES) do
+			if bindTypes[name] == bindType then
+				return true
+			end
+		end
+	end
+	-- Older clients name only these two, as globals.
+	return bindType == LE_ITEM_BIND_ON_ACQUIRE or bindType == LE_ITEM_BIND_QUEST
+end
+
 --- Uses static C_Item.GetItemInfo bind type only (not whether your stack is actually soulbound).
---- Excludes typical BoP / quest / account / bnet / warband-style bindings when the client exposes them.
 function AuctionHelper:IsItemLikelyTradeableOnAuctionByStaticInfo(itemID)
 	itemID = tonumber(itemID)
 	if not itemID or itemID <= 0 then
@@ -389,45 +407,8 @@ function AuctionHelper:IsItemLikelyTradeableOnAuctionByStaticInfo(itemID)
 	if not desc or not desc.name then
 		return false
 	end
-	local bt = desc.bindType
-	if bt == nil then
-		return true
-	end
-	bt = tonumber(bt)
-	if not bt then
-		return true
-	end
-	local E = Enum and Enum.ItemBind
-	if E then
-		if E.OnAcquire and bt == E.OnAcquire then
-			return false
-		end
-		if E.Quest and bt == E.Quest then
-			return false
-		end
-		if E.ToWoWAccount and bt == E.ToWoWAccount then
-			return false
-		end
-		if E.ToBnetAccount and bt == E.ToBnetAccount then
-			return false
-		end
-		if E.ToWoWAccountUntilEquipped and bt == E.ToWoWAccountUntilEquipped then
-			return false
-		end
-		if E.ToBnetAccountUntilEquipped and bt == E.ToBnetAccountUntilEquipped then
-			return false
-		end
-		if E.ToWarband and bt == E.ToWarband then
-			return false
-		end
-	end
-	if LE_ITEM_BIND_ON_ACQUIRE and bt == LE_ITEM_BIND_ON_ACQUIRE then
-		return false
-	end
-	if LE_ITEM_BIND_QUEST and bt == LE_ITEM_BIND_QUEST then
-		return false
-	end
-	return true
+	local bindType = tonumber(desc.bindType)
+	return bindType == nil or not isUntradeableBindType(bindType)
 end
 
 --- Map C_Item.GetItemInfo expansionID (LE_EXPANSION) to crafts/inventory filter bucket.

@@ -144,10 +144,7 @@ function OverviewTab:Create(container, uiState)
 	panel.statsRow:SetPoint("TOPLEFT")
 	panel.statsRow:SetPoint("TOPRIGHT")
 	panel.statsRow:SetHeight(58)
-	panel.stats = {}
-	for index = 1, 4 do
-		panel.stats[index] = pe:CreateStat(panel.statsRow)
-	end
+	panel.stats = pe:CreateStats(panel.statsRow, { "characters", "gold", "itemTypes", "professionScan" })
 
 	panel.toolbar = CreateFrame("Frame", nil, host)
 	panel.toolbar:SetPoint("TOPLEFT", panel.statsRow, "BOTTOMLEFT", 0, -GAP)
@@ -256,20 +253,20 @@ function OverviewTab:RefreshStats(panel, selectedKey, selectedData, keys)
 		professionCount = pe:TableCount(selectedData and selectedData.professions or {})
 	end
 
-	panel.stats[1]:SetValues("Characters scanned", tostring(#keys), "Last rebuilt " .. pe:FormatScanTimestamp(agg.updatedAt))
+	panel.stats.characters:SetValues("Characters scanned", tostring(#keys), "Last rebuilt " .. pe:FormatScanTimestamp(agg.updatedAt))
 	local goldDetail = string.format("Across %d %s", #keys, pe:Plural(#keys, "character"))
 	if gold ~= nil then
 		local name = selectedData and selectedData.meta and selectedData.meta.name or "This character"
 		goldDetail = name .. " has " .. pe:FormatCopperShort(gold)
 	end
-	panel.stats[2]:SetValues("Gold, all characters", accountGold and accountGold > 0 and pe:FormatCopperShort(accountGold) or "-", goldDetail)
-	panel.stats[3]:SetValues("Item types tracked", pe:FormatNumberGrouped(inv.tracked),
+	panel.stats.gold:SetValues("Gold, all characters", accountGold and accountGold > 0 and pe:FormatCopperShort(accountGold) or "-", goldDetail)
+	panel.stats.itemTypes:SetValues("Item types tracked", pe:FormatNumberGrouped(inv.tracked),
 		string.format("%s in stock, %s items", pe:FormatNumberGrouped(inv.inStock), pe:FormatNumberGrouped(inv.quantity)))
 	if state.scanInProgress then
-		panel.stats[4]:SetValues("Profession scan", "Scanning",
+		panel.stats.professionScan:SetValues("Profession scan", "Scanning",
 			string.format("%s, %d left", tostring(state.currentProfession and state.currentProfession.professionName or "starting"), #(state.queue or {})), "warning")
 	else
-		panel.stats[4]:SetValues("Profession scan", "Ready",
+		panel.stats.professionScan:SetValues("Profession scan", "Ready",
 			string.format("%d %s stored", professionCount, pe:Plural(professionCount, "profession")), "success")
 	end
 end

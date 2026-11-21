@@ -1,9 +1,6 @@
 {
  "luacheck": {
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": {
-   "W631": 2
-  },
-  "src/AuctionHelper/src/core/AuctionHelper_Events.lua": {
    "W631": 1
   },
   "src/AuctionHelper/src/modules/AuctionHelper_Docs.lua": {
@@ -28,7 +25,7 @@
   }
  },
  "files": {
-  "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 2559,
+  "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 2557,
   "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": 778,
   "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5538,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": 779,
@@ -124,7 +121,7 @@
    },
    "AuctionHelper:ComputeCopyBoxPagingSegmentsYielding": {
     "lines": [
-     52
+     48
     ]
    },
    "AuctionHelper:CopyBoxApplyCurrentPage": {
@@ -160,10 +157,10 @@
    },
    "AuctionHelper:Export": {
     "lines": [
-     96
+     65
     ],
     "ccn": [
-     60
+     24
     ]
    },
    "AuctionHelper:FinalizeSpecializationTabGraph": {
@@ -177,19 +174,6 @@
    "AuctionHelper:GetCompactCharacterHeader": {
     "ccn": [
      23
-    ]
-   },
-   "AuctionHelper:HandleAuctionSlash": {
-    "ccn": [
-     21
-    ]
-   },
-   "AuctionHelper:HandleSettingsSlash": {
-    "lines": [
-     44
-    ],
-    "ccn": [
-     27
     ]
    },
    "AuctionHelper:LayoutCopyFrameScroll": {
@@ -237,15 +221,10 @@
    },
    "AuctionHelper:ShowCopyBox": {
     "lines": [
-     103
+     100
     ],
     "ccn": [
      15
-    ]
-   },
-   "AuctionHelper:ShowCopyBox/<anon>": {
-    "lines": [
-     41
     ]
    },
    "AuctionHelper:SnapshotFilters": {
@@ -278,11 +257,6 @@
    "AuctionHelper:SkinTree": {
     "ccn": [
      15
-    ]
-   },
-   "applyButtonState": {
-    "ccn": [
-     14
     ]
    },
    "skinScrollBar": {
@@ -389,14 +363,6 @@
    "AuctionHelper:FindProfessionByIdentifier": {
     "ccn": [
      11
-    ]
-   },
-   "AuctionHelper:IsItemLikelyTradeableOnAuctionByStaticInfo": {
-    "lines": [
-     49
-    ],
-    "ccn": [
-     27
     ]
    },
    "AuctionHelper:ItemDescriptorFromID": {
@@ -563,11 +529,8 @@
     ]
    },
    "AuctionHelper:FinishQueuedAuctionRefreshItem": {
-    "lines": [
-     58
-    ],
     "ccn": [
-     32
+     12
     ]
    },
    "AuctionHelper:GetAuctionDisplayProfessionQualityRank": {
@@ -1782,7 +1745,7 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_GoldDashboard.lua": {
    "AuctionHelper:CreateGoldDashboard": {
     "lines": [
-     287
+     284
     ]
    },
    "dash:Refresh": {
@@ -1929,7 +1892,7 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_OverviewTab.lua": {
    "OverviewTab:Create": {
     "lines": [
-     118
+     115
     ]
    },
    "OverviewTab:Refresh": {
@@ -2010,7 +1973,7 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_SalesDashboard.lua": {
    "AuctionHelper:CreateSalesDashboard": {
     "lines": [
-     131
+     128
     ]
    },
    "dash:Refresh": {

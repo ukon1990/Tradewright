@@ -197,17 +197,32 @@ local function setFontColor(font, color)
 	end
 end
 
--- Colours follow state: disabled grey; primary or selected gold; tab muted; otherwise text.
+-- Button state -> fill, outline and label colour. Primary or selected buttons are "marked".
+local BUTTON_STATE_COLORS = {
+	disabled = { fill = CLEAR, border = THEME.borderStrong, text = THEME.textDisabled },
+	marked = { fill = THEME.surface2, border = THEME.tick, text = THEME.gold },
+	tab = { fill = CLEAR, border = THEME.borderStrong, text = THEME.textMuted },
+	normal = { fill = CLEAR, border = THEME.borderStrong, text = THEME.textPrimary },
+}
+
+local function buttonState(button)
+	if not button:IsEnabled() then
+		return "disabled"
+	end
+	if button.ahPrimary or button.ahSelected then
+		return "marked"
+	end
+	return button.ahTab and "tab" or "normal"
+end
+
 local function applyButtonState(button)
 	local surface = button.ahSurface
 	if not surface then
 		return
 	end
-	local enabled = button:IsEnabled()
-	local marked = enabled and (button.ahPrimary or button.ahSelected)
-	surface:SetColors(marked and THEME.surface2 or CLEAR, marked and THEME.tick or THEME.borderStrong)
-	local color = not enabled and THEME.textDisabled or marked and THEME.gold or button.ahTab and THEME.textMuted or THEME.textPrimary
-	setFontColor(button:GetFontString(), color)
+	local colors = BUTTON_STATE_COLORS[buttonState(button)]
+	surface:SetColors(colors.fill, colors.border)
+	setFontColor(button:GetFontString(), colors.text)
 end
 
 local function onButtonEnter(button)

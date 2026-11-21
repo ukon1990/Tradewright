@@ -114,6 +114,30 @@ check("Stored key, plain item", pe.ForeverLogic.SerializeItemKey(nil, 2589) == "
 zeroFields.itemID = 2589
 check("Stored key, all-zero fields", pe.ForeverLogic.SerializeItemKey(zeroFields) == "2589")
 
+-- Queued refresh: each priced item adds to one source counter.
+pe.MarkAuctionTargetSearched = function() end
+pe.DebugLog = function() end
+pe.GetItemDisplayName = function() return "Item" end
+pe.GetItemEconomySummary = function() return nil end
+pe.UpdateAuctionPanelRowPrice = function() end
+pe.ContinueQueuedAuctionRefresh = function() end
+local refreshState = pe:GetState()
+refreshState.auctionSourceCounts = nil
+local function finishWith(priceState)
+	pe.ProcessAuctionRefreshItem = function() return priceState end
+	pe:FinishQueuedAuctionRefreshItem(2589)
+end
+finishWith({ currentPrice = 100, currentPriceIsNative = true, currentPriceSource = "snapshot" })
+finishWith({ currentPrice = 100, currentPriceSource = "snapshot" })
+finishWith({ currentPrice = 100, currentPriceSource = "tsm" })
+finishWith({ currentPrice = 100 })
+finishWith({ currentPrice = 0, currentPriceIsNative = true })
+local counts = refreshState.auctionSourceCounts or {}
+check("Native price counts as native even when its source says snapshot", counts.native == 1, counts.native)
+check("Snapshot price counts as snapshot", counts.snapshot == 1, counts.snapshot)
+check("Any other or missing source counts as fallback", counts.fallback == 2, counts.fallback)
+check("Unpriced item is not counted and the last price stays", refreshState.auctionLivePriceByItem[2589] == 100)
+
 if failed > 0 then
 	print(failed .. " test(s) failed")
 	os.exit(1)

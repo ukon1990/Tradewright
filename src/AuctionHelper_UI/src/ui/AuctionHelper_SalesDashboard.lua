@@ -31,6 +31,16 @@ function AuctionHelper:CreateDashboardCard(parent, title)
 	return card
 end
 
+--- One stat tile (CreateStat) per name, left to right. The result holds them in order (for LayoutEvenRow) and by name.
+function AuctionHelper:CreateStats(parent, names)
+	local stats = {}
+	for index, name in ipairs(names) do
+		stats[index] = self:CreateStat(parent)
+		stats[name] = stats[index]
+	end
+	return stats
+end
+
 --- 7 days / 30 days / 90 days / All time at the card's top right, ending its heading. The choice
 --- is one setting shared by the Sales and Income views; `onChange` redraws the view.
 function AuctionHelper:CreatePeriodButtons(card, onChange)
@@ -170,10 +180,7 @@ function AuctionHelper:CreateSalesDashboard(parent)
 	dash.statsRow:SetPoint("TOPLEFT")
 	dash.statsRow:SetPoint("TOPRIGHT")
 	dash.statsRow:SetHeight(STATS_HEIGHT)
-	dash.stats = {}
-	for index = 1, 4 do
-		dash.stats[index] = pe:CreateStat(dash.statsRow)
-	end
+	dash.stats = pe:CreateStats(dash.statsRow, { "earned", "sales", "bestEarner", "mostOften" })
 
 	-- Gold per day, with the period switch that drives the whole view.
 	dash.chart = pe:CreateDashboardCard(dash, "Gold from sales, per day")
@@ -253,14 +260,14 @@ function AuctionHelper:CreateSalesDashboard(parent)
 				mostOften = item
 			end
 		end
-		self.stats[1]:SetValues("Earned from sales", money(totals.net),
+		self.stats.earned:SetValues("Earned from sales", money(totals.net),
 			string.format("%s a day · %s paid in auction cut", money(totals.net / summary.spanDays), money(totals.gross - totals.net)),
 			totals.net > 0 and "success" or nil)
-		self.stats[2]:SetValues("Sales", count(totals.sales),
+		self.stats.sales:SetValues("Sales", count(totals.sales),
 			string.format("%s items of %s kinds", count(totals.units), count(#summary.items)))
-		self.stats[3]:SetValues("Best earner", bestEarner and bestEarner.name or "-",
+		self.stats.bestEarner:SetValues("Best earner", bestEarner and bestEarner.name or "-",
 			bestEarner and (money(bestEarner.net) .. " earned") or "Nothing sold in this period", bestEarner and "gold" or nil)
-		self.stats[4]:SetValues("Sells most often", mostOften and mostOften.name or "-",
+		self.stats.mostOften:SetValues("Sells most often", mostOften and mostOften.name or "-",
 			mostOften and string.format("%s sales, %.1f a week", count(mostOften.sales), mostOften.perWeek) or "Nothing sold in this period")
 
 		self.graph:SetAccentColor(pe:GetTheme().accent)

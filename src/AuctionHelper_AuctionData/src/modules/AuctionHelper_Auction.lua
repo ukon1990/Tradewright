@@ -766,6 +766,30 @@ function AuctionHelper:SendAuctionPanelSearchQuery(itemID, scanKeyFields)
 	return ok == true
 end
 
+-- Listed quantity, else what the last snapshot saw.
+local function fetchedQuantity(self, itemID, priceState)
+	local quantity = tonumber(priceState.nativeListingQuantity)
+	if quantity and quantity > 0 then
+		return quantity
+	end
+	local summary = self:GetItemEconomySummary(itemID, {})
+	local snapshot = summary and summary.snapshot
+	return snapshot and (tonumber(snapshot.sampleSize) or tonumber(snapshot.quantity))
+end
+
+local function logFetchedAuctionPrice(self, itemID, priceState, currentPrice)
+	self:DebugLog("AH", "refresh fetched", { string.format("itemID=%d name=%s price=%s qty=%s source=%s", itemID,
+		tostring(self:GetItemDisplayName(itemID) or "?"), tostring(currentPrice),
+		tostring(fetchedQuantity(self, itemID, priceState) or "?"), tostring(priceState.currentPriceSource or "unknown")) })
+end
+
+local function countAuctionPriceSource(state, priceState)
+	local counts = state.auctionSourceCounts or { native = 0, snapshot = 0, fallback = 0 }
+	state.auctionSourceCounts = counts
+	local source = priceState.currentPriceIsNative and "native" or priceState.currentPriceSource == "snapshot" and "snapshot" or "fallback"
+	counts[source] = (counts[source] or 0) + 1
+end
+
 function AuctionHelper:FinishQueuedAuctionRefreshItem(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
@@ -785,34 +809,10 @@ function AuctionHelper:FinishQueuedAuctionRefreshItem(itemID)
 		string.format("itemID=%d shown=%s source=%s native=%s fallback=%s", itemID, tostring(currentPrice), tostring(priceState.currentPriceSource), tostring(priceState.nativePrice), tostring(priceState.fallbackPrice)),
 	})
 	if currentPrice and currentPrice > 0 then
-		local fetchedQty = tonumber(priceState.nativeListingQuantity)
-		if not fetchedQty or fetchedQty <= 0 then
-			local summary = self:GetItemEconomySummary(itemID, {})
-			local snapshot = summary and summary.snapshot or nil
-			fetchedQty = tonumber(snapshot and snapshot.sampleSize) or tonumber(snapshot and snapshot.quantity) or nil
-		end
-		self:DebugLog("AH", "refresh fetched", {
-			string.format(
-				"itemID=%d name=%s price=%s qty=%s source=%s",
-				itemID,
-				tostring(self:GetItemDisplayName(itemID) or "?"),
-				tostring(currentPrice),
-				tostring(fetchedQty or "?"),
-				tostring(priceState.currentPriceSource or "unknown")
-			),
-		})
-	end
-	if currentPrice and currentPrice > 0 then
+		logFetchedAuctionPrice(self, itemID, priceState, currentPrice)
 		state.auctionLivePriceByItem = state.auctionLivePriceByItem or {}
 		state.auctionLivePriceByItem[itemID] = currentPrice
-		state.auctionSourceCounts = state.auctionSourceCounts or { native = 0, snapshot = 0, fallback = 0 }
-		if priceState.currentPriceIsNative then
-			state.auctionSourceCounts.native = (state.auctionSourceCounts.native or 0) + 1
-		elseif tostring(priceState.currentPriceSource or "") == "snapshot" then
-			state.auctionSourceCounts.snapshot = (state.auctionSourceCounts.snapshot or 0) + 1
-		else
-			state.auctionSourceCounts.fallback = (state.auctionSourceCounts.fallback or 0) + 1
-		end
+		countAuctionPriceSource(state, priceState)
 	end
 	self:UpdateAuctionPanelRowPrice(itemID, priceState)
 	state.auctionScanDone = tonumber(state.auctionRefreshIndex) or 0

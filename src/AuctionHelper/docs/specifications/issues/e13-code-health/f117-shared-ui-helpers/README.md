@@ -16,6 +16,7 @@ Replace the UI building blocks that were copied between dashboards and tabs with
 - `AuctionHelper_Columns.lua` with money and percent columns; the item column reuses `CreateItemColumn`
 - `pe:CreateTableCard`, `pe:MakePanelTab(id)`, `pe:CreateSettingDropdown(parent, options)` taking one options table
 - Replace every copy; delete the three tab adapter files (all four TOCs)
+- Move the shared dashboard helpers `CreateDashboardCard`, `CreatePeriodButtons` and `CreateStats` out of `AuctionHelper_SalesDashboard.lua` into the new dashboard widgets file, next to `CreateTableCard`
 
 ## Acceptance criteria
 
