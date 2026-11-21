@@ -421,204 +421,203 @@ function AuctionHelper:StartChunkedRecipeMergeJob(job)
 	C_Timer.After(0, processChunk)
 end
 
+local MERGE_LOG = "ApplyLiveProfessionMergeForSkillLineID"
+
+local function mergeBlockedOrMissing(self, openSkillLineID)
+	if self:LiveUpdatesBlocked() or self:GetState().pendingScan then
+		self:DebugLog("LIVE", MERGE_LOG .. " skipped", {
+			string.format("blocked=%s pendingScan=%s", tostring(self:LiveUpdatesBlocked()), tostring(self:GetState().pendingScan)),
+		})
+		return true
+	end
+	return not openSkillLineID
+end
+
+local function exportFilteredFingerprint(self)
+	local filterSnapshot = self:SnapshotFilters()
+	self:ApplyExportFilters()
+	local fingerprintInfo = self:BuildOpenProfessionQuickFingerprint()
+	self:RestoreFilters(filterSnapshot)
+	return fingerprintInfo
+end
+
+-- True when the saved profession should stay as is (unstable UI teardown, or nothing changed).
+local function keepSavedProfession(self, openSkillLineID, existing, fingerprintInfo)
+	if not existing or not fingerprintInfo then
+		return false
+	end
+	-- Avoid wiping good SavedVariables when the UI tears down before recipes are available.
+	if not fingerprintInfo.stable and tonumber(existing.recipeCount) and tonumber(existing.recipeCount) > 0 then
+		self:DebugLog("LIVE", MERGE_LOG .. " skipped (unstable fingerprint, keeping saved)", {
+			string.format("skillLineID=%s savedRecipeCount=%s", tostring(openSkillLineID), tostring(existing.recipeCount)),
+		})
+		return true
+	end
+	if existing.liveFingerprint and existing.liveFingerprint == fingerprintInfo.fingerprint then
+		self:DebugLog("LIVE", MERGE_LOG .. " skipped (saved fingerprint match)", { string.format("skillLineID=%s", tostring(openSkillLineID)) })
+		return true
+	end
+	return false
+end
+
+local function chunkedMergeJob(merge, professionData, recipeSpellIDs, fingerprintInfo, mode)
+	return { key = merge.key, charData = merge.charData, openSkillLineID = merge.openSkillLineID, descriptor = merge.descriptor,
+		professionData = professionData, recipeSpellIDs = recipeSpellIDs, fingerprintInfo = fingerprintInfo, mode = mode }
+end
+
+local function professionLogLine(merge)
+	return string.format("profession=%s skillLineID=%s", tostring(merge.descriptor.professionName), tostring(merge.openSkillLineID))
+end
+
+local function startChunkedFullMerge(self, merge, recipeIDs, filterSnapshot)
+	self:DebugLog("LIVE", MERGE_LOG .. " collecting (chunked full)", { professionLogLine(merge) .. string.format(" recipeCount=%d", #recipeIDs) })
+	local professionData = self:CreateProfessionDataShell(merge.descriptor, { rebuildSpecs = true })
+	self:RestoreFilters(filterSnapshot)
+	-- Prefer a fingerprint taken under the same filter state used for collection.
+	local filteredFp = self:BuildOpenProfessionQuickFingerprint() or merge.fingerprintInfo
+	self:StartChunkedRecipeMergeJob(chunkedMergeJob(merge, professionData, recipeIDs, filteredFp, "chunked_full"))
+	return nil
+end
+
+local function fullLiveProfessionMerge(self, merge)
+	local snapshot = self:SnapshotFilters()
+	self:ApplyExportFilters()
+	local recipeIDs = C_TradeSkillUI.GetAllRecipeIDs and self:NormalizeApiList(C_TradeSkillUI.GetAllRecipeIDs()) or {}
+	sortNumericIds(recipeIDs)
+	if merge.allowChunked and #recipeIDs > LIVE_SYNC_RECIPE_BUDGET then
+		return startChunkedFullMerge(self, merge, recipeIDs, snapshot)
+	end
+
+	self:DebugLog("LIVE", MERGE_LOG .. " collecting (full)", { professionLogLine(merge) })
+	local professionData = self:CollectCurrentProfessionData(merge.descriptor)
+	-- Stamp while export filters are still applied so liveFingerprint matches close-path compares.
+	local filteredFp = self:BuildOpenProfessionQuickFingerprint() or merge.fingerprintInfo
+	self:RestoreFilters(snapshot)
+	if not professionData then
+		self:DebugLog("LIVE", MERGE_LOG .. " CollectCurrentProfessionData returned nil", {})
+		return nil
+	end
+	if filteredFp then
+		self:StampProfessionLiveFingerprint(professionData, filteredFp)
+	end
+	return self:CommitLiveProfessionMergeResult(merge.key, merge.charData, merge.openSkillLineID, professionData,
+		{ mode = merge.forceFull and "force_full" or "full", refreshInventory = true, forceImmediateInventory = merge.forceFull })
+end
+
+local function needsSpecRebuild(self, existing, fingerprintInfo)
+	if self:GetSetting("capture.captureSpecializationTree", true) == false then
+		return false
+	end
+	local sameMeta = fingerprintInfo and fingerprintInfo.metaFingerprint and existing.liveMetaFingerprint
+		and existing.liveMetaFingerprint == fingerprintInfo.metaFingerprint
+	return not (sameMeta and existing.specializationTrees)
+end
+
+local function professionInfos()
+	local baseInfo = C_TradeSkillUI.GetBaseProfessionInfo and C_TradeSkillUI.GetBaseProfessionInfo() or nil
+	local childInfo = C_TradeSkillUI.GetChildProfessionInfo and C_TradeSkillUI.GetChildProfessionInfo() or nil
+	return baseInfo, childInfo
+end
+
+local function stampProfessionMetadataOnly(self, merge)
+	local existing = merge.existing
+	local baseInfo, childInfo = professionInfos()
+	self:UpdateProfessionDescriptorFields(existing, merge.descriptor, baseInfo, childInfo)
+	self:StampProfessionLiveFingerprint(existing, merge.fingerprintInfo)
+	self:BumpDataRevision()
+	self:DebugLog("LIVE", MERGE_LOG .. " metadata-only stamp", { string.format("skillLineID=%s", tostring(merge.openSkillLineID)) })
+	return self:CommitLiveProfessionMergeResult(merge.key, merge.charData, merge.openSkillLineID, existing, { mode = "metadata", refreshInventory = false })
+end
+
+-- Categories, descriptor fields and (when asked) spec trees, collected under export filters.
+local function refreshProfessionMetadata(self, merge, needSpecs)
+	local existing, descriptor = merge.existing, merge.descriptor
+	local snapshot = self:SnapshotFilters()
+	self:ApplyExportFilters()
+	local baseInfo, childInfo = professionInfos()
+	local categories = self:CollectRecipeCategories()
+	self:UpdateProfessionDescriptorFields(existing, descriptor, baseInfo, childInfo)
+	existing.categories = categories
+	if needSpecs then
+		local captureSpec = self:GetSetting("capture.captureSpecializationTree", true) ~= false
+		local specResult = captureSpec
+			and self:CollectSpecializationTreesForProfession(descriptor.skillLineID, childInfo, categories, descriptor.currentLevelName) or nil
+		self:ApplySpecializationResultToProfessionData(existing, specResult)
+	end
+	self:RestoreFilters(snapshot)
+end
+
+local function collectNewRecipes(self, professionData, newSpellIDs)
+	if #newSpellIDs > 0 then
+		self:BeginProfessionCollectCaches()
+		self:CollectRecipesIntoProfessionData(professionData, newSpellIDs, 1, #newSpellIDs)
+		self:EndProfessionCollectCaches()
+	end
+end
+
+-- Keeps existing recipe rows; collects only new spell IDs; rebuilds specs when meta changes.
+local function incrementalLiveProfessionMerge(self, merge)
+	local existing, fingerprintInfo = merge.existing, merge.fingerprintInfo
+	local recipeIDs = fingerprintInfo and fingerprintInfo.recipeIDs
+	local newSpellIDs = listNewSpellIDs(recipeIDs, buildKnownSpellSet(self, existing))
+	local needSpecs = needsSpecRebuild(self, existing, fingerprintInfo)
+	local pruned = self:PruneProfessionRecipesNotInSpellSet(existing, buildSpellIDSet(recipeIDs))
+	local recipesChanged = (#newSpellIDs > 0) or (pruned > 0)
+	if not recipesChanged and not needSpecs then
+		return stampProfessionMetadataOnly(self, merge)
+	end
+
+	self:DebugLog("LIVE", MERGE_LOG .. " collecting (incremental)", {
+		professionLogLine(merge),
+		string.format("newRecipes=%d pruned=%d needSpecs=%s", #newSpellIDs, pruned, tostring(needSpecs)),
+	})
+	refreshProfessionMetadata(self, merge, needSpecs)
+	if merge.allowChunked and #newSpellIDs > LIVE_SYNC_RECIPE_BUDGET then
+		self:StartChunkedRecipeMergeJob(chunkedMergeJob(merge, existing, newSpellIDs, fingerprintInfo, "chunked_incremental"))
+		return nil
+	end
+	collectNewRecipes(self, existing, newSpellIDs)
+	self:FinalizeProfessionDataCollect(existing, merge.descriptor, fingerprintInfo)
+	return self:CommitLiveProfessionMergeResult(merge.key, merge.charData, merge.openSkillLineID, existing,
+		{ mode = "incremental", refreshInventory = recipesChanged, forceImmediateInventory = false })
+end
+
 --- One merge for a known skill line (window may already be closing; APIs may still be valid briefly).
 --- opts.forceFull — full rescan (Scan button / explicit). opts.fingerprintInfo — prebuilt fingerprint.
 --- opts.allowChunked — default true for live path; false for forceFull sync scans.
 function AuctionHelper:ApplyLiveProfessionMergeForSkillLineID(openSkillLineID, opts)
 	opts = type(opts) == "table" and opts or {}
 	local forceFull = opts.forceFull == true
+	if mergeBlockedOrMissing(self, openSkillLineID) then
+		return nil
+	end
+	self:CancelLiveProfessionMergeJob()
+	self:InitDB()
+	local key, charData = self:GetOrCreateCharacterDataForLiveUpdate()
+	local existing = charData.professions and charData.professions[tostring(openSkillLineID)] or nil
+	local fingerprintInfo = opts.fingerprintInfo
+	if type(fingerprintInfo) ~= "table" then
+		fingerprintInfo = exportFilteredFingerprint(self)
+	end
+	if not forceFull and keepSavedProfession(self, openSkillLineID, existing, fingerprintInfo) then
+		return existing
+	end
+	local descriptor = self:FindProfessionDescriptorForSkillLineID(openSkillLineID)
+	if not descriptor then
+		self:DebugLog("LIVE", MERGE_LOG .. " no matching GetPlayerProfessions entry", { string.format("openSkillLineID=%s", tostring(openSkillLineID)) })
+		return nil
+	end
 	local allowChunked = opts.allowChunked
 	if allowChunked == nil then
 		allowChunked = not forceFull
 	end
-
-	if self:LiveUpdatesBlocked() or self:GetState().pendingScan then
-		self:DebugLog("LIVE", "ApplyLiveProfessionMergeForSkillLineID skipped", {
-			string.format("blocked=%s pendingScan=%s", tostring(self:LiveUpdatesBlocked()), tostring(self:GetState().pendingScan)),
-		})
-		return nil
-	end
-
-	if not openSkillLineID then
-		return nil
-	end
-
-	self:CancelLiveProfessionMergeJob()
-
-	self:InitDB()
-	local key, charData = self:GetOrCreateCharacterDataForLiveUpdate()
-	local skillKey = tostring(openSkillLineID)
-	local existing = charData.professions and charData.professions[skillKey] or nil
-
-	local fingerprintInfo = opts.fingerprintInfo
-	if type(fingerprintInfo) ~= "table" then
-		local filterSnapshot = self:SnapshotFilters()
-		self:ApplyExportFilters()
-		fingerprintInfo = self:BuildOpenProfessionQuickFingerprint()
-		self:RestoreFilters(filterSnapshot)
-	end
-
-	-- Avoid wiping good SavedVariables when the UI tears down before recipes are available.
-	if not forceFull and fingerprintInfo and not fingerprintInfo.stable
-		and existing and tonumber(existing.recipeCount) and tonumber(existing.recipeCount) > 0 then
-		self:DebugLog("LIVE", "ApplyLiveProfessionMergeForSkillLineID skipped (unstable fingerprint, keeping saved)", {
-			string.format("skillLineID=%s savedRecipeCount=%s", tostring(openSkillLineID), tostring(existing.recipeCount)),
-		})
-		return existing
-	end
-
-	if not forceFull and existing and fingerprintInfo and existing.liveFingerprint
-		and existing.liveFingerprint == fingerprintInfo.fingerprint then
-		self:DebugLog("LIVE", "ApplyLiveProfessionMergeForSkillLineID skipped (saved fingerprint match)", {
-			string.format("skillLineID=%s", tostring(openSkillLineID)),
-		})
-		return existing
-	end
-
-	local descriptor = self:FindProfessionDescriptorForSkillLineID(openSkillLineID)
-	if not descriptor then
-		self:DebugLog("LIVE", "ApplyLiveProfessionMergeForSkillLineID no matching GetPlayerProfessions entry", {
-			string.format("openSkillLineID=%s", tostring(openSkillLineID)),
-		})
-		return nil
-	end
-
+	local merge = { key = key, charData = charData, openSkillLineID = openSkillLineID, descriptor = descriptor,
+		existing = existing, fingerprintInfo = fingerprintInfo, forceFull = forceFull, allowChunked = allowChunked }
 	local hasExistingRecipes = existing and type(existing.recipes) == "table" and next(existing.recipes) ~= nil
-	local doFull = forceFull or not hasExistingRecipes
-
-	if doFull then
-		local snapshot = self:SnapshotFilters()
-		self:ApplyExportFilters()
-		local recipeIDs = C_TradeSkillUI.GetAllRecipeIDs and self:NormalizeApiList(C_TradeSkillUI.GetAllRecipeIDs()) or {}
-		sortNumericIds(recipeIDs)
-
-		if allowChunked and #recipeIDs > LIVE_SYNC_RECIPE_BUDGET then
-			self:DebugLog("LIVE", "ApplyLiveProfessionMergeForSkillLineID collecting (chunked full)", {
-				string.format("profession=%s skillLineID=%s recipeCount=%d", tostring(descriptor.professionName), tostring(openSkillLineID), #recipeIDs),
-			})
-			local professionData = self:CreateProfessionDataShell(descriptor, { rebuildSpecs = true })
-			self:RestoreFilters(snapshot)
-			-- Prefer a fingerprint taken under the same filter state used for collection.
-			local filteredFp = self:BuildOpenProfessionQuickFingerprint() or fingerprintInfo
-			self:StartChunkedRecipeMergeJob({
-				key = key,
-				charData = charData,
-				openSkillLineID = openSkillLineID,
-				descriptor = descriptor,
-				professionData = professionData,
-				recipeSpellIDs = recipeIDs,
-				fingerprintInfo = filteredFp,
-				mode = "chunked_full",
-			})
-			return nil
-		end
-
-		self:DebugLog("LIVE", "ApplyLiveProfessionMergeForSkillLineID collecting (full)", {
-			string.format("profession=%s skillLineID=%s", tostring(descriptor.professionName), tostring(openSkillLineID)),
-		})
-		local professionData = self:CollectCurrentProfessionData(descriptor)
-		-- Stamp while export filters are still applied so liveFingerprint matches close-path compares.
-		local filteredFp = self:BuildOpenProfessionQuickFingerprint() or fingerprintInfo
-		self:RestoreFilters(snapshot)
-		if not professionData then
-			self:DebugLog("LIVE", "ApplyLiveProfessionMergeForSkillLineID CollectCurrentProfessionData returned nil", {})
-			return nil
-		end
-		if filteredFp then
-			self:StampProfessionLiveFingerprint(professionData, filteredFp)
-		end
-		return self:CommitLiveProfessionMergeResult(key, charData, openSkillLineID, professionData, {
-			mode = forceFull and "force_full" or "full",
-			refreshInventory = true,
-			forceImmediateInventory = forceFull,
-		})
+	if forceFull or not hasExistingRecipes then
+		return fullLiveProfessionMerge(self, merge)
 	end
-
-	-- Incremental path: keep existing recipe rows; collect only new spell IDs; rebuild specs when meta changes.
-	local knownSpellSet = buildKnownSpellSet(self, existing)
-	local newSpellIDs = listNewSpellIDs(fingerprintInfo and fingerprintInfo.recipeIDs, knownSpellSet)
-	local currentSpellSet = buildSpellIDSet(fingerprintInfo and fingerprintInfo.recipeIDs)
-	local needSpecs = true
-	if fingerprintInfo and fingerprintInfo.metaFingerprint and existing.liveMetaFingerprint
-		and existing.liveMetaFingerprint == fingerprintInfo.metaFingerprint
-		and existing.specializationTrees then
-		needSpecs = false
-	end
-	if self:GetSetting("capture.captureSpecializationTree", true) == false then
-		needSpecs = false
-	end
-
-	local pruned = self:PruneProfessionRecipesNotInSpellSet(existing, currentSpellSet)
-	local recipesChanged = (#newSpellIDs > 0) or (pruned > 0)
-
-	if not recipesChanged and not needSpecs then
-		local baseInfo = C_TradeSkillUI.GetBaseProfessionInfo and C_TradeSkillUI.GetBaseProfessionInfo() or nil
-		local childInfo = C_TradeSkillUI.GetChildProfessionInfo and C_TradeSkillUI.GetChildProfessionInfo() or nil
-		self:UpdateProfessionDescriptorFields(existing, descriptor, baseInfo, childInfo)
-		self:StampProfessionLiveFingerprint(existing, fingerprintInfo)
-		self:BumpDataRevision()
-		self:DebugLog("LIVE", "ApplyLiveProfessionMergeForSkillLineID metadata-only stamp", {
-			string.format("skillLineID=%s", tostring(openSkillLineID)),
-		})
-		return self:CommitLiveProfessionMergeResult(key, charData, openSkillLineID, existing, {
-			mode = "metadata",
-			refreshInventory = false,
-		})
-	end
-
-	self:DebugLog("LIVE", "ApplyLiveProfessionMergeForSkillLineID collecting (incremental)", {
-		string.format("profession=%s skillLineID=%s", tostring(descriptor.professionName), tostring(openSkillLineID)),
-		string.format("newRecipes=%d pruned=%d needSpecs=%s", #newSpellIDs, pruned, tostring(needSpecs)),
-	})
-
-	local snapshot = self:SnapshotFilters()
-	self:ApplyExportFilters()
-
-	local baseInfo = C_TradeSkillUI.GetBaseProfessionInfo and C_TradeSkillUI.GetBaseProfessionInfo() or nil
-	local childInfo = C_TradeSkillUI.GetChildProfessionInfo and C_TradeSkillUI.GetChildProfessionInfo() or nil
-	local categories = self:CollectRecipeCategories()
-	self:UpdateProfessionDescriptorFields(existing, descriptor, baseInfo, childInfo)
-	existing.categories = categories
-
-	if needSpecs then
-		local captureSpec = self:GetSetting("capture.captureSpecializationTree", true) ~= false
-		local specResult = captureSpec and self:CollectSpecializationTreesForProfession(
-			descriptor.skillLineID,
-			childInfo,
-			categories,
-			descriptor.currentLevelName
-		) or nil
-		self:ApplySpecializationResultToProfessionData(existing, specResult)
-	end
-
-	self:RestoreFilters(snapshot)
-
-	if allowChunked and #newSpellIDs > LIVE_SYNC_RECIPE_BUDGET then
-		self:StartChunkedRecipeMergeJob({
-			key = key,
-			charData = charData,
-			openSkillLineID = openSkillLineID,
-			descriptor = descriptor,
-			professionData = existing,
-			recipeSpellIDs = newSpellIDs,
-			fingerprintInfo = fingerprintInfo,
-			mode = "chunked_incremental",
-		})
-		return nil
-	end
-
-	if #newSpellIDs > 0 then
-		self:BeginProfessionCollectCaches()
-		self:CollectRecipesIntoProfessionData(existing, newSpellIDs, 1, #newSpellIDs)
-		self:EndProfessionCollectCaches()
-	end
-
-	self:FinalizeProfessionDataCollect(existing, descriptor, fingerprintInfo)
-	return self:CommitLiveProfessionMergeResult(key, charData, openSkillLineID, existing, {
-		mode = "incremental",
-		refreshInventory = recipesChanged,
-		forceImmediateInventory = false,
-	})
+	return incrementalLiveProfessionMerge(self, merge)
 end
 
 function AuctionHelper:ApplyLiveOpenProfessionMerge()

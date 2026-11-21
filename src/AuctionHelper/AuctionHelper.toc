@@ -10,6 +10,7 @@
 Bootstrap.lua
 src\core\AuctionHelper.lua
 src\util\AuctionHelper_ForeverLogic.lua
+src\util\AuctionHelper_AuctionLogic.lua
 src\util\AuctionHelper_IncomeLogic.lua
 src\util\AuctionHelper_MailLogic.lua
 src\util\AuctionHelper_MarketSignals.lua
@@ -19,6 +20,8 @@ src\util\AuctionHelper_VendorLogic.lua
 src\util\AuctionHelper_FarmLogic.lua
 src\util\AuctionHelper_WeekdayPattern.lua
 src\util\AuctionHelper_TooltipLogic.lua
+src\util\AuctionHelper_FilterLogic.lua
+src\util\AuctionHelper_ChartLogic.lua
 src\core\AuctionHelper_Data.lua
 src\core\AuctionHelper_DataInit.lua
 src\util\AuctionHelper_CoreHelpers.lua

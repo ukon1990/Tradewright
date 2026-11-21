@@ -11,6 +11,7 @@ local CLASSIC_AH_DUMP_PAGE_SIZE = 50
 local CLASSIC_AH_DUMP_QUERY_RETRY_SEC = 0.5
 local CLASSIC_AH_DUMP_QUERY_MAX_RETRIES = 40
 local FL = AuctionHelper.ForeverLogic
+local AL = AuctionHelper.AuctionLogic
 local KNOWN_AH_SIDE_PANELS = {
 	"AuctionHelper_AuctionDataAuctionPanel",
 }
@@ -354,106 +355,51 @@ function AuctionHelper:ExtractAuctionItemKeyFieldsFromEventArg(eventArg)
 	})
 end
 
+function AuctionHelper:GetLiveCommoditySearchAggregate(itemID)
+	if not C_AuctionHouse.GetNumCommoditySearchResults or not C_AuctionHouse.GetCommoditySearchResultInfo then
+		return nil
+	end
+	local commodityResultCount = tonumber(C_AuctionHouse.GetNumCommoditySearchResults(itemID)) or 0
+	local searchAggregate = { kind = "commodity", itemID = itemID, totalQuantity = 0, listingCount = commodityResultCount }
+	for index = 1, commodityResultCount do
+		AL.AddCommodityResult(searchAggregate, C_AuctionHouse.GetCommoditySearchResultInfo(itemID, index))
+	end
+	if not searchAggregate.minUnitPrice then
+		return nil
+	end
+	searchAggregate.totalQuantity = math.max(1, searchAggregate.totalQuantity)
+	return searchAggregate
+end
+
+function AuctionHelper:GetLiveItemSearchAggregate(itemID, keyFields)
+	local queryKey = self:MakeAuctionHouseItemKey(itemID, keyFields)
+	if not queryKey or not C_AuctionHouse.GetNumItemSearchResults or not C_AuctionHouse.GetItemSearchResultInfo then
+		return nil
+	end
+	local itemResultCount = tonumber(C_AuctionHouse.GetNumItemSearchResults(queryKey)) or 0
+	-- Item keys are tables, so rows are grouped and narrowed by what the key holds. A key whose
+	-- fields are all zero asks for every variant and narrows nothing.
+	local expectedKey = AL.NarrowingItemKey(self:NormalizeAuctionItemKeyFields(keyFields), itemID)
+	local variantGroups = {}
+	for index = 1, itemResultCount do
+		local info = C_AuctionHouse.GetItemSearchResultInfo(queryKey, index)
+		if info and info.itemKey then
+			local rowKey = FL.SerializeItemKey(info.itemKey, itemID)
+			if not expectedKey or rowKey == expectedKey then
+				AL.AddItemResult(variantGroups, rowKey, info)
+			end
+		end
+	end
+	return AL.SummarizeItemVariants(variantGroups, itemID)
+end
+
 --- Sum listed quantity + cheapest unit for commodities; per–ItemKey groups for non-commodity items.
 function AuctionHelper:GetLiveAuctionSearchAggregate(itemID, keyFields)
 	itemID = normalizeItemID(itemID)
 	if not itemID or not C_AuctionHouse then
 		return nil
 	end
-	if C_AuctionHouse.GetNumCommoditySearchResults and C_AuctionHouse.GetCommoditySearchResultInfo then
-		local n = tonumber(C_AuctionHouse.GetNumCommoditySearchResults(itemID)) or 0
-		if n > 0 then
-			local totalQty = 0
-			local minUnit, maxUnit = nil, nil
-			for i = 1, n do
-				local info = C_AuctionHouse.GetCommoditySearchResultInfo(itemID, i)
-				if info then
-					totalQty = totalQty + math.max(0, tonumber(info.quantity) or 0)
-					local u = tonumber(info.unitPrice)
-					if u and u > 0 then
-						minUnit = minUnit and math.min(minUnit, u) or u
-						maxUnit = maxUnit and math.max(maxUnit, u) or u
-					end
-				end
-			end
-			if minUnit and minUnit > 0 then
-				return {
-					kind = "commodity",
-					itemID = itemID,
-					minUnitPrice = minUnit,
-					maxUnitPrice = maxUnit,
-					totalQuantity = math.max(1, totalQty),
-					listingCount = n,
-				}
-			end
-		end
-	end
-	local queryKey = self:MakeAuctionHouseItemKey(itemID, keyFields)
-	if not queryKey or not C_AuctionHouse.GetNumItemSearchResults or not C_AuctionHouse.GetItemSearchResultInfo then
-		return nil
-	end
-	local m = tonumber(C_AuctionHouse.GetNumItemSearchResults(queryKey)) or 0
-	if m <= 0 then
-		return nil
-	end
-	-- Item keys are tables, so rows are grouped and narrowed by what the key holds. A key whose
-	-- fields are all zero asks for every variant and narrows nothing.
-	local fields = self:NormalizeAuctionItemKeyFields(keyFields)
-	local expectedKey = fields and (fields.itemLevel > 0 or fields.itemSuffix > 0 or fields.battlePetSpeciesID > 0)
-		and FL.SerializeItemKey(fields, itemID) or nil
-	local groups = {}
-	for i = 1, m do
-		local info = C_AuctionHouse.GetItemSearchResultInfo(queryKey, i)
-		if info and info.itemKey then
-			local rowKey = FL.SerializeItemKey(info.itemKey, itemID)
-			-- Narrow search: ignore rows that do not match the requested ItemKey.
-			if not expectedKey or rowKey == expectedKey then
-				local g = groups[rowKey]
-				if not g then
-					g = { key = rowKey, itemKey = info.itemKey, totalQuantity = 0, minUnitPrice = nil, maxUnitPrice = nil, listingCount = 0 }
-					groups[rowKey] = g
-				end
-				local qty = math.max(1, tonumber(info.quantity) or 1)
-				g.totalQuantity = g.totalQuantity + qty
-				g.listingCount = g.listingCount + 1
-				local buyout = tonumber(info.buyoutAmount)
-				if buyout and buyout > 0 then
-					local unit = math.floor(buyout / qty)
-					if unit and unit > 0 then
-						g.minUnitPrice = g.minUnitPrice and math.min(g.minUnitPrice, unit) or unit
-						g.maxUnitPrice = g.maxUnitPrice and math.max(g.maxUnitPrice, unit) or unit
-					end
-				end
-			end
-		end
-	end
-	local variantList = {}
-	local totalAll, listingsAll = 0, 0
-	local cheapestGlobal, highestGlobal = nil, nil
-	for _, g in pairs(groups) do
-		if g.minUnitPrice and g.minUnitPrice > 0 then
-			variantList[#variantList + 1] = g
-			totalAll = totalAll + math.max(1, tonumber(g.totalQuantity) or 1)
-			listingsAll = listingsAll + g.listingCount
-			cheapestGlobal = cheapestGlobal and math.min(cheapestGlobal, g.minUnitPrice) or g.minUnitPrice
-			highestGlobal = highestGlobal and math.max(highestGlobal, g.maxUnitPrice) or g.maxUnitPrice
-		end
-	end
-	if #variantList == 0 then
-		return nil
-	end
-	table.sort(variantList, function(a, b)
-		return a.key < b.key
-	end)
-	return {
-		kind = "item",
-		itemID = itemID,
-		variants = variantList,
-		cheapestUnitPrice = cheapestGlobal,
-		highestUnitPrice = highestGlobal,
-		totalQuantityAll = math.max(1, totalAll),
-		listingCountAll = listingsAll,
-	}
+	return self:GetLiveCommoditySearchAggregate(itemID) or self:GetLiveItemSearchAggregate(itemID, keyFields)
 end
 
 function AuctionHelper:RecordLiveAuctionObservationsFromAggregate(itemID, agg, sourceTag)
@@ -1806,135 +1752,56 @@ function AuctionHelper:ScheduleAuctionCartPurchaseRefresh()
 	end
 end
 
+local NO_ITEM_DESCRIPTOR = {}
+
+function AuctionHelper:BuildAuctionCraftCartRow(itemID, reagent)
+	local desc = self:ResolveItemDescriptor(itemID) or NO_ITEM_DESCRIPTOR
+	local priceState = self:BuildAuctionPanelPriceState(itemID)
+	local quantityOnCharacter = tonumber(self:GetAuctionCartEffectiveHave(itemID)) or 0
+	local unitPrice = tonumber(reagent.estimatedUnitPrice)
+	local quantityHave, quantityToBuy, buyCost = AL.CartQuantities(reagent.quantityNeeded, quantityOnCharacter, unitPrice)
+	local mailAllocations, mailToText
+	if self.BuildReagentMailAllocations then
+		mailAllocations = self:BuildReagentMailAllocations(itemID, reagent.sources)
+		mailToText = self:FormatMailAllocationsShort(mailAllocations)
+	end
+	local sourceText, sourceCount = AL.CartSourceText(reagent.sources)
+	return {
+		itemID = itemID,
+		itemName = reagent.name,
+		itemIcon = desc.icon or 134400,
+		itemClassLabel = desc.itemType or "",
+		itemSubclassLabel = desc.itemSubType or "",
+		quantityNeeded = tonumber(reagent.quantityNeeded) or 0,
+		quantityHave = quantityHave,
+		quantityOnCharacter = quantityOnCharacter,
+		quantityToBuy = quantityToBuy,
+		estimatedUnitPrice = unitPrice,
+		estimatedBuyCost = buyCost,
+		estimatedPriceSource = reagent.estimatedPriceSource,
+		mailAllocations = mailAllocations,
+		mailToText = mailToText or "—",
+		sourceText = sourceText,
+		sourceCount = sourceCount,
+		sources = reagent.sources or {},
+		currentPrice = tonumber(priceState.currentPrice),
+		currentPriceSource = priceState.currentPriceSource,
+		currentPriceSeenAt = tonumber(priceState.currentPriceSeenAt),
+		currentPriceIsNative = priceState.currentPriceIsNative == true,
+		nativePrice = tonumber(priceState.nativePrice),
+		fallbackPrice = tonumber(priceState.fallbackPrice),
+	}
+end
+
 function AuctionHelper:BuildAuctionCraftCartRows()
 	self:ClearSettledAuctionCartPurchaseCredits()
 	local summary = self:BuildCraftQueueSummary()
 	local orderSummary = self.BuildCraftingOrderQueueSummary and self:BuildCraftingOrderQueueSummary() or { reagentLines = {} }
-	local merged = {}
-	-- Order mats are upserted into craftQueue; skip those orderIDs when merging the crafting-order queue summary.
-	local mirroredOrderIDs = {}
-	for _, entry in ipairs(self:GetCraftQueueRows()) do
-		local oid = tonumber(entry and entry.orderID)
-		if oid then
-			mirroredOrderIDs[oid] = true
-		end
-	end
-
-	local function mergeReagentLine(reagent, sourcePrefix)
-		local itemID = tonumber(reagent.itemID)
-		if not itemID then
-			return
-		end
-		local need = tonumber(reagent.quantityNeeded or reagent.quantity) or 0
-		local row = merged[itemID]
-		if not row then
-			row = {
-				itemID = itemID,
-				name = reagent.name or self:GetItemDisplayName(itemID),
-				quantityNeeded = 0,
-				currentCharacterQuantity = self:GetAuctionCartEffectiveHave(itemID),
-				estimatedUnitPrice = tonumber(reagent.estimatedUnitPrice),
-				estimatedPriceSource = reagent.estimatedPriceSource or reagent.priceSource,
-				sources = {},
-			}
-			merged[itemID] = row
-		end
-		row.quantityNeeded = (tonumber(row.quantityNeeded) or 0) + need
-		local unitPrice = tonumber(reagent.estimatedUnitPrice)
-		if unitPrice and unitPrice > 0 and (not row.estimatedUnitPrice or unitPrice < row.estimatedUnitPrice) then
-			row.estimatedUnitPrice = unitPrice
-			row.estimatedPriceSource = reagent.estimatedPriceSource or reagent.priceSource
-		end
-		for _, src in ipairs(reagent.sources or {}) do
-			local copy = {}
-			for k, v in pairs(src) do
-				copy[k] = v
-			end
-			if sourcePrefix and copy.recipeName then
-				copy.recipeName = sourcePrefix .. tostring(copy.recipeName)
-			elseif sourcePrefix and copy.orderID then
-				copy.recipeName = sourcePrefix .. "Order #" .. tostring(copy.orderID)
-			end
-			row.sources[#row.sources + 1] = copy
-		end
-	end
-
-	for _, reagent in ipairs(summary.reagentLines or {}) do
-		mergeReagentLine(reagent, nil)
-	end
-	for _, reagent in ipairs(orderSummary.reagentLines or {}) do
-		local filteredNeed = 0
-		local filteredSources = {}
-		for _, src in ipairs(reagent.sources or {}) do
-			local oid = tonumber(src and src.orderID)
-			if not oid or not mirroredOrderIDs[oid] then
-				filteredNeed = filteredNeed + (tonumber(src and src.quantity) or 0)
-				filteredSources[#filteredSources + 1] = src
-			end
-		end
-		if filteredNeed > 0 then
-			local copy = {
-				itemID = reagent.itemID,
-				name = reagent.name,
-				quantityNeeded = filteredNeed,
-				quantity = filteredNeed,
-				estimatedUnitPrice = reagent.estimatedUnitPrice,
-				estimatedPriceSource = reagent.estimatedPriceSource or reagent.priceSource,
-				sources = filteredSources,
-			}
-			mergeReagentLine(copy, "WO: ")
-		end
-	end
-
+	local merged = AL.MergeCartReagents(summary.reagentLines, orderSummary.reagentLines, self:GetCraftQueueRows(),
+		function(itemID) return self:GetItemDisplayName(itemID) end)
 	local rows = {}
 	for itemID, reagent in pairs(merged) do
-		local desc = self:ResolveItemDescriptor(itemID) or nil
-		local priceState = self:BuildAuctionPanelPriceState(itemID)
-		reagent.currentCharacterQuantity = self:GetAuctionCartEffectiveHave(itemID)
-		reagent.currentCharacterAvailable = math.min(tonumber(reagent.currentCharacterQuantity) or 0, tonumber(reagent.quantityNeeded) or 0)
-		reagent.quantityToBuy = math.max(0, (tonumber(reagent.quantityNeeded) or 0) - (tonumber(reagent.currentCharacterQuantity) or 0))
-		if self.BuildReagentMailAllocations then
-			reagent.mailAllocations = self:BuildReagentMailAllocations(itemID, reagent.sources)
-			reagent.mailToText = self:FormatMailAllocationsShort(reagent.mailAllocations)
-		end
-		if reagent.estimatedUnitPrice and reagent.quantityToBuy > 0 then
-			reagent.estimatedBuyCost = reagent.estimatedUnitPrice * reagent.quantityToBuy
-		end
-		local sourceNames = {}
-		local seenSources = {}
-		for _, src in ipairs(reagent.sources or {}) do
-			local label = tostring(src and src.recipeName or src and src.outputName or (src and src.orderID and ("Order #" .. tostring(src.orderID))) or "")
-			if label ~= "" and not seenSources[label] then
-				seenSources[label] = true
-				sourceNames[#sourceNames + 1] = label
-			end
-		end
-		table.sort(sourceNames)
-		rows[#rows + 1] = {
-			itemID = itemID,
-			itemName = reagent.name,
-			itemIcon = desc and desc.icon or 134400,
-			itemClassLabel = desc and desc.itemType or "",
-			itemSubclassLabel = desc and desc.itemSubType or "",
-			quantityNeeded = tonumber(reagent.quantityNeeded) or 0,
-			quantityHave = tonumber(reagent.currentCharacterAvailable) or 0,
-			quantityOnCharacter = tonumber(reagent.currentCharacterQuantity) or 0,
-			quantityToBuy = tonumber(reagent.quantityToBuy) or 0,
-			estimatedUnitPrice = tonumber(reagent.estimatedUnitPrice),
-			estimatedBuyCost = tonumber(reagent.estimatedBuyCost),
-			estimatedPriceSource = reagent.estimatedPriceSource,
-			mailAllocations = reagent.mailAllocations,
-			mailToText = reagent.mailToText or "—",
-			sourceText = (#sourceNames > 0 and table.concat(sourceNames, ", ")) or "—",
-			sourceCount = #sourceNames,
-			sources = reagent.sources or {},
-			currentPrice = tonumber(priceState.currentPrice),
-			currentPriceSource = priceState.currentPriceSource,
-			currentPriceSeenAt = tonumber(priceState.currentPriceSeenAt),
-			currentPriceIsNative = priceState.currentPriceIsNative == true,
-			nativePrice = tonumber(priceState.nativePrice),
-			fallbackPrice = tonumber(priceState.fallbackPrice),
-		}
+		rows[#rows + 1] = self:BuildAuctionCraftCartRow(itemID, reagent)
 	end
 	table.sort(rows, function(a, b)
 		return tostring(a.itemName) < tostring(b.itemName)

@@ -26,6 +26,7 @@ src\modules\AuctionHelper_Cooldowns.lua
 src\modules\AuctionHelper_MaterialSource.lua
 src\modules\AuctionHelper_CraftsEngine.lua
 src\modules\AuctionHelper_CraftDetailText.lua
+src\modules\AuctionHelper_OrderReagents.lua
 src\modules\AuctionHelper_CraftingOrdersMaterials.lua
 src\modules\AuctionHelper_CraftingOrdersUI.lua
 src\modules\AuctionHelper_Scan.lua

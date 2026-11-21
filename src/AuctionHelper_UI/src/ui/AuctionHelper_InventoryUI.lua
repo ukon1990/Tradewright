@@ -66,59 +66,9 @@ function AuctionHelper:BuildInventoryFilterState()
 end
 
 function AuctionHelper:FilterInventoryRows(rows, filters)
-	filters = filters or {}
-	local filter = string.lower(self:Trim(filters.text))
-	local characterFilter = filters.characters or {}
-	local roleFilter = filters.role or {}
-	local itemTypeFilter = filters.itemType or {}
-	local expSel = filters.expansions or {}
-	local showAllExpansions = self:IsFilterSelectionEmpty(expSel)
-	local out = {}
-
-	for _, row in ipairs(rows or {}) do
-		local matchesText = true
-		if filter ~= "" then
-			matchesText = false
-			local haystacks = {
-				tostring(row.itemID or ""),
-				tostring(row.name or ""),
-				tostring(row.roleLabel or ""),
-				tostring(row.itemTypeLabel or ""),
-				tostring(row.itemSubTypeLabel or ""),
-			}
-			for _, text in ipairs(haystacks) do
-				if string.find(string.lower(text), filter, 1, true) then
-					matchesText = true
-					break
-				end
-			end
-		end
-
-		local matchesCharacter = row.aggregatedInventory
-			or self:IsFilterSelectionEmpty(characterFilter)
-			or characterFilter[row.characterKey] == true
-		local matchesRole = self:IsFilterSelectionEmpty(roleFilter) or roleFilter[row.roleKey] == true
-		local matchesType = self:IsFilterSelectionEmpty(itemTypeFilter) or itemTypeFilter[row.itemTypeLabel] == true
-		local expTag = row.expansionTag or "legacy"
-		local matchesExpansion = showAllExpansions or expSel[expTag] == true
-		local matchesExtra = (not filters.hasPrice or (tonumber(row.currentAhCopper) or 0) > 0)
-			and (not filters.profitable or (tonumber(row.profitCopperPerUnit) or 0) > 0)
-		if matchesExtra and not self:IsFilterSelectionEmpty(filters.locations) then
-			matchesExtra = (filters.locations.bags and (tonumber(row.bags) or 0) > 0)
-				or (filters.locations.bank and (tonumber(row.bank) or 0) > 0)
-				or (filters.locations.warband and (tonumber(row.warband) or 0) > 0)
-				or false
-		end
-		if matchesExtra and not self:IsFilterSelectionEmpty(filters.qualities) then
-			local quality = self:GetItemFilterInfo(row.itemID).quality
-			matchesExtra = quality ~= nil and filters.qualities[quality] == true
-		end
-		if matchesText and matchesCharacter and matchesRole and matchesType and matchesExpansion and matchesExtra then
-			out[#out + 1] = row
-		end
-	end
-
-	return out
+	return self.FilterLogic.FilterInventoryRows(rows, filters, function(itemID)
+		return self:GetItemFilterInfo(itemID).quality
+	end)
 end
 
 function AuctionHelper:GetInventoryRoleFilterOptions()

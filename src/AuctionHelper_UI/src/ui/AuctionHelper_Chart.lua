@@ -9,50 +9,13 @@ local WHITE = "Interface\\Buttons\\WHITE8X8"
 local MAX_MARKERS = 24
 local Y_TICKS = 4
 local X_TICKS = 4
-
--- Rounded tick step (1, 2 or 5 times a power of ten) covering `range` in about `count` steps.
-local function niceStep(range, count)
-	local raw = range / math.max(1, count)
-	if raw <= 0 then
-		return 1
-	end
-	local power = 10 ^ math.floor(math.log10(raw))
-	local fraction = raw / power
-	local nice = fraction <= 1 and 1 or fraction <= 2 and 2 or fraction <= 5 and 5 or 10
-	return nice * power
-end
-
-local function niceScale(minValue, maxValue, count, floorAtZero)
-	if minValue == maxValue then
-		minValue, maxValue = minValue - 1, maxValue + 1
-	end
-	local step = niceStep(maxValue - minValue, count)
-	local low = math.floor(minValue / step) * step
-	local high = math.ceil(maxValue / step) * step
-	if floorAtZero and minValue >= 0 then
-		low = math.max(0, low)
-	end
-	return low, high, step
-end
+local ChartLogic = AuctionHelper.ChartLogic
 
 local function timeLabel(at, span)
 	if span <= 36 * 3600 then
 		return date("%H:%M", at)
 	end
 	return date("%b %d", at)
-end
-
-local function expandRange(points, minT, maxT, minV, maxV)
-	for _, p in ipairs(points or {}) do
-		local t, v = tonumber(p.at), tonumber(p.value)
-		if t and v then
-			minT = minT and math.min(minT, t) or t
-			maxT = maxT and math.max(maxT, t) or t
-			minV = minV and math.min(minV, v) or v
-			maxV = maxV and math.max(maxV, v) or v
-		end
-	end
-	return minT, maxT, minV, maxV
 end
 
 function AuctionHelper:CreateTimeSeriesGraph(parent, opts)
@@ -190,135 +153,96 @@ function AuctionHelper:CreateTimeSeriesGraph(parent, opts)
 		dot:SetVertexColor(color.r, color.g, color.b, 1)
 	end
 
-	local geometry
+	local geometry, box, scales
 
-	local function paint()
-		resetPools()
-		geometry = nil
-		emptyText:Hide()
-
-		local minT, maxT, minV, maxV = expandRange(series)
-		minT, maxT, minV, maxV = expandRange(secondarySeries, minT, maxT, minV, maxV)
-		local hasQty = #quantitySeries > 0
-		local qMinT, qMaxT, _, maxQ = expandRange(quantitySeries)
-		if qMinT then
-			minT = minT and math.min(minT, qMinT) or qMinT
-			maxT = maxT and math.max(maxT, qMaxT) or qMaxT
-		end
-		local width, height = plot:GetWidth(), plot:GetHeight()
-		local padR = padRBase + (hasQty and padQtyAxis or 0)
-		local innerW, innerH = width - padL - padR, height - padT - padB
-		if #series == 0 or not minV or innerW < 20 or innerH < 20 then
-			emptyText:SetText(emptyStateText)
-			emptyText:Show()
-			return
-		end
-		if minT == maxT then
-			minT, maxT = minT - 3600, maxT + 3600
-		end
-
-		local low, high, step = niceScale(minV, maxV, Y_TICKS - 1, true)
-		local qHigh = hasQty and select(2, niceScale(0, math.max(1, maxQ or 1), Y_TICKS - 1, true)) or 1
-		local function xAt(t)
-			return padL + (t - minT) / (maxT - minT) * innerW
-		end
-		local function yAt(v)
-			return padB + (v - low) / (high - low) * innerH
-		end
-		local function yAtQ(v)
-			return padB + (v / qHigh) * innerH
-		end
-
-		-- Gridlines and axis labels.
-		local grid = theme.borderSubtle
-		local tick = low
-		local tickIndex = 0
-		while tick <= high + step * 0.001 and tickIndex < 12 do
-			local y = yAt(tick)
-			drawLine("grid", padL, y, padL + innerW, y, grid, 1, tickIndex == 0 and 1 or 0.7)
+	local function drawValueAxes()
+		local low, high, qHigh = scales.low, scales.high, scales.qHigh
+		local right = padL + box.width
+		for index, tick in ipairs(ChartLogic.TickValues(low, high, scales.step)) do
+			local y = scales.yAt(tick)
+			drawLine("grid", padL, y, right, y, theme.borderSubtle, 1, index == 1 and 1 or 0.7)
 			local label = take("yLabel", newLabel)
 			label:ClearAllPoints()
 			label:SetPoint("RIGHT", plot, "BOTTOMLEFT", padL - 6, y)
 			label:SetText(yFormatter(tick))
-			if hasQty then
-				local right = take("qLabel", newLabel)
-				right:ClearAllPoints()
-				right:SetJustifyH("LEFT")
-				right:SetPoint("LEFT", plot, "BOTTOMLEFT", padL + innerW + 6, y)
-				right:SetText(rightYFormatter(qHigh * (tick - low) / (high - low)))
+			if #quantitySeries > 0 then
+				local qLabel = take("qLabel", newLabel)
+				qLabel:ClearAllPoints()
+				qLabel:SetJustifyH("LEFT")
+				qLabel:SetPoint("LEFT", plot, "BOTTOMLEFT", right + 6, y)
+				qLabel:SetText(rightYFormatter(qHigh * (tick - low) / (high - low)))
 			end
-			tick = tick + step
-			tickIndex = tickIndex + 1
 		end
-		local span = maxT - minT
+	end
+
+	local function drawTimeAxis()
+		local span = scales.maxT - scales.minT
 		for index = 0, X_TICKS - 1 do
-			local t = minT + span * index / (X_TICKS - 1)
+			local t = scales.minT + span * index / (X_TICKS - 1)
 			local label = take("xLabel", newLabel)
 			label:ClearAllPoints()
 			local justify = index == 0 and "LEFT" or index == X_TICKS - 1 and "RIGHT" or "CENTER"
 			label:SetJustifyH(justify)
-			label:SetPoint(justify == "CENTER" and "BOTTOM" or ("BOTTOM" .. justify), plot, "BOTTOMLEFT", xAt(t), 3)
+			label:SetPoint(justify == "CENTER" and "BOTTOM" or ("BOTTOM" .. justify), plot, "BOTTOMLEFT", scales.xAt(t), 3)
 			label:SetText(timeLabel(t, span))
 		end
+	end
 
-		-- Quantity columns behind the lines.
-		if hasQty then
-			local columnWidth = math.max(2, math.min(8, innerW / #quantitySeries * 0.6))
-			local qc = colors.quantity
-			for _, p in ipairs(quantitySeries) do
-				local h = yAtQ(p.value) - padB
-				if h > 0.5 then
-					local column = take("column", newTexture("BACKGROUND", 2))
-					column:ClearAllPoints()
-					column:SetPoint("BOTTOM", plot, "BOTTOMLEFT", xAt(p.at), padB)
-					column:SetSize(columnWidth, h)
-					column:SetColorTexture(qc.r, qc.g, qc.b, 0.35)
-				end
+	-- Quantity columns behind the lines.
+	local function drawQuantityColumns()
+		local columnWidth = math.max(2, math.min(8, box.width / #quantitySeries * 0.6))
+		local qc = colors.quantity
+		for _, p in ipairs(quantitySeries) do
+			local h = scales.yAtQ(p.value) - padB
+			if h > 0.5 then
+				local column = take("column", newTexture("BACKGROUND", 2))
+				column:ClearAllPoints()
+				column:SetPoint("BOTTOM", plot, "BOTTOMLEFT", scales.xAt(p.at), padB)
+				column:SetSize(columnWidth, h)
+				column:SetColorTexture(qc.r, qc.g, qc.b, 0.35)
 			end
 		end
+	end
 
-		-- Lines: secondary first, then primary with its area fill.
-		local function drawSeries(points, color, thickness, name, withFill)
-			local markers = #points <= MAX_MARKERS
-			for index, p in ipairs(points) do
-				local x, y = xAt(p.at), yAt(p.value)
-				local nextPoint = points[index + 1]
-				if nextPoint then
-					local x2, y2 = xAt(nextPoint.at), yAt(nextPoint.value)
-					if withFill then
-						drawFill(x, y, x2, y2, padB, color)
-					end
-					drawLine(name .. "Line", x, y, x2, y2, color, thickness)
+	local function drawSeries(points, color, thickness, name, withFill)
+		local xAt, yAt = scales.xAt, scales.yAt
+		local markers = #points <= MAX_MARKERS
+		for index, p in ipairs(points) do
+			local x, y = xAt(p.at), yAt(p.value)
+			local nextPoint = points[index + 1]
+			if nextPoint then
+				local x2, y2 = xAt(nextPoint.at), yAt(nextPoint.value)
+				if withFill then
+					drawFill(x, y, x2, y2, padB, color)
 				end
-				if markers or index == #points then
-					drawMarker(name .. "Marker", x, y, color, thickness >= 2 and 6 or 5)
-				end
+				drawLine(name .. "Line", x, y, x2, y2, color, thickness)
+			end
+			if markers or index == #points then
+				drawMarker(name .. "Marker", x, y, color, thickness >= 2 and 6 or 5)
 			end
 		end
-		drawSeries(secondarySeries, colors.secondary, 1.5, "secondary", false)
-		drawSeries(series, colors.primary, 2, "primary", true)
+	end
 
-		-- Average of the range as a dashed line with its value, and the latest value as a label.
-		local total = 0
-		for _, p in ipairs(series) do
-			total = total + p.value
+	-- Average of the range as a dashed line with its value.
+	local function drawAverage(average)
+		local y = scales.yAt(average)
+		local right = padL + box.width
+		local x = padL
+		while x < right do
+			drawLine("avgDash", x, y, math.min(x + 5, right), y, theme.textMuted, 1, 0.7)
+			x = x + 9
 		end
-		local average = total / #series
-		if #series >= 2 then
-			local y = yAt(average)
-			local x = padL
-			while x < padL + innerW do
-				drawLine("avgDash", x, y, math.min(x + 5, padL + innerW), y, theme.textMuted, 1, 0.7)
-				x = x + 9
-			end
-			local avgLabel = take("avgLabel", newLabel)
-			avgLabel:ClearAllPoints()
-			avgLabel:SetJustifyH("LEFT")
-			avgLabel:SetPoint("BOTTOMLEFT", plot, "BOTTOMLEFT", padL + 4, y + 2)
-			avgLabel:SetText("avg " .. yFormatter(average))
-		end
+		local avgLabel = take("avgLabel", newLabel)
+		avgLabel:ClearAllPoints()
+		avgLabel:SetJustifyH("LEFT")
+		avgLabel:SetPoint("BOTTOMLEFT", plot, "BOTTOMLEFT", padL + 4, y + 2)
+		avgLabel:SetText("avg " .. yFormatter(average))
+	end
+
+	-- The latest value as a pill above (or below) the last point.
+	local function drawLatestValue()
 		local last = series[#series]
-		local lastX, lastY = xAt(last.at), yAt(last.value)
+		local lastX, lastY = scales.xAt(last.at), scales.yAt(last.value)
 		local pill = take("pill", newTexture("OVERLAY", 4))
 		local pillText = take("pillText", function()
 			local fs = plot:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -329,52 +253,74 @@ function AuctionHelper:CreateTimeSeriesGraph(parent, opts)
 		pillText:SetTextColor(theme.surface1.r, theme.surface1.g, theme.surface1.b)
 		pillText:ClearAllPoints()
 		local pillW = math.ceil(pillText:GetStringWidth()) + 10
-		local pillX = math.min(lastX, padL + innerW)
-		local pillY = lastY + 14 <= padB + innerH and lastY + 6 or lastY - 22
+		local pillX = math.min(lastX, padL + box.width)
+		local pillY = lastY + 14 <= padB + box.height and lastY + 6 or lastY - 22
 		pill:ClearAllPoints()
 		pill:SetSize(pillW, 16)
 		pill:SetPoint("BOTTOMRIGHT", plot, "BOTTOMLEFT", pillX, pillY)
 		pill:SetColorTexture(colors.primary.r, colors.primary.g, colors.primary.b, 1)
 		pillText:SetPoint("CENTER", pill, "CENTER", 0, 0)
 		pillText:SetDrawLayer("OVERLAY", 5)
+	end
 
-		-- Legend when more than one series is drawn.
-		local legend = { { "primary", series } }
+	-- Legend when more than one series is drawn.
+	local function drawLegend()
+		local keys = { "primary" }
 		if #secondarySeries > 0 then
-			legend[#legend + 1] = { "secondary", secondarySeries }
+			keys[#keys + 1] = "secondary"
 		end
-		if hasQty then
-			legend[#legend + 1] = { "quantity", quantitySeries }
+		if #quantitySeries > 0 then
+			keys[#keys + 1] = "quantity"
 		end
-		if #legend > 1 then
-			local x = padL + innerW
-			for index = #legend, 1, -1 do
-				local key = legend[index][1]
-				local label = take("legendLabel", newLabel)
-				label:ClearAllPoints()
-				label:SetPoint("TOPRIGHT", plot, "TOPLEFT", x, -1)
-				label:SetText(labels[key])
-				local swatch = take("legendSwatch", newTexture("OVERLAY", 0))
-				swatch:ClearAllPoints()
-				swatch:SetSize(10, key == "quantity" and 6 or 2)
-				swatch:SetPoint("RIGHT", label, "LEFT", -4, 0)
-				local c = colors[key]
-				swatch:SetColorTexture(c.r, c.g, c.b, 1)
-				x = x - label:GetStringWidth() - 30
-			end
+		if #keys < 2 then
+			return
 		end
+		local x = padL + box.width
+		for index = #keys, 1, -1 do
+			local key = keys[index]
+			local label = take("legendLabel", newLabel)
+			label:ClearAllPoints()
+			label:SetPoint("TOPRIGHT", plot, "TOPLEFT", x, -1)
+			label:SetText(labels[key])
+			local swatch = take("legendSwatch", newTexture("OVERLAY", 0))
+			swatch:ClearAllPoints()
+			swatch:SetSize(10, key == "quantity" and 6 or 2)
+			swatch:SetPoint("RIGHT", label, "LEFT", -4, 0)
+			local c = colors[key]
+			swatch:SetColorTexture(c.r, c.g, c.b, 1)
+			x = x - label:GetStringWidth() - 30
+		end
+	end
 
-		-- Hit targets for hover.
-		local targets = {}
-		local function addTargets(points, kind, yFn)
-			for _, p in ipairs(points) do
-				targets[#targets + 1] = { kind = kind, pt = p, x = xAt(p.at), y = yFn(p.value) }
-			end
+	local function paint()
+		resetPools()
+		geometry = nil
+		emptyText:Hide()
+		local bounds = ChartLogic.Bounds(series, secondarySeries, quantitySeries)
+		local hasQty = #quantitySeries > 0
+		local padR = padRBase + (hasQty and padQtyAxis or 0)
+		box = { left = padL, bottom = padB, width = plot:GetWidth() - padL - padR, height = plot:GetHeight() - padT - padB }
+		if #series == 0 or not bounds.minV or box.width < 20 or box.height < 20 then
+			emptyText:SetText(emptyStateText)
+			emptyText:Show()
+			return
 		end
-		addTargets(series, "primary", yAt)
-		addTargets(secondarySeries, "secondary", yAt)
-		addTargets(quantitySeries, "quantity", yAtQ)
-		geometry = { targets = targets, top = padB + innerH, bottom = padB, average = average }
+		scales = ChartLogic.Scales(bounds, box, Y_TICKS - 1, hasQty)
+		drawValueAxes()
+		drawTimeAxis()
+		if hasQty then
+			drawQuantityColumns()
+		end
+		drawSeries(secondarySeries, colors.secondary, 1.5, "secondary", false)
+		drawSeries(series, colors.primary, 2, "primary", true)
+		local average = ChartLogic.Average(series)
+		if #series >= 2 then
+			drawAverage(average)
+		end
+		drawLatestValue()
+		drawLegend()
+		local targets = ChartLogic.HitTargets(scales, series, secondarySeries, quantitySeries)
+		geometry = { targets = targets, top = padB + box.height, bottom = padB, average = average }
 	end
 
 	-- Hover: snap to the nearest point (by horizontal distance first), draw a crosshair, enlarge the

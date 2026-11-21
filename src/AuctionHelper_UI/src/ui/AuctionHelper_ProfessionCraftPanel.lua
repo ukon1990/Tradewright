@@ -442,43 +442,44 @@ function AuctionHelper:EnsureProfessionCraftEconomyPanel()
 	return f
 end
 
--- Fills the Recipe view from the selected recipe's evaluation.
-local function renderProfessionRecipe(pe, panel, ctx)
-	local host = panel.infoHost
-	local ev = ctx.eval or {}
-	host.empty:Hide()
-	host.body:Show()
-	host.header:SetItem(ev.outputItemID, (ev.recipeName or pe:GetItemDisplayName(ev.outputItemID)) .. rankMarkup(ev.qualityIndex),
-		string.format("%s · best crafter %s", tostring(ev.professionName or "?"), tostring(ctx.recommendedCrafterLabel or "-")), ev.outputIcon)
-
-	local conf = ctx.confidence or "ok"
-	if conf == "missing_sale_price" or conf == "missing_mat_price" then
-		host.header.badge:SetBadge("No price", "warning")
-	elseif conf == "stale_scan" then
-		host.header.badge:SetBadge("Old scan", "warning")
-	elseif ev.canCraftNow then
-		host.header.badge:SetBadge("Can craft", "success")
-	elseif ev.qualityReachable == false then
-		host.header.badge:SetBadge((ev.concentrationNeeded or ev.concentrationCost) and "Needs concentration" or "Out of reach", "warning")
-	else
-		local missing = 0
-		for _, slot in ipairs(ev.reagentPlan or {}) do
-			missing = missing + math.max(0, tonumber(slot.purchasedQuantity) or 0)
-		end
-		host.header.badge:SetBadge(missing > 0 and ("Missing " .. missing) or "Missing", "danger")
+local function missingReagentCount(reagentPlan)
+	local missing = 0
+	for _, slot in ipairs(reagentPlan or {}) do
+		missing = missing + math.max(0, tonumber(slot.purchasedQuantity) or 0)
 	end
+	return missing
+end
 
-	host.stats.saleAfterCut:SetValues("Sale after cut", ev.saleNet and pe:FormatCopperShort(ev.saleNet) or "-")
-	host.stats.materials:SetValues("Materials", ev.matCost and pe:FormatCopperShort(ev.matCost) or "-")
-	host.stats.profit:SetValues("Profit", pe:FormatSignedMoney(ev.profit), nil, (tonumber(ev.profit) or 0) < 0 and "danger" or "success")
-	pe:LayoutEvenRow(host.statsRow, host.stats, 0, 8)
+local CONFIDENCE_BADGES = {
+	missing_sale_price = "No price",
+	missing_mat_price = "No price",
+	stale_scan = "Old scan",
+}
 
+-- Status badge label and tone for a recipe evaluation.
+local function recipeBadge(confidence, ev)
+	if CONFIDENCE_BADGES[confidence] then
+		return CONFIDENCE_BADGES[confidence], "warning"
+	elseif ev.canCraftNow then
+		return "Can craft", "success"
+	elseif ev.qualityReachable == false then
+		return (ev.concentrationNeeded or ev.concentrationCost) and "Needs concentration" or "Out of reach", "warning"
+	end
+	local missing = missingReagentCount(ev.reagentPlan)
+	return missing > 0 and ("Missing " .. missing) or "Missing", "danger"
+end
+
+local function moneyOrDash(pe, copper, formatter)
+	return copper and formatter(pe, copper) or "-"
+end
+
+local function recipeFacts(pe, ev)
 	local cut = math.floor((pe:GetCraftsAhCutFraction() or 0) * 100 + 0.5)
 	local facts = {
 		{ "Return", ev.roi and string.format("%.0f%%", ev.roi) or "-" },
 		{ "Materials you already own", string.format("%.0f%%", (ev.coverage or 0) * 100) },
-		{ "Still to buy", ev.outOfPocketMatCost and pe:FormatCopperFull(ev.outOfPocketMatCost) or "-" },
-		{ string.format("Sale before the %d%% auction cut", cut), ev.saleGross and pe:FormatCopperFull(ev.saleGross) or "-" },
+		{ "Still to buy", moneyOrDash(pe, ev.outOfPocketMatCost, pe.FormatCopperFull) },
+		{ string.format("Sale before the %d%% auction cut", cut), moneyOrDash(pe, ev.saleGross, pe.FormatCopperFull) },
 	}
 	if pe.IS_RETAIL and ev.concentrationNeeded then
 		facts[#facts + 1] = { "Concentration needed", pe:FormatNumberGrouped(ev.concentrationNeeded) }
@@ -486,10 +487,12 @@ local function renderProfessionRecipe(pe, panel, ctx)
 	if ev.requiredTargetReagent and ev.requiredTargetReagentItemID then
 		facts[#facts + 1] = { "Target reagent", pe:GetItemDisplayName(ev.requiredTargetReagentItemID) }
 	end
-	host.facts:SetRows(facts)
+	return facts
+end
 
+local function recipeMaterialRows(pe, reagentPlan)
 	local materials = {}
-	for index, slot in ipairs(ev.reagentPlan or {}) do
+	for index, slot in ipairs(reagentPlan or {}) do
 		local inv = pe:BuildAccountItemInventoryTotals(slot.itemID)
 		materials[#materials + 1] = {
 			_rowIdentity = index,
@@ -499,7 +502,28 @@ local function renderProfessionRecipe(pe, panel, ctx)
 			cost = tonumber(slot.lineCost),
 		}
 	end
-	host.materials:SetRows(materials)
+	return materials
+end
+
+local function renderRecipeStats(pe, host, ev)
+	host.stats.saleAfterCut:SetValues("Sale after cut", moneyOrDash(pe, ev.saleNet, pe.FormatCopperShort))
+	host.stats.materials:SetValues("Materials", moneyOrDash(pe, ev.matCost, pe.FormatCopperShort))
+	host.stats.profit:SetValues("Profit", pe:FormatSignedMoney(ev.profit), nil, (tonumber(ev.profit) or 0) < 0 and "danger" or "success")
+	pe:LayoutEvenRow(host.statsRow, host.stats, 0, 8)
+end
+
+-- Fills the Recipe view from the selected recipe's evaluation.
+local function renderProfessionRecipe(pe, panel, ctx)
+	local host = panel.infoHost
+	local ev = ctx.eval or {}
+	host.empty:Hide()
+	host.body:Show()
+	host.header:SetItem(ev.outputItemID, (ev.recipeName or pe:GetItemDisplayName(ev.outputItemID)) .. rankMarkup(ev.qualityIndex),
+		string.format("%s · best crafter %s", tostring(ev.professionName or "?"), tostring(ctx.recommendedCrafterLabel or "-")), ev.outputIcon)
+	host.header.badge:SetBadge(recipeBadge(ctx.confidence or "ok", ev))
+	renderRecipeStats(pe, host, ev)
+	host.facts:SetRows(recipeFacts(pe, ev))
+	host.materials:SetRows(recipeMaterialRows(pe, ev.reagentPlan))
 	host.materials:Refresh()
 	host.materials:SetFooterText("Have counts every character", ev.matCost and pe:FormatCopperShort(ev.matCost) or nil)
 	panel.footerText:SetText(string.format("%s scanned %s", tostring(ev.professionName or "Profession"), pe:FormatScanTimestamp(ev.scanAt)))

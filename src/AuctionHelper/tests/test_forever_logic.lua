@@ -19,6 +19,9 @@ _G.AuctionHelper = pe
 local chunk, err = loadfile(root .. "/src/util/AuctionHelper_ForeverLogic.lua")
 assert(chunk, err)
 chunk("AuctionHelper", pe)
+chunk, err = loadfile(root .. "/src/util/AuctionHelper_FilterLogic.lua")
+assert(chunk, err)
+chunk("AuctionHelper", pe)
 
 local FL = pe.ForeverLogic
 assert(FL, "ForeverLogic missing")

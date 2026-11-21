@@ -604,107 +604,99 @@ function AuctionHelper:FinalizeSpecializationTabGraph(tab)
 	return tab
 end
 
+-- Specialization API functions differ by client: a missing one reads as nil; pcallProfSpecs also catches errors.
+local function callIfPresent(api, name, ...)
+	local fn = api and api[name]
+	return fn and fn(...) or nil
+end
+
+local function pcallProfSpecs(self, name, ...)
+	return self:SafeCall(C_ProfSpecs[name], ...) or nil
+end
+
+function AuctionHelper:CollectSpecializationEntry(configID, entryID, perkValue)
+	local entryInfo = callIfPresent(C_Traits, "GetEntryInfo", configID, entryID)
+	local perkID = self:ExtractPerkIDFromApiValue(perkValue)
+	return {
+		entryID = entryID,
+		perkID = perkID,
+		entryInfo = self:SanitizeValue(entryInfo),
+		definitionInfo = self:SanitizeValue(entryInfo and callIfPresent(C_Traits, "GetDefinitionInfo", entryInfo.definitionID) or nil),
+		perkDescription = perkID and pcallProfSpecs(self, "GetDescriptionForPerk", perkID) or nil,
+		unlockRank = perkID and pcallProfSpecs(self, "GetUnlockRankForPerk", perkID) or pcallProfSpecs(self, "GetUnlockRankForPerk", entryID),
+	}
+end
+
+--- Entries in node order; the first entry with a name or description names the node.
+function AuctionHelper:CollectSpecializationNodeEntries(configID, nodeRecord, entryIDs)
+	local pathDescription = nodeRecord.pathDescription
+	local perkIDsForPath = pcallProfSpecs(self, "GetPerksForPath", nodeRecord.nodeID)
+	for entryIndex, entryID in ipairs(type(entryIDs) == "table" and entryIDs or {}) do
+		local entry = self:CollectSpecializationEntry(configID, entryID, perkIDsForPath and perkIDsForPath[entryIndex] or nil)
+		table.insert(nodeRecord.entries, entry)
+		nodeRecord.nodeName = nodeRecord.nodeName or self:ResolveSpecEntryName(entry.definitionInfo, pathDescription)
+		nodeRecord.nodeDescription = nodeRecord.nodeDescription
+			or self:ResolveSpecEntryDescription(entry.definitionInfo, entry.perkDescription, pathDescription)
+	end
+end
+
+function AuctionHelper:CollectSpecializationNode(configID, nodeID)
+	local nodeInfo = callIfPresent(C_Traits, "GetNodeInfo", configID, nodeID)
+	local pathDescription = pcallProfSpecs(self, "GetDescriptionForPath", nodeID)
+	local nodeKind = self:ClassifySpecNodeKind(nodeInfo)
+	local nodeRecord = {
+		nodeID = nodeID,
+		nodeKind = nodeKind,
+		childPathIDs = nodeKind == "path" and self:SanitizeValue(pcallProfSpecs(self, "GetChildrenForPath", nodeID)) or nil,
+		nodeInfo = self:SanitizeValue(nodeInfo),
+		pathDescription = pathDescription,
+		unlockRank = pcallProfSpecs(self, "GetUnlockRankForPerk", nodeID),
+		entries = {},
+	}
+	self:CollectSpecializationNodeEntries(configID, nodeRecord, nodeInfo and nodeInfo.entryIDs or nil)
+	if nodeKind == "milestone" then
+		nodeRecord.milestoneRank = nodeRecord.unlockRank
+	end
+	return nodeRecord
+end
+
+function AuctionHelper:CollectSpecializationTab(configID, treeID)
+	local tab = {
+		treeID = treeID,
+		rootPathID = pcallProfSpecs(self, "GetRootPathForTab", treeID),
+		tabInfo = self:SanitizeValue(callIfPresent(C_ProfSpecs, "GetTabInfo", treeID)),
+		state = callIfPresent(C_ProfSpecs, "GetStateForTab", treeID, configID),
+		nodes = {},
+	}
+	for _, nodeID in ipairs(callIfPresent(C_Traits, "GetTreeNodes", treeID) or {}) do
+		table.insert(tab.nodes, self:CollectSpecializationNode(configID, nodeID))
+	end
+	return self:FinalizeSpecializationTabGraph(tab)
+end
+
 function AuctionHelper:CollectSpecializationTreeForSkillLine(skillLineID)
 	skillLineID = tonumber(skillLineID)
-	if not skillLineID or skillLineID <= 0 or not self:SkillLineHasSpecializationConfig(skillLineID) then
+	if not self:SkillLineHasSpecializationConfig(skillLineID) then
 		return nil
 	end
-
 	local configID = C_ProfSpecs.GetConfigIDForSkillLine(skillLineID)
-	if not configID or configID <= 0 then
-		return nil
-	end
-
-	local specializationSkillLineID = skillLineID
-	local variantInfo = C_TradeSkillUI and C_TradeSkillUI.GetProfessionInfoBySkillLineID
-		and C_TradeSkillUI.GetProfessionInfoBySkillLineID(specializationSkillLineID) or nil
-	local expansionID = nil
-	if self.ResolveSpecCatalogForTierSkillLine then
-		expansionID = self:ResolveSpecCatalogForTierSkillLine(specializationSkillLineID)
-	end
-
-	local configInfo = C_Traits.GetConfigInfo and C_Traits.GetConfigInfo(configID) or nil
+	local variantInfo = callIfPresent(C_TradeSkillUI, "GetProfessionInfoBySkillLineID", skillLineID) or {}
+	local configInfo = callIfPresent(C_Traits, "GetConfigInfo", configID)
 	local treeIDs = configInfo and self:ShallowArrayCopy(configInfo.treeIDs) or {}
 	local result = {
 		configID = configID,
-		skillLineID = specializationSkillLineID,
-		tierName = variantInfo and variantInfo.professionName or nil,
-		expansionID = expansionID,
-		parentProfessionID = variantInfo and variantInfo.parentProfessionID or nil,
+		skillLineID = skillLineID,
+		tierName = variantInfo.professionName,
+		expansionID = self.ResolveSpecCatalogForTierSkillLine and self:ResolveSpecCatalogForTierSkillLine(skillLineID) or nil,
+		parentProfessionID = variantInfo.parentProfessionID,
 		configInfo = self:SanitizeValue(configInfo),
 		treeIDs = treeIDs,
 		tabs = {},
-		unspentKnowledge = nil,
+		unspentKnowledge = self:SanitizeValue(callIfPresent(C_ProfSpecs, "GetCurrencyInfoForSkillLine", skillLineID)),
 	}
-
-	local currencyInfo = C_ProfSpecs.GetCurrencyInfoForSkillLine and C_ProfSpecs.GetCurrencyInfoForSkillLine(specializationSkillLineID) or nil
-	result.unspentKnowledge = self:SanitizeValue(currencyInfo)
-
 	for _, treeID in ipairs(treeIDs) do
-		local tabInfo = C_ProfSpecs.GetTabInfo and C_ProfSpecs.GetTabInfo(treeID) or nil
-		local tabState = C_ProfSpecs.GetStateForTab and C_ProfSpecs.GetStateForTab(treeID, configID) or nil
-		local nodeIDs = C_Traits.GetTreeNodes and (C_Traits.GetTreeNodes(treeID) or {}) or {}
-		local tab = {
-			treeID = treeID,
-			rootPathID = C_ProfSpecs.GetRootPathForTab and self:SafeCall(C_ProfSpecs.GetRootPathForTab, treeID) or nil,
-			tabInfo = self:SanitizeValue(tabInfo),
-			state = tabState,
-			nodes = {},
-		}
-
-		for _, nodeID in ipairs(nodeIDs) do
-			local nodeInfo = C_Traits.GetNodeInfo and C_Traits.GetNodeInfo(configID, nodeID) or nil
-			local pathDescription = C_ProfSpecs.GetDescriptionForPath and self:SafeCall(C_ProfSpecs.GetDescriptionForPath, nodeID) or nil
-			local nodeKind = self:ClassifySpecNodeKind(nodeInfo)
-			local nodeRecord = {
-				nodeID = nodeID,
-				nodeKind = nodeKind,
-				childPathIDs = nodeKind == "path" and C_ProfSpecs.GetChildrenForPath
-					and self:SanitizeValue(self:SafeCall(C_ProfSpecs.GetChildrenForPath, nodeID)) or nil,
-				nodeInfo = self:SanitizeValue(nodeInfo),
-				pathDescription = pathDescription,
-				unlockRank = C_ProfSpecs.GetUnlockRankForPerk and self:SafeCall(C_ProfSpecs.GetUnlockRankForPerk, nodeID) or nil,
-				entries = {},
-			}
-
-			local entryIDs = nodeInfo and nodeInfo.entryIDs or nil
-			local perkIDsForPath = C_ProfSpecs.GetPerksForPath and self:SafeCall(C_ProfSpecs.GetPerksForPath, nodeID) or nil
-			if type(entryIDs) == "table" then
-				for entryIndex, entryID in ipairs(entryIDs) do
-					local entryInfo = C_Traits.GetEntryInfo and C_Traits.GetEntryInfo(configID, entryID) or nil
-					local definitionInfo = entryInfo and C_Traits.GetDefinitionInfo and C_Traits.GetDefinitionInfo(entryInfo.definitionID) or nil
-					local perkID = self:ExtractPerkIDFromApiValue(perkIDsForPath and perkIDsForPath[entryIndex] or nil)
-					local perkDescription = perkID and C_ProfSpecs.GetDescriptionForPerk
-						and self:SafeCall(C_ProfSpecs.GetDescriptionForPerk, perkID) or nil
-					table.insert(nodeRecord.entries, {
-						entryID = entryID,
-						perkID = perkID,
-						entryInfo = self:SanitizeValue(entryInfo),
-						definitionInfo = self:SanitizeValue(definitionInfo),
-						perkDescription = perkDescription,
-						unlockRank = perkID and C_ProfSpecs.GetUnlockRankForPerk
-							and self:SafeCall(C_ProfSpecs.GetUnlockRankForPerk, perkID)
-							or (C_ProfSpecs.GetUnlockRankForPerk and self:SafeCall(C_ProfSpecs.GetUnlockRankForPerk, entryID) or nil),
-					})
-					if not nodeRecord.nodeName then
-						nodeRecord.nodeName = self:ResolveSpecEntryName(definitionInfo, pathDescription)
-					end
-					if not nodeRecord.nodeDescription then
-						nodeRecord.nodeDescription = self:ResolveSpecEntryDescription(definitionInfo, perkDescription, pathDescription)
-					end
-				end
-			end
-			if nodeKind == "milestone" then
-				nodeRecord.milestoneRank = nodeRecord.unlockRank
-			end
-
-			table.insert(tab.nodes, nodeRecord)
-		end
-
-		self:FinalizeSpecializationTabGraph(tab)
-		table.insert(result.tabs, tab)
+		table.insert(result.tabs, self:CollectSpecializationTab(configID, treeID))
 	end
-
 	return result
 end
 

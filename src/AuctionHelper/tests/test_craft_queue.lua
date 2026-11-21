@@ -92,6 +92,7 @@ local function newAddon(isRetail)
 	local files = {
 		"/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua",
 		"/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueueOrders.lua",
+		"/AuctionHelper_Professions/src/modules/AuctionHelper_OrderReagents.lua",
 		"/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua",
 		"/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftAction.lua",
 	}

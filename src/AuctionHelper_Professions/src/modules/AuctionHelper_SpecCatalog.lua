@@ -332,6 +332,85 @@ function AuctionHelper:ComputeSpecBreakdownForRecipe(recipeID, catalog, nodeRank
 	return result
 end
 
+local function catalogTierInfo(self, catalog, expansionID, tierSkillLineID)
+	return {
+		available = true,
+		version = self.SPEC_CATALOG_VERSION,
+		expansionID = expansionID,
+		tierSkillLineID = tierSkillLineID,
+		nodeCount = self:TableCount(catalog.nodeData or {}),
+		recipeMappingCount = self:TableCount(catalog.recipeMapping or {}),
+	}
+end
+
+local function professionForBaseSkillLine(self, baseSkillLineID)
+	for profession, lines in pairs(self.TRADE_SKILL_LINE_BY_PROFESSION or {}) do
+		if lines.BASE == baseSkillLineID then
+			return profession
+		end
+	end
+	return nil
+end
+
+-- Catalogs for the profession's own expansion tiers, plus any other ranked tier that has one.
+local function collectCatalogsUsed(self, professionEnum, ranksByTier)
+	local catalogsUsed = {}
+	for expansionID = 11, 9, -1 do
+		local catalog = professionEnum and self:GetSpecCatalog(expansionID, professionEnum)
+		local tierSkillLineID = catalog and self.TRADE_SKILL_LINE_BY_PROFESSION[professionEnum][expansionID]
+		if tierSkillLineID then
+			catalogsUsed[tostring(tierSkillLineID)] = catalogTierInfo(self, catalog, expansionID, tierSkillLineID)
+		end
+	end
+	for tierKey in pairs(ranksByTier) do
+		if not catalogsUsed[tierKey] then
+			local expansionID, _, catalog = self:ResolveSpecCatalogForTierSkillLine(tonumber(tierKey))
+			if catalog then
+				catalogsUsed[tierKey] = catalogTierInfo(self, catalog, expansionID, tonumber(tierKey))
+			end
+		end
+	end
+	return catalogsUsed
+end
+
+local function specConfigIDForTier(professionData, tierSkillLineID)
+	local trees = professionData.specializationTrees
+	local tierTree = trees and trees[tostring(tierSkillLineID)]
+	if tierTree then
+		return tierTree.configID
+	end
+	local legacyTree = professionData.specializationTree
+	if legacyTree and legacyTree.skillLineID == tierSkillLineID then
+		return legacyTree.configID
+	end
+	return nil
+end
+
+local function attachRecipeSpecBreakdown(self, professionData, recipeKey, recipeData, baseSkillLineID)
+	local recipeSpellID = self:GetRecipeSpellID(recipeData) or tonumber(recipeKey)
+	local expansionID, recipeProfession, catalog, tierSkillLineID = self:ResolveSpecCatalogForRecipe(recipeSpellID, baseSkillLineID)
+	if not catalog or not recipeSpellID then
+		return
+	end
+	local nodeRanks = professionData.specNodeRanksByTier[tostring(tierSkillLineID)] or {}
+	local configID = specConfigIDForTier(professionData, tierSkillLineID)
+	local breakdown = self:ComputeSpecBreakdownForRecipe(recipeSpellID, catalog, nodeRanks, configID)
+	if not breakdown then
+		return
+	end
+	breakdown.recipeID = self:GetRecipeExportID(recipeData) or tonumber(recipeKey)
+	breakdown.recipeSpellID = recipeSpellID
+	breakdown.expansionID = expansionID
+	breakdown.profession = recipeProfession
+	breakdown.tierSkillLineID = tierSkillLineID
+	recipeData.specBreakdown = breakdown
+	if type(recipeData.crafting) == "table" then
+		local skill = breakdown.totals and breakdown.totals.skill or 0
+		recipeData.crafting.specSkillFromCatalog = skill
+		recipeData.crafting.bonusSkillFromCatalog = skill
+	end
+end
+
 function AuctionHelper:AttachSpecCatalogMetadata(professionData, baseSkillLineID)
 	if type(professionData) ~= "table" then
 		return professionData
@@ -346,46 +425,7 @@ function AuctionHelper:AttachSpecCatalogMetadata(professionData, baseSkillLineID
 		and tostring(professionData.primarySpecializationSkillLineID) or nil
 	professionData.specNodeRanks = (primaryKey and ranksByTier[primaryKey]) or {}
 
-	local professionEnum = nil
-	for profession, lines in pairs(self.TRADE_SKILL_LINE_BY_PROFESSION or {}) do
-		if lines.BASE == tonumber(baseSkillLineID) then
-			professionEnum = profession
-			break
-		end
-	end
-
-	local catalogsUsed = {}
-	if professionEnum then
-		for expansionID = 11, 9, -1 do
-			local catalog = self:GetSpecCatalog(expansionID, professionEnum)
-			local tierSkillLineID = self.TRADE_SKILL_LINE_BY_PROFESSION[professionEnum][expansionID]
-			if catalog and tierSkillLineID then
-				catalogsUsed[tostring(tierSkillLineID)] = {
-					available = true,
-					version = self.SPEC_CATALOG_VERSION,
-					expansionID = expansionID,
-					tierSkillLineID = tierSkillLineID,
-					nodeCount = self:TableCount(catalog.nodeData or {}),
-					recipeMappingCount = self:TableCount(catalog.recipeMapping or {}),
-				}
-			end
-		end
-	end
-	for tierKey in pairs(ranksByTier) do
-		if not catalogsUsed[tierKey] then
-			local expansionID, _, catalog = self:ResolveSpecCatalogForTierSkillLine(tonumber(tierKey))
-			if catalog then
-				catalogsUsed[tierKey] = {
-					available = true,
-					version = self.SPEC_CATALOG_VERSION,
-					expansionID = expansionID,
-					tierSkillLineID = tonumber(tierKey),
-					nodeCount = self:TableCount(catalog.nodeData or {}),
-					recipeMappingCount = self:TableCount(catalog.recipeMapping or {}),
-				}
-			end
-		end
-	end
+	local catalogsUsed = collectCatalogsUsed(self, professionForBaseSkillLine(self, tonumber(baseSkillLineID)), ranksByTier)
 	professionData.specCatalog = {
 		available = next(catalogsUsed) ~= nil,
 		version = self.SPEC_CATALOG_VERSION,
@@ -396,35 +436,9 @@ function AuctionHelper:AttachSpecCatalogMetadata(professionData, baseSkillLineID
 	if not captureBreakdown or type(professionData.recipes) ~= "table" then
 		return professionData
 	end
-
 	for recipeKey, recipeData in pairs(professionData.recipes) do
-		local recipeSpellID = self:GetRecipeSpellID(recipeData) or tonumber(recipeKey)
-		local expansionID, recipeProfession, catalog, tierSkillLineID = self:ResolveSpecCatalogForRecipe(recipeSpellID, baseSkillLineID)
-		if catalog and recipeSpellID then
-			local nodeRanks = ranksByTier[tostring(tierSkillLineID)] or {}
-			local configID = nil
-			local trees = professionData.specializationTrees
-			if trees and trees[tostring(tierSkillLineID)] then
-				configID = trees[tostring(tierSkillLineID)].configID
-			elseif professionData.specializationTree and professionData.specializationTree.skillLineID == tierSkillLineID then
-				configID = professionData.specializationTree.configID
-			end
-			local breakdown = self:ComputeSpecBreakdownForRecipe(recipeSpellID, catalog, nodeRanks, configID)
-			if breakdown then
-				breakdown.recipeID = self:GetRecipeExportID(recipeData) or tonumber(recipeKey)
-				breakdown.recipeSpellID = recipeSpellID
-				breakdown.expansionID = expansionID
-				breakdown.profession = recipeProfession
-				breakdown.tierSkillLineID = tierSkillLineID
-				recipeData.specBreakdown = breakdown
-				if recipeData.crafting and type(recipeData.crafting) == "table" then
-					recipeData.crafting.specSkillFromCatalog = breakdown.totals and breakdown.totals.skill or 0
-					recipeData.crafting.bonusSkillFromCatalog = breakdown.totals and breakdown.totals.skill or 0
-				end
-			end
-		end
+		attachRecipeSpecBreakdown(self, professionData, recipeKey, recipeData, baseSkillLineID)
 	end
-
 	return professionData
 end
 

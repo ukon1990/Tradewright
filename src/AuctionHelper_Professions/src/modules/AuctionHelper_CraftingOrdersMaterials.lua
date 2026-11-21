@@ -6,86 +6,7 @@ end
 
 local ReagentSource = Enum.CraftingOrderReagentSource
 
-local function getOrderReagentDescriptor(entry)
-	if not entry then
-		return { dataSlotIndex = nil, dataSlotType = nil, itemID = nil, currencyID = nil, quantity = 0 }
-	end
-
-	local dataSlotIndex = nil
-	if entry.reagent and entry.reagent.dataSlotIndex then
-		dataSlotIndex = entry.reagent.dataSlotIndex
-	elseif entry.reagent and entry.reagent.reagent and entry.reagent.reagent.dataSlotIndex then
-		dataSlotIndex = entry.reagent.reagent.dataSlotIndex
-	elseif entry.reagentInfo and entry.reagentInfo.dataSlotIndex then
-		dataSlotIndex = entry.reagentInfo.dataSlotIndex
-	elseif entry.reagentInfo and entry.reagentInfo.reagent and entry.reagentInfo.reagent.dataSlotIndex then
-		dataSlotIndex = entry.reagentInfo.reagent.dataSlotIndex
-	elseif entry.dataSlotIndex then
-		dataSlotIndex = entry.dataSlotIndex
-	elseif entry.reagentSlot and entry.reagentSlot.dataSlotIndex then
-		dataSlotIndex = entry.reagentSlot.dataSlotIndex
-	end
-
-	local dataSlotType = nil
-	if entry.reagent and entry.reagent.dataSlotType then
-		dataSlotType = entry.reagent.dataSlotType
-	elseif entry.reagent and entry.reagent.reagent and entry.reagent.reagent.dataSlotType then
-		dataSlotType = entry.reagent.reagent.dataSlotType
-	elseif entry.reagentInfo and entry.reagentInfo.dataSlotType then
-		dataSlotType = entry.reagentInfo.dataSlotType
-	elseif entry.reagentInfo and entry.reagentInfo.reagent and entry.reagentInfo.reagent.dataSlotType then
-		dataSlotType = entry.reagentInfo.reagent.dataSlotType
-	elseif entry.dataSlotType then
-		dataSlotType = entry.dataSlotType
-	elseif entry.reagentSlot and entry.reagentSlot.dataSlotType then
-		dataSlotType = entry.reagentSlot.dataSlotType
-	end
-
-	local currencyID = nil
-	if entry.reagent then
-		if entry.reagent.reagent and entry.reagent.reagent.currencyID then
-			currencyID = entry.reagent.reagent.currencyID
-		elseif entry.reagent.currencyID then
-			currencyID = entry.reagent.currencyID
-		end
-	end
-	if not currencyID and entry.reagentInfo and entry.reagentInfo.reagent and entry.reagentInfo.reagent.currencyID then
-		currencyID = entry.reagentInfo.reagent.currencyID
-	elseif not currencyID and entry.reagentInfo and entry.reagentInfo.currencyID then
-		currencyID = entry.reagentInfo.currencyID
-	end
-
-	local itemID = nil
-	if entry.reagent then
-		if entry.reagent.reagent and entry.reagent.reagent.itemID then
-			itemID = entry.reagent.reagent.itemID
-		elseif entry.reagent.itemID then
-			itemID = entry.reagent.itemID
-		end
-	end
-	if not itemID and entry.reagentInfo and entry.reagentInfo.reagent and entry.reagentInfo.reagent.itemID then
-		itemID = entry.reagentInfo.reagent.itemID
-	elseif not itemID and entry.reagentInfo and entry.reagentInfo.itemID then
-		itemID = entry.reagentInfo.itemID
-	elseif not itemID and entry.itemID then
-		itemID = entry.itemID
-	end
-
-	local quantity = tonumber(
-		entry.quantity or
-		(entry.reagent and entry.reagent.quantity) or
-		(entry.reagentInfo and entry.reagentInfo.quantity) or
-		(entry.reagentSlot and entry.reagentSlot.quantity)
-	) or 0
-
-	return {
-		dataSlotIndex = tonumber(dataSlotIndex),
-		dataSlotType = tonumber(dataSlotType),
-		itemID = tonumber(itemID),
-		currencyID = tonumber(currencyID),
-		quantity = quantity,
-	}
-end
+local OrderReagents = AuctionHelper.OrderReagents
 
 -- Key by unique schematic slotIndex (not bare dataSlotIndex). Recipes like
 -- Attuned Thalassian Rune-Prism reuse dataSlotIndex across dataSlotTypes.
@@ -117,9 +38,9 @@ local function buildOrderSlotSchematicLookup(order)
 	return lookup
 end
 
-local function buildOrderItemToSlotLookup(order)
+local function buildOrderItemToSlotLookup(slotSchematicLookup)
 	local lookup = {}
-	for slotIndex, slot in pairs(buildOrderSlotSchematicLookup(order)) do
+	for slotIndex, slot in pairs(slotSchematicLookup) do
 		for _, reagent in ipairs(slot.reagents or {}) do
 			local itemID = tonumber(reagent and reagent.itemID)
 			if itemID and lookup[itemID] == nil then
@@ -182,21 +103,6 @@ local function findSchematicSlotKeyForProvidedReagent(slotSchematicLookup, itemT
 	return nil
 end
 
-local function resolveOrderReagentEntry(entry)
-	local descriptor = getOrderReagentDescriptor(entry)
-	-- Preserve Blizzard dataSlotIndex; unique schematic slot is resolved via
-	-- findSchematicSlotKeyForProvidedReagent (itemID membership first).
-
-	return {
-		source = entry and entry.source,
-		dataSlotIndex = descriptor.dataSlotIndex,
-		dataSlotType = descriptor.dataSlotType,
-		itemID = descriptor.itemID,
-		quantity = descriptor.quantity,
-		currencyID = descriptor.currencyID,
-	}
-end
-
 local function copyReagentsList(reagents)
 	local out = {}
 	if type(reagents) ~= "table" then
@@ -204,7 +110,7 @@ local function copyReagentsList(reagents)
 	end
 	for i, entry in ipairs(reagents) do
 		if type(entry) == "table" then
-			local r = resolveOrderReagentEntry(entry)
+			local r = OrderReagents.Describe(entry)
 			out[i] = {
 				source = entry.source,
 				reagentSlot = entry.reagentSlot,
@@ -221,80 +127,46 @@ local function copyReagentsList(reagents)
 	return out
 end
 
+local function addProvidedReagent(providedBySlot, slotIndex, reagent)
+	local provided = providedBySlot[slotIndex] or { quantity = 0, items = {} }
+	providedBySlot[slotIndex] = provided
+	provided.quantity = provided.quantity + reagent.quantity
+	if reagent.itemID then
+		provided.items[reagent.itemID] = true
+	end
+end
+
+local function isCustomerReagent(entry)
+	local customer = ReagentSource and ReagentSource.Customer
+	return type(entry) == "table" and customer ~= nil and entry.source == customer
+end
+
+-- Customer-provided quantity and items per schematic slot.
+local function collectCustomerProvidedBySlot(order, slotSchematicLookup, itemToSlotLookup)
+	local providedBySlot = {}
+	for _, entry in ipairs(type(order.reagents) == "table" and order.reagents or {}) do
+		if isCustomerReagent(entry) then
+			local reagent = OrderReagents.Describe(entry)
+			local slotIndex = findSchematicSlotKeyForProvidedReagent(slotSchematicLookup, itemToSlotLookup, reagent)
+			if slotIndex and reagent.quantity > 0 then
+				addProvidedReagent(providedBySlot, slotIndex, reagent)
+			end
+		end
+	end
+	return providedBySlot
+end
+
 --- Reagents the crafter may need to supply.
 --- Only Customer-provided reagents reduce the buy need; Crafter/Any entries in
 --- order.reagents must not be treated as already supplied (that under-counts).
 function AuctionHelper:ExtractCrafterShoppingReagentsFromOrder(order)
-	local totals = {}
 	if type(order) ~= "table" then
-		return totals
+		return {}
 	end
-
-	local itemToSlotLookup = buildOrderItemToSlotLookup(order)
 	local slotSchematicLookup = buildOrderSlotSchematicLookup(order)
-	local providedBySlot = {}
-
-	if type(order.reagents) == "table" then
-		for _, entry in ipairs(order.reagents) do
-			if type(entry) == "table" then
-				local src = entry.source
-				-- Customer-locked reagents are already on the order; everything else
-				-- is still the crafter's responsibility (see CraftingOrderReagentSource).
-				local isCustomer = ReagentSource and src == ReagentSource.Customer
-				if isCustomer then
-					local reagent = resolveOrderReagentEntry(entry)
-					local itemID = tonumber(reagent.itemID)
-					local qty = tonumber(reagent.quantity) or 0
-					local slotIndex = findSchematicSlotKeyForProvidedReagent(slotSchematicLookup, itemToSlotLookup, reagent)
-					if slotIndex and qty > 0 then
-						providedBySlot[slotIndex] = providedBySlot[slotIndex] or { quantity = 0, items = {} }
-						providedBySlot[slotIndex].quantity = (providedBySlot[slotIndex].quantity or 0) + qty
-						if itemID then
-							providedBySlot[slotIndex].items[itemID] = true
-						end
-					end
-				end
-			end
-		end
-	end
-
+	local providedBySlot = collectCustomerProvidedBySlot(order, slotSchematicLookup, buildOrderItemToSlotLookup(slotSchematicLookup))
 	local basicReagentType = Enum and Enum.CraftingReagentType and tonumber(Enum.CraftingReagentType.Basic) or nil
-	for slotIndex, slot in pairs(slotSchematicLookup) do
-		local requiredQty = tonumber(slot and slot.quantityRequired) or 0
-		local includeSlot = requiredQty > 0 and slot and slot.optional ~= true and (
-			slot.required == true or
-			(basicReagentType ~= nil and tonumber(slot.reagentType) == basicReagentType)
-		)
-		local provided = providedBySlot[tonumber(slotIndex)]
-		local providedQty = tonumber(provided and provided.quantity) or 0
-		local remainingQty = math.max(0, requiredQty - providedQty)
-		if includeSlot and remainingQty > 0 then
-			local chosenItemID = nil
-			local providedItems = provided and provided.items or nil
-			-- Prefer a quality/item the customer did not already send.
-			for _, reagent in ipairs(slot.reagents or {}) do
-				local itemID = tonumber(reagent and reagent.itemID)
-				if itemID and not (providedItems and providedItems[itemID]) then
-					chosenItemID = itemID
-					break
-				end
-			end
-			if not chosenItemID then
-				for _, reagent in ipairs(slot.reagents or {}) do
-					local itemID = tonumber(reagent and reagent.itemID)
-					if itemID then
-						chosenItemID = itemID
-						break
-					end
-				end
-			end
-			if chosenItemID then
-				totals[chosenItemID] = (totals[chosenItemID] or 0) + remainingQty
-			end
-		end
-	end
-
-	return totals
+	return OrderReagents.RemainingShoppingTotals(slotSchematicLookup, providedBySlot, basicReagentType)
 end
 
 -- "craftingOrderWorkQueue" is the saved name; kept so existing queues survive.
@@ -847,135 +719,98 @@ function AuctionHelper:EnsureCraftingOrderViewActionButtons()
 	end)
 end
 
-function AuctionHelper:CraftingOrderViewRefreshButtons(orderView, order)
-	orderView = orderView or getLiveCraftingOrderView()
-	self:EnsureCraftingOrderViewActionButtons()
-	local panel = getProfessionSidePanelOrderControls()
-	order = order or (orderView and orderView.order) or nil
-	if not panel or not panel.peAddToQueueBtn then
+local RECIPE_QUEUE_TIP = "Adds this recipe to AuctionHelper shopping. Reagents (including Enchanting Vellum for enchants) are included in the cart."
+local ORDER_QUEUE_TIP = "Adds this crafting order to AuctionHelper shopping without starting the order. Only crafter-supplied reagents are included."
+
+local function setOrderNavShown(panel, showOrderNav, showRecipeNav)
+	if not panel.orderNav then
 		return
 	end
+	panel.orderNav:SetShown((showOrderNav or showRecipeNav) and true or false)
+	panel.orderNav:SetHeight((showRecipeNav and not showOrderNav) and 26 or 48)
+end
 
-	local showOrderNav = isOrdersPageActive() and order and order.orderID
-	local recipeID = (not showOrderNav) and self.GetOpenProfessionRecipeID and tonumber(self:GetOpenProfessionRecipeID()) or nil
-	local showRecipeNav = (not showOrderNav) and recipeID ~= nil
-
-	if panel.orderNav then
-		panel.orderNav:SetShown((showOrderNav or showRecipeNav) and true or false)
-		if showRecipeNav and not showOrderNav then
-			panel.orderNav:SetHeight(26)
-		else
-			panel.orderNav:SetHeight(48)
-		end
-	end
-
-	local function layoutQueueCardBelowNav(useNav)
-		if not (panel.queueCard and panel.queueHost) then
-			return
-		end
-		panel.queueCard:ClearAllPoints()
-		if useNav and panel.orderNav then
-			panel.queueCard:SetPoint("TOPLEFT", panel.orderNav, "BOTTOMLEFT", 0, -6)
-			panel.queueCard:SetPoint("TOPRIGHT", panel.queueHost, "TOPRIGHT", 0, 0)
-			panel.queueCard:SetPoint("BOTTOMLEFT", panel.queueHost, "BOTTOMLEFT", 0, 30)
-		else
-			panel.queueCard:SetPoint("TOPLEFT", panel.queueHost, "TOPLEFT", 0, 0)
-			panel.queueCard:SetPoint("TOPRIGHT", panel.queueHost, "TOPRIGHT", 0, 0)
-			panel.queueCard:SetPoint("BOTTOMLEFT", panel.queueHost, "BOTTOMLEFT", 0, 30)
-		end
-	end
-
-	if not showOrderNav and not showRecipeNav then
-		panel.peAddToQueueBtn:Hide()
-		panel.peRemoveFromQueueBtn:Hide()
-		if panel.pePrevOrderBtn then panel.pePrevOrderBtn:Hide() end
-		if panel.peNextOrderBtn then panel.peNextOrderBtn:Hide() end
-		if panel.peQueueStatusText then panel.peQueueStatusText:Hide() end
-		layoutQueueCardBelowNav(false)
+local function layoutQueueCardBelowNav(panel, useNav)
+	if not (panel.queueCard and panel.queueHost) then
 		return
 	end
-
-	if showRecipeNav then
-		layoutQueueCardBelowNav(true)
-		layoutOrderQueueButtons(panel)
-		if panel.pePrevOrderBtn then panel.pePrevOrderBtn:Hide() end
-		if panel.peNextOrderBtn then panel.peNextOrderBtn:Hide() end
-		if panel.peQueueStatusText then panel.peQueueStatusText:Hide() end
-
-		local inQ = self.IsRecipeInCraftQueue and self:IsRecipeInCraftQueue(recipeID)
-		panel.peAddToQueueBtn:SetShown(not inQ)
-		panel.peRemoveFromQueueBtn:SetShown(inQ and true or false)
-		panel.peAddToQueueBtn:SetEnabled(true)
-		panel.peRemoveFromQueueBtn:SetEnabled(true)
-		panel.peAddToQueueBtn:SetScript("OnEnter", function(btn)
-			GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
-			GameTooltip:AddLine("AuctionHelper", 1, 1, 1)
-			GameTooltip:AddLine(
-				"Adds this recipe to AuctionHelper shopping. Reagents (including Enchanting Vellum for enchants) are included in the cart.",
-				1,
-				0.9,
-				0.6,
-				true
-			)
-			GameTooltip:Show()
-		end)
-		panel.peAddToQueueBtn:SetScript("OnLeave", GameTooltip_Hide)
-		panel.peAddToQueueBtn:SetScript("OnClick", function()
-			if AuctionHelper.QueueOpenProfessionRecipe then
-				AuctionHelper:QueueOpenProfessionRecipe(1, { recipeID = recipeID })
-			end
-			AuctionHelper:CraftingOrderViewRefreshButtons()
-		end)
-		panel.peRemoveFromQueueBtn:SetScript("OnClick", function()
-			if AuctionHelper.RemoveCraftQueueLinesForRecipeID then
-				AuctionHelper:RemoveCraftQueueLinesForRecipeID(recipeID)
-			end
-			if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
-				AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
-			end
-			AuctionHelper:CraftingOrderViewRefreshButtons()
-		end)
-		return
+	panel.queueCard:ClearAllPoints()
+	if useNav and panel.orderNav then
+		panel.queueCard:SetPoint("TOPLEFT", panel.orderNav, "BOTTOMLEFT", 0, -6)
+	else
+		panel.queueCard:SetPoint("TOPLEFT", panel.queueHost, "TOPLEFT", 0, 0)
 	end
+	panel.queueCard:SetPoint("TOPRIGHT", panel.queueHost, "TOPRIGHT", 0, 0)
+	panel.queueCard:SetPoint("BOTTOMLEFT", panel.queueHost, "BOTTOMLEFT", 0, 30)
+end
 
-	layoutQueueCardBelowNav(true)
-
-	layoutOrderQueueButtons(panel)
-	local oid = tonumber(order.orderID)
-	panel._navOrderID = oid
-	local inQ = self:IsCraftingOrderQueued(oid)
-	if inQ and type(order) == "table" then
-		local stored = self:GetCraftingOrderQueueStorage()[tostring(oid)]
-		if type(stored) == "table" then
-			stored.orderPayload = copyOrderPayload(order)
-			stored.reagents = copyReagentsList(order.reagents) or stored.reagents
-			stored.tipAmount = tonumber(order.tipAmount) or stored.tipAmount
-			stored.spellID = tonumber(order.spellID) or stored.spellID
-			stored.itemID = tonumber(order.itemID) or stored.itemID
-			local mats = self:ExtractCrafterShoppingReagentsFromOrder(order)
-			stored.crafterMatTotals = mats
-			if self.UpsertCraftQueueForCraftingOrder then
-				self:UpsertCraftQueueForCraftingOrder(stored)
-			end
+local function hideOrderPaging(panel)
+	for _, key in ipairs({ "pePrevOrderBtn", "peNextOrderBtn", "peQueueStatusText" }) do
+		if panel[key] then
+			panel[key]:Hide()
 		end
 	end
-	panel.peAddToQueueBtn:SetShown(not inQ)
-	panel.peRemoveFromQueueBtn:SetShown(inQ)
+end
+
+local function showQueueToggle(panel, inQueue)
+	panel.peAddToQueueBtn:SetShown(not inQueue)
+	panel.peRemoveFromQueueBtn:SetShown(inQueue and true or false)
 	panel.peAddToQueueBtn:SetEnabled(true)
 	panel.peRemoveFromQueueBtn:SetEnabled(true)
-	panel.peAddToQueueBtn:SetScript("OnEnter", function(btn)
+end
+
+local function setQueueButtonTooltip(button, text)
+	button:SetScript("OnEnter", function(btn)
 		GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
 		GameTooltip:AddLine("AuctionHelper", 1, 1, 1)
-		GameTooltip:AddLine(
-			"Adds this crafting order to AuctionHelper shopping without starting the order. Only crafter-supplied reagents are included.",
-			1,
-			0.9,
-			0.6,
-			true
-		)
+		GameTooltip:AddLine(text, 1, 0.9, 0.6, true)
 		GameTooltip:Show()
 	end)
-	panel.peAddToQueueBtn:SetScript("OnLeave", GameTooltip_Hide)
+	button:SetScript("OnLeave", GameTooltip_Hide)
+end
+
+local function refreshRecipeQueueButtons(self, panel, recipeID)
+	layoutQueueCardBelowNav(panel, true)
+	layoutOrderQueueButtons(panel)
+	hideOrderPaging(panel)
+	showQueueToggle(panel, self.IsRecipeInCraftQueue and self:IsRecipeInCraftQueue(recipeID))
+	setQueueButtonTooltip(panel.peAddToQueueBtn, RECIPE_QUEUE_TIP)
+	panel.peAddToQueueBtn:SetScript("OnClick", function()
+		if AuctionHelper.QueueOpenProfessionRecipe then
+			AuctionHelper:QueueOpenProfessionRecipe(1, { recipeID = recipeID })
+		end
+		AuctionHelper:CraftingOrderViewRefreshButtons()
+	end)
+	panel.peRemoveFromQueueBtn:SetScript("OnClick", function()
+		if AuctionHelper.RemoveCraftQueueLinesForRecipeID then
+			AuctionHelper:RemoveCraftQueueLinesForRecipeID(recipeID)
+		end
+		if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
+			AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
+		end
+		AuctionHelper:CraftingOrderViewRefreshButtons()
+	end)
+end
+
+-- Keeps a queued order's saved copy in step with the live order being viewed.
+local function syncQueuedOrderEntry(self, order, orderID)
+	local stored = self:GetCraftingOrderQueueStorage()[tostring(orderID)]
+	if type(stored) ~= "table" then
+		return
+	end
+	stored.orderPayload = copyOrderPayload(order)
+	stored.reagents = copyReagentsList(order.reagents) or stored.reagents
+	stored.tipAmount = tonumber(order.tipAmount) or stored.tipAmount
+	stored.spellID = tonumber(order.spellID) or stored.spellID
+	stored.itemID = tonumber(order.itemID) or stored.itemID
+	stored.crafterMatTotals = self:ExtractCrafterShoppingReagentsFromOrder(order)
+	if self.UpsertCraftQueueForCraftingOrder then
+		self:UpsertCraftQueueForCraftingOrder(stored)
+	end
+end
+
+local function wireOrderQueueButtons(panel, order)
+	setQueueButtonTooltip(panel.peAddToQueueBtn, ORDER_QUEUE_TIP)
 	panel.peAddToQueueBtn:SetScript("OnClick", function()
 		local live = getLiveCraftingOrderView()
 		local o = (live and live.order) or order
@@ -995,29 +830,65 @@ function AuctionHelper:CraftingOrderViewRefreshButtons(orderView, order)
 			AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), o)
 		end
 	end)
+end
+
+local function setPagingButton(button, shown, enabled)
+	if button then
+		button:SetShown(shown)
+		button:SetEnabled(enabled)
+	end
+end
+
+local function refreshOrderPaging(self, panel, orderID, inQueue)
+	local idx, total = self:GetCraftingOrderQueueIndex(orderID)
+	local showPaging = (total or 0) > 0 and inQueue
+	local queued = inQueue and idx ~= nil
+	setPagingButton(panel.pePrevOrderBtn, showPaging, queued and idx > 1)
+	setPagingButton(panel.peNextOrderBtn, showPaging, queued and idx < total)
+	local status = panel.peQueueStatusText
+	if status and showPaging and idx then
+		status:SetText(string.format("Queue %d/%d", idx, total))
+		status:Show()
+	elseif status then
+		status:Hide()
+	end
+end
+
+local function refreshOrderQueueButtons(self, panel, order)
+	layoutQueueCardBelowNav(panel, true)
+	layoutOrderQueueButtons(panel)
+	local orderID = tonumber(order.orderID)
+	panel._navOrderID = orderID
+	local inQueue = self:IsCraftingOrderQueued(orderID)
+	if inQueue then
+		syncQueuedOrderEntry(self, order, orderID)
+	end
+	showQueueToggle(panel, inQueue)
+	wireOrderQueueButtons(panel, order)
 	panel.peAddToQueueBtn:Show()
-	if inQ then
-		panel.peRemoveFromQueueBtn:Show()
+	refreshOrderPaging(self, panel, orderID, inQueue)
+end
+
+function AuctionHelper:CraftingOrderViewRefreshButtons(orderView, order)
+	orderView = orderView or getLiveCraftingOrderView()
+	self:EnsureCraftingOrderViewActionButtons()
+	local panel = getProfessionSidePanelOrderControls()
+	order = order or (orderView and orderView.order) or nil
+	if not panel or not panel.peAddToQueueBtn then
+		return
+	end
+	local showOrderNav = isOrdersPageActive() and order and order.orderID
+	local recipeID = (not showOrderNav) and self.GetOpenProfessionRecipeID and tonumber(self:GetOpenProfessionRecipeID()) or nil
+	setOrderNavShown(panel, showOrderNav, recipeID ~= nil)
+	if showOrderNav then
+		refreshOrderQueueButtons(self, panel, order)
+	elseif recipeID then
+		refreshRecipeQueueButtons(self, panel, recipeID)
 	else
+		panel.peAddToQueueBtn:Hide()
 		panel.peRemoveFromQueueBtn:Hide()
-	end
-	local idx, total = self:GetCraftingOrderQueueIndex(oid)
-	local hasQueue = (total or 0) > 0
-	if panel.pePrevOrderBtn then
-		panel.pePrevOrderBtn:SetShown(hasQueue and inQ)
-		panel.pePrevOrderBtn:SetEnabled(inQ and idx ~= nil and idx > 1)
-	end
-	if panel.peNextOrderBtn then
-		panel.peNextOrderBtn:SetShown(hasQueue and inQ)
-		panel.peNextOrderBtn:SetEnabled(inQ and idx ~= nil and idx < total)
-	end
-	if panel.peQueueStatusText then
-		if hasQueue and inQ and idx then
-			panel.peQueueStatusText:SetText(string.format("Queue %d/%d", idx, total))
-			panel.peQueueStatusText:Show()
-		else
-			panel.peQueueStatusText:Hide()
-		end
+		hideOrderPaging(panel)
+		layoutQueueCardBelowNav(panel, false)
 	end
 end
 

@@ -414,42 +414,42 @@ function ForeverLogic.BuildMarketBrowserRows(commodities, items, options)
 	return rows
 end
 
+local function isEmptySelection(set)
+	return type(set) ~= "table" or next(set) == nil
+end
+
+local function marketInfoMatches(info, filters)
+	if not isEmptySelection(filters.classes) and not filters.classes[info.classLabel or ""] then
+		return false
+	end
+	if not isEmptySelection(filters.subclasses) and not filters.subclasses[info.subclassLabel or ""] then
+		return false
+	end
+	return isEmptySelection(filters.qualities) or (info.quality ~= nil and filters.qualities[info.quality])
+end
+
 --- Narrows Market rows. filters: classes, subclasses, qualities (sets keyed by label / quality number;
 --- empty or nil = any), owned (set of item IDs, used when ownedOnly), minPrice / maxPrice (copper).
---- getInfo(itemID) returns { classLabel, subclassLabel, quality }. A quality filter hides items whose
---- quality is not known yet.
+--- getInfo(itemID) returns { classLabel, subclassLabel, quality }, asked once per row after the price
+--- and owned checks. A quality filter hides items whose quality is not known yet.
 function ForeverLogic.FilterMarketRows(rows, filters, getInfo)
 	filters = filters or {}
-	local function any(set)
-		return type(set) ~= "table" or next(set) == nil
-	end
-	local needInfo = not any(filters.classes) or not any(filters.subclasses) or not any(filters.qualities)
 	local minPrice, maxPrice = tonumber(filters.minPrice), tonumber(filters.maxPrice)
-	local out = {}
-	for _, row in ipairs(rows or {}) do
-		local keep = true
-		local price = tonumber(row.price) or 0
-		if minPrice and price < minPrice then
-			keep = false
-		elseif maxPrice and price > maxPrice then
-			keep = false
-		elseif filters.ownedOnly and not (filters.owned and filters.owned[row.itemID]) then
-			keep = false
-		elseif needInfo then
-			local info = getInfo and getInfo(row.itemID) or {}
-			if not any(filters.classes) and not filters.classes[info.classLabel or ""] then
-				keep = false
-			elseif not any(filters.subclasses) and not filters.subclasses[info.subclassLabel or ""] then
-				keep = false
-			elseif not any(filters.qualities) and (info.quality == nil or not filters.qualities[info.quality]) then
-				keep = false
-			end
-		end
-		if keep then
-			out[#out + 1] = row
-		end
-	end
-	return out
+	local needInfo = not (isEmptySelection(filters.classes) and isEmptySelection(filters.subclasses) and isEmptySelection(filters.qualities))
+	return AuctionHelper.FilterLogic.KeepRows(rows, {
+		{ "minPrice", minPrice ~= nil, function(row)
+			return (tonumber(row.price) or 0) >= minPrice
+		end },
+		{ "maxPrice", maxPrice ~= nil, function(row)
+			return (tonumber(row.price) or 0) <= maxPrice
+		end },
+		{ "owned", filters.ownedOnly, function(row)
+			return filters.owned and filters.owned[row.itemID]
+		end },
+		{ "itemInfo", needInfo, function(row)
+			return marketInfoMatches(getInfo and getInfo(row.itemID) or {}, filters)
+		end },
+	})
 end
 
 --- Resolve bags/bank/warband when warband API may be missing (Forever).

@@ -1868,69 +1868,7 @@ function AuctionHelper:BuildCraftOpportunityRows(opts)
 end
 
 function AuctionHelper:FilterCraftRows(rows, filters)
-	filters = filters or {}
-	local text = string.lower(self:Trim(filters.text))
-	local charSel = filters.characters or {}
-	local profSel = filters.professions or {}
-	local expSel = filters.expansions or {}
-	local profitState = filters.profitState or "all"
-	local categorySel = filters.categories or {}
-	local showAllExpansions = self:IsFilterSelectionEmpty(expSel)
-
-	local out = {}
-	for _, row in ipairs(rows or {}) do
-		local keep = true
-
-		if keep and not self:IsFilterSelectionEmpty(charSel) then
-			local any = false
-			for ck in pairs(row.perChar or {}) do
-				if charSel[ck] then
-					any = true
-					break
-				end
-			end
-			keep = any
-		end
-
-		if keep and not self:IsFilterSelectionEmpty(profSel) and not profSel["all"] then
-			local sid = tostring(row.skillLineID or "")
-			keep = profSel[sid] == true
-		end
-
-		if keep and not showAllExpansions and not expSel[row.expansionTag] then
-			keep = false
-		end
-
-		if keep and not self:IsFilterSelectionEmpty(categorySel) and not categorySel["all"] then
-			if not row.categoryID or not categorySel[tostring(row.categoryID)] then
-				keep = false
-			end
-		end
-
-		if keep and text ~= "" then
-			local ok = string.find(string.lower(row.recipeName or ""), text, 1, true)
-				or string.find(string.lower(row.outputName or ""), text, 1, true)
-			keep = ok and true or false
-		end
-
-		if keep and profitState ~= "all" then
-			local p = row.profit
-			if profitState == "profitable" then
-				keep = p ~= nil and p > 0
-			elseif profitState == "negative" then
-				keep = p ~= nil and p < 0
-			elseif profitState == "missing_price" then
-				keep = (p == nil) or row.matMissingPrice == true
-			elseif profitState == "uncraftable" then
-				keep = not row.canCraftNow
-			end
-		end
-
-		if keep then
-			out[#out + 1] = row
-		end
-	end
-	return out
+	return self.FilterLogic.FilterCraftRows(rows, filters)
 end
 
 function AuctionHelper:GetCraftProfessionFilterOptions()
