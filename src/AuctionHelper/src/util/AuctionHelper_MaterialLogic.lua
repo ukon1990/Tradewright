@@ -114,7 +114,7 @@ function MaterialLogic.FormatCooldown(seconds)
 	local minutes = math.ceil((tonumber(seconds) or 0) / 60)
 	local days, hours = math.floor(minutes / 1440), math.floor(minutes % 1440 / 60)
 	local function unit(count, name)
-		return count .. " " .. name .. (count == 1 and "" or "s")
+		return count .. " " .. AuctionHelper:Plural(count, name)
 	end
 	if days > 0 then
 		return hours > 0 and (unit(days, "day") .. " " .. unit(hours, "hour")) or unit(days, "day")

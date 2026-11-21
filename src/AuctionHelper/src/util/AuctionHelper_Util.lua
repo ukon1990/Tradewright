@@ -1,12 +1,5 @@
 local _, AuctionHelper = ...
 
-function AuctionHelper:Trim(text)
-	if not text then
-		return ""
-	end
-	return (text:gsub("^%s+", ""):gsub("%s+$", ""))
-end
-
 function AuctionHelper:SafeCall(func, ...)
 	if type(func) ~= "function" then
 		return nil

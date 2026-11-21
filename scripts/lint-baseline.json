@@ -16,9 +16,6 @@
   "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": {
    "W631": 2
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": {
-   "W631": 1
-  },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_Scan.lua": {
    "W631": 1
   },
@@ -33,18 +30,18 @@
  "files": {
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 2559,
   "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": 778,
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5582,
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": 781,
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5538,
+  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": 779,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1198,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1241,
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": 2485,
+  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": 2428,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_LiveUpdate.lua": 708,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_CraftsUI.lua": 815,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": 1041,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": 702,
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_CraftsUI.lua": 803,
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": 1032,
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": 701,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": 929,
   "src/AuctionHelper_UI/src/ui/AuctionHelper_UIShell.lua": 809,
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_Widgets.lua": 906
+  "src/AuctionHelper_UI/src/ui/AuctionHelper_Widgets.lua": 901
  },
  "functions": {
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": {
@@ -466,7 +463,7 @@
    },
    "AuctionHelper:BuildAuctionPanelColumns": {
     "lines": [
-     89
+     88
     ]
    },
    "AuctionHelper:BuildAuctionPanelColumns/sortValue": {
@@ -589,11 +586,6 @@
    "AuctionHelper:GetAuctionPanelPersonalSaleRate": {
     "ccn": [
      18
-    ]
-   },
-   "AuctionHelper:GetAuctionPostButton": {
-    "ccn": [
-     19
     ]
    },
    "AuctionHelper:GetAuctionRowProtectionState": {
@@ -741,7 +733,7 @@
    },
    "AuctionHelper:ResolveCurrentAuctionPrice": {
     "lines": [
-     62
+     60
     ],
     "ccn": [
      14
@@ -855,14 +847,6 @@
      13
     ]
    },
-   "buildLiveOwnedBagState": {
-    "lines": [
-     47
-    ],
-    "ccn": [
-     18
-    ]
-   },
    "mergeReagentLine": {
     "ccn": [
      20
@@ -972,11 +956,6 @@
     "ccn": [
      19
     ]
-   },
-   "resolveQueueReagentUnitPrice": {
-    "ccn": [
-     11
-    ]
    }
   },
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_Inventory.lua": {
@@ -1015,11 +994,6 @@
     ],
     "ccn": [
      11
-    ]
-   },
-   "countItemInBagsViaContainer": {
-    "ccn": [
-     17
     ]
    }
   },
@@ -1193,11 +1167,6 @@
    }
   },
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_MailPlans.lua": {
-   "AuctionHelper:GetBagItems": {
-    "ccn": [
-     11
-    ]
-   },
    "heldQuantities": {
     "ccn": [
      12
@@ -1417,19 +1386,8 @@
     ]
    },
    "AuctionHelper:GetOpenProfessionRecipeID": {
-    "lines": [
-     56
-    ],
     "ccn": [
-     33
-    ]
-   },
-   "AuctionHelper:GetOpenProfessionScenario": {
-    "lines": [
-     63
-    ],
-    "ccn": [
-     28
+     23
     ]
    },
    "AuctionHelper:GetOpenProfessionSchematicForm": {
@@ -1546,10 +1504,10 @@
    },
    "AuctionHelper:ApplyEconomyToInventoryRow": {
     "lines": [
-     42
+     41
     ],
     "ccn": [
-     17
+     15
     ]
    },
    "AuctionHelper:EstimateBestMatCostPerUnitAmongSelection": {
@@ -1559,10 +1517,7 @@
    },
    "AuctionHelper:EstimateMatCostPerUnitForItem": {
     "lines": [
-     44
-    ],
-    "ccn": [
-     11
+     42
     ]
    },
    "AuctionHelper:EstimateRecipeMatCostCopper": {
@@ -1820,7 +1775,7 @@
    },
    "ExportTab:Refresh": {
     "ccn": [
-     15
+     11
     ]
    }
   },
@@ -1997,7 +1952,7 @@
    },
    "OverviewTab:RefreshStats": {
     "ccn": [
-     25
+     21
     ]
    },
    "getCurrentSelection": {
@@ -2040,7 +1995,7 @@
    },
    "createRecipeView": {
     "lines": [
-     86
+     85
     ]
    },
    "renderProfessionRecipe": {
@@ -2177,7 +2132,7 @@
    },
    "AuctionHelper:RefreshShellStatus": {
     "ccn": [
-     21
+     19
     ]
    },
    "AuctionHelper:RegisterBlizzardSettings": {

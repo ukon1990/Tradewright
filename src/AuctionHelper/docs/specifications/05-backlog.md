@@ -67,7 +67,7 @@
 | [f106-audit-bugs](issues/e13-code-health/f106-audit-bugs/README.md) | Bugs found by the audit | done, in-game check pending |
 | [f107-dead-code](issues/e13-code-health/f107-dead-code/README.md) | Delete dead code | done, in-game check pending |
 | [f108-comment-sweep](issues/e13-code-health/f108-comment-sweep/README.md) | Comment sweep | done |
-| [f109-shared-helpers](issues/e13-code-health/f109-shared-helpers/README.md) | Shared core helpers for repeated code | planned |
+| [f109-shared-helpers](issues/e13-code-health/f109-shared-helpers/README.md) | Shared core helpers for repeated code | done, in-game check pending |
 | [f110-lookup-tables](issues/e13-code-health/f110-lookup-tables/README.md) | Lookup tables instead of if-chains | planned |
 | [f111-item-key-normalizers](issues/e13-code-health/f111-item-key-normalizers/README.md) | One item key and snapshot normalizer | planned |
 | [f112-queue-vocabulary](issues/e13-code-health/f112-queue-vocabulary/README.md) | One name for the craft queue | planned |

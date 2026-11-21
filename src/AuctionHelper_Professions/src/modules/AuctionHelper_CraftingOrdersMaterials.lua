@@ -560,7 +560,7 @@ function AuctionHelper:BuildCraftingOrderWorkQueueSummary()
 			end
 		end
 	end
-	local matLines = {}
+	local matLines, tsm = {}, self:GetTsmPriceStrings()
 	for itemID, line in pairs(reagentTotals) do
 		if self.GetCharacterItemTotal then
 			line.currentCharacterQuantity = self:GetCharacterItemTotal(currentCharacterKey, itemID)
@@ -575,7 +575,7 @@ function AuctionHelper:BuildCraftingOrderWorkQueueSummary()
 			line.mailToText = self:FormatMailAllocationsShort(line.mailAllocations)
 		end
 		if self.GetMarketEstimateCopper then
-			line.estimatedUnitPrice = select(1, self:GetMarketEstimateCopper(itemID, self:GetSetting("integrations.economyTSMMatString", "Crafting"), self:GetSetting("integrations.economyTSMFallbackString", "DBMinBuyout")))
+			line.estimatedUnitPrice = select(1, self:GetMarketEstimateCopper(itemID, tsm.material, tsm.fallback))
 		end
 		if line.estimatedUnitPrice and line.quantityToBuy > 0 then
 			line.estimatedBuyCost = line.estimatedUnitPrice * line.quantityToBuy

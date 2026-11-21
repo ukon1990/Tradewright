@@ -2,13 +2,6 @@ local addonName, AuctionHelper = ...
 
 local MAX_ROWS = 500
 
-local function trim(s)
-	if not s then
-		return ""
-	end
-	return (string.gsub(tostring(s), "^%s*(.-)%s*$", "%1"))
-end
-
 local DETAIL_WIDTH = 288
 local GAP = 12
 local PAD = 10
@@ -498,7 +491,7 @@ function AuctionHelper:CollectMarketBrowserRows()
 	if not FL or not FL.BuildMarketBrowserRows then
 		return {}
 	end
-	local query = trim(ui.marketSearchBox and ui.marketSearchBox:GetText() or "")
+	local query = self:Trim(ui.marketSearchBox and ui.marketSearchBox:GetText() or "")
 	local sortKey = (ui.marketTable and ui.marketTable.sortKey) or self:GetSetting("market.sortColumn", "name")
 	local sortAsc
 	if ui.marketTable and ui.marketTable.sortAsc ~= nil then

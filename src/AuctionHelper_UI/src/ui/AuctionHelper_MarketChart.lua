@@ -10,10 +10,6 @@ local RANGES = {
 	{ id = "hours", label = "48 hours" },
 }
 
-local function now()
-	return (GetServerTime and GetServerTime()) or time()
-end
-
 local function rangeById(id)
 	for _, range in ipairs(RANGES) do
 		if range.id == id then
@@ -27,7 +23,7 @@ end
 local function dailyPoints(pe, storageKey, days)
 	local auction = pe:InitAuctionDB()
 	local byDay = auction and auction.history.daily and auction.history.daily[storageKey] or {}
-	local cutoff = now() - days * DAY
+	local cutoff = AuctionHelper:Now() - days * DAY
 	local points = {}
 	for dayKey, entry in pairs(byDay) do
 		local at = tonumber(dayKey)

@@ -422,7 +422,7 @@ function AuctionHelper:RefreshShellStatus()
 	end
 	local stored = self:TableCount(self.db and self.db.characters or {})
 	ui.mainFrame.statusText:SetText(leftText)
-	local text = string.format("%d %s stored", stored, stored == 1 and "character" or "characters")
+	local text = string.format("%d %s stored", stored, self:Plural(stored, "character"))
 	-- Profession scan time only matters when this character has a profession to scan.
 	if #self:GetPlayerProfessions() > 0 then
 		local scannedAt = charData and charData.scanFinishedAt

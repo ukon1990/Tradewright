@@ -12,9 +12,11 @@ local function check(name, cond, detail)
 end
 
 local pe = {}
-local chunk, err = loadfile(root .. "/src/util/AuctionHelper_TooltipLogic.lua")
-assert(chunk, err)
-chunk("AuctionHelper", pe)
+for _, file in ipairs({ "AuctionHelper_CoreHelpers.lua", "AuctionHelper_TooltipLogic.lua" }) do
+	local chunk, err = loadfile(root .. "/src/util/" .. file)
+	assert(chunk, err)
+	chunk("AuctionHelper", pe)
+end
 local TL = pe.TooltipLogic
 assert(TL, "TooltipLogic missing")
 

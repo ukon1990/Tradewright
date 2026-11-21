@@ -142,11 +142,11 @@ function ExportTab:Refresh()
 	local professionCount = pe:TableCount(charData and charData.professions or {})
 	panel.characterGroup.body:SetText(string.format("%s, %d %s stored.",
 		meta.name and meta.realm and (meta.name .. " · " .. meta.realm) or tostring(key),
-		professionCount, professionCount == 1 and "profession" or "professions"))
+		professionCount, pe:Plural(professionCount, "profession")))
 
 	local rows = pe:BuildProfessionRows(charData)
 	panel.profTable:SetRows(rows)
 	panel.profTable:Refresh()
-	panel.profTable:SetFooterText(string.format("%d %s scanned on this character", #rows, #rows == 1 and "profession" or "professions"))
+	panel.profTable:SetFooterText(string.format("%d %s scanned on this character", #rows, pe:Plural(#rows, "profession")))
 	self:Layout(panel)
 end

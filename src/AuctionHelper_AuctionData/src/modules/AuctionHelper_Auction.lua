@@ -14,10 +14,6 @@ local KNOWN_AH_SIDE_PANELS = {
 	"AuctionHelper_AuctionDataAuctionPanel",
 }
 
-local function now()
-	return AuctionHelper:Now()
-end
-
 local function normalizeItemID(item)
 	if type(item) == "number" then
 		return item > 0 and math.floor(item) or nil
@@ -81,33 +77,19 @@ local function auctionHistoryBucketWeightedSum(bucket)
 	return tonumber(bucket and (bucket.w or bucket.weightedSum)) or 0
 end
 
-local function getMaxOwnedBagIndex()
-	return AuctionHelper:GetLastBagIndex()
-end
-
 local function findBagSlotForItemID(itemID)
 	itemID = normalizeItemID(itemID)
-	if not itemID or not C_Container or not C_Container.GetContainerNumSlots then
+	if not itemID then
 		return nil, nil
 	end
-	for bag = 0, getMaxOwnedBagIndex() do
-		local slots = C_Container.GetContainerNumSlots(bag) or 0
-		for slot = 1, slots do
-			local slotItemID = C_Container.GetContainerItemID and C_Container.GetContainerItemID(bag, slot) or nil
-			if tonumber(slotItemID) == itemID then
-				return bag, slot
-			end
+	local foundBag, foundSlot
+	AuctionHelper:ForEachBagSlot(nil, function(bag, slot, info)
+		if info and tonumber(info.itemID) == itemID then
+			foundBag, foundSlot = bag, slot
+			return true
 		end
-	end
-	return nil, nil
-end
-
-local function isBagSlotSoulbound(bag, slot)
-	if not C_Container or not C_Container.GetContainerItemInfo then
-		return false
-	end
-	local info = C_Container.GetContainerItemInfo(bag, slot)
-	return info and info.isBound == true
+	end)
+	return foundBag, foundSlot
 end
 
 local function isAuctionSellItemValid(bag, slot)
@@ -136,40 +118,18 @@ local function isAuctionSellItemValid(bag, slot)
 end
 
 local function buildLiveOwnedBagState()
-	local out = {}
-	local representatives = {}
-	local validSlots = {}
-	if not C_Container or not C_Container.GetContainerNumSlots then
-		return {
-			items = out,
-			orderedItemIDs = {},
-			representatives = representatives,
-			signature = "",
-		}
-	end
-	for bag = 0, getMaxOwnedBagIndex() do
-		local slots = C_Container.GetContainerNumSlots(bag) or 0
-		for slot = 1, slots do
-			local itemID = C_Container.GetContainerItemID and C_Container.GetContainerItemID(bag, slot) or nil
-			itemID = normalizeItemID(itemID)
-			if itemID and not isBagSlotSoulbound(bag, slot) and isAuctionSellItemValid(bag, slot) then
-				local count = 1
-				if C_Container.GetContainerItemInfo then
-					local info = C_Container.GetContainerItemInfo(bag, slot)
-					if info and tonumber(info.stackCount) and tonumber(info.stackCount) > 0 then
-						count = tonumber(info.stackCount)
-					end
-				end
-				out[itemID] = (out[itemID] or 0) + count
-				representatives[itemID] = representatives[itemID] or {
-					bag = bag,
-					slot = slot,
-					stackQty = count,
-				}
-				validSlots[#validSlots + 1] = string.format("%d:%d:%d:%d", bag, slot, itemID, count)
-			end
+	local out, representatives, validSlots = {}, {}, {}
+	AuctionHelper:ForEachBagSlot(nil, function(bag, slot, info)
+		local itemID = info and normalizeItemID(info.itemID)
+		if not itemID or info.isBound == true or not isAuctionSellItemValid(bag, slot) then
+			return
 		end
-	end
+		local stackCount = tonumber(info.stackCount)
+		local count = stackCount and stackCount > 0 and stackCount or 1
+		out[itemID] = (out[itemID] or 0) + count
+		representatives[itemID] = representatives[itemID] or { bag = bag, slot = slot, stackQty = count }
+		validSlots[#validSlots + 1] = string.format("%d:%d:%d:%d", bag, slot, itemID, count)
+	end)
 	local orderedItemIDs = {}
 	for itemID in pairs(out) do
 		orderedItemIDs[#orderedItemIDs + 1] = itemID
@@ -401,7 +361,7 @@ function AuctionHelper:MarkAuctionTargetSearched(itemID, keyFields, source, seen
 		return false
 	end
 	local searched, meta = self:GetAuctionSearchedTargetsState()
-	local ts = tonumber(seenAt) or now()
+	local ts = tonumber(seenAt) or AuctionHelper:Now()
 	local key = self:SerializeAuctionItemKeyFields(itemID, keyFields)
 	searched[key] = true
 	meta[key] = {
@@ -536,7 +496,7 @@ function AuctionHelper:RecordLiveAuctionObservationsFromAggregate(itemID, agg, s
 		return
 	end
 	sourceTag = tostring(sourceTag or "native_refresh")
-	local seenAt = now()
+	local seenAt = AuctionHelper:Now()
 	if agg.kind == "commodity" then
 		self:RecordAuctionObservation({
 			itemID = itemID,
@@ -574,11 +534,11 @@ function AuctionHelper:ApplyLiveAggregateToNativePrice(itemID, agg)
 	end
 	local src = agg.kind == "commodity" and "commodity_aggregate_live" or "item_aggregate_live"
 	if agg.kind == "commodity" then
-		self:UpsertNativeAuctionPrice(itemID, agg.minUnitPrice, src, math.max(1, tonumber(agg.totalQuantity) or 1), now())
+		self:UpsertNativeAuctionPrice(itemID, agg.minUnitPrice, src, math.max(1, tonumber(agg.totalQuantity) or 1), AuctionHelper:Now())
 		return
 	end
 	if agg.kind == "item" and agg.cheapestUnitPrice and agg.cheapestUnitPrice > 0 then
-		self:UpsertNativeAuctionPrice(itemID, agg.cheapestUnitPrice, src, math.max(1, tonumber(agg.totalQuantityAll) or 1), now())
+		self:UpsertNativeAuctionPrice(itemID, agg.cheapestUnitPrice, src, math.max(1, tonumber(agg.totalQuantityAll) or 1), AuctionHelper:Now())
 	end
 end
 
@@ -611,11 +571,9 @@ function AuctionHelper:GetAuctionPanelFallbackPrice(itemID)
 	end
 
 	local function tryMarketEstimate()
-		local st = self.db and self.db.settings or {}
-		local marketStr = st.economyTSMMarketString or "dbmarket"
-		local fallbackPrice, fallbackSource = self:GetMarketEstimateCopper(itemID, marketStr)
+		local fallbackPrice, fallbackSource = self:GetMarketEstimateCopper(itemID, self:GetTsmPriceStrings().market)
 		if fallbackPrice and fallbackPrice > 0 then
-			return fallbackPrice, "fallback:" .. tostring(fallbackSource or "market"), now()
+			return fallbackPrice, "fallback:" .. tostring(fallbackSource or "market"), AuctionHelper:Now()
 		end
 		return nil
 	end
@@ -652,7 +610,7 @@ function AuctionHelper:BuildAuctionPanelPriceState(itemID)
 	local nativeListingQuantity = nil
 	if livePrice and livePrice > 0 then
 		nativeListingQuantity = math.max(1, tonumber(liveQty) or 1)
-		self:UpsertNativeAuctionPrice(itemID, livePrice, liveSource or "results_live", nativeListingQuantity, now())
+		self:UpsertNativeAuctionPrice(itemID, livePrice, liveSource or "results_live", nativeListingQuantity, AuctionHelper:Now())
 	end
 	local nativePrice, nativeSource, nativeSeenAt = self:GetNativeAhPrice(itemID)
 	local fallbackPrice, fallbackSource, fallbackSeenAt = self:GetAuctionPanelFallbackPrice(itemID)
@@ -820,7 +778,7 @@ function AuctionHelper:FinishQueuedAuctionRefreshItem(itemID)
 		scanKeyFields = ctx.scanKeyFields
 		state.auctionSearchContext = nil
 	end
-	self:MarkAuctionTargetSearched(itemID, scanKeyFields, "queue_finish", now())
+	self:MarkAuctionTargetSearched(itemID, scanKeyFields, "queue_finish", AuctionHelper:Now())
 	local priceState = self:ProcessAuctionRefreshItem(itemID, scanKeyFields)
 	local currentPrice = tonumber(priceState.currentPrice)
 	self:DebugLog("AH", "refresh resolved", {
@@ -1416,7 +1374,7 @@ function AuctionHelper:BuildCompactAuctionSnapshotEntry(observation)
 		return nil
 	end
 	local price = tonumber(observation.p or observation.marketLow or observation.minBuyout or observation.price)
-	local seenAt = tonumber(observation.t or observation.seenAt) or now()
+	local seenAt = tonumber(observation.t or observation.seenAt) or AuctionHelper:Now()
 	if not price or price <= 0 then
 		return nil
 	end
@@ -1478,7 +1436,7 @@ function AuctionHelper:IsItemAuctionScanStale(itemID, freshnessWindowSeconds, no
 	end
 	local window = tonumber(freshnessWindowSeconds) or self:GetAuctionPriceFreshnessWindowSeconds()
 	window = math.max(60, window)
-	local curTs = tonumber(nowTs) or now()
+	local curTs = tonumber(nowTs) or AuctionHelper:Now()
 	return (curTs - lastScanAt) >= window
 end
 
@@ -1496,7 +1454,7 @@ function AuctionHelper:TouchItemAuctionScanTimestamp(itemID, ts)
 	if not itemID then
 		return
 	end
-	ts = tonumber(ts) or now()
+	ts = tonumber(ts) or AuctionHelper:Now()
 	local auction = self:InitAuctionDB()
 	auction.itemLastScanAt = auction.itemLastScanAt or {}
 	local k = tostring(itemID)
@@ -1507,7 +1465,7 @@ function AuctionHelper:TouchItemAuctionScanTimestamp(itemID, ts)
 end
 
 function AuctionHelper:MarkAuctionQueueScanCompleted()
-	local ts = now()
+	local ts = AuctionHelper:Now()
 	local auction = self:InitAuctionDB()
 	auction.lastQueueScanAt = ts
 	self:GetState().auctionLastQueueScanCompletedAt = ts
@@ -1518,7 +1476,7 @@ function AuctionHelper:FormatAuctionScanAge(ts)
 	if not ts or ts <= 0 then
 		return "never"
 	end
-	local sec = math.max(0, now() - ts)
+	local sec = math.max(0, AuctionHelper:Now() - ts)
 	if sec < 120 then
 		return "just now"
 	end
@@ -1574,7 +1532,7 @@ function AuctionHelper:SetAuctionItemRule(itemID, updates)
 	if next(rule) == nil then
 		auction.rules.byItemID[key] = nil
 	else
-		rule.updatedAt = now()
+		rule.updatedAt = AuctionHelper:Now()
 		auction.rules.byItemID[key] = rule
 	end
 	return true
@@ -3023,8 +2981,7 @@ end
 
 -- A badge-like word in its own colour, for the Flag column.
 local function flagText(pe, text, colorKey)
-	local color = pe:GetTheme()[colorKey]
-	return string.format("|cff%02x%02x%02x%s|r", color.r * 255, color.g * 255, color.b * 255, string.upper(text))
+	return pe:Colorize(string.upper(text), colorKey)
 end
 
 function AuctionHelper:BuildAuctionPanelColumns()
@@ -3068,8 +3025,7 @@ function AuctionHelper:BuildAuctionPanelColumns()
 				end
 				local text = pe:FormatCopperShort(row.currentPrice)
 				if row.currentPriceIsNative ~= true then
-					local muted = pe:GetTheme().textMuted
-					return string.format("|cff%02x%02x%02x%s|r", muted.r * 255, muted.g * 255, muted.b * 255, text)
+					return pe:Colorize(text, "textMuted")
 				end
 				return text
 			end,
@@ -3356,24 +3312,26 @@ function AuctionHelper:TrySendItemToAuctionSellFrame(itemID, bag, slot)
 	return clicked == true
 end
 
+local POST_BUTTON_KEYS = { "PostButton", "CreateAuctionButton" }
+
+-- IsVisible, not IsShown: the hidden pane's button still reports itself as shown.
+local function visibleButton(button)
+	if type(button) == "table" and button.IsVisible and button:IsVisible() and button.Click then
+		return button
+	end
+	return nil
+end
+
 function AuctionHelper:GetAuctionPostButton()
 	local ah = _G.AuctionHouseFrame
 	if not ah then
 		return nil
 	end
-	local candidates = {
-		ah.CommoditiesSellFrame and ah.CommoditiesSellFrame.PostButton,
-		ah.CommoditiesSellFrame and ah.CommoditiesSellFrame.CreateAuctionButton,
-		ah.ItemSellFrame and ah.ItemSellFrame.PostButton,
-		ah.ItemSellFrame and ah.ItemSellFrame.CreateAuctionButton,
-		ah.CommoditiesSellFrame and ah.CommoditiesSellFrame.SaleFrame and ah.CommoditiesSellFrame.SaleFrame.PostButton,
-		ah.CommoditiesSellFrame and ah.CommoditiesSellFrame.SaleFrame and ah.CommoditiesSellFrame.SaleFrame.CreateAuctionButton,
-		ah.ItemSellFrame and ah.ItemSellFrame.SaleFrame and ah.ItemSellFrame.SaleFrame.PostButton,
-		ah.ItemSellFrame and ah.ItemSellFrame.SaleFrame and ah.ItemSellFrame.SaleFrame.CreateAuctionButton,
-	}
-	for _, button in ipairs(candidates) do
-		-- IsVisible, not IsShown: the hidden pane's button still reports itself as shown.
-		if button and button.IsVisible and button:IsVisible() and button.Click then
+	local commodities, items = ah.CommoditiesSellFrame, ah.ItemSellFrame
+	local sellFrames = { commodities, items, commodities and commodities.SaleFrame, items and items.SaleFrame }
+	for index = 1, 4 do -- not ipairs: a missing frame leaves a nil hole in the list
+		local button = self:FirstValueFrom(sellFrames[index], nil, POST_BUTTON_KEYS, visibleButton)
+		if button then
 			return button
 		end
 	end
@@ -3594,7 +3552,7 @@ function AuctionHelper:RecordAuctionObservation(observation)
 		return false
 	end
 
-	local seenAt = tonumber(observation.seenAt) or now()
+	local seenAt = tonumber(observation.seenAt) or AuctionHelper:Now()
 	local entry = self:BuildCompactAuctionSnapshotEntry(observation)
 	if not entry then
 		return false
@@ -3653,7 +3611,7 @@ end
 
 --- Persist a dump/replicate observation: always stamp last-updated and session-searched;
 --- write snapshot/native price when a usable unit price is present.
---- Ignores the 1-hour auto-scan gate. Timestamps use now() unless the caller passes a newer value.
+--- Ignores the 1-hour auto-scan gate. Timestamps use AuctionHelper:Now() unless the caller passes a newer value.
 function AuctionHelper:PersistAuctionDumpObservation(observation)
 	if type(observation) ~= "table" then
 		return false
@@ -3662,7 +3620,7 @@ function AuctionHelper:PersistAuctionDumpObservation(observation)
 	if not itemID then
 		return false
 	end
-	local nowTs = now()
+	local nowTs = AuctionHelper:Now()
 	local requested = tonumber(observation.seenAt)
 	local seenAt = nowTs
 	if requested and requested > nowTs then
@@ -3697,7 +3655,7 @@ function AuctionHelper:UpdateAuctionHistoryFromObservation(storageKey, entry)
 	if not storageKey or type(entry) ~= "table" then
 		return
 	end
-	local hourBucketTs = math.floor((tonumber(auctionSnapshotSeenAt(entry) or entry.seenAt) or now()) / 3600) * 3600
+	local hourBucketTs = math.floor((tonumber(auctionSnapshotSeenAt(entry) or entry.seenAt) or AuctionHelper:Now()) / 3600) * 3600
 	local itemHistory = getBucketTable(auction.history.hourly, storageKey)
 	if not itemHistory then
 		return
@@ -3716,7 +3674,7 @@ function AuctionHelper:UpdateAuctionHistoryFromObservation(storageKey, entry)
 		bucket.n = auctionHistoryBucketCount(bucket) + 1
 		bucket.q = auctionHistoryBucketWeightedQty(bucket) + qty
 		bucket.w = auctionHistoryBucketWeightedSum(bucket) + (price * qty)
-		bucket.t = auctionSnapshotSeenAt(entry) or now()
+		bucket.t = auctionSnapshotSeenAt(entry) or AuctionHelper:Now()
 		bucket.min = nil
 		bucket.max = nil
 		bucket.last = nil
@@ -3733,15 +3691,15 @@ end
 function AuctionHelper:TrimAuctionHistory()
 	-- Called per observation; walking all history each time made full dumps quadratic.
 	local state = self:GetState()
-	if state.auctionHistoryTrimmedAt and now() - state.auctionHistoryTrimmedAt < 600 then
+	if state.auctionHistoryTrimmedAt and AuctionHelper:Now() - state.auctionHistoryTrimmedAt < 600 then
 		return
 	end
-	state.auctionHistoryTrimmedAt = now()
+	state.auctionHistoryTrimmedAt = AuctionHelper:Now()
 	local auction = self:InitAuctionDB()
 	local settings = self.db and self.db.settings and self.db.settings.auction or nil
 	local retentionDays = tonumber(settings and settings.historyRetentionDays) or 30
 	retentionDays = math.max(1, retentionDays)
-	local cutoffTs = now() - retentionDays * 24 * 3600
+	local cutoffTs = AuctionHelper:Now() - retentionDays * 24 * 3600
 	for storageKey, historyByHour in pairs(auction.history.hourly or {}) do
 		for hourTs in pairs(historyByHour) do
 			if tonumber(hourTs) and tonumber(hourTs) < cutoffTs then
@@ -3851,7 +3809,7 @@ function AuctionHelper:RecordAuctionTransaction(event)
 	local kind = tostring(event.kind or "unknown")
 	local entry = shallowCopy(event)
 	entry.kind = kind
-	entry.ts = tonumber(event.ts) or now()
+	entry.ts = tonumber(event.ts) or AuctionHelper:Now()
 	entry.itemID = normalizeItemID(event.itemID)
 	entry.characterKey = event.characterKey and tostring(event.characterKey) or self:GetCharacterKey()
 	entry.quantity = math.max(0, tonumber(event.quantity) or 0)
@@ -3916,7 +3874,7 @@ function AuctionHelper:GetItemEconomySummary(itemID, opts)
 	local saleStats = self:LedgerSaleStats(itemID, opts.characterKey)
 	local freshnessMinutes = tonumber(self:GetSetting("auction.priceFreshnessMinutes", 15)) or 15
 	local freshWindowSec = math.max(60, freshnessMinutes * 60)
-	local nowTs = now()
+	local nowTs = AuctionHelper:Now()
 	local lastAuctionScanAt = self:GetItemLastAuctionScanAt(itemID)
 	local scanFresh = lastAuctionScanAt and (nowTs - lastAuctionScanAt) <= freshWindowSec
 	local snapFresh = false
@@ -3951,7 +3909,7 @@ function AuctionHelper:UpsertNativeAuctionPrice(itemID, price, source, sampleSiz
 	end
 	local state = self:GetState()
 	state.auctionNativePriceByItem = state.auctionNativePriceByItem or {}
-	local ts = tonumber(seenAt) or now()
+	local ts = tonumber(seenAt) or AuctionHelper:Now()
 	state.auctionNativePriceByItem[itemID] = {
 		price = price,
 		seenAt = ts,
@@ -3983,8 +3941,8 @@ function AuctionHelper:ResolveCurrentAuctionPrice(itemID, opts)
 	end
 	local livePrice, liveSource, liveQty = self:GetLiveAuctionResultUnitPrice(itemID)
 	if livePrice and livePrice > 0 then
-		self:UpsertNativeAuctionPrice(itemID, livePrice, liveSource or "results_live", liveQty or 1, now())
-		return livePrice, liveSource or "results_live", now()
+		self:UpsertNativeAuctionPrice(itemID, livePrice, liveSource or "results_live", liveQty or 1, AuctionHelper:Now())
+		return livePrice, liveSource or "results_live", AuctionHelper:Now()
 	end
 	local nativePrice, nativeSource, nativeSeenAt = self:GetNativeAhPrice(itemID)
 	if nativePrice and nativePrice > 0 then
@@ -4013,16 +3971,14 @@ function AuctionHelper:ResolveCurrentAuctionPrice(itemID, opts)
 		if opts.allowFallback == false then
 			return nil
 		end
-		local st = self.db and self.db.settings or {}
-		local marketStr = st.economyTSMMarketString or "dbmarket"
-		local fallbackPrice, fallbackSource = self:GetMarketEstimateCopper(itemID, marketStr)
+		local fallbackPrice, fallbackSource = self:GetMarketEstimateCopper(itemID, self:GetTsmPriceStrings().market)
 		if fallbackPrice and fallbackPrice > 0 then
 			if self:IsDebugEnabled() then
 				self:DebugLog("AH", "ResolveCurrentAuctionPrice", {
 					string.format("itemID=%d source=fallback(%s) price=%s", itemID, tostring(fallbackSource), tostring(fallbackPrice)),
 				})
 			end
-			return fallbackPrice, "fallback:" .. tostring(fallbackSource or "market"), now()
+			return fallbackPrice, "fallback:" .. tostring(fallbackSource or "market"), AuctionHelper:Now()
 		end
 		return nil
 	end
@@ -4296,7 +4252,7 @@ function AuctionHelper:GetFullAuctionDumpCooldownRemaining()
 	local requestedAt = type(requests) == "table"
 		and tonumber(requests[self:GetAuctionRegionKey() .. ":" .. self:GetAuctionConnectedRealmID()]) or 0
 	local lastAt = math.max(self:GetLastFullAuctionScanAt() or 0, requestedAt)
-	return math.max(0, lastAt + FULL_AH_DUMP_COOLDOWN_SEC - now())
+	return math.max(0, lastAt + FULL_AH_DUMP_COOLDOWN_SEC - AuctionHelper:Now())
 end
 
 function AuctionHelper:IsFullAuctionDumpRunning()
@@ -4386,7 +4342,7 @@ function AuctionHelper:QueueVisibleCraftsTabAuctionRefresh(force)
 	ui.craftsVisibleAuctionTargetsSignature = signature
 
 	local freshnessWindowSeconds = self:GetAuctionPriceFreshnessWindowSeconds()
-	local currentTs = now()
+	local currentTs = AuctionHelper:Now()
 	local filtered = {}
 	for _, target in ipairs(targets) do
 		local itemID = normalizeItemID(target.itemID)
@@ -4451,7 +4407,7 @@ function AuctionHelper:BuildPrioritizedAuctionAutoScanTargets(opts)
 	local includeSessionSearched = opts.includeSessionSearched == true
 	local requireStaleNonVisible = opts.requireStaleNonVisible == true
 	local freshnessWindowSeconds = tonumber(opts.freshnessWindowSeconds) or self:GetAuctionPriceFreshnessWindowSeconds()
-	local currentTs = now()
+	local currentTs = AuctionHelper:Now()
 	local targets = {}
 	local seen = {}
 	local function addTarget(target, _sourceKind)
@@ -4722,7 +4678,7 @@ function AuctionHelper:FailFullAuctionDump(reason)
 	dump.running = false
 	dump.status = "failed"
 	dump.error = tostring(reason or "unknown")
-	dump.finishedAt = now()
+	dump.finishedAt = AuctionHelper:Now()
 	self:PrintMessage("Full AH dump failed: " .. tostring(reason or "unknown"))
 	self:RefreshAuctionHousePanel()
 end
@@ -4735,7 +4691,7 @@ function AuctionHelper:FinishFullAuctionDump()
 	end
 	dump.running = false
 	dump.status = "complete"
-	dump.finishedAt = now()
+	dump.finishedAt = AuctionHelper:Now()
 	self:SetLastFullAuctionScanAt(dump.finishedAt)
 	self:PrintMessage(string.format("Full AH dump complete: %s items aggregated.", self:FormatNumberGrouped(tonumber(dump.persistTotal) or 0)))
 	self:RefreshAuctionHousePanel()
@@ -4763,7 +4719,7 @@ function AuctionHelper:PersistFullAuctionDumpChunk(token)
 	end
 	dump.status = "processing"
 	local last = math.min(#keys, index + FULL_AH_DUMP_PERSIST_CHUNK - 1)
-	local seenAt = tonumber(dump.seenAt) or now()
+	local seenAt = tonumber(dump.seenAt) or AuctionHelper:Now()
 	for i = index, last do
 		local itemID = tonumber(keys[i])
 		local aggregate = itemID and dump.aggregate and dump.aggregate[itemID] or nil
@@ -4855,7 +4811,7 @@ function AuctionHelper:OnFullAuctionDumpTimeout(token)
 			dump.total = total
 			dump.done = 0
 			dump.index = 0
-			dump.seenAt = now()
+			dump.seenAt = AuctionHelper:Now()
 			dump.aggregate = {}
 			dump.status = "processing"
 			self:RefreshAuctionHousePanel()
@@ -4864,8 +4820,8 @@ function AuctionHelper:OnFullAuctionDumpTimeout(token)
 		end
 		dump.listMarkSettling = mark
 	end
-	local startedAt = tonumber(dump.requestStartedAt) or now()
-	if not dump.listMarkSettling and (now() - startedAt) >= FULL_AH_DUMP_REQUEST_TIMEOUT_SEC then
+	local startedAt = tonumber(dump.requestStartedAt) or AuctionHelper:Now()
+	if not dump.listMarkSettling and (AuctionHelper:Now() - startedAt) >= FULL_AH_DUMP_REQUEST_TIMEOUT_SEC then
 		self:FailFullAuctionDump("the server did not answer. It allows one full scan every "
 			.. formatDurationShort(FULL_AH_DUMP_COOLDOWN_SEC) .. ", so try again later")
 		return
@@ -4888,7 +4844,7 @@ function AuctionHelper:TrimFullDumpMarketHistory()
 	local settings = self.db and self.db.settings and self.db.settings.auction or nil
 	local retentionDays = tonumber(settings and settings.historyRetentionDays) or 30
 	retentionDays = math.max(1, retentionDays)
-	local cutoff = now() - (retentionDays * 24 * 3600)
+	local cutoff = AuctionHelper:Now() - (retentionDays * 24 * 3600)
 	for _, itemHistory in pairs(self.db.itemHistory or {}) do
 		local market = itemHistory and itemHistory.market or nil
 		if market and market.buckets then
@@ -4913,7 +4869,7 @@ function AuctionHelper:ContinueAuctionDump(token)
 	local index = tonumber(dump.index) or 1
 	if index > #rows then
 		dump.running = false
-		dump.finishedAt = now()
+		dump.finishedAt = AuctionHelper:Now()
 		dump.remaining = 0
 		dump.rows = nil
 		dump.index = nil
@@ -4947,7 +4903,7 @@ function AuctionHelper:ContinueAuctionDump(token)
 	dump.remaining = math.max(0, #rows - last)
 	if dump.remaining <= 0 then
 		dump.running = false
-		dump.finishedAt = now()
+		dump.finishedAt = AuctionHelper:Now()
 		dump.rows = nil
 		dump.index = nil
 		self:PrimeAuctionPanelRows()
@@ -5062,8 +5018,8 @@ function AuctionHelper:StartClassicFullAuctionDump(existingToken)
 		mode = "full",
 		classic = true,
 		status = "querying",
-		startedAt = now(),
-		requestStartedAt = now(),
+		startedAt = AuctionHelper:Now(),
+		requestStartedAt = AuctionHelper:Now(),
 		page = 0,
 		total = 0,
 		done = 0,
@@ -5105,7 +5061,7 @@ function AuctionHelper:QueryClassicAuctionDumpPage(token, page, retries)
 	end
 	dump.status = "querying"
 	dump.page = tonumber(page) or 0
-	dump.requestStartedAt = now()
+	dump.requestStartedAt = AuctionHelper:Now()
 	dump.queryRetries = 0
 	local ok = pcall(QueryAuctionItems, "", nil, nil, dump.page, false, nil, false, false)
 	if not ok then
@@ -5129,7 +5085,7 @@ function AuctionHelper:OnAuctionItemListUpdate()
 	totalAuctions = tonumber(totalAuctions) or 0
 	dump.total = totalAuctions
 	dump.status = "processing"
-	dump.seenAt = now()
+	dump.seenAt = AuctionHelper:Now()
 	dump.aggregate = dump.aggregate or {}
 	local aggregateRow = self.AggregateAuctionRow
 	for i = 1, numBatch do
@@ -5191,8 +5147,8 @@ function AuctionHelper:StartAuctionDump(mode)
 				running = true,
 				mode = "full",
 				status = "requesting",
-				startedAt = now(),
-				requestStartedAt = now(),
+				startedAt = AuctionHelper:Now(),
+				requestStartedAt = AuctionHelper:Now(),
 				total = 0,
 				done = 0,
 				index = 0,
@@ -5204,7 +5160,7 @@ function AuctionHelper:StartAuctionDump(mode)
 			if not ok then
 				return self:StartClassicFullAuctionDump(token)
 			end
-			self:SetLastFullAuctionScanRequestAt(now())
+			self:SetLastFullAuctionScanRequestAt(AuctionHelper:Now())
 			self:RefreshAuctionHousePanel()
 			C_Timer.After(FULL_AH_DUMP_REQUEST_POLL_SEC, function()
 				AuctionHelper:OnFullAuctionDumpTimeout(token)
@@ -5223,7 +5179,7 @@ function AuctionHelper:StartAuctionDump(mode)
 		token = token,
 		running = true,
 		mode = mode,
-		startedAt = now(),
+		startedAt = AuctionHelper:Now(),
 		batchSize = batchSize,
 		rows = rows,
 		index = 1,
@@ -5233,7 +5189,7 @@ function AuctionHelper:StartAuctionDump(mode)
 	}
 	if #rows == 0 then
 		state.auctionDump.running = false
-		state.auctionDump.finishedAt = now()
+		state.auctionDump.finishedAt = AuctionHelper:Now()
 		self:RefreshAuctionHousePanel()
 		self:PrintMessage("Dump complete: 0 items persisted.")
 		return true
@@ -5292,7 +5248,7 @@ function AuctionHelper:OnAuctionHouseClosed()
 	local state = self:GetState()
 	if state.auctionDump and state.auctionDump.running == true then
 		state.auctionDump.running = false
-		state.auctionDump.finishedAt = now()
+		state.auctionDump.finishedAt = AuctionHelper:Now()
 	end
 	state.auctionRefreshQueue = {}
 	state.auctionRefreshRunning = false
@@ -5336,7 +5292,7 @@ function AuctionHelper:ApplyAuctionSearchResultToDatabase(itemID, keyFields, sou
 	if not itemID then
 		return false
 	end
-	self:MarkAuctionTargetSearched(itemID, keyFields, sourceTag or "manual_search", now())
+	self:MarkAuctionTargetSearched(itemID, keyFields, sourceTag or "manual_search", AuctionHelper:Now())
 	local agg = self:GetLiveAuctionSearchAggregate(itemID, keyFields)
 	if not agg then
 		return false
@@ -5363,7 +5319,7 @@ function AuctionHelper:SaveLiveSearchToScanEntry(itemID, agg, quiet)
 	local storageKey = self:BuildAuctionStorageKey(itemID, "item", tostring(itemID))
 	local saved = storageKey and auction.snapshot.items[storageKey]
 	if not self.ForeverLogic.LiveSearchDiffers(saved, price, quantity, listings) then
-		saved.t = now()
+		saved.t = AuctionHelper:Now()
 		return false
 	end
 	self:RecordAuctionObservation({
@@ -5376,7 +5332,7 @@ function AuctionHelper:SaveLiveSearchToScanEntry(itemID, agg, quiet)
 		sampleSize = quantity,
 		listingCount = listings,
 		source = "results_live_search",
-		seenAt = now(),
+		seenAt = AuctionHelper:Now(),
 	})
 	if not quiet then
 		self:RefreshViewsAfterLiveSearch()

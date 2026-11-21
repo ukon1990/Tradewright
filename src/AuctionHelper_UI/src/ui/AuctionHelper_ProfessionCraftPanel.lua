@@ -431,9 +431,8 @@ local function createRecipeView(pe, f)
 		{ id = "need", label = "Need", width = 40, justifyH = "RIGHT", getText = function(slot) return tostring(slot.need) end },
 		{ id = "have", label = "Have", width = 46, justifyH = "RIGHT",
 			getText = function(slot)
-				local danger = pe:GetTheme().danger
 				if slot.have < slot.need then
-					return string.format("|cff%02x%02x%02x%s|r", danger.r * 255, danger.g * 255, danger.b * 255, pe:FormatNumberGrouped(slot.have))
+					return pe:Colorize(pe:FormatNumberGrouped(slot.have), "danger")
 				end
 				return pe:FormatNumberGrouped(slot.have)
 			end },

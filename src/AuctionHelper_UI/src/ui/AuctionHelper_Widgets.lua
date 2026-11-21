@@ -811,11 +811,7 @@ function AuctionHelper:GetQualityFilterOptions()
 	local options = {}
 	for quality = 0, 5 do
 		local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
-		local label = names[quality]
-		if color then
-			label = string.format("|cff%02x%02x%02x%s|r", color.r * 255, color.g * 255, color.b * 255, label)
-		end
-		options[#options + 1] = { value = quality, label = label }
+		options[#options + 1] = { value = quality, label = color and self:Colorize(names[quality], color) or names[quality] }
 	end
 	return options
 end
@@ -874,8 +870,7 @@ function AuctionHelper:FormatSignedMoney(copper)
 	if n < 0 then
 		return self:FormatCopperShort(n)
 	end
-	local c = self:GetTheme().success
-	return string.format("|cff%02x%02x%02x+|r", c.r * 255, c.g * 255, c.b * 255) .. self:FormatCopperShort(n)
+	return self:Colorize("+", "success") .. self:FormatCopperShort(n)
 end
 
 -- "today 14:32" style time for table cells: time only for today, else month and day.

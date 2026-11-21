@@ -7,10 +7,6 @@ local _, AuctionHelper = ...
 local MAX_STEPS = 8
 local DAY = 24 * 3600
 
-local function now()
-	return (GetServerTime and GetServerTime()) or time()
-end
-
 --- Fold one auction row of a full scan into its item's aggregate, and remember its price level.
 --- Called as a plain function: `aggregateRow(aggregate, itemID, count, buyoutPrice)`.
 function AuctionHelper.AggregateAuctionRow(aggregate, itemID, count, buyoutPrice)
@@ -75,7 +71,7 @@ function AuctionHelper:TrimPriceSteps()
 		return
 	end
 	local keepDays = tonumber(self:GetSetting("auction.historyRetentionDays", 30)) or 30
-	local cutoff = now() - keepDays * DAY
+	local cutoff = AuctionHelper:Now() - keepDays * DAY
 	for itemID, entry in pairs(auction.priceSteps) do
 		if (tonumber(entry.t) or 0) < cutoff then
 			auction.priceSteps[itemID] = nil

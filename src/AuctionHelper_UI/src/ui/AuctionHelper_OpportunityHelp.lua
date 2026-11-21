@@ -107,12 +107,6 @@ local function stepLine(pe, info, step, insights)
 	return step.key == "off" and label or pe:FormatNumberGrouped(step.count) .. " " .. label
 end
 
---- Text in the theme's warning colour.
-function AuctionHelper:WarningText(text)
-	local color = self:GetTheme().warning
-	return string.format("|cff%02x%02x%02x%s|r", math.floor(color.r * 255), math.floor(color.g * 255), math.floor(color.b * 255), text)
-end
-
 --- Title and text for the side pane of a list with no row selected.
 function AuctionHelper:GetOpportunityHelp(view)
 	local help = HELP[view.id]
@@ -138,6 +132,6 @@ function AuctionHelper:GetOpportunityEmptyText(view, funnel, insights)
 		lines[#lines + 1] = stepLine(self, help.steps[step.key], step, insights)
 	end
 	local info = stuck.key == "off" and OFF or help.steps[stuck.key]
-	lines[#lines + 1] = self:WarningText(stepLine(self, info, stuck, insights))
+	lines[#lines + 1] = self:Colorize(stepLine(self, info, stuck, insights), "warning")
 	return view.emptyTitle, table.concat(lines, "\n") .. "\n\n" .. resolve(self, info.fix, insights)
 end

@@ -32,7 +32,7 @@ function AuctionHelper:GetDashboardSidebarCharacterLabel(characterKey, charData,
 		if meta and meta.name and meta.realm then
 			base = string.format("%s — %s", tostring(meta.name), tostring(meta.realm))
 		end
-		return base .. "  |cFF33FF99(you)|r"
+		return base .. "  " .. self:Colorize("(you)", "33ff99")
 	end
 	local meta = charData and charData.meta
 	if meta and meta.name and meta.realm then
@@ -48,7 +48,7 @@ function AuctionHelper:GetCharacterNameMarkup(characterKey)
 	local name = meta and meta.name or (tostring(characterKey or "?"):match("^([^%-]+)") or "?")
 	local color = meta and meta.class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[meta.class]
 	if color then
-		return string.format("|cff%02x%02x%02x%s|r", color.r * 255, color.g * 255, color.b * 255, name)
+		return self:Colorize(name, color)
 	end
 	return name
 end

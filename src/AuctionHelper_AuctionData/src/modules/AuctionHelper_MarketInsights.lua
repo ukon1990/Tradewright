@@ -6,10 +6,6 @@ local _, AuctionHelper = ...
 local CHUNK = 150
 local DAY = 24 * 3600
 
-local function now()
-	return AuctionHelper:Now()
-end
-
 function AuctionHelper:GetGoldDashboardOptions()
 	return {
 		dealThreshold = tonumber(self:GetSetting("gold.dealThreshold", 0.3)) or 0.3,
@@ -26,7 +22,7 @@ local function externalReference(pe, itemID)
 	if not (pe.IsTSMLoaded and pe:IsTSMLoaded() and pe.GetTSMCustomPriceCopper) then
 		return nil
 	end
-	local value = pe:GetTSMCustomPriceCopper(tostring(pe:GetSetting("integrations.economyTSMMarketString", "dbmarket")), itemID)
+	local value = pe:GetTSMCustomPriceCopper(pe:GetTsmPriceStrings().market, itemID)
 	return value and value > 0 and value or nil
 end
 
@@ -159,14 +155,14 @@ function AuctionHelper:GetMarketInsights(onDone)
 	end
 	-- Scans bump the revision per observation; rebuild at most every 30 seconds meanwhile,
 	-- unless a single live search asked for a rebuild.
-	if cached and not state.marketInsightsForceRebuild and now() - (cached.builtAt or 0) < 30 then
+	if cached and not state.marketInsightsForceRebuild and AuctionHelper:Now() - (cached.builtAt or 0) < 30 then
 		return cached
 	end
 
 	local FL = self.ForeverLogic
 	local auction = self:InitAuctionDB()
 	local keys = collectKeys(auction)
-	local byItemID, index, ts = {}, 1, now()
+	local byItemID, index, ts = {}, 1, AuctionHelper:Now()
 	state.marketInsightsForceRebuild = nil
 	state.marketInsightsBuilding = revision
 	state.marketInsightsProgress = 0

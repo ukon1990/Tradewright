@@ -86,9 +86,8 @@ end
 
 local function targetDetail(pe, row)
 	if row.early then
-		local warning = pe:GetTheme().warning
 		local basis = (row.days or 0) > 0 and string.format("%d of 5 days", row.days) or "latest scan only"
-		return string.format("|cff%02x%02x%02xEarly estimate: %s|r", warning.r * 255, warning.g * 255, warning.b * 255, basis)
+		return pe:Colorize("Early estimate: " .. basis, "warning")
 	end
 	local supply = row.daysOfSupply < 1 and "Supply lasts under a day" or string.format("Supply lasts %d days", math.floor(row.daysOfSupply + 0.5))
 	return supply .. (row.usedByRecipes and " · used by your recipes" or "")

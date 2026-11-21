@@ -11,16 +11,12 @@ local FILTERS = { { id = "sending", label = "Sending" }, { id = "kept", label = 
 local REASONS = { held = "For your crafts", kept = "All kept", skipped = "Not this time", othersOff = "No keep amount set" }
 local KEEP_HINT = "Type a number; while typing, mouse wheel adds or removes one stack. Shift-click: keep all. Ctrl-click: clear the keep amount."
 
-local function colored(color, text)
-	return string.format("|cff%02x%02x%02x%s|r", color.r * 255, color.g * 255, color.b * 255, tostring(text))
-end
-
 -- Numbers in rows that send nothing are greyed out.
 local function cellText(pe, row, value)
 	if row.group then
 		return ""
 	end
-	return row.send > 0 and value or colored(pe:GetTheme().textMuted, value)
+	return row.send > 0 and value or pe:Colorize(value, "textMuted")
 end
 
 local function showRowTooltip(pe, owner, row)
@@ -146,7 +142,7 @@ local function itemColumn(pe)
 		cell.name:ClearAllPoints()
 		cell.name:SetPoint("LEFT", cell, "LEFT", 5, 0)
 		cell.name:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
-		cell.name:SetText(string.format("%s · %d %s", row.label, row.count, row.count == 1 and "item" or "items"))
+		cell.name:SetText(string.format("%s · %d %s", row.label, row.count, pe:Plural(row.count, "item")))
 		cell.name:SetTextColor(gold.r, gold.g, gold.b)
 		cell.detail:Hide()
 	end
@@ -157,7 +153,7 @@ local function worthText(pe, row)
 	if row.group then
 		return ""
 	elseif row.send == 0 then
-		return colored(pe:GetTheme().textMuted, REASONS[row.reason] or "-")
+		return pe:Colorize(REASONS[row.reason] or "-", "textMuted")
 	end
 	return row.unitPrice and pe:FormatCopperShort(row.unitPrice * row.send) or "-"
 end
@@ -345,7 +341,7 @@ local function refreshControls(pe, f, sum)
 	local sending = pe:EnsureMailSendQueueState().running
 	local mails = f.dest and pe:CountMailParcels({ f.dest }) or 0
 	pe:SetButtonLabel(f.sendBtn, string.format("Prepare %s items · %d %s", pe:FormatNumberGrouped(sum.send), mails,
-		mails == 1 and "mail" or "mails"), false)
+		pe:Plural(mails, "mail")), false)
 	f.sendBtn:SetEnabled(sum.send > 0 and not sending)
 	f.sendOthers.check:SetChecked(pe:GetMailSendOthers())
 end

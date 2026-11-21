@@ -7,10 +7,6 @@ local _, AuctionHelper = ...
 local DAY = 24 * 3600
 local MIN_USUAL_DAYS = 5
 
-local function now()
-	return (GetServerTime and GetServerTime()) or time()
-end
-
 -- Copy each day's fields into `byDay`, keeping fields other rollups already wrote.
 local function mergeDays(byDay, days)
 	for dayTs, entry in pairs(days) do
@@ -56,7 +52,7 @@ function AuctionHelper:RollupDailyAuctionHistory()
 	end
 	local history = auction.history
 	history.daily = history.daily or {}
-	local today = MS.DayStart(now())
+	local today = MS.DayStart(AuctionHelper:Now())
 	local from = tonumber(history.dailyThrough) or 0
 	if from < today then
 		rollupFinishedDays(history, MS, from, today)
@@ -75,7 +71,7 @@ end
 
 -- The usual price from saved daily history, or false when an item has fewer than 5 days.
 local function computeUsualPrice(pe, storageKey, window)
-	local usual = pe.MarketSignals.UsualPrice(dailyHistory(pe, storageKey), now(), window)
+	local usual = pe.MarketSignals.UsualPrice(dailyHistory(pe, storageKey), AuctionHelper:Now(), window)
 	if usual and usual.days >= MIN_USUAL_DAYS then
 		return usual
 	end
@@ -89,8 +85,8 @@ local function ownSalesPerDay(pe, itemID, window)
 	end
 	local state = pe:GetState()
 	local cache = state.ownSalesPerDay
-	if not cache or cache.window ~= window or now() - cache.at > 60 then
-		cache = { at = now(), window = window, byItem = {} }
+	if not cache or cache.window ~= window or AuctionHelper:Now() - cache.at > 60 then
+		cache = { at = AuctionHelper:Now(), window = window, byItem = {} }
 		for _, item in ipairs(pe:GetSalesSummary(window).items) do
 			if tonumber(item.itemID) then
 				cache.byItem[tonumber(item.itemID)] = item.units / window
@@ -104,7 +100,7 @@ end
 local function computeSellsPerDay(pe, storageKey, window)
 	local itemID = tonumber(pe.ForeverLogic.ParseItemIDFromStorageKey(storageKey))
 	local own = ownSalesPerDay(pe, itemID, window)
-	return pe.MarketSignals.SellsPerDay(dailyHistory(pe, storageKey), now(), window, own) or false
+	return pe.MarketSignals.SellsPerDay(dailyHistory(pe, storageKey), AuctionHelper:Now(), window, own) or false
 end
 
 -- One cached value per stored listing and kind, dropped at the next scan observation or window change.
@@ -142,7 +138,7 @@ end
 --- For early estimates only; everything else uses `GetUsualPrice`.
 function AuctionHelper:GetEarlyUsualPrice(storageKey)
 	local window = tonumber(self:GetSetting("auction.usualPriceDays", 14)) or 14
-	return self.MarketSignals.UsualPrice(dailyHistory(self, storageKey), now(), window)
+	return self.MarketSignals.UsualPrice(dailyHistory(self, storageKey), AuctionHelper:Now(), window)
 end
 
 --- Estimated units sold per day of one stored listing: `{ perDay, confidence, pairs }`, or nil when the

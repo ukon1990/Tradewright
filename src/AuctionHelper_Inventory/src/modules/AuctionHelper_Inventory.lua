@@ -100,35 +100,11 @@ local function countItemInBagsViaContainer(itemID)
 		return 0
 	end
 	local total = 0
-	for bag = 0, AuctionHelper:GetLastBagIndex() do
-		local slots = nil
-		if C_Container and C_Container.GetContainerNumSlots then
-			slots = C_Container.GetContainerNumSlots(bag)
-		elseif GetContainerNumSlots then
-			slots = GetContainerNumSlots(bag)
+	AuctionHelper:ForEachBagSlot(nil, function(_, _, info)
+		if info and tonumber(info.itemID) == itemID then
+			total = total + math.max(0, tonumber(info.stackCount or info.quantity) or 0)
 		end
-		slots = tonumber(slots) or 0
-		for slot = 1, slots do
-			local count, foundID = nil, nil
-			if C_Container and C_Container.GetContainerItemInfo then
-				local info = C_Container.GetContainerItemInfo(bag, slot)
-				if type(info) == "table" then
-					foundID = tonumber(info.itemID)
-					count = tonumber(info.stackCount or info.quantity)
-				end
-			elseif GetContainerItemInfo then
-				local _, itemCount, _, _, _, _, itemLink, _, _, itemID2 = GetContainerItemInfo(bag, slot)
-				foundID = tonumber(itemID2)
-				count = tonumber(itemCount)
-				if not foundID and type(itemLink) == "string" then
-					foundID = tonumber(itemLink:match("item:(%d+)"))
-				end
-			end
-			if foundID == itemID then
-				total = total + math.max(0, count or 0)
-			end
-		end
-	end
+	end)
 	return total
 end
 

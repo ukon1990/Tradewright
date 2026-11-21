@@ -12,9 +12,11 @@ local function check(name, cond, detail)
 end
 
 local pe = {}
-local chunk, err = loadfile(root .. "/src/util/AuctionHelper_MarketSignals.lua")
-assert(chunk, err)
-chunk("AuctionHelper", pe)
+for _, file in ipairs({ "AuctionHelper_CoreHelpers.lua", "AuctionHelper_MarketSignals.lua" }) do
+	local chunk, err = loadfile(root .. "/src/util/" .. file)
+	assert(chunk, err)
+	chunk("AuctionHelper", pe)
+end
 local MS = pe.MarketSignals
 assert(MS, "MarketSignals missing")
 
@@ -462,6 +464,7 @@ function pe:GetSetting(path, default) -- luacheck: ignore 212
 end
 local today = MS.DayStart(os.time())
 _G.GetServerTime = function() return today + HOUR end
+function pe:Now() return GetServerTime() end
 local glue, glueErr = loadfile(root .. "/../AuctionHelper_AuctionData/src/modules/AuctionHelper_PriceHistory.lua")
 assert(glue, glueErr)
 glue("AuctionHelper_AuctionData", pe)

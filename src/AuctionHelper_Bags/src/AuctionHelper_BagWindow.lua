@@ -374,8 +374,7 @@ local function refreshModes(pe, f, view)
 end
 
 local function headingText(pe, group, view)
-	local muted = pe:GetTheme().textMuted
-	local text = string.format("%s  |cff%02x%02x%02x%d|r", group.label, muted.r * 255, muted.g * 255, muted.b * 255, #group.items)
+	local text = group.label .. "  " .. pe:Colorize(#group.items, "textMuted")
 	if group.key == "junk" and view.live and pe:GetSetting("bags.showJunkValue", true) then
 		local value = pe.BagLogic.JunkValue(group.items)
 		if value > 0 then
@@ -466,7 +465,7 @@ end
 local function refreshLogTexts(pe, f, view, rowCount)
 	local record = pe:GetBagHoldings()[view.tab]
 	f.meta:SetText((record and record.name or view.tab) .. " · item log")
-	local entries = rowCount == 1 and "1 entry" or (rowCount .. " entries")
+	local entries = rowCount .. " " .. pe:Plural(rowCount, "entry", "entries")
 	f.footLeft:SetText(string.format("%s · last %d days", entries, pe:GetItemLogLimits().days))
 	f.footRight:SetText(view.tab == view.current and goldText(pe, GetMoney()) or "")
 end

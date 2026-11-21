@@ -48,16 +48,14 @@ local function setMailField(box, text)
 end
 
 local function findBagSlotForItem(itemID)
-	for bag = 0, AuctionHelper:GetLastBagIndex() do
-		local slots = C_Container.GetContainerNumSlots(bag)
-		for slot = 1, slots do
-			local info = C_Container.GetContainerItemInfo(bag, slot)
-			if info and tonumber(info.itemID) == tonumber(itemID) and (tonumber(info.stackCount) or 0) > 0 then
-				return bag, slot, tonumber(info.stackCount) or 0
-			end
+	local foundBag, foundSlot, stack
+	AuctionHelper:ForEachBagSlot(nil, function(bag, slot, info)
+		if info and tonumber(info.itemID) == tonumber(itemID) and (tonumber(info.stackCount) or 0) > 0 then
+			foundBag, foundSlot, stack = bag, slot, tonumber(info.stackCount)
+			return true
 		end
-	end
-	return nil
+	end)
+	return foundBag, foundSlot, stack
 end
 
 local function attachItemQuantity(itemID, quantity)
@@ -362,21 +360,16 @@ local function createMailRow(pe, parent)
 	return row
 end
 
-local function colorize(color, text)
-	return string.format("|cff%02x%02x%02x%s|r", color.r * 255, color.g * 255, color.b * 255, text)
-end
-
 -- "Crafted items to Bånkey · 6 items · ready" with the count muted and the state coloured. The
 -- surplus row has no state: what goes is decided in its review panel.
 local function destTitle(pe, dest)
-	local theme = pe:GetTheme()
 	local text = (ROW_TITLES[dest.kind] or "") .. pe:GetMailCharacterLabel(dest.characterKey)
 	if dest.kind == "surplus" then
 		return text
 	end
-	text = text .. " " .. colorize(theme.textMuted, "· " .. pe:FormatNumberGrouped(dest.totalQuantity or 0) .. " items")
+	text = text .. " " .. pe:Colorize("· " .. pe:FormatNumberGrouped(dest.totalQuantity or 0) .. " items", "textMuted")
 	local ready = dest.complete ~= false
-	return text .. " " .. colorize(ready and theme.success or theme.warning, "· " .. (ready and "ready" or (#dest.missing .. " still missing")))
+	return text .. " " .. pe:Colorize("· " .. (ready and "ready" or (#dest.missing .. " still missing")), ready and "success" or "warning")
 end
 
 -- "214 to send · 12 stay · 4 skipped" for the surplus row.
@@ -432,7 +425,7 @@ local function footerText(pe, plan)
 		items = items + dest.totalQuantity
 	end
 	if #ready > 0 then
-		return string.format("%d %s · %s items to prepare", #ready, #ready == 1 and "mail row" or "mail rows", pe:FormatNumberGrouped(items))
+		return string.format("%d %s · %s items to prepare", #ready, pe:Plural(#ready, "mail row"), pe:FormatNumberGrouped(items))
 	end
 	return #plan > 0 and "Use Review… to choose what surplus goes" or "No mail pending"
 end

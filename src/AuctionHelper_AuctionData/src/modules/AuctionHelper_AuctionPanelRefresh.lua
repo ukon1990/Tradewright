@@ -518,7 +518,7 @@ local function unpricedCartHint(rows)
 	if unpriced == 0 then
 		return ""
 	end
-	return string.format("%d %s no price yet. Press Price all.", unpriced, unpriced == 1 and "item has" or "items have")
+	return string.format("%d %s no price yet. Press Price all.", unpriced, AuctionHelper:Plural(unpriced, "item has", "items have"))
 end
 
 local function refreshAuctionCartButtons(panel, rows, selectedRow)

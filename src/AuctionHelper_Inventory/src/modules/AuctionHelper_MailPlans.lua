@@ -79,23 +79,21 @@ end
 function AuctionHelper:GetBagItems()
 	local questClass = Enum and Enum.ItemClass and Enum.ItemClass.Questitem
 	local items = {}
-	for bag = 0, self:GetLastBagIndex() do
-		for slot = 1, C_Container.GetContainerNumSlots(bag) do
-			local info = C_Container.GetContainerItemInfo(bag, slot)
-			local itemID = info and tonumber(info.itemID)
-			if itemID then
-				local entry = items[itemID]
-				if not entry then
-					local classID = select(6, C_Item.GetItemInfoInstant(itemID))
-					entry = { itemID = itemID, name = self:GetItemDisplayName(itemID), quantity = 0,
-						quality = tonumber(info.quality) or 0, sellable = classID ~= questClass }
-					items[itemID] = entry
-				end
-				entry.quantity = entry.quantity + (tonumber(info.stackCount) or 1)
-				entry.sellable = entry.sellable and not info.isBound
-			end
+	self:ForEachBagSlot(nil, function(_, _, info)
+		local itemID = info and tonumber(info.itemID)
+		if not itemID then
+			return
 		end
-	end
+		local entry = items[itemID]
+		if not entry then
+			local classID = select(6, C_Item.GetItemInfoInstant(itemID))
+			entry = { itemID = itemID, name = self:GetItemDisplayName(itemID), quantity = 0,
+				quality = tonumber(info.quality) or 0, sellable = classID ~= questClass }
+			items[itemID] = entry
+		end
+		entry.quantity = entry.quantity + (tonumber(info.stackCount) or 1)
+		entry.sellable = entry.sellable and not info.isBound
+	end)
 	return items
 end
 

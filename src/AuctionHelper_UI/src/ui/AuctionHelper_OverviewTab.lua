@@ -257,7 +257,7 @@ function OverviewTab:RefreshStats(panel, selectedKey, selectedData, keys)
 	end
 
 	panel.stats[1]:SetValues("Characters scanned", tostring(#keys), "Last rebuilt " .. pe:FormatScanTimestamp(agg.updatedAt))
-	local goldDetail = string.format("Across %d %s", #keys, #keys == 1 and "character" or "characters")
+	local goldDetail = string.format("Across %d %s", #keys, pe:Plural(#keys, "character"))
 	if gold ~= nil then
 		local name = selectedData and selectedData.meta and selectedData.meta.name or "This character"
 		goldDetail = name .. " has " .. pe:FormatCopperShort(gold)
@@ -270,18 +270,17 @@ function OverviewTab:RefreshStats(panel, selectedKey, selectedData, keys)
 			string.format("%s, %d left", tostring(state.currentProfession and state.currentProfession.professionName or "starting"), #(state.queue or {})), "warning")
 	else
 		panel.stats[4]:SetValues("Profession scan", "Ready",
-			string.format("%d %s stored", professionCount, professionCount == 1 and "profession" or "professions"), "success")
+			string.format("%d %s stored", professionCount, pe:Plural(professionCount, "profession")), "success")
 	end
 end
 
 function OverviewTab:RefreshCharacterList(panel, currentKey, keys)
 	local pe = AuctionHelper
-	local theme = pe:GetTheme()
 	local items = { { key = ACCT_KEY, label = "All characters" } }
 	for _, key in ipairs(keys) do
 		local label = characterName(pe.db.characters[key], key)
 		if key == currentKey then
-			label = label .. string.format(" |cff%02x%02x%02x(you)|r", theme.success.r * 255, theme.success.g * 255, theme.success.b * 255)
+			label = label .. " " .. pe:Colorize("(you)", "success")
 		end
 		items[#items + 1] = { key = key, label = label }
 	end

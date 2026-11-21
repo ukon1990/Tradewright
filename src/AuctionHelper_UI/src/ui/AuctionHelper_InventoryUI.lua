@@ -18,13 +18,6 @@ local COL = {
 	seenAt = 56,
 }
 
-local function trim(text)
-	if not text then
-		return ""
-	end
-	return (string.gsub(tostring(text), "^%s*(.-)%s*$", "%1"))
-end
-
 local function compareTriple(leftA, leftB, leftC, rightA, rightB, rightC)
 	leftA = tonumber(leftA) or 0
 	leftB = tonumber(leftB) or 0
@@ -50,11 +43,9 @@ end
 
 -- "Bånkey 30, Alt 10": who holds the item (bags + bank), most first.
 local function holdersText(pe, row)
-	local muted = pe:GetTheme().textMuted
-	local countFmt = string.format(" |cff%02x%02x%02x%%s|r", muted.r * 255, muted.g * 255, muted.b * 255)
 	local parts = {}
 	for _, holder in ipairs(row.holders or {}) do
-		parts[#parts + 1] = pe:GetCharacterNameMarkup(holder.key) .. string.format(countFmt, pe:FormatNumberGrouped(holder.count))
+		parts[#parts + 1] = pe:GetCharacterNameMarkup(holder.key) .. " " .. pe:Colorize(pe:FormatNumberGrouped(holder.count), "textMuted")
 	end
 	return #parts > 0 and table.concat(parts, ", ") or "-"
 end
@@ -62,7 +53,7 @@ end
 function AuctionHelper:BuildInventoryFilterState()
 	local ui = self.ui or {}
 	return {
-		text = trim(ui.invSearchBox and ui.invSearchBox:GetText() or ""),
+		text = self:Trim(ui.invSearchBox and ui.invSearchBox:GetText() or ""),
 		characters = ui.invCharacterFilterValues or {},
 		role = ui.invRoleFilterValues or {},
 		itemType = ui.invTypeFilterValues or {},
@@ -76,7 +67,7 @@ end
 
 function AuctionHelper:FilterInventoryRows(rows, filters)
 	filters = filters or {}
-	local filter = string.lower(trim(filters.text))
+	local filter = string.lower(self:Trim(filters.text))
 	local characterFilter = filters.characters or {}
 	local roleFilter = filters.role or {}
 	local itemTypeFilter = filters.itemType or {}

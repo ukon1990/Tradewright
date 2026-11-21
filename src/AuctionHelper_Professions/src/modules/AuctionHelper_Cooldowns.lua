@@ -7,10 +7,6 @@ local _, AuctionHelper = ...
 
 local READ_DELAY = 1
 
-local function now()
-	return (GetServerTime and GetServerTime()) or time()
-end
-
 local function cooldownStore(pe, characterKey)
 	local character = pe.db and pe.db.characters and pe.db.characters[characterKey]
 	if not character then
@@ -44,7 +40,7 @@ function AuctionHelper:ReadOpenProfessionCooldowns()
 	for _, recipeID in ipairs(recipeIDs) do
 		local seconds = secondsLeft(recipeID)
 		if seconds then
-			store[recipeID] = now() + seconds
+			store[recipeID] = AuctionHelper:Now() + seconds
 			waiting = waiting + 1
 		end
 	end
@@ -55,7 +51,7 @@ end
 function AuctionHelper:GetCraftRowCooldown(row)
 	local store = row and cooldownStore(self, row.bestCharacterKey)
 	local readyAt = store and (store[tonumber(row.recipeID)] or store[tonumber(row.recipeSpellID)])
-	return self.MaterialLogic.CooldownState(readyAt, now())
+	return self.MaterialLogic.CooldownState(readyAt, AuctionHelper:Now())
 end
 
 --- Does any character's stored cooldown mark this recipe as a cooldown recipe?

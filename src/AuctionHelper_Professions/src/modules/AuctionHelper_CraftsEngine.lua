@@ -39,13 +39,6 @@ local EXPANSION_PATTERNS = {
 
 local ENCHANTING_VELLUM_ITEM_ID = 38682
 
-local function trim(s)
-	if not s then
-		return ""
-	end
-	return (string.gsub(tostring(s), "^%s*(.-)%s*$", "%1"))
-end
-
 function AuctionHelper:GetCraftExpansionTag(professionData, recipeData, outputItemID)
 	local desc = outputItemID and self:ResolveItemDescriptor(outputItemID) or nil
 	local expansionID = desc and tonumber(desc.expansionID) or nil
@@ -1150,10 +1143,8 @@ end
 
 --- Price/inventory callbacks; pick and cost get separate closures with the same rules.
 local function bindCraftEvalPricing(self, c)
-	local st = self.db and self.db.settings or {}
-	c.tsmMarket = st.economyTSMMarketString or "dbmarket"
-	c.fallbackTsm = st.economyTSMFallbackString or "DBMinBuyout"
-	c.tsmMat = st.economyTSMMatString or "Crafting"
+	local tsm = self:GetTsmPriceStrings()
+	c.tsmMarket, c.fallbackTsm, c.tsmMat = tsm.market, tsm.fallback, tsm.material
 	local costBasis = c.opts.costBasis or "auto"
 	c.useLedgerMats = costBasis == "ledger" or costBasis == "auto"
 	c.saleUnitFn = function(id) return craftEvalSaleUnit(self, c, id) end
@@ -1427,6 +1418,7 @@ local function boolToken(value)
 end
 
 local function getCraftEvaluationSettings(self)
+	local tsm = self:GetTsmPriceStrings()
 	return {
 		scenario = tostring(self:GetSetting("crafts.scenario", "default")),
 		sourceMode = tostring(self:GetSetting("crafts.reagentSourceMode", "owned_first")),
@@ -1436,9 +1428,9 @@ local function getCraftEvaluationSettings(self)
 		metricRange = tostring(self:GetSetting("inventory.metricRange", "30d")),
 		economyShowColumns = self:GetSetting("inventory.economyShowColumns", true) ~= false,
 		economyUseAuctionatorFallback = self:GetSetting("integrations.economyUseAuctionatorFallback", true) ~= false,
-		tsmMarketString = tostring(self:GetSetting("integrations.economyTSMMarketString", "dbmarket")),
-		tsmFallbackString = tostring(self:GetSetting("integrations.economyTSMFallbackString", "DBMinBuyout")),
-		tsmMatString = tostring(self:GetSetting("integrations.economyTSMMatString", "Crafting")),
+		tsmMarketString = tsm.market,
+		tsmFallbackString = tsm.fallback,
+		tsmMatString = tsm.material,
 		currentCharacterKey = self:GetCharacterKey(),
 	}
 end
@@ -1877,7 +1869,7 @@ end
 
 function AuctionHelper:FilterCraftRows(rows, filters)
 	filters = filters or {}
-	local text = string.lower(trim(filters.text))
+	local text = string.lower(self:Trim(filters.text))
 	local charSel = filters.characters or {}
 	local profSel = filters.professions or {}
 	local expSel = filters.expansions or {}
@@ -2147,6 +2139,11 @@ function AuctionHelper:NormalizeTradeSkillRecipeId(candidate)
 	return candidate
 end
 
+local function positiveNumber(value)
+	value = tonumber(value)
+	return value and value > 0 and value or nil
+end
+
 function AuctionHelper:GetOpenProfessionRecipeID()
 	if not self.IS_SUPPORTED then
 		return nil
@@ -2166,23 +2163,10 @@ function AuctionHelper:GetOpenProfessionRecipeID()
 			end
 		end
 		local transaction = form.GetTransaction and form:GetTransaction() or nil
-		if transaction then
-			for _, methodName in ipairs({ "GetRecipeID", "GetRecipeSchematicID" }) do
-				local fn = transaction[methodName]
-				if type(fn) == "function" then
-					local ok, value = pcall(fn, transaction)
-					value = ok and tonumber(value) or nil
-					if value and value > 0 then
-						return self:NormalizeTradeSkillRecipeId(value)
-					end
-				end
-			end
-		end
-		for _, fieldName in ipairs({ "recipeID", "selectedRecipeID" }) do
-			local value = tonumber(rawget(form, fieldName))
-			if value and value > 0 then
-				return self:NormalizeTradeSkillRecipeId(value)
-			end
+		local recipeID = self:FirstValueFrom(transaction, { "GetRecipeID", "GetRecipeSchematicID" }, nil, positiveNumber)
+			or self:FirstValueFrom(form, nil, { "recipeID", "selectedRecipeID" }, positiveNumber)
+		if recipeID then
+			return self:NormalizeTradeSkillRecipeId(recipeID)
 		end
 	end
 	if C_TradeSkillUI.GetSelectedRecipeID then
@@ -2191,15 +2175,18 @@ function AuctionHelper:GetOpenProfessionRecipeID()
 			return self:NormalizeTradeSkillRecipeId(selected)
 		end
 	end
-	local pf = _G.ProfessionsFrame
-	local page = pf and pf.CraftingPage
-	if page then
-		for _, fieldName in ipairs({ "selectedRecipeID", "recipeID" }) do
-			local value = tonumber(rawget(page, fieldName))
-			if value and value > 0 then
-				return self:NormalizeTradeSkillRecipeId(value)
-			end
-		end
+	local page = _G.ProfessionsFrame and _G.ProfessionsFrame.CraftingPage
+	local pageRecipeID = self:FirstValueFrom(page, nil, { "selectedRecipeID", "recipeID" }, positiveNumber)
+	return pageRecipeID and self:NormalizeTradeSkillRecipeId(pageRecipeID) or nil
+end
+
+local FORM_CONCENTRATION_METHODS = { "IsConcentrating", "IsUsingConcentration", "GetUseConcentration" }
+local FORM_CONCENTRATION_FIELDS = { "useConcentration", "usingConcentration", "isConcentrating" }
+local TRANSACTION_CONCENTRATION_METHODS = { "IsApplyingConcentration", "IsConcentrating", "GetUseConcentration", "IsUsingConcentration" }
+
+local function booleanOnly(value)
+	if type(value) == "boolean" then
+		return value
 	end
 	return nil
 end
@@ -2215,59 +2202,15 @@ function AuctionHelper:GetOpenProfessionScenario()
 	if not form then
 		return fallback
 	end
-
-	local boolMethods = {
-		"IsConcentrating",
-		"IsUsingConcentration",
-		"GetUseConcentration",
-	}
-	for _, methodName in ipairs(boolMethods) do
-		local fn = form[methodName]
-		if type(fn) == "function" then
-			local ok, value = pcall(fn, form)
-			if ok and type(value) == "boolean" then
-				return value and "concentration" or "default"
-			end
-		end
+	local concentrating = self:FirstValueFrom(form, FORM_CONCENTRATION_METHODS, FORM_CONCENTRATION_FIELDS, booleanOnly)
+	if concentrating == nil then
+		local transaction = rawget(form, "transaction") or rawget(form, "Transaction")
+		concentrating = self:FirstValueFrom(transaction, TRANSACTION_CONCENTRATION_METHODS, nil, booleanOnly)
 	end
-
-	local boolFields = {
-		"useConcentration",
-		"usingConcentration",
-		"isConcentrating",
-	}
-	for _, fieldName in ipairs(boolFields) do
-		if type(form[fieldName]) == "boolean" then
-			return form[fieldName] and "concentration" or "default"
-		end
+	if concentrating == nil then
+		return fallback
 	end
-
-	local transaction = rawget(form, "transaction") or rawget(form, "Transaction")
-	if type(transaction) == "table" then
-		local txApplyConc = transaction.IsApplyingConcentration
-		if type(txApplyConc) == "function" then
-			local ok, value = pcall(txApplyConc, transaction)
-			if ok and type(value) == "boolean" then
-				return value and "concentration" or "default"
-			end
-		end
-		local txMethods = {
-			"IsConcentrating",
-			"GetUseConcentration",
-			"IsUsingConcentration",
-		}
-		for _, methodName in ipairs(txMethods) do
-			local fn = transaction[methodName]
-			if type(fn) == "function" then
-				local ok, value = pcall(fn, transaction)
-				if ok and type(value) == "boolean" then
-					return value and "concentration" or "default"
-				end
-			end
-		end
-	end
-
-	return fallback
+	return concentrating and "concentration" or "default"
 end
 
 --- Live evaluation for the recipe selected in Blizzard's profession UI (same rules as Crafts tab).

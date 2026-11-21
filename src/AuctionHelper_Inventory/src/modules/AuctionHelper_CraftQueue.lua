@@ -632,10 +632,8 @@ local function resolveQueueReagentUnitPrice(self, itemID, slot)
 	if not itemID or not self.GetMarketEstimateCopper then
 		return nil, nil
 	end
-	local st = self.db and self.db.settings or {}
-	local tsmMat = st.economyTSMMatString or "Crafting"
-	local fallbackTsm = st.economyTSMFallbackString or "DBMinBuyout"
-	return self:GetMarketEstimateCopper(itemID, tsmMat, fallbackTsm)
+	local tsm = self:GetTsmPriceStrings()
+	return self:GetMarketEstimateCopper(itemID, tsm.material, tsm.fallback)
 end
 
 --- Aggregated totals and reagents for UI / future shopping-list hooks.

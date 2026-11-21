@@ -21,6 +21,7 @@ src\util\AuctionHelper_WeekdayPattern.lua
 src\util\AuctionHelper_TooltipLogic.lua
 src\core\AuctionHelper_Data.lua
 src\core\AuctionHelper_DataInit.lua
+src\util\AuctionHelper_CoreHelpers.lua
 src\util\AuctionHelper_Util.lua
 src\ui\AuctionHelper_Theme.lua
 src\modules\AuctionHelper_Docs.lua

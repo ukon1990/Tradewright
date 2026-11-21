@@ -28,17 +28,19 @@ end
 
 --- The free slots of `target` ("bags", "bank" or "warband") that take any item: { { bag, slot } }.
 function AuctionHelper:FindFreeBagSlots(target)
-	local free = {}
+	local generalBags = {}
 	for _, bag in ipairs(targetBagIDs(self, target)) do
 		local _, family = C_Container.GetContainerNumFreeSlots(bag)
 		if (family or 0) == 0 then
-			for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
-				if not C_Container.GetContainerItemInfo(bag, slot) then
-					free[#free + 1] = { bag = bag, slot = slot }
-				end
-			end
+			generalBags[#generalBags + 1] = bag
 		end
 	end
+	local free = {}
+	self:ForEachBagSlot(generalBags, function(bag, slot, info)
+		if not info then
+			free[#free + 1] = { bag = bag, slot = slot }
+		end
+	end)
 	return free
 end
 

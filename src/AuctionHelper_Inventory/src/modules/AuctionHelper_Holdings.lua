@@ -11,7 +11,6 @@ local _, AuctionHelper = ...
 -- in the shape of a character that only has a bank:
 -- AuctionHelperInventoryDB.warbandBank = { name, bank = { [itemID] = count }, bankSeenAt, money }
 
-local BACKPACK = 0
 local BANK_SETTLE_SECONDS = 0.3
 local bankOpen = false
 
@@ -48,17 +47,15 @@ function AuctionHelper:GetItemHoldersOnOtherCharacters(itemID)
 	return holders
 end
 
-local function countItems(bagIDs)
+-- Item counts in `bagIDs` (default: the carried bags), by item ID.
+local function countItems(pe, bagIDs)
 	local counts = {}
-	for _, bag in ipairs(bagIDs) do
-		for slot = 1, C_Container.GetContainerNumSlots(bag) or 0 do
-			local info = C_Container.GetContainerItemInfo(bag, slot)
-			local itemID = info and tonumber(info.itemID)
-			if itemID then
-				counts[itemID] = (counts[itemID] or 0) + (tonumber(info.stackCount) or 1)
-			end
+	pe:ForEachBagSlot(bagIDs, function(_, _, info)
+		local itemID = info and tonumber(info.itemID)
+		if itemID then
+			counts[itemID] = (counts[itemID] or 0) + (tonumber(info.stackCount) or 1)
 		end
-	end
+	end)
 	return counts
 end
 
@@ -87,11 +84,7 @@ end
 --- Save what the logged-in character carries, and its gold.
 function AuctionHelper:SaveBagHoldings()
 	local own = self:GetOwnItemHoldings()
-	local bagIDs = {}
-	for bag = BACKPACK, self:GetLastBagIndex() do
-		bagIDs[#bagIDs + 1] = bag
-	end
-	own.bags = countItems(bagIDs)
+	own.bags = countItems(self)
 	own.money = GetMoney()
 	own.seenAt = time()
 end
@@ -102,7 +95,7 @@ function AuctionHelper:SaveBankHoldings()
 		return
 	end
 	local own = self:GetOwnItemHoldings()
-	own.bank = countItems(bankBagIDs(self))
+	own.bank = countItems(self, bankBagIDs(self))
 	own.bankSeenAt = time()
 end
 
@@ -152,7 +145,7 @@ function AuctionHelper:SaveWarbandHoldings()
 	end
 	self:GetItemHoldings() -- makes sure the database is loaded
 	self.inventoryDb.warbandBank = {
-		name = "Warband bank", bank = countItems(bagIDs), bankSeenAt = time(), money = warbandMoney(),
+		name = "Warband bank", bank = countItems(self, bagIDs), bankSeenAt = time(), money = warbandMoney(),
 	}
 end
 

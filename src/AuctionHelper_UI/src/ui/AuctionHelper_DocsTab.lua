@@ -9,12 +9,10 @@ local PAD = 12
 
 -- Lines written in capitals are section headings in the docs text: draw them gold.
 local function formatBody(pe, body)
-	local gold = pe:GetTheme().gold
-	local prefix = string.format("|cff%02x%02x%02x", gold.r * 255, gold.g * 255, gold.b * 255)
 	local lines = {}
 	for line in string.gmatch((body or "") .. "\n", "(.-)\n") do
 		if #line > 3 and line == string.upper(line) and string.find(line, "%u") then
-			line = prefix .. line .. "|r"
+			line = pe:Colorize(line, "gold")
 		end
 		lines[#lines + 1] = line
 	end

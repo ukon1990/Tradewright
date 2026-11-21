@@ -125,10 +125,8 @@ local function goldSection()
 end
 
 local function tsmSourcesText(pe)
-	return string.format("TSM sources in use: market %s, materials %s, sale rate %s.",
-		tostring(pe:GetSetting("integrations.economyTSMMarketString", "dbmarket")),
-		tostring(pe:GetSetting("integrations.economyTSMMatString", "Crafting")),
-		tostring(pe:GetSetting("integrations.economyTSMSaleRateString", "DBRegionSaleRate")))
+	local tsm = pe:GetTsmPriceStrings()
+	return string.format("TSM sources in use: market %s, materials %s, sale rate %s.", tsm.market, tsm.material, tsm.saleRate)
 end
 
 local function priceSourcesSection()

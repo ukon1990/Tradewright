@@ -67,7 +67,7 @@ local function itemColumn(pe, detail)
 		getName = function(row) return pe:GetItemDisplayName(row.itemID) end,
 		getDetail = function(row)
 			if row.early then
-				return pe:WarningText(string.format("Early · %d days of prices", row.usualDays or 0)) .. " · " .. detail(pe, row)
+				return pe:Colorize(string.format("Early · %d days of prices", row.usualDays or 0), "warning") .. " · " .. detail(pe, row)
 			end
 			return detail(pe, row)
 		end,

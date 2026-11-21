@@ -131,11 +131,6 @@ local function plainNote(pe, advice)
 	return advice.price and ("Vendor: " .. priceText(pe, advice)) or "Sold by a vendor"
 end
 
-local function warningText(pe, text)
-	local c = pe:GetTheme().warning
-	return string.format("|cff%02x%02x%02x%s|r", c.r * 255, c.g * 255, c.b * 255, text)
-end
-
 local function hasText(text)
 	return text ~= nil and text ~= "" and text ~= "-" and text ~= "—"
 end
@@ -148,7 +143,7 @@ function AuctionHelper:GetVendorNote(row)
 		return nil
 	end
 	if advice.cheaper then
-		return warningText(self, "Cheaper at a vendor: " .. priceText(self, advice))
+		return self:Colorize("Cheaper at a vendor: " .. priceText(self, advice), "warning")
 	end
 	return plainNote(self, advice)
 end
@@ -174,7 +169,7 @@ function AuctionHelper:AppendCartVendorLines(lines, row, hint)
 	end
 	if advice.price then
 		local price = priceText(self, advice) .. " each"
-		lines[#lines + 1] = { "Vendor price", advice.cheaper and warningText(self, price .. ", cheaper than the auction house") or price }
+		lines[#lines + 1] = { "Vendor price", advice.cheaper and self:Colorize(price .. ", cheaper than the auction house", "warning") or price }
 	end
 	lines[#lines + 1] = { "Sold by", VendorLogic.Where(info) or "vendors" }
 	return hint .. "\n" .. (VendorLogic.Nearest(info.sellers) and "Right-click to show the way to the nearest vendor"
@@ -193,7 +188,7 @@ function AuctionHelper:CartVendorHint(rows)
 	if count == 0 then
 		return ""
 	end
-	return warningText(self, string.format("%d %s cheaper at a vendor. ", count, count == 1 and "item is" or "items are"))
+	return self:Colorize(string.format("%d %s cheaper at a vendor. ", count, self:Plural(count, "item is", "items are")), "warning")
 end
 
 -- The game's own waypoint arrow, where the client has one and the map allows it.

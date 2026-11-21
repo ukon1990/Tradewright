@@ -10,11 +10,6 @@ local ROW = 36
 local MIN_CARD_HEIGHT = 150
 local ACCT_KEY = AuctionHelper.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
 
-local function colorize(pe, colorKey, text)
-	local c = pe:GetTheme()[colorKey]
-	return string.format("|cff%02x%02x%02x%s|r", c.r * 255, c.g * 255, c.b * 255, text)
-end
-
 -- "+18%" in green or "-12%" in red; `invert` swaps the colours (a lower price is good when buying).
 local function percent(pe, fraction, invert)
 	if not fraction then
@@ -28,7 +23,7 @@ local function percent(pe, fraction, invert)
 	if invert then
 		good = not good
 	end
-	return colorize(pe, good and "success" or "danger", text)
+	return pe:Colorize(text, good and "success" or "danger")
 end
 
 local function ageText(ts)
@@ -163,7 +158,7 @@ function AuctionHelper:CreateGoldDashboard(parent)
 		itemColumn(pe, function(row)
 			local parts = { "vs " .. (row.refSource or "usual"), ageText(row.seenAt) }
 			if dash.materials and dash.materials[row.itemID] then
-				parts[#parts + 1] = colorize(pe, "gold", "your material")
+				parts[#parts + 1] = pe:Colorize("your material", "gold")
 			end
 			return table.concat(parts, " · ")
 		end),
@@ -394,7 +389,7 @@ function AuctionHelper:CreateGoldDashboard(parent)
 		local note = "No history yet"
 		if first then
 			local delta = gold - first
-			note = (delta >= 0 and colorize(pe, "success", "+" .. pe:FormatCopperShort(delta)) or colorize(pe, "danger", pe:FormatCopperShort(delta))) .. " in 7 days"
+			note = (delta >= 0 and pe:Colorize("+" .. pe:FormatCopperShort(delta), "success") or pe:Colorize(pe:FormatCopperShort(delta), "danger")) .. " in 7 days"
 		end
 		self.stats[1]:SetValues("Gold, all characters", pe:FormatCopperShort(gold), note)
 

@@ -94,10 +94,6 @@ function AuctionHelper:GetAuctionatorPriceCopper(itemID)
 	return n
 end
 
-function AuctionHelper:GetConfiguredFallbackTSMString()
-	return tostring(self:GetSetting("integrations.economyTSMFallbackString", "DBMinBuyout"))
-end
-
 function AuctionHelper:GetPreferredAddonPrice(itemID, opts)
 	opts = type(opts) == "table" and opts or {}
 	itemID = tonumber(itemID)
@@ -170,7 +166,7 @@ function AuctionHelper:GetMarketEstimateCopper(itemID, tsmCustomStr, fallbackTSM
 			return c, "TSM"
 		end
 	end
-	fallbackTSMStr = fallbackTSMStr or self:GetConfiguredFallbackTSMString()
+	fallbackTSMStr = fallbackTSMStr or self:GetTsmPriceStrings().fallback
 	if fallbackTSMStr and fallbackTSMStr ~= "" and fallbackTSMStr ~= tsmCustomStr then
 		local c = self:GetTSMCustomPriceCopper(fallbackTSMStr, itemID)
 		if c then
@@ -329,23 +325,21 @@ function AuctionHelper:EstimateMatCostPerUnitForItem(characterData, itemID)
 	if st.economyShowMatCost == false then
 		return nil
 	end
-	local marketStr = st.economyTSMMarketString or "dbmarket"
-	local fallbackStr = st.economyTSMFallbackString or "DBMinBuyout"
-	local matStr = st.economyTSMMatString or "Crafting"
+	local tsm = self:GetTsmPriceStrings()
 	local function unitPrice(rid)
 		local addonPrice = self.GetPreferredAddonPrice and self:GetPreferredAddonPrice(rid, { requireFresh = false }) or nil
 		if addonPrice then
 			return addonPrice
 		end
-		local c = self:GetTSMCustomPriceCopper(matStr, rid)
+		local c = self:GetTSMCustomPriceCopper(tsm.material, rid)
 		if c then
 			return c
 		end
-		c = self:GetTSMCustomPriceCopper(fallbackStr, rid)
+		c = self:GetTSMCustomPriceCopper(tsm.fallback, rid)
 		if c then
 			return c
 		end
-		c = self:GetTSMCustomPriceCopper(marketStr, rid)
+		c = self:GetTSMCustomPriceCopper(tsm.market, rid)
 		if c then
 			return c
 		end
@@ -426,15 +420,14 @@ function AuctionHelper:ApplyEconomyToInventoryRow(row, characterData, roleMap)
 	end
 
 	local itemID = row.itemID
-	local tsmMarket = st.economyTSMMarketString or "dbmarket"
-	local mkt, src = self:GetMarketEstimateCopper(itemID, tsmMarket)
+	local tsm = self:GetTsmPriceStrings()
+	local mkt, src = self:GetMarketEstimateCopper(itemID, tsm.market)
 	row.marketCopper = mkt
 	row.marketSource = src
 
 	if st.economyShowSaleRate ~= false and self:IsTSMLoaded() then
-		local srStr = st.economyTSMSaleRateString or "DBRegionSaleRate"
-		if srStr ~= "" then
-			local v = self:GetTSMCustomPriceCopper(srStr, itemID)
+		if tsm.saleRate ~= "" then
+			local v = self:GetTSMCustomPriceCopper(tsm.saleRate, itemID)
 			row.saleRateValue = v
 			row.saleRateDisplay = self:FormatSaleRateDisplay(v)
 		end

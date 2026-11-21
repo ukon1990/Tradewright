@@ -2,15 +2,8 @@ local _, AuctionHelper = ...
 
 local MAX_ROWS = 450
 
-local function trim(s)
-	if not s then
-		return ""
-	end
-	return (string.gsub(tostring(s), "^%s*(.-)%s*$", "%1"))
-end
-
 local function isPlaceholderItemLabel(s)
-	local t = trim(s)
+	local t = AuctionHelper:Trim(s)
 	if t == "" or t == "?" then
 		return true
 	end
@@ -24,11 +17,6 @@ local TALL_ROW = 36
 
 local function rankMarkup(rankIndex)
 	return AuctionHelper:GetRankMarkup(rankIndex)
-end
-
-local function colorize(pe, colorKey, text)
-	local c = pe:GetTheme()[colorKey]
-	return string.format("|cff%02x%02x%02x%s|r", c.r * 255, c.g * 255, c.b * 255, text)
 end
 
 local function crafterName(pe, characterKey)
@@ -48,20 +36,20 @@ local function craftRowDetail(pe, row)
 	end
 	local queued = pe:GetCraftQueueQuantityForOpportunityRow(row)
 	if queued > 0 then
-		parts[#parts + 1] = colorize(pe, "gold", queued .. " queued")
+		parts[#parts + 1] = pe:Colorize(queued .. " queued", "gold")
 	end
 	if not row.matCost then
-		parts[#parts + 1] = colorize(pe, "warning", "no material price")
+		parts[#parts + 1] = pe:Colorize("no material price", "warning")
 	elseif row.qualityReachable == false then
-		parts[#parts + 1] = colorize(pe, "warning", (row.concentrationNeeded or row.concentrationCost) and "needs concentration" or "rank out of reach")
+		parts[#parts + 1] = pe:Colorize((row.concentrationNeeded or row.concentrationCost) and "needs concentration" or "rank out of reach", "warning")
 	end
 	return table.concat(parts, " · ")
 end
 
 local function craftRowName(pe, row)
-	local item = trim(pe:GetItemDisplayName(row and row.outputItemID))
+	local item = pe:Trim(pe:GetItemDisplayName(row and row.outputItemID))
 	if isPlaceholderItemLabel(item) then
-		item = trim(row and row.recipeName or "") ~= "" and row.recipeName or "Craft"
+		item = pe:Trim(row and row.recipeName or "") ~= "" and row.recipeName or "Craft"
 	end
 	return item .. rankMarkup(row and row.qualityIndex)
 end
@@ -557,7 +545,7 @@ function AuctionHelper:EnsureCraftsPanel(mainFrame)
 				if slot.have == nil then
 					return "-"
 				end
-				return slot.have < slot.need and colorize(pe, "danger", tostring(slot.have)) or tostring(slot.have)
+				return slot.have < slot.need and pe:Colorize(tostring(slot.have), "danger") or tostring(slot.have)
 			end },
 		{ id = "cost", label = "Cost", width = 70, justifyH = "RIGHT", getText = function(slot) return slot.cost and pe:FormatCopperShort(slot.cost) or "-" end },
 	})
@@ -647,7 +635,7 @@ end
 function AuctionHelper:BuildCraftsFilterState()
 	local ui = self.ui or {}
 	return {
-		text = trim(ui.craftsSearchBox and ui.craftsSearchBox:GetText() or ""),
+		text = self:Trim(ui.craftsSearchBox and ui.craftsSearchBox:GetText() or ""),
 		characters = ui.craftsCharacterFilterValues or {},
 		professions = ui.craftsProfessionFilterValues or {},
 		expansions = self.IS_RETAIL and ui.craftsExpansionFilterValues or {},
@@ -696,7 +684,7 @@ function AuctionHelper:RefreshCraftsTab()
 		self.IS_RETAIL and "Prices from TSM, Auctionator or scans" or "Prices from the last auction house scan")
 	if craftState.craftEvalInProgress and craftState.craftEvalWorkList and #craftState.craftEvalWorkList > 0 then
 		local done = math.max(0, (craftState.craftEvalIdx or 1) - 1)
-		note = colorize(self, "warning", string.format("Updating %d of %d recipes…", done, #craftState.craftEvalWorkList))
+		note = self:Colorize(string.format("Updating %d of %d recipes…", done, #craftState.craftEvalWorkList), "warning")
 	end
 	panel.optionsNote:SetText(note)
 

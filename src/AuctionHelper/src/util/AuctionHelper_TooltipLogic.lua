@@ -185,7 +185,7 @@ local function recipeLines(lines, g)
 		return
 	end
 	if use.usedCount > 0 then
-		local recipes = use.usedCount == 1 and "1 recipe" or (use.usedCount .. " recipes")
+		local recipes = use.usedCount .. " " .. AuctionHelper:Plural(use.usedCount, "recipe")
 		add(lines, "Used in", string.format("%s (%s)", recipes, table.concat(use.professions, ", ")))
 	end
 	if #use.crafters > 0 then
