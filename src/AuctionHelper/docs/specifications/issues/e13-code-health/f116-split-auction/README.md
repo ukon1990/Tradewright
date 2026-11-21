@@ -40,5 +40,5 @@ In-game after every commit (full client restart), on Forever and retail: AH open
 
 ## Out of scope
 
-- Renaming `ProfessionExporter`
+- Renaming `ProfessionExporter` (F119)
 - `AuctionHelper_Data.lua` (F118)

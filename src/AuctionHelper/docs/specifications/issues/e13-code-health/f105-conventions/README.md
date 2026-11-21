@@ -44,4 +44,4 @@ Read the new sections as someone new to the repo: each rule has a good and a bad
 
 - Fixing existing names and comments (F108 and the split features do that)
 - The lint check against feature ids in comments (F108 adds it after the sweep, so nothing is baselined)
-- Renaming `ProfessionExporter`
+- Renaming `ProfessionExporter` (F119)

@@ -27,11 +27,12 @@ Make the code maintainable by a human: a developer new to a file can read it, un
 - F115: split the UI files
 - F116: split `AuctionHelper_Auction.lua`
 - F117: shared UI helpers
+- F119: rename `ProfessionExporter` to `AuctionHelper`
 - F118: split `AuctionHelper_Data.lua`, `AuctionHelper_Util.lua` and `AuctionHelper_ForeverLogic.lua`
 
 ## Acceptance criteria
 
-- [ ] F105 to F118 done
+- [ ] F105 to F119 done
 - [ ] No feature grows `scripts/lint-baseline.json`; every feature that touches baselined code shrinks it and commits the new baseline
 - [ ] Behaviour is unchanged on Forever and retail, apart from the bugs F106 fixes
 - [ ] Every feature passed a review against the three focus files and the question "could a developer new to this file change it safely?"
@@ -50,6 +51,5 @@ In-game after each feature that moves code (full client restart when a `.lua` fi
 
 ## Out of scope
 
-- Renaming the `ProfessionExporter` namespace and `SLASH_PROFESSIONEXPORTER`: touches every file and the SavedVariables; a separate decision
 - Showing warband columns in the inventory on Forever
 - New features

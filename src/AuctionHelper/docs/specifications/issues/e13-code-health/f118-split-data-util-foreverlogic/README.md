@@ -39,4 +39,4 @@ In-game after every commit (full client restart), on Forever and retail: profess
 
 ## Out of scope
 
-- Renaming `ProfessionExporter`
+- Renaming `ProfessionExporter` (F119)
