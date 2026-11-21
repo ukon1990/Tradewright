@@ -37,7 +37,9 @@ load("AuctionHelper/src/core/AuctionHelper_ProfessionScan.lua")
 load("AuctionHelper/src/core/AuctionHelper_ExportBuild.lua")
 load("AuctionHelper/src/core/AuctionHelper_CopyBox.lua")
 load("AuctionHelper/src/core/AuctionHelper_SlashCommands.lua")
-load("AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua")
+for _, path in ipairs(dofile(root .. "/tests/auction_data_files.lua")(repo)) do
+	load(path)
+end
 
 local messages = {}
 pe.PrintMessage = function(_, message) messages[#messages + 1] = message end

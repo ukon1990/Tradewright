@@ -10,8 +10,11 @@
    "W421": 2,
    "W631": 1
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": {
-   "W631": 2
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionRefreshQueue.lua": {
+   "W631": 1
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionScanTargets.lua": {
+   "W631": 1
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_Scan.lua": {
    "W631": 1
@@ -25,7 +28,6 @@
   }
  },
  "files": {
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5341,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1198,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1088,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": 2366,
@@ -400,22 +402,7 @@
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": {
-   "AuctionHelper:ApplyLiveAggregateToNativePrice": {
-    "ccn": [
-     11
-    ]
-   },
-   "AuctionHelper:BuildAccountTradableInventoryAuctionTargets": {
-    "ccn": [
-     14
-    ]
-   },
-   "AuctionHelper:BuildAuctionBulkRows": {
-    "ccn": [
-     16
-    ]
-   },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionBags.lua": {
    "AuctionHelper:BuildAuctionInventoryRows": {
     "lines": [
      76
@@ -424,54 +411,14 @@
      35
     ]
    },
-   "AuctionHelper:BuildAuctionPanelColumns": {
-    "lines": [
-     88
-    ]
-   },
-   "AuctionHelper:BuildAuctionPanelColumns/sortValue": {
+   "AuctionHelper:GetAuctionRowProtectionState": {
     "ccn": [
-     11
+     18
     ]
-   },
-   "AuctionHelper:BuildAuctionPanelLayout": {
-    "lines": [
-     213
-    ],
-    "ccn": [
-     11
-    ]
-   },
-   "AuctionHelper:BuildAuctionPanelPriceState": {
-    "lines": [
-     42
-    ],
-    "ccn": [
-     13
-    ]
-   },
-   "AuctionHelper:BuildOwnedAuctionRows": {
-    "ccn": [
-     20
-    ]
-   },
-   "AuctionHelper:BuildPrioritizedAuctionAutoScanTargets": {
-    "lines": [
-     74
-    ],
-    "ccn": [
-     19
-    ]
-   },
-   "AuctionHelper:BuildVisibleCraftsTabAuctionTargets": {
-    "ccn": [
-     26
-    ]
-   },
-   "AuctionHelper:CollectVisibleAuctionDumpRows": {
-    "lines": [
-     70
-    ],
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionBulk.lua": {
+   "AuctionHelper:BuildAuctionBulkRows": {
     "ccn": [
      16
     ]
@@ -489,206 +436,9 @@
      19
     ]
    },
-   "AuctionHelper:ContinueAuctionDump": {
-    "lines": [
-     60
-    ],
-    "ccn": [
-     23
-    ]
-   },
-   "AuctionHelper:ContinueQueuedAuctionRefresh": {
-    "lines": [
-     75
-    ],
-    "ccn": [
-     19
-    ]
-   },
-   "AuctionHelper:EnsureAuctionReserveWindow": {
-    "lines": [
-     63
-    ]
-   },
-   "AuctionHelper:FilterAuctionCraftCartRows": {
-    "ccn": [
-     12
-    ]
-   },
-   "AuctionHelper:FilterAuctionPanelRows": {
-    "ccn": [
-     28
-    ]
-   },
-   "AuctionHelper:FinishQueuedAuctionRefreshItem": {
-    "ccn": [
-     12
-    ]
-   },
-   "AuctionHelper:GetAuctionDisplayProfessionQualityRank": {
-    "ccn": [
-     26
-    ]
-   },
-   "AuctionHelper:GetAuctionHistoryQuantitySeriesForItem": {
-    "lines": [
-     46
-    ],
-    "ccn": [
-     22
-    ]
-   },
-   "AuctionHelper:GetAuctionPanelPersonalSaleRate": {
-    "ccn": [
-     18
-    ]
-   },
-   "AuctionHelper:GetAuctionRowProtectionState": {
-    "ccn": [
-     18
-    ]
-   },
-   "AuctionHelper:GetAuctionSubclassFilterOptions": {
-    "ccn": [
-     11
-    ]
-   },
-   "AuctionHelper:GetItemEconomySummary": {
-    "lines": [
-     48
-    ],
-    "ccn": [
-     33
-    ]
-   },
-   "AuctionHelper:InitAuctionDB": {
-    "ccn": [
-     31
-    ]
-   },
-   "AuctionHelper:IsAuctionDumpAhOriginPrice": {
-    "ccn": [
-     18
-    ]
-   },
-   "AuctionHelper:MakeAuctionHouseItemKey": {
-    "ccn": [
-     11
-    ]
-   },
-   "AuctionHelper:OnAuctionHouseAuctionCreated": {
-    "ccn": [
-     14
-    ]
-   },
-   "AuctionHelper:OnAuctionHouseClosed": {
-    "lines": [
-     42
-    ]
-   },
-   "AuctionHelper:OnAuctionItemListUpdate": {
-    "lines": [
-     51
-    ],
-    "ccn": [
-     20
-    ]
-   },
-   "AuctionHelper:OnCommoditySearchResultsUpdated": {
-    "ccn": [
-     11
-    ]
-   },
-   "AuctionHelper:OnFullAuctionDumpTimeout": {
-    "ccn": [
-     13
-    ]
-   },
-   "AuctionHelper:OnItemSearchResultsUpdated": {
-    "ccn": [
-     11
-    ]
-   },
-   "AuctionHelper:OpenAuctionBrowseSearchForItem": {
-    "lines": [
-     42
-    ],
-    "ccn": [
-     21
-    ]
-   },
-   "AuctionHelper:PersistAuctionDumpObservation": {
-    "ccn": [
-     13
-    ]
-   },
-   "AuctionHelper:PersistFullAuctionDumpChunk": {
-    "ccn": [
-     16
-    ]
-   },
    "AuctionHelper:ProcessAuctionBulkPhase": {
     "ccn": [
      14
-    ]
-   },
-   "AuctionHelper:ProcessFullAuctionDumpChunk": {
-    "ccn": [
-     13
-    ]
-   },
-   "AuctionHelper:QueryClassicAuctionDumpPage": {
-    "ccn": [
-     13
-    ]
-   },
-   "AuctionHelper:QueueAuctionEconomyScan": {
-    "lines": [
-     56
-    ],
-    "ccn": [
-     24
-    ]
-   },
-   "AuctionHelper:QueueAuctionScanTargets": {
-    "ccn": [
-     14
-    ]
-   },
-   "AuctionHelper:QueueVisibleCraftsTabAuctionRefresh": {
-    "lines": [
-     41
-    ],
-    "ccn": [
-     13
-    ]
-   },
-   "AuctionHelper:RecordAuctionObservation": {
-    "ccn": [
-     12
-    ]
-   },
-   "AuctionHelper:RecordLiveAuctionObservationsFromAggregate": {
-    "ccn": [
-     13
-    ]
-   },
-   "AuctionHelper:RefreshAuctionPanelRules": {
-    "ccn": [
-     14
-    ]
-   },
-   "AuctionHelper:ResolveCurrentAuctionPrice": {
-    "lines": [
-     60
-    ],
-    "ccn": [
-     14
-    ]
-   },
-   "AuctionHelper:ResolveDumpItemCommodity": {
-    "ccn": [
-     11
     ]
    },
    "AuctionHelper:RunAuctionPanelBulkAction": {
@@ -698,64 +448,20 @@
     "ccn": [
      12
     ]
-   },
-   "AuctionHelper:RunQueuedAuctionRefresh": {
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionBuy.lua": {
+   "AuctionHelper:OpenAuctionBrowseSearchForItem": {
     "lines": [
-     57
+     42
     ],
     "ccn": [
-     17
-    ]
-   },
-   "AuctionHelper:SaveBrowseResultsToScanEntries": {
-    "ccn": [
-     13
+     21
     ]
    },
    "AuctionHelper:SearchAuctionCartRow": {
     "ccn": [
      13
-    ]
-   },
-   "AuctionHelper:SendAuctionPanelSearchQuery": {
-    "ccn": [
-     11
-    ]
-   },
-   "AuctionHelper:SetAuctionItemRule": {
-    "ccn": [
-     13
-    ]
-   },
-   "AuctionHelper:StartAuctionDump": {
-    "lines": [
-     77
-    ],
-    "ccn": [
-     12
-    ]
-   },
-   "AuctionHelper:StartAuctionRoiEnrichment": {
-    "lines": [
-     66
-    ]
-   },
-   "AuctionHelper:StartClassicFullAuctionDump": {
-    "lines": [
-     45
-    ]
-   },
-   "AuctionHelper:TrimAuctionHistory": {
-    "lines": [
-     63
-    ],
-    "ccn": [
-     34
-    ]
-   },
-   "AuctionHelper:TrimFullDumpMarketHistory": {
-    "ccn": [
-     15
     ]
    },
    "AuctionHelper:TryBuyAuctionCartRow": {
@@ -769,13 +475,307 @@
     ]
    },
    "AuctionHelper:TrySelectPendingAuctionBrowseResult": {
+    "ccn": [
+     16
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionCart.lua": {
+   "AuctionHelper:FilterAuctionCraftCartRows": {
+    "ccn": [
+     12
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionEvents.lua": {
+   "AuctionHelper:OnAuctionHouseAuctionCreated": {
+    "ccn": [
+     14
+    ]
+   },
+   "AuctionHelper:OnAuctionHouseClosed": {
     "lines": [
-     41
+     42
+    ]
+   },
+   "AuctionHelper:OnCommoditySearchResultsUpdated": {
+    "ccn": [
+     11
+    ]
+   },
+   "AuctionHelper:OnItemSearchResultsUpdated": {
+    "ccn": [
+     11
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionFullScan.lua": {
+   "AuctionHelper:ContinueAuctionDump": {
+    "lines": [
+     47
+    ],
+    "ccn": [
+     19
+    ]
+   },
+   "AuctionHelper:OnFullAuctionDumpTimeout": {
+    "ccn": [
+     13
+    ]
+   },
+   "AuctionHelper:PersistFullAuctionDumpChunk": {
+    "ccn": [
+     16
+    ]
+   },
+   "AuctionHelper:ProcessFullAuctionDumpChunk": {
+    "ccn": [
+     13
+    ]
+   },
+   "AuctionHelper:StartAuctionDump": {
+    "lines": [
+     77
+    ],
+    "ccn": [
+     12
+    ]
+   },
+   "AuctionHelper:TrimFullDumpMarketHistory": {
+    "ccn": [
+     15
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionFullScanRows.lua": {
+   "AuctionHelper:CollectVisibleAuctionDumpRows": {
+    "lines": [
+     70
     ],
     "ccn": [
      16
     ]
    },
+   "AuctionHelper:IsAuctionDumpAhOriginPrice": {
+    "ccn": [
+     18
+    ]
+   },
+   "AuctionHelper:OnAuctionItemListUpdate": {
+    "lines": [
+     51
+    ],
+    "ccn": [
+     20
+    ]
+   },
+   "AuctionHelper:PersistAuctionDumpObservation": {
+    "ccn": [
+     13
+    ]
+   },
+   "AuctionHelper:QueryClassicAuctionDumpPage": {
+    "ccn": [
+     13
+    ]
+   },
+   "AuctionHelper:ResolveDumpItemCommodity": {
+    "ccn": [
+     11
+    ]
+   },
+   "AuctionHelper:StartClassicFullAuctionDump": {
+    "lines": [
+     45
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionItemKeys.lua": {
+   "AuctionHelper:MakeAuctionHouseItemKey": {
+    "ccn": [
+     11
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionItemRules.lua": {
+   "AuctionHelper:EnsureAuctionReserveWindow": {
+    "lines": [
+     63
+    ]
+   },
+   "AuctionHelper:RefreshAuctionPanelRules": {
+    "ccn": [
+     14
+    ]
+   },
+   "AuctionHelper:SetAuctionItemRule": {
+    "ccn": [
+     13
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionLiveSearch.lua": {
+   "AuctionHelper:ApplyLiveAggregateToNativePrice": {
+    "ccn": [
+     11
+    ]
+   },
+   "AuctionHelper:RecordLiveAuctionObservationsFromAggregate": {
+    "ccn": [
+     13
+    ]
+   },
+   "AuctionHelper:SaveBrowseResultsToScanEntries": {
+    "ccn": [
+     13
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionOwned.lua": {
+   "AuctionHelper:BuildOwnedAuctionRows": {
+    "ccn": [
+     20
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionPanelLayout.lua": {
+   "AuctionHelper:BuildAuctionPanelLayout": {
+    "lines": [
+     213
+    ],
+    "ccn": [
+     11
+    ]
+   },
+   "placeIn": {
+    "params": [
+     6
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionPanelPrices.lua": {
+   "AuctionHelper:BuildAuctionPanelPriceState": {
+    "lines": [
+     42
+    ],
+    "ccn": [
+     13
+    ]
+   },
+   "AuctionHelper:GetAuctionDisplayProfessionQualityRank": {
+    "ccn": [
+     26
+    ]
+   },
+   "AuctionHelper:GetAuctionPanelPersonalSaleRate": {
+    "ccn": [
+     18
+    ]
+   },
+   "AuctionHelper:UpdateAuctionPanelRowPrice": {
+    "ccn": [
+     13
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionPricing.lua": {
+   "AuctionHelper:GetItemEconomySummary": {
+    "lines": [
+     48
+    ],
+    "ccn": [
+     33
+    ]
+   },
+   "AuctionHelper:ResolveCurrentAuctionPrice": {
+    "lines": [
+     60
+    ],
+    "ccn": [
+     14
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionRefreshQueue.lua": {
+   "AuctionHelper:ContinueQueuedAuctionRefresh": {
+    "lines": [
+     75
+    ],
+    "ccn": [
+     19
+    ]
+   },
+   "AuctionHelper:FinishQueuedAuctionRefreshItem": {
+    "ccn": [
+     12
+    ]
+   },
+   "AuctionHelper:QueueAuctionScanTargets": {
+    "ccn": [
+     14
+    ]
+   },
+   "AuctionHelper:RunQueuedAuctionRefresh": {
+    "lines": [
+     57
+    ],
+    "ccn": [
+     17
+    ]
+   },
+   "AuctionHelper:SendAuctionPanelSearchQuery": {
+    "ccn": [
+     11
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionScanTargets.lua": {
+   "AuctionHelper:BuildAccountTradableInventoryAuctionTargets": {
+    "ccn": [
+     14
+    ]
+   },
+   "AuctionHelper:BuildPrioritizedAuctionAutoScanTargets": {
+    "lines": [
+     74
+    ],
+    "ccn": [
+     19
+    ]
+   },
+   "AuctionHelper:BuildVisibleCraftsTabAuctionTargets": {
+    "ccn": [
+     26
+    ]
+   },
+   "AuctionHelper:QueueAuctionEconomyScan": {
+    "lines": [
+     56
+    ],
+    "ccn": [
+     24
+    ]
+   },
+   "AuctionHelper:QueueVisibleCraftsTabAuctionRefresh": {
+    "lines": [
+     41
+    ],
+    "ccn": [
+     13
+    ]
+   },
+   "AuctionHelper:StartAuctionRoiEnrichment": {
+    "lines": [
+     66
+    ]
+   },
+   "step": {
+    "ccn": [
+     16
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionSellFrame.lua": {
    "AuctionHelper:TrySendItemToAuctionSellFrame": {
     "lines": [
      89
@@ -783,28 +783,65 @@
     "ccn": [
      38
     ]
-   },
-   "AuctionHelper:UpdateAuctionHistoryFromObservation": {
-    "ccn": [
-     16
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionSellTab.lua": {
+   "AuctionHelper:BuildAuctionPanelColumns": {
+    "lines": [
+     88
     ]
    },
-   "AuctionHelper:UpdateAuctionPanelRowPrice": {
+   "AuctionHelper:BuildAuctionPanelColumns/sortValue": {
     "ccn": [
-     13
+     11
     ]
    },
+   "AuctionHelper:FilterAuctionPanelRows": {
+    "ccn": [
+     28
+    ]
+   },
+   "AuctionHelper:GetAuctionSubclassFilterOptions": {
+    "ccn": [
+     11
+    ]
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionShared.lua": {
    "normalizeItemID": {
     "ccn": [
      12
     ]
-   },
-   "placeIn": {
-    "params": [
-     6
+   }
+  },
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionStore.lua": {
+   "AuctionHelper:GetAuctionHistoryQuantitySeriesForItem": {
+    "lines": [
+     46
+    ],
+    "ccn": [
+     22
     ]
    },
-   "step": {
+   "AuctionHelper:InitAuctionDB": {
+    "ccn": [
+     31
+    ]
+   },
+   "AuctionHelper:RecordAuctionObservation": {
+    "ccn": [
+     12
+    ]
+   },
+   "AuctionHelper:TrimAuctionHistory": {
+    "lines": [
+     63
+    ],
+    "ccn": [
+     34
+    ]
+   },
+   "AuctionHelper:UpdateAuctionHistoryFromObservation": {
     "ccn": [
      16
     ]

@@ -37,11 +37,11 @@ local function setControlsShown(controls, shown)
 end
 
 local function countKeys(t)
-	local n = 0
+	local count = 0
 	for _ in pairs(t or {}) do
-		n = n + 1
+		count = count + 1
 	end
-	return n
+	return count
 end
 
 local function queuedHint(queued, idleText)
@@ -376,6 +376,8 @@ end
 -- them and then carries on where it was.
 local CANCEL_SCAN_HOLD_SEC = 3
 
+local HOLD_END_MARGIN_SEC = 0.05 -- the hold timer fires just after the hold ends
+
 -- Puts the items at position `at` of the scan list, skipping ones already waiting there as
 -- priority checks. Returns how many were added.
 local function insertPriorityChecks(list, at, itemIDs)
@@ -418,7 +420,7 @@ function AuctionHelper:IsAuctionScanHeld(state)
 	if holdLeft > 0 then
 		if not state.auctionScanHoldTimer then
 			state.auctionScanHoldTimer = true
-			C_Timer.After(holdLeft + 0.05, function()
+			C_Timer.After(holdLeft + HOLD_END_MARGIN_SEC, function()
 				state.auctionScanHoldTimer = nil
 				AuctionHelper:ContinueQueuedAuctionRefresh()
 			end)

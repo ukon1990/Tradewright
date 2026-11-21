@@ -74,7 +74,7 @@
 | [f113-tests-and-complex-functions](issues/e13-code-health/f113-tests-and-complex-functions/README.md) | Tests for core logic, then break up complex functions | done, in-game check pending |
 | [f114-split-professions-inventory](issues/e13-code-health/f114-split-professions-inventory/README.md) | Split the Professions and Inventory files | planned |
 | [f115-split-ui](issues/e13-code-health/f115-split-ui/README.md) | Split the UI files | planned |
-| [f116-split-auction](issues/e13-code-health/f116-split-auction/README.md) | Split Auction.lua | planned |
+| [f116-split-auction](issues/e13-code-health/f116-split-auction/README.md) | Split Auction.lua | done, in-game check pending |
 | [f117-shared-ui-helpers](issues/e13-code-health/f117-shared-ui-helpers/README.md) | Shared UI helpers | done, in-game check pending |
 | [f118-split-data-util-foreverlogic](issues/e13-code-health/f118-split-data-util-foreverlogic/README.md) | Split Data.lua, Util.lua and ForeverLogic.lua | done, in-game check pending |
 | [f119-rename-namespace](issues/e13-code-health/f119-rename-namespace/README.md) | Rename ProfessionExporter to AuctionHelper | done, in-game check pending |
