@@ -29,7 +29,14 @@ load("AuctionHelper/src/core/AuctionHelper.lua")
 load("AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua")
 load("AuctionHelper/src/util/AuctionHelper_CoreHelpers.lua")
 load("AuctionHelper/src/util/AuctionHelper_Util.lua")
+load("AuctionHelper/src/util/AuctionHelper_JsonCodec.lua")
+load("AuctionHelper/src/util/AuctionHelper_ItemInfo.lua")
 load("AuctionHelper/src/core/AuctionHelper_Data.lua")
+load("AuctionHelper/src/core/AuctionHelper_ProfessionSpecTree.lua")
+load("AuctionHelper/src/core/AuctionHelper_ProfessionScan.lua")
+load("AuctionHelper/src/core/AuctionHelper_ExportBuild.lua")
+load("AuctionHelper/src/core/AuctionHelper_CopyBox.lua")
+load("AuctionHelper/src/core/AuctionHelper_SlashCommands.lua")
 
 -- Tree 900: path 10 (children: path 11, milestone 20, unknown 99), path 11, milestone 20.
 local nodes = {

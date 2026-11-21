@@ -1,6 +1,7 @@
 local _, AuctionHelper = ...
 
---- Pure helpers for choosing the cheapest way to get a crafting material. No WoW API.
+--- Pure helpers for crafting materials: the cheapest way to get one, counts per storage location and
+--- classic reagent slots. No WoW API.
 local MaterialLogic = {}
 AuctionHelper.MaterialLogic = MaterialLogic
 
@@ -122,6 +123,44 @@ function MaterialLogic.FormatCooldown(seconds)
 		return unit(hours, "hour")
 	end
 	return unit(math.max(1, minutes), "minute")
+end
+
+--- Resolve bags/bank/warband when warband API may be missing (Forever).
+--- withWarband may be nil when the 5-arg GetItemCount form failed.
+function MaterialLogic.ResolveLocationCounts(bags, withBank, withWarband)
+	bags = math.max(0, tonumber(bags) or 0)
+	withBank = math.max(bags, tonumber(withBank) or bags)
+	local bank = math.max(0, withBank - bags)
+	local warband = 0
+	if withWarband ~= nil then
+		withWarband = math.max(bags, tonumber(withWarband) or bags)
+		warband = math.max(0, withWarband - bags)
+	end
+	return bags, bank, warband, bags + bank + warband
+end
+
+-- Classic recipe reagent slot from (itemID, quantity).
+function MaterialLogic.MakeClassicReagentSlot(slotIndex, itemID, quantity)
+	itemID = tonumber(itemID)
+	quantity = tonumber(quantity) or 0
+	if not itemID or itemID <= 0 or quantity <= 0 then
+		return nil
+	end
+	return {
+		slotIndex = slotIndex,
+		dataSlotIndex = slotIndex,
+		reagentType = 1,
+		quantityRequired = quantity,
+		required = true,
+		optional = false,
+		reagents = {
+			{
+				reagentIndex = 1,
+				itemID = itemID,
+				quantity = quantity,
+			},
+		},
+	}
 end
 
 return MaterialLogic

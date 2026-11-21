@@ -155,3 +155,78 @@ function MailLogic.ListReviewRows(rows, filter, search, classOf)
 	end
 	return out
 end
+
+--- The auction house / bank character chosen for `realm`, or nil when none is chosen or the
+--- chosen character is no longer known. sellerByRealm[realm] = characterKey ("" means none).
+function MailLogic.ResolveSellerCharacter(sellerByRealm, realm, knownCharacters)
+	local key = type(sellerByRealm) == "table" and realm and sellerByRealm[realm] or nil
+	if type(key) ~= "string" or key == "" or not (knownCharacters and knownCharacters[key]) then
+		return nil
+	end
+	return key
+end
+
+--- Shares the bag stock out over the characters that need materials mailed to them.
+--- lines: { { itemID, name, allocations = { { characterKey, mailQuantity } } } }; stock[itemID] is
+--- what the bags hold. Returns the destinations that get at least one item, sorted by character:
+--- { characterKey, mailName, items = { { itemID, quantity, name } }, totalQuantity,
+--- missing = { { itemID, quantity, name } }, complete }. A destination is complete when everything
+--- it needs mailed is in the bags; earlier lines and characters are served first.
+function MailLogic.BuildMailPlan(lines, stock)
+	local left, byKey, out = {}, {}, {}
+	for _, line in ipairs(lines or {}) do
+		local itemID = line.itemID
+		left[itemID] = left[itemID] or tonumber(stock and stock[itemID]) or 0
+		for _, alloc in ipairs(line.allocations or {}) do
+			local key = tostring(alloc.characterKey or "")
+			local need = tonumber(alloc.mailQuantity) or 0
+			if key ~= "" and need > 0 then
+				local dest = byKey[key]
+				if not dest then
+					dest = { characterKey = key, mailName = key:match("^([^%-]+)") or key, items = {}, missing = {}, totalQuantity = 0 }
+					byKey[key] = dest
+				end
+				local send = math.min(need, left[itemID])
+				left[itemID] = left[itemID] - send
+				if send > 0 then
+					dest.items[#dest.items + 1] = { itemID = itemID, quantity = send, name = line.name }
+					dest.totalQuantity = dest.totalQuantity + send
+				end
+				if send < need then
+					dest.missing[#dest.missing + 1] = { itemID = itemID, quantity = need - send, name = line.name }
+				end
+			end
+		end
+	end
+	for _, dest in pairs(byKey) do
+		if #dest.items > 0 then
+			dest.complete = #dest.missing == 0
+			out[#out + 1] = dest
+		end
+	end
+	table.sort(out, function(a, b) return a.characterKey < b.characterKey end)
+	return out
+end
+
+--- Crafted items waiting to go back to the seller, clamped to what the bags still hold.
+--- toSeller[itemID] = quantity owed, bagItems[itemID] = { quantity, name }. Returns no destination
+--- without a seller or without anything to send, else one: { kind = "crafts", characterKey,
+--- mailName, items = { { itemID, quantity, name } }, totalQuantity }, items sorted by name.
+function MailLogic.BuildReturnToSellerPlan(toSeller, bagItems, sellerKey)
+	local dest = { kind = "crafts", characterKey = sellerKey, mailName = tostring(sellerKey or ""):match("^([^%-]+)"),
+		items = {}, totalQuantity = 0 }
+	for itemID, owed in pairs(toSeller or {}) do
+		local bag = bagItems and bagItems[itemID]
+		local quantity = math.min(tonumber(owed) or 0, bag and tonumber(bag.quantity) or 0)
+		if quantity > 0 then
+			dest.items[#dest.items + 1] = { itemID = itemID, quantity = quantity, name = bag.name }
+			dest.totalQuantity = dest.totalQuantity + quantity
+		end
+	end
+	if not sellerKey or #dest.items == 0 then
+		return {}
+	end
+	table.sort(dest.items, function(a, b) return tostring(a.name) < tostring(b.name) end)
+	return { dest }
+end
+

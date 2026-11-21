@@ -1,6 +1,7 @@
 local _, AuctionHelper = ...
 
---- Pure helpers for the craft cart and the live auction search aggregate. No WoW API.
+--- Pure helpers for the craft cart, the live auction search aggregate, the full scan row fold, own
+--- auctions and the classic sell gate. No WoW API.
 local AuctionLogic = {}
 AuctionHelper.AuctionLogic = AuctionLogic
 local FL = AuctionHelper.ForeverLogic
@@ -199,4 +200,105 @@ function AuctionLogic.SummarizeItemVariants(variantGroups, itemID)
 		totalQuantityAll = math.max(1, totalQuantity),
 		listingCountAll = listingCount,
 	}
+end
+
+--- Fold one classic/replicate auction list row into a full-dump aggregate bucket (by itemID).
+--- Tracks listingCount (auctions with buyout) and marketHigh (max unit price) for Market UI.
+function AuctionLogic.AggregateClassicAuctionRow(aggregate, itemID, count, buyoutPrice)
+	aggregate = aggregate or {}
+	itemID = tonumber(itemID)
+	if not itemID or itemID <= 0 then
+		return aggregate
+	end
+	local quantity = math.max(1, tonumber(count) or 1)
+	local rawBuyout = tonumber(buyoutPrice)
+	local bucket = aggregate[itemID] or {
+		itemID = itemID,
+		marketLow = nil,
+		marketHigh = nil,
+		minBuyout = nil,
+		sampleSize = 0,
+		listingCount = 0,
+		weightedQty = 0,
+		weightedSum = 0,
+	}
+	if rawBuyout and rawBuyout > 0 then
+		local perUnit = rawBuyout / quantity
+		bucket.marketLow = bucket.marketLow and math.min(bucket.marketLow, perUnit) or perUnit
+		bucket.marketHigh = bucket.marketHigh and math.max(bucket.marketHigh, perUnit) or perUnit
+		bucket.minBuyout = bucket.minBuyout and math.min(bucket.minBuyout, rawBuyout) or rawBuyout
+		bucket.sampleSize = (tonumber(bucket.sampleSize) or 0) + quantity
+		bucket.listingCount = (tonumber(bucket.listingCount) or 0) + 1
+		bucket.weightedQty = (tonumber(bucket.weightedQty) or 0) + quantity
+		bucket.weightedSum = (tonumber(bucket.weightedSum) or 0) + (perUnit * quantity)
+	end
+	aggregate[itemID] = bucket
+	return aggregate
+end
+
+--- Gate classic cursor sell inject (PickupContainerItem + ClickAuctionSellItemButton).
+--- Retail keeps the modern sell frame (SetPostItem) only when it exists; Forever always may use classic.
+--- Clients without the modern sell frame may use classic even when not Forever.
+function AuctionLogic.ShouldUseClassicSellInject(isForever, hasModernSellFrame)
+	if isForever == true then
+		return true
+	end
+	return hasModernSellFrame ~= true
+end
+
+---- Totals and undercut flags for the player's own auctions.
+--- auctions: { { itemID, quantity, sold, buyout, bid, deposit } } — the price is per unit while listed
+--- and the whole incoming amount once sold; deposit is the listing's whole deposit, nil when unknown
+--- or not counted. lowestByItem[itemID] is the lowest scanned unit price, if any.
+--- Each row gets `undercut`: true / false, or nil when the item has no scanned price to compare;
+--- undercut rows also get `undercutBy` (copper per unit) and `undercutPct` (of the player's price).
+--- ahCut (fraction, default 0.05) gives `net`, what a listing pays out after the auction house cut,
+--- and for undercut rows `repostNet`, the payout if it were cancelled (forfeiting the deposit) and
+--- reposted at the lowest scanned price.
+function AuctionLogic.SummarizeOwnedAuctions(auctions, lowestByItem, ahCut)
+	local keep = 1 - (tonumber(ahCut) or 0.05)
+	local rows = {}
+	local totals = { soldValue = 0, soldCount = 0, listedValue = 0, listedNet = 0, listedCount = 0, undercutCount = 0 }
+	for _, auction in ipairs(auctions or {}) do
+		local quantity = math.max(1, tonumber(auction.quantity) or 1)
+		local price = tonumber(auction.buyout) or tonumber(auction.bid) or 0
+		local row = { auctionID = auction.auctionID, itemID = auction.itemID, quantity = quantity, sold = auction.sold == true }
+		if row.sold then
+			row.value = price
+			totals.soldValue = totals.soldValue + price
+			totals.soldCount = totals.soldCount + 1
+		else
+			row.unitPrice = price
+			row.value = price * quantity
+			row.net = math.floor(row.value * keep)
+			row.deposit = tonumber(auction.deposit)
+			row.marketPrice = tonumber(lowestByItem and lowestByItem[auction.itemID])
+			if row.marketPrice and price > 0 then
+				row.undercut = row.marketPrice < price
+				if row.undercut then
+					row.undercutBy = price - row.marketPrice
+					row.undercutPct = row.undercutBy / price * 100
+					row.repostNet = math.floor(row.marketPrice * quantity * keep) - (row.deposit or 0)
+				end
+			end
+			totals.listedValue = totals.listedValue + row.value
+			totals.listedNet = totals.listedNet + row.net
+			totals.listedCount = totals.listedCount + 1
+			totals.undercutCount = totals.undercutCount + (row.undercut and 1 or 0)
+		end
+		rows[#rows + 1] = row
+	end
+	return rows, totals
+end
+
+-- True when a live auction house search differs from the saved scan entry ({ p = price, q = quantity, n = auctions }).
+-- A value the search did not report (nil) is never a difference.
+function AuctionLogic.LiveSearchDiffers(saved, price, quantity, listings)
+	if type(saved) ~= "table" then
+		return true
+	end
+	local function differs(old, new)
+		return tonumber(new) ~= nil and tonumber(old) ~= tonumber(new)
+	end
+	return differs(saved.p, price) or differs(saved.q, quantity) or differs(saved.n, listings)
 end

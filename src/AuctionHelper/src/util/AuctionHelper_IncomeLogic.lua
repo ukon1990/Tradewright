@@ -1,7 +1,7 @@
 local _, AuctionHelper = ...
 
 -- Pure income helpers: which source a change of gold belongs to, and the per-day totals it
--- is kept in. No WoW API here, so the offline tests can load this file on its own.
+-- is kept in, and the sales summary of the ledger. No WoW API here, so the offline tests can load this file on its own.
 local IncomeLogic = {}
 AuctionHelper.IncomeLogic = IncomeLogic
 
@@ -339,3 +339,52 @@ function IncomeLogic.SummarizeItemTypes(events, since, characterKey, classOf)
 	finishTypeRows(rows, total, tracksMisses)
 	return rows
 end
+
+--- Sales statistics from ledger events (kind "sell": ts, itemID / itemName, quantity, totalCopper
+--- gross, netCopper after the auction house cut). `days` limits to the last N days; nil is all time.
+--- Returns { totals, items, daily, recent, spanDays }: items carry sales, units, net, avgUnit,
+--- perWeek (sales per week over the span) and lastAt; daily is { at, value } net per day, oldest
+--- first; recent is the matching events, newest first.
+function IncomeLogic.SummarizeSales(events, now, days)
+	local since = days and (now - days * 86400) or 0
+	local totals = { net = 0, gross = 0, sales = 0, units = 0 }
+	local itemByKey, items, byDay, daily, recent = {}, {}, {}, {}, {}
+	local firstAt = now
+	for _, event in ipairs(events or {}) do
+		local ts = tonumber(event.ts) or 0
+		if event.kind == "sell" and ts >= since then
+			local gross = tonumber(event.totalCopper) or 0
+			local net = tonumber(event.netCopper) or gross
+			local units = tonumber(event.quantity) or 1
+			local key = event.itemID or event.itemName
+			local item = itemByKey[key]
+			if not item then
+				item = { itemID = event.itemID, name = event.itemName, sales = 0, units = 0, net = 0, gross = 0, lastAt = 0 }
+				itemByKey[key] = item
+				items[#items + 1] = item
+			end
+			item.sales, item.units = item.sales + 1, item.units + units
+			item.net, item.gross = item.net + net, item.gross + gross
+			item.lastAt = math.max(item.lastAt, ts)
+			totals.sales, totals.units = totals.sales + 1, totals.units + units
+			totals.net, totals.gross = totals.net + net, totals.gross + gross
+			firstAt = math.min(firstAt, ts)
+			local day = math.floor(ts / 86400)
+			if not byDay[day] then
+				byDay[day] = { at = day * 86400 + 43200, value = 0 }
+				daily[#daily + 1] = byDay[day]
+			end
+			byDay[day].value = byDay[day].value + net
+			recent[#recent + 1] = event
+		end
+	end
+	local spanDays = days or math.max(1, (now - firstAt) / 86400)
+	for _, item in ipairs(items) do
+		item.avgUnit = item.units > 0 and item.gross / item.units or nil
+		item.perWeek = item.sales / spanDays * 7
+	end
+	table.sort(daily, function(a, b) return a.at < b.at end)
+	table.sort(recent, function(a, b) return (tonumber(a.ts) or 0) > (tonumber(b.ts) or 0) end)
+	return { totals = totals, items = items, daily = daily, recent = recent, spanDays = spanDays }
+end
+

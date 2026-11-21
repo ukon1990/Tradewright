@@ -1,0 +1,361 @@
+-- The /auctionhelper slash commands, status line, and Export() — the export run that slash, the Export tab, Overview and Scan all start.
+local _, AuctionHelper = ...
+
+-- Export scope -> what the progress window calls it. Profession slices fill in the profession at %s.
+local EXPORT_SCOPE_LABELS = {
+	account = "account", account_summary = "account summary",
+	professions = "professions (character)", professions_compact = "professions compact",
+	professions_recipes = "professions recipes (character)", professions_talents = "professions talents (character)",
+	inventory = "inventory (character)", inventory_compact = "inventory compact",
+	auction_snapshot = "auction snapshot", auction_history = "auction history", crafting_costs = "crafting costs",
+	spec_catalog = "spec catalog (Midnight bundled)", character_meta = "character meta",
+	profession = "profession (%s)", profession_recipes = "profession recipes (%s)", profession_talents = "profession talents (%s)",
+}
+
+local function exportScopeLabel(scope, identifier)
+	local label = EXPORT_SCOPE_LABELS[scope]
+	return label and string.format(label, tostring(identifier or "?")) or tostring(scope or "character")
+end
+
+function AuctionHelper:Export(scope, identifier)
+	local st = self:GetState()
+	if st.exportJsonBusy then
+		self:PrintMessage("Export already in progress.")
+		return
+	end
+
+	self:ShowExportProgress(exportScopeLabel(scope, identifier))
+
+	local dbg = self:IsDebugEnabled()
+	debugprofilestart()
+	local exportData, err = self:GetExportData(scope, identifier)
+	local msGather = debugprofilestop()
+	if not exportData then
+		self:HideExportProgress()
+		self:PrintMessage(err or "Nothing to export.")
+		return
+	end
+
+	local meta = exportData.meta or {}
+	st.exportJsonBusy = true
+	self:SetExportProgressPhase("Packing the export", true)
+	self:UpdateExportProgressSteps(1)
+	debugprofilestart()
+	local payload, encodeErr = self:BuildCompactExportPayload(exportData)
+	local msEncode = debugprofilestop()
+	self:HideExportProgress(payload and not encodeErr)
+	st.exportJsonBusy = false
+
+	if encodeErr or not payload then
+		self:PrintMessage("Package export failed: " .. tostring(encodeErr or "unknown error"))
+		if dbg then
+			self:PrintMessage(string.format("Export timing: gather=%.1fms pack=%.1fms (failed)", msGather, msEncode))
+		end
+		return
+	end
+
+	if #payload > self.MAX_EXPORT_BYTES then
+		self:PrintMessage(string.format("Compressed export is %d bytes. Use a smaller scope if needed.", #payload))
+	end
+
+	local savedOk = self:SaveExportToSavedVariables(payload, meta)
+	local unsavedHint
+	if not savedOk and #payload > self.MAX_SAVEDEXPORT_BYTES then
+		unsavedHint = string.format("Full compressed export was not saved (over %d byte SavedVariables limit). Try smaller scopes"
+			.. " such as professions_recipes, profession_talents, inventory, or a single profession.", self.MAX_SAVEDEXPORT_BYTES)
+	end
+
+	debugprofilestart()
+	self:ShowCopyBox(payload, { fullByteLength = #payload, savedToVariables = savedOk, unsavedHint = unsavedHint })
+	local msUi = debugprofilestop()
+
+	if dbg then
+		self:PrintMessage(string.format("Export timing: gather=%.1fms pack=%.1fms copyUI=%.1fms (package %d bytes)",
+			msGather, msEncode, msUi, #payload))
+	end
+
+	local formatLabel = (meta and meta.format) or (type(payload) == "string" and payload:sub(1, 7) == "AHLUA1:" and "AHLUA1") or self.EXPORT_FORMAT or "AHCBOR1"
+	self:PrintMessage(string.format("Exported %s package (%d bytes, %s).", tostring(meta.scope or scope or "character"), #payload, formatLabel))
+	if savedOk then
+		self:PrintMessage("Compressed export queued for SavedVariables — |cffffffff/reload|r or log out to write WTF\\Account\\…\\SavedVariables\\AuctionHelper.lua (AuctionHelperLastExport.payload).")
+	elseif #payload > self.MAX_SAVEDEXPORT_BYTES then
+		self:PrintMessage("SavedVariables copy skipped (compressed export still exceeds size limit).")
+	end
+end
+
+function AuctionHelper:PrintStatus()
+	self:InitDB()
+	local characterKey = self:GetCharacterKey()
+	local characterData = self.db.characters[characterKey]
+	local state = self:GetState()
+
+	if state.scanInProgress then
+		local currentName = state.currentProfession and state.currentProfession.professionName or "pending"
+		self:PrintMessage(string.format("Scan in progress. Current profession: %s. Remaining queue: %d.", currentName, #state.queue))
+		return
+	end
+
+	if not characterData then
+		self:PrintMessage("No stored scan for this character yet.")
+		return
+	end
+
+	self:PrintMessage(string.format("Last scan for %s finished at %s with %d professions.",
+		characterKey,
+		date("%Y-%m-%d %H:%M:%S", characterData.scanFinishedAt or 0),
+		self:TableCount(characterData.professions)))
+end
+
+local ON_OFF_ARGS = { on = true, ["1"] = true, ["true"] = true, off = false, ["0"] = false, ["false"] = false }
+
+-- `/auctionhelper settings <usageName> on|off` for one boolean setting.
+local function onOffSetting(key, default, usageName, label)
+	return function(self, arg)
+		local value = ON_OFF_ARGS[arg]
+		if value == nil then
+			self:PrintMessage(string.format("Usage: /auctionhelper settings %s on|off", usageName))
+			return
+		end
+		self:SetSetting(key, value)
+		self:PrintMessage(string.format("%s: %s.", label, self:GetSetting(key, default) and "on" or "off"))
+	end
+end
+
+local setSpecTreeCapture = onOffSetting("capture.captureSpecializationTree", true, "spectree", "Specialization tree capture")
+local setRecipeOutputCapture = onOffSetting("capture.includeRecipeOutputItemData", false, "recipeoutput", "Recipe output item API dump")
+
+local function setInventoryBatchSize(self, arg)
+	local size = tonumber(arg)
+	if not size or size < 0 then
+		self:PrintMessage("Usage: /auctionhelper settings invbatch <n>  (0 = one frame; 50–100 spreads GetItemCount work)")
+		return
+	end
+	self:SetSetting("capture.inventorySnapshotBatchSize", math.floor(size))
+	self:PrintMessage(string.format("Inventory snapshot batch size: %d.", self:GetSetting("capture.inventorySnapshotBatchSize", 0)))
+end
+
+-- `/auctionhelper settings <sub> <arg>` (sub lower-cased) -> handler(self, arg).
+local SETTINGS_SUBCOMMANDS = {
+	spectree = setSpecTreeCapture, specialization = setSpecTreeCapture,
+	recipeoutput = setRecipeOutputCapture, rawoutput = setRecipeOutputCapture,
+	invbatch = setInventoryBatchSize, inventorybatch = setInventoryBatchSize,
+}
+
+function AuctionHelper:HandleSettingsSlash(rest)
+	self:InitDB()
+	local sub, arg = rest:match("^(%S+)%s*(.*)$")
+	local handler = SETTINGS_SUBCOMMANDS[string.lower(sub or "")]
+	if handler then
+		handler(self, self:Trim(arg or ""))
+		return
+	end
+	self:PrintMessage("Usage: /auctionhelper settings spectree on|off | recipeoutput on|off | invbatch <n>")
+end
+
+-- The auction subcommand handlers return true when they ran; false falls through to the usage line.
+local function printAuctionStatus(self)
+	local enabled = self:GetSetting("auction.enabled", true)
+	local rows = self.BuildAuctionInventoryRows and self:BuildAuctionInventoryRows() or {}
+	self:PrintMessage(string.format("Auction module: %s. Inventory rows: %d.", enabled and "enabled" or "disabled", #rows))
+	return true
+end
+
+local function setAuctionModuleEnabled(self, enabled)
+	self:SetSetting("auction.enabled", enabled)
+	self:PrintMessage(enabled and "Auction module enabled." or "Auction module disabled.")
+	return true
+end
+
+local function refreshAuctionPrices(self, target)
+	target = string.lower(target)
+	if (target == "crafts" or target == "craft") and self.QueueCraftEconomyAuctionRefresh then
+		self:QueueCraftEconomyAuctionRefresh({})
+		self:PrintMessage("Queued craft refresh.")
+		return true
+	end
+	if self.BuildAuctionVisibleItemIDs and self.QueueVisibleAuctionRefresh then
+		self:QueueVisibleAuctionRefresh(self:BuildAuctionVisibleItemIDs())
+		self:PrintMessage("Queued visible auction refresh.")
+		return true
+	end
+	return false
+end
+
+local function runAuctionDump(self, mode)
+	if not self.StartAuctionDump then
+		return false
+	end
+	self:RunAuctionDumpSlash(mode)
+	return true
+end
+
+-- `/auctionhelper auction <sub> <arg>` (sub lower-cased) -> handler(self, arg).
+local AUCTION_SUBCOMMANDS = {
+	[""] = printAuctionStatus, status = printAuctionStatus,
+	enable = function(self) return setAuctionModuleEnabled(self, true) end,
+	disable = function(self) return setAuctionModuleEnabled(self, false) end,
+	refresh = refreshAuctionPrices,
+	dump = runAuctionDump,
+}
+
+function AuctionHelper:HandleAuctionSlash(rest)
+	local sub, arg = self:Trim(rest or ""):match("^(%S+)%s*(.*)$")
+	local handler = AUCTION_SUBCOMMANDS[string.lower(sub or "")]
+	if handler and handler(self, self:Trim(arg or "")) then
+		return
+	end
+	self:PrintMessage("Usage: /auctionhelper auction [status|enable|disable|refresh [crafts]|dump [visible|full]]")
+end
+
+--- The dump runs asynchronously and prints its own "complete" line when it ends. When it refuses
+--- to start, StartAuctionDump prints why; an empty dump finishes at once and is not "started".
+function AuctionHelper:RunAuctionDumpSlash(mode)
+	mode = mode ~= "" and mode or "visible"
+	local dump = self:StartAuctionDump(mode) and self:GetState().auctionDump
+	if dump and dump.running == true then
+		self:PrintMessage(string.format("Auction dump started (mode: %s).", mode))
+	end
+end
+
+local SLASH_HELP_LINES = {
+	"Commands: /auctionhelper (window) | /auctionhelper docs | /auctionhelper scan | /auctionhelper full | /auctionhelper status"
+		.. " | /auctionhelper debug [on|off|toggle] | /auctionhelper export … | /auctionhelper settings …"
+		.. " | /auctionhelper auction …  (short: /ah)",
+	"Export: character | account | account_summary | professions | professions_recipes | professions_talents"
+		.. " | professions_compact | inventory | inventory_compact | auction_snapshot | auction_history | crafting_costs"
+		.. " | spec_catalog | meta | profession <id|name> | profession_recipes <id|name> | profession_talents <id|name>",
+	"Settings: spectree on|off | recipeoutput on|off | invbatch <n> (0 = sync snapshot). Auction: status|enable|disable|refresh [crafts]|dump.",
+	"Export: AHLUA1 (plain Lua text) on Forever, AHCBOR1 (CBOR + Deflate + Base64) on retail. Full payload is written to AuctionHelperLastExport after /reload"
+		.. " — see timing lines when debug is on.",
+}
+
+local EXPORT_USAGE = "Usage: /auctionhelper export [character|account|account_summary|professions|professions_recipes"
+	.. "|professions_talents|professions_compact|inventory|inventory_compact|auction_snapshot|auction_history|crafting_costs"
+	.. "|spec_catalog|meta|profession <id|name>|profession_recipes <id|name>|profession_talents <id|name>]"
+
+-- `/auctionhelper export <arg>` (lower-cased) -> export scope.
+local EXPORT_SCOPE_BY_ARG = {
+	[""] = "character", character = "character",
+	account = "account",
+	account_summary = "account_summary", summary = "account_summary", aggregates = "account_summary", aggregate = "account_summary",
+	professions = "professions",
+	professions_recipes = "professions_recipes",
+	professions_talents = "professions_talents",
+	professions_compact = "professions_compact", profcompact = "professions_compact",
+	inventory = "inventory", items = "inventory",
+	inventory_compact = "inventory_compact", invcompact = "inventory_compact",
+	auction_snapshot = "auction_snapshot", auctionsnapshot = "auction_snapshot",
+	auction_history = "auction_history", auctionhistory = "auction_history",
+	crafting_costs = "crafting_costs", craftcosts = "crafting_costs",
+	spec_catalog = "spec_catalog", speccatalog = "spec_catalog", spec_catalog_midnight = "spec_catalog",
+	meta = "character_meta", charmeta = "character_meta", character_meta = "character_meta",
+}
+
+local function handleExportSlash(self, rest)
+	local scope = EXPORT_SCOPE_BY_ARG[string.lower(rest or "")]
+	if scope then
+		self:Export(scope)
+		return
+	end
+	local sliceScope, identifier = rest:match("^(%S+)%s+(.+)$")
+	sliceScope = string.lower(sliceScope or "")
+	if (sliceScope == "profession_recipes" or sliceScope == "profession_talents") and identifier then
+		self:Export(sliceScope, self:Trim(identifier))
+		return
+	end
+	if sliceScope == "profession" and identifier then
+		self:Export("profession", identifier)
+		return
+	end
+	self:PrintMessage(EXPORT_USAGE)
+end
+
+local function setDebugOn(self)
+	self:SetDebugEnabled(true)
+end
+
+local function setDebugOff(self)
+	self:SetDebugEnabled(false)
+end
+
+local function clearDebugLog(self)
+	self:ClearDebugLog()
+	self:PrintMessage("Persistent debug log cleared.")
+end
+
+local function printDebugLogPath(self)
+	self:PrintMessage("Persistent debug log is stored in AuctionHelperDB.settings.debug.lines and written to"
+		.. " WTF\\Account\\...\\SavedVariables\\AuctionHelper.lua on /reload or logout.")
+end
+
+local function printDebugStatus(self)
+	self:InitDB()
+	local count = self.db and self.db.debug and self.db.debug.lines and #self.db.debug.lines or 0
+	self:PrintMessage(string.format("Debug logging: %s. Persistent lines buffered: %d.", self:IsDebugEnabled() and "on" or "off", count))
+end
+
+local function toggleDebug(self)
+	self:SetDebugEnabled(not self:IsDebugEnabled())
+end
+
+-- `/auctionhelper debug <sub>` (lower-cased); anything else toggles.
+local DEBUG_SUBCOMMANDS = {
+	on = setDebugOn, ["1"] = setDebugOn, ["true"] = setDebugOn,
+	clear = clearDebugLog, reset = clearDebugLog,
+	where = printDebugLogPath, path = printDebugLogPath,
+	status = printDebugStatus,
+	off = setDebugOff, ["0"] = setDebugOff, ["false"] = setDebugOff,
+}
+
+local function handleDebugSlash(self, rest)
+	local handler = DEBUG_SUBCOMMANDS[string.lower(rest or "")] or toggleDebug
+	handler(self)
+	if self.ui and self.ui.mainFrame and self.ui.mainFrame:IsShown() then
+		self:RefreshDashboard(true)
+	end
+end
+
+local function printSlashHelp(self)
+	for _, line in ipairs(SLASH_HELP_LINES) do
+		self:PrintMessage(line)
+	end
+end
+
+local function openDocumentation(self)
+	self:OpenDocumentationTab()
+end
+
+local function handleAuctionSlash(self, rest)
+	self:HandleAuctionSlash(rest)
+end
+
+local function startFullCharacterDump(self)
+	self:StartFullCharacterDump()
+end
+
+-- `/auctionhelper <command> <rest>` (command lower-cased) -> handler(self, rest).
+local SLASH_COMMANDS = {
+	[""] = function(self) self:ToggleDashboard() end,
+	docs = openDocumentation, documentation = openDocumentation,
+	help = printSlashHelp,
+	settings = function(self, rest) self:HandleSettingsSlash(rest) end,
+	auction = handleAuctionSlash, ah = handleAuctionSlash,
+	debug = handleDebugSlash,
+	scan = function(self) self:StartScan() end,
+	full = startFullCharacterDump, dumpfull = startFullCharacterDump,
+	status = function(self) self:PrintStatus() end,
+	export = handleExportSlash,
+}
+
+function AuctionHelper:HandleSlash(input)
+	input = self:Trim(input)
+	local command, rest = input:match("^(%S+)%s*(.-)$")
+	command = string.lower(command or "")
+	rest = self:Trim(rest)
+	local handler = SLASH_COMMANDS[command]
+	if handler then
+		handler(self, rest)
+		return
+	end
+	self:PrintMessage("Unknown command. Use /auctionhelper help.")
+end

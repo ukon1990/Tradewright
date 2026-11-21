@@ -13,7 +13,7 @@ local function check(name, cond, detail)
 end
 
 local pe = {}
-local chunk, err = loadfile(root .. "/src/util/AuctionHelper_Util.lua")
+local chunk, err = loadfile(root .. "/src/util/AuctionHelper_ItemInfo.lua")
 assert(chunk, err)
 chunk("AuctionHelper", pe)
 

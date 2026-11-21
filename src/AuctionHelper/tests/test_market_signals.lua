@@ -474,6 +474,11 @@ stepsGlue("AuctionHelper_AuctionData", pe)
 local logic, logicErr = loadfile(root .. "/src/util/AuctionHelper_ForeverLogic.lua")
 assert(logic, logicErr)
 logic("AuctionHelper", pe)
+for _, file in ipairs({ "AuctionHelper_AuctionLogic.lua", "AuctionHelper_ForeverLogicAliases.lua" }) do
+	local moved, movedErr = loadfile(root .. "/src/util/" .. file)
+	assert(moved, movedErr)
+	moved("AuctionHelper", pe)
+end
 
 for back = 1, 6 do
 	auction.history.hourly["k"] = auction.history.hourly["k"] or {}

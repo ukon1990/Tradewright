@@ -16,6 +16,8 @@ local pe = {}
 for _, path in ipairs({
 	"/src/util/AuctionHelper_CoreHelpers.lua",
 	"/src/util/AuctionHelper_ForeverLogic.lua",
+	"/src/util/AuctionHelper_MarketLogic.lua",
+	"/src/util/AuctionHelper_ForeverLogicAliases.lua",
 	"/src/util/AuctionHelper_FilterLogic.lua",
 	"/../AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua",
 	"/../AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua",

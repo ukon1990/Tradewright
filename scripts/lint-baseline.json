@@ -1,6 +1,6 @@
 {
  "luacheck": {
-  "src/AuctionHelper/src/core/AuctionHelper_Data.lua": {
+  "src/AuctionHelper/src/core/AuctionHelper_SlashCommands.lua": {
    "W631": 1
   },
   "src/AuctionHelper/src/modules/AuctionHelper_Docs.lua": {
@@ -25,8 +25,6 @@
   }
  },
  "files": {
-  "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 2549,
-  "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": 778,
   "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5341,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1198,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1088,
@@ -39,6 +37,49 @@
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Widgets.lua": 901
  },
  "functions": {
+  "src/AuctionHelper/src/core/AuctionHelper_CopyBox.lua": {
+   "AuctionHelper:ComputeCopyBoxPagingSegmentsYielding": {
+    "lines": [
+     48
+    ]
+   },
+   "AuctionHelper:CopyBoxApplyCurrentPage": {
+    "lines": [
+     52
+    ],
+    "ccn": [
+     22
+    ]
+   },
+   "AuctionHelper:CreateCopyFrame": {
+    "lines": [
+     104
+    ]
+   },
+   "AuctionHelper:LayoutCopyFrameScroll": {
+    "ccn": [
+     12
+    ]
+   },
+   "AuctionHelper:RunComputeCopyBoxPagingAsync": {
+    "lines": [
+     42
+    ]
+   },
+   "AuctionHelper:SaveExportToSavedVariables": {
+    "ccn": [
+     20
+    ]
+   },
+   "AuctionHelper:ShowCopyBox": {
+    "lines": [
+     100
+    ],
+    "ccn": [
+     15
+    ]
+   }
+  },
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": {
    "AuctionHelper:BuildAggregate": {
     "lines": [
@@ -48,6 +89,48 @@
      32
     ]
    },
+   "AuctionHelper:BuildMaxQualityRequiredReagentInfo": {
+    "ccn": [
+     15
+    ]
+   },
+   "AuctionHelper:CollectRecipeCategories": {
+    "lines": [
+     45
+    ]
+   },
+   "AuctionHelper:DescribeOperationInfo": {
+    "ccn": [
+     11
+    ]
+   },
+   "AuctionHelper:DescribeRecipeOutput": {
+    "ccn": [
+     20
+    ]
+   },
+   "AuctionHelper:PatchAggregateInventorySummaryForCharacter": {
+    "ccn": [
+     12
+    ]
+   },
+   "AuctionHelper:RestoreFilters": {
+    "ccn": [
+     14
+    ]
+   },
+   "AuctionHelper:SnapshotFilters": {
+    "ccn": [
+     11
+    ]
+   },
+   "collectCategoryNode": {
+    "ccn": [
+     11
+    ]
+   }
+  },
+  "src/AuctionHelper/src/core/AuctionHelper_ExportBuild.lua": {
    "AuctionHelper:BuildCompactAuctionHistoryExport": {
     "ccn": [
      22
@@ -73,11 +156,18 @@
      24
     ]
    },
-   "AuctionHelper:BuildMaxQualityRequiredReagentInfo": {
+   "AuctionHelper:GetCompactCharacterHeader": {
     "ccn": [
-     15
+     23
     ]
    },
+   "AuctionHelper:ProfessionExportSliceProfession": {
+    "ccn": [
+     13
+    ]
+   }
+  },
+  "src/AuctionHelper/src/core/AuctionHelper_ProfessionScan.lua": {
    "AuctionHelper:CollectClassicRecipeReagentSlots": {
     "lines": [
      96
@@ -94,37 +184,9 @@
      17
     ]
    },
-   "AuctionHelper:CollectRecipeCategories": {
-    "lines": [
-     45
-    ]
-   },
    "AuctionHelper:CollectRecipeData": {
     "ccn": [
      16
-    ]
-   },
-   "AuctionHelper:CollectSpecializationTreesForProfession": {
-    "lines": [
-     43
-    ]
-   },
-   "AuctionHelper:ComputeCopyBoxPagingSegmentsYielding": {
-    "lines": [
-     48
-    ]
-   },
-   "AuctionHelper:CopyBoxApplyCurrentPage": {
-    "lines": [
-     52
-    ],
-    "ccn": [
-     22
-    ]
-   },
-   "AuctionHelper:CreateCopyFrame": {
-    "lines": [
-     104
     ]
    },
    "AuctionHelper:CreateProfessionDataShell": {
@@ -135,22 +197,16 @@
      14
     ]
    },
-   "AuctionHelper:DescribeOperationInfo": {
+   "pushSlot": {
     "ccn": [
-     11
+     17
     ]
-   },
-   "AuctionHelper:DescribeRecipeOutput": {
-    "ccn": [
-     20
-    ]
-   },
-   "AuctionHelper:Export": {
+   }
+  },
+  "src/AuctionHelper/src/core/AuctionHelper_ProfessionSpecTree.lua": {
+   "AuctionHelper:CollectSpecializationTreesForProfession": {
     "lines": [
-     65
-    ],
-    "ccn": [
-     24
+     43
     ]
    },
    "AuctionHelper:FinalizeSpecializationTabGraph": {
@@ -161,29 +217,9 @@
      18
     ]
    },
-   "AuctionHelper:GetCompactCharacterHeader": {
-    "ccn": [
-     23
-    ]
-   },
-   "AuctionHelper:LayoutCopyFrameScroll": {
-    "ccn": [
-     12
-    ]
-   },
-   "AuctionHelper:PatchAggregateInventorySummaryForCharacter": {
-    "ccn": [
-     12
-    ]
-   },
    "AuctionHelper:PickPrimarySpecializationSkillLineID": {
     "ccn": [
      20
-    ]
-   },
-   "AuctionHelper:ProfessionExportSliceProfession": {
-    "ccn": [
-     13
     ]
    },
    "AuctionHelper:ResolveProfessionSpecSkillLineIDs": {
@@ -193,43 +229,15 @@
     "ccn": [
      18
     ]
-   },
-   "AuctionHelper:RestoreFilters": {
-    "ccn": [
-     14
-    ]
-   },
-   "AuctionHelper:RunComputeCopyBoxPagingAsync": {
+   }
+  },
+  "src/AuctionHelper/src/core/AuctionHelper_SlashCommands.lua": {
+   "AuctionHelper:Export": {
     "lines": [
-     42
-    ]
-   },
-   "AuctionHelper:SaveExportToSavedVariables": {
-    "ccn": [
-     20
-    ]
-   },
-   "AuctionHelper:ShowCopyBox": {
-    "lines": [
-     100
+     65
     ],
     "ccn": [
-     15
-    ]
-   },
-   "AuctionHelper:SnapshotFilters": {
-    "ccn": [
-     11
-    ]
-   },
-   "collectCategoryNode": {
-    "ccn": [
-     11
-    ]
-   },
-   "pushSlot": {
-    "ccn": [
-     17
+     24
     ]
    }
   },
@@ -255,45 +263,19 @@
     ]
    }
   },
+  "src/AuctionHelper/src/util/AuctionHelper_AuctionLogic.lua": {
+   "AuctionLogic.AggregateClassicAuctionRow": {
+    "ccn": [
+     18
+    ]
+   },
+   "AuctionLogic.SummarizeOwnedAuctions": {
+    "ccn": [
+     15
+    ]
+   }
+  },
   "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": {
-   "ForeverLogic.AggregateClassicAuctionRow": {
-    "ccn": [
-     18
-    ]
-   },
-   "ForeverLogic.BuildMailPlan": {
-    "ccn": [
-     18
-    ]
-   },
-   "ForeverLogic.BuildMarketBrowserRows": {
-    "lines": [
-     49
-    ],
-    "ccn": [
-     14
-    ]
-   },
-   "ForeverLogic.BuildMarketHistorySeries": {
-    "ccn": [
-     16
-    ]
-   },
-   "ForeverLogic.BuildReturnToSellerPlan": {
-    "ccn": [
-     11
-    ]
-   },
-   "ForeverLogic.ClassifyMarketItem": {
-    "ccn": [
-     23
-    ]
-   },
-   "ForeverLogic.NormalizeMarketSnapshotFields": {
-    "ccn": [
-     14
-    ]
-   },
    "ForeverLogic.RepairAuctionStorageKeys": {
     "lines": [
      49
@@ -307,35 +289,94 @@
      13
     ]
    },
-   "ForeverLogic.SummarizeHourlyHistory": {
-    "ccn": [
-     29
-    ]
-   },
-   "ForeverLogic.SummarizeOwnedAuctions": {
-    "ccn": [
-     15
-    ]
-   },
-   "ForeverLogic.SummarizeSales": {
-    "lines": [
-     42
-    ],
-    "ccn": [
-     18
-    ]
-   },
-   "compareMarketRows": {
-    "ccn": [
-     13
-    ]
-   },
    "encodeLuaValue": {
     "lines": [
      59
     ],
     "ccn": [
      23
+    ]
+   }
+  },
+  "src/AuctionHelper/src/util/AuctionHelper_IncomeLogic.lua": {
+   "IncomeLogic.SummarizeSales": {
+    "lines": [
+     42
+    ],
+    "ccn": [
+     18
+    ]
+   }
+  },
+  "src/AuctionHelper/src/util/AuctionHelper_ItemInfo.lua": {
+   "AuctionHelper:ItemDescriptorFromID": {
+    "lines": [
+     42
+    ],
+    "ccn": [
+     14
+    ]
+   }
+  },
+  "src/AuctionHelper/src/util/AuctionHelper_JsonCodec.lua": {
+   "AuctionHelper:RunEncodeJsonAsync": {
+    "lines": [
+     53
+    ]
+   },
+   "encodeJsonCore": {
+    "lines": [
+     48
+    ],
+    "ccn": [
+     16
+    ]
+   }
+  },
+  "src/AuctionHelper/src/util/AuctionHelper_MailLogic.lua": {
+   "MailLogic.BuildMailPlan": {
+    "ccn": [
+     18
+    ]
+   },
+   "MailLogic.BuildReturnToSellerPlan": {
+    "ccn": [
+     11
+    ]
+   }
+  },
+  "src/AuctionHelper/src/util/AuctionHelper_MarketLogic.lua": {
+   "MarketLogic.BuildMarketBrowserRows": {
+    "lines": [
+     49
+    ],
+    "ccn": [
+     14
+    ]
+   },
+   "MarketLogic.BuildMarketHistorySeries": {
+    "ccn": [
+     16
+    ]
+   },
+   "MarketLogic.ClassifyMarketItem": {
+    "ccn": [
+     23
+    ]
+   },
+   "MarketLogic.NormalizeMarketSnapshotFields": {
+    "ccn": [
+     14
+    ]
+   },
+   "MarketLogic.SummarizeHourlyHistory": {
+    "ccn": [
+     29
+    ]
+   },
+   "compareMarketRows": {
+    "ccn": [
+     13
     ]
    },
    "historyBucketAvg": {
@@ -350,33 +391,12 @@
      11
     ]
    },
-   "AuctionHelper:ItemDescriptorFromID": {
-    "lines": [
-     42
-    ],
-    "ccn": [
-     14
-    ]
-   },
-   "AuctionHelper:RunEncodeJsonAsync": {
-    "lines": [
-     53
-    ]
-   },
    "AuctionHelper:SanitizeValue": {
     "lines": [
      44
     ],
     "ccn": [
      19
-    ]
-   },
-   "encodeJsonCore": {
-    "lines": [
-     48
-    ],
-    "ccn": [
-     16
     ]
    }
   },

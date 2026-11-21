@@ -31,9 +31,18 @@ local function load(path)
 end
 load("AuctionHelper/src/core/AuctionHelper.lua")
 load("AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua")
+load("AuctionHelper/src/util/AuctionHelper_MarketLogic.lua")
+load("AuctionHelper/src/util/AuctionHelper_ForeverLogicAliases.lua")
 load("AuctionHelper/src/util/AuctionHelper_CoreHelpers.lua")
 load("AuctionHelper/src/util/AuctionHelper_Util.lua")
+load("AuctionHelper/src/util/AuctionHelper_JsonCodec.lua")
+load("AuctionHelper/src/util/AuctionHelper_ItemInfo.lua")
 load("AuctionHelper/src/core/AuctionHelper_Data.lua")
+load("AuctionHelper/src/core/AuctionHelper_ProfessionSpecTree.lua")
+load("AuctionHelper/src/core/AuctionHelper_ProfessionScan.lua")
+load("AuctionHelper/src/core/AuctionHelper_ExportBuild.lua")
+load("AuctionHelper/src/core/AuctionHelper_CopyBox.lua")
+load("AuctionHelper/src/core/AuctionHelper_SlashCommands.lua")
 load("AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua")
 local FL = pe.ForeverLogic
 
