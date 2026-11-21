@@ -1,4 +1,4 @@
-local ProfessionExporter = select(2, ...)
+local AuctionHelper = select(2, ...)
 
 -- Help for the Opportunities lists (F58): "How this list works" in the side pane with no row selected,
 -- and an empty list's funnel, which names the rule that left nothing and the setting or step that fixes it.
@@ -108,13 +108,13 @@ local function stepLine(pe, info, step, insights)
 end
 
 --- Text in the theme's warning colour.
-function ProfessionExporter:WarningText(text)
+function AuctionHelper:WarningText(text)
 	local color = self:GetTheme().warning
 	return string.format("|cff%02x%02x%02x%s|r", math.floor(color.r * 255), math.floor(color.g * 255), math.floor(color.b * 255), text)
 end
 
 --- Title and text for the side pane of a list with no row selected.
-function ProfessionExporter:GetOpportunityHelp(view)
+function AuctionHelper:GetOpportunityHelp(view)
 	local help = HELP[view.id]
 	if not help then
 		return "Select a row", "Click a row to see the sums behind it and what could go wrong."
@@ -124,7 +124,7 @@ end
 
 --- Title and hint for an empty list: each step of the funnel down to the first that kept nothing, that
 --- step in the warning colour, then how to get past it. Without a funnel the view's fixed text.
-function ProfessionExporter:GetOpportunityEmptyText(view, funnel, insights)
+function AuctionHelper:GetOpportunityEmptyText(view, funnel, insights)
 	local help = HELP[view.id]
 	local stuck = self.FlipLogic.FirstEmptyStep(funnel)
 	if not (help and stuck) then

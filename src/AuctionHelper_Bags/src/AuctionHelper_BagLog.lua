@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Log view of the bag window: the item log of the inventory module (AuctionHelper_ItemLog.lua) as
 -- rows, newest first: count, item, why and when. Read-only; the search box filters it. A long log
@@ -17,7 +17,7 @@ local shownFor -- the tab and search text the limit belongs to
 local moreButton
 
 local function showTooltip(row)
-	local pe, entry = ProfessionExporter, row.entry
+	local pe, entry = AuctionHelper, row.entry
 	pe:ShowItemRowTooltip(row, entry.id, {
 		{ entry.n > 0 and "Entered the bags" or "Left the bags", pe:FormatNumberGrouped(math.abs(entry.n)) },
 		{ "How", pe.ItemLogLogic.Describe(entry) },
@@ -76,7 +76,7 @@ local function hideRows()
 end
 
 --- Leave the log view: hide its rows and go back to the first page.
-function ProfessionExporter:HideBagLog()
+function AuctionHelper:HideBagLog()
 	hideRows()
 	shownLimit = PAGE
 end
@@ -99,7 +99,7 @@ end
 
 --- Draw the log of the character of `view.tab` into the window's content, filtered by the search
 --- text. Returns the height used and the number of entries that fit the search.
-function ProfessionExporter:DrawBagLog(f, view)
+function AuctionHelper:DrawBagLog(f, view)
 	local pe = self
 	local entries = self.ItemLogLogic.Visible(self:GetItemLog(view.tab), function(itemID)
 		return pe:DescribeBagItem(itemID, { count = 1 }).name

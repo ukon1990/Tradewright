@@ -1,8 +1,8 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 --- Pure helpers for choosing the cheapest way to get a crafting material (F60). No WoW API.
 local MaterialLogic = {}
-ProfessionExporter.MaterialLogic = MaterialLogic
+AuctionHelper.MaterialLogic = MaterialLogic
 
 --- The cheapest of `candidates = { { cost, source }, … }`: `cost, source`. Entries without a positive
 --- cost are skipped; on a tie the earlier entry wins, so list the preferred source first.

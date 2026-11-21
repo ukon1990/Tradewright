@@ -1,13 +1,13 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
-ProfessionExporter.SPEC_CATALOG_VERSION = 1
-ProfessionExporter.EXPANSION_ID_MIDNIGHT = 11
-ProfessionExporter.EXPANSION_ID_TWW = 10
-ProfessionExporter.EXPANSION_ID_DRAGONFLIGHT = 9
+AuctionHelper.SPEC_CATALOG_VERSION = 1
+AuctionHelper.EXPANSION_ID_MIDNIGHT = 11
+AuctionHelper.EXPANSION_ID_TWW = 10
+AuctionHelper.EXPANSION_ID_DRAGONFLIGHT = 9
 
 --- Base profession skill line -> { expansionID, profession } for each expansion tier line.
 --- Index matches CraftSim/wowpedia TradeSkillLineID expansion columns (9=TWW, 11=Midnight).
-ProfessionExporter.TRADE_SKILL_LINE_BY_PROFESSION = {
+AuctionHelper.TRADE_SKILL_LINE_BY_PROFESSION = {
 	[Enum.Profession.Blacksmithing] = { BASE = 164, [9] = 2822, [10] = 2872, [11] = 2907 },
 	[Enum.Profession.Leatherworking] = { BASE = 165, [9] = 2830, [10] = 2880, [11] = 2915 },
 	[Enum.Profession.Alchemy] = { BASE = 171, [9] = 2823, [10] = 2871, [11] = 2906 },
@@ -23,14 +23,14 @@ ProfessionExporter.TRADE_SKILL_LINE_BY_PROFESSION = {
 	[Enum.Profession.Inscription] = { BASE = 773, [9] = 2828, [10] = 2878, [11] = 2913 },
 }
 
-function ProfessionExporter:InitSpecCatalogStore()
+function AuctionHelper:InitSpecCatalogStore()
 	if type(self._specCatalog) == "table" then
 		return
 	end
 	self._specCatalog = {}
 end
 
-function ProfessionExporter:RegisterSpecCatalog(expansionID, profession, data)
+function AuctionHelper:RegisterSpecCatalog(expansionID, profession, data)
 	self:InitSpecCatalogStore()
 	expansionID = tonumber(expansionID)
 	profession = tonumber(profession)
@@ -46,7 +46,7 @@ function ProfessionExporter:RegisterSpecCatalog(expansionID, profession, data)
 	}
 end
 
-function ProfessionExporter:GetSpecCatalog(expansionID, profession)
+function AuctionHelper:GetSpecCatalog(expansionID, profession)
 	self:InitSpecCatalogStore()
 	expansionID = tonumber(expansionID)
 	profession = tonumber(profession)
@@ -54,7 +54,7 @@ function ProfessionExporter:GetSpecCatalog(expansionID, profession)
 	return byExp and byExp[profession] or nil
 end
 
-function ProfessionExporter:ResolveSpecCatalogForTierSkillLine(tierSkillLineID)
+function AuctionHelper:ResolveSpecCatalogForTierSkillLine(tierSkillLineID)
 	tierSkillLineID = tonumber(tierSkillLineID)
 	if not tierSkillLineID then
 		return nil
@@ -69,7 +69,7 @@ function ProfessionExporter:ResolveSpecCatalogForTierSkillLine(tierSkillLineID)
 	return nil
 end
 
-function ProfessionExporter:ResolveSpecCatalogForBaseProfession(baseSkillLineID, preferredTierSkillLineID)
+function AuctionHelper:ResolveSpecCatalogForBaseProfession(baseSkillLineID, preferredTierSkillLineID)
 	if preferredTierSkillLineID then
 		local expansionID, profession, catalog = self:ResolveSpecCatalogForTierSkillLine(preferredTierSkillLineID)
 		if catalog then
@@ -102,7 +102,7 @@ local STAT_KEYS = {
 	"craftingspeed",
 }
 
-function ProfessionExporter:NewSpecStatTotals()
+function AuctionHelper:NewSpecStatTotals()
 	return {
 		skill = 0,
 		multicraft = 0,
@@ -115,7 +115,7 @@ function ProfessionExporter:NewSpecStatTotals()
 	}
 end
 
-function ProfessionExporter:AddSpecStatTotals(target, source)
+function AuctionHelper:AddSpecStatTotals(target, source)
 	if type(target) ~= "table" or type(source) ~= "table" then
 		return target
 	end
@@ -130,7 +130,7 @@ function ProfessionExporter:AddSpecStatTotals(target, source)
 	return target
 end
 
-function ProfessionExporter:ParseCatalogPerkStats(stats)
+function AuctionHelper:ParseCatalogPerkStats(stats)
 	local out = self:NewSpecStatTotals()
 	if type(stats) ~= "table" then
 		return out
@@ -152,7 +152,7 @@ function ProfessionExporter:ParseCatalogPerkStats(stats)
 	return out
 end
 
-function ProfessionExporter:GetSpecNodeRank(nodeRanks, nodeID)
+function AuctionHelper:GetSpecNodeRank(nodeRanks, nodeID)
 	if type(nodeRanks) ~= "table" or not nodeID then
 		return 0
 	end
@@ -163,7 +163,7 @@ function ProfessionExporter:GetSpecNodeRank(nodeRanks, nodeID)
 	return math.max(0, tonumber(rank) or 0)
 end
 
-function ProfessionExporter:GetSpecUnlockRankForPerk(perkID, _configID)
+function AuctionHelper:GetSpecUnlockRankForPerk(perkID, _configID)
 	perkID = tonumber(perkID)
 	if not perkID or not C_ProfSpecs or not C_ProfSpecs.GetUnlockRankForPerk then
 		return 0
@@ -171,7 +171,7 @@ function ProfessionExporter:GetSpecUnlockRankForPerk(perkID, _configID)
 	return tonumber(C_ProfSpecs.GetUnlockRankForPerk(perkID)) or 0
 end
 
-function ProfessionExporter:BuildSpecNodeRanksFromSpecializationTree(specTree)
+function AuctionHelper:BuildSpecNodeRanksFromSpecializationTree(specTree)
 	local byTier = {}
 	if type(specTree) ~= "table" then
 		return byTier
@@ -228,7 +228,7 @@ function ProfessionExporter:BuildSpecNodeRanksFromSpecializationTree(specTree)
 	return byTier
 end
 
-function ProfessionExporter:ResolveSpecCatalogForRecipe(recipeID, baseSkillLineID)
+function AuctionHelper:ResolveSpecCatalogForRecipe(recipeID, baseSkillLineID)
 	recipeID = tonumber(recipeID)
 	baseSkillLineID = tonumber(baseSkillLineID)
 	if not recipeID or not baseSkillLineID then
@@ -254,7 +254,7 @@ function ProfessionExporter:ResolveSpecCatalogForRecipe(recipeID, baseSkillLineI
 	return nil
 end
 
-function ProfessionExporter:BuildSpecNodeGroupsForRecipe(recipeID, catalog)
+function AuctionHelper:BuildSpecNodeGroupsForRecipe(recipeID, catalog)
 	local groups = {}
 	if not catalog or type(catalog.recipeMapping) ~= "table" or type(catalog.nodeData) ~= "table" then
 		return groups
@@ -277,7 +277,7 @@ function ProfessionExporter:BuildSpecNodeGroupsForRecipe(recipeID, catalog)
 	return groups
 end
 
-function ProfessionExporter:ComputeSpecStatsForBaseNode(baseNodeID, perkIDs, nodeRanks, catalog, configID)
+function AuctionHelper:ComputeSpecStatsForBaseNode(baseNodeID, perkIDs, nodeRanks, catalog, configID)
 	local totals = self:NewSpecStatTotals()
 	local nodeData = catalog and catalog.nodeData or {}
 	baseNodeID = tonumber(baseNodeID)
@@ -326,7 +326,7 @@ function ProfessionExporter:ComputeSpecStatsForBaseNode(baseNodeID, perkIDs, nod
 	return totals, detail
 end
 
-function ProfessionExporter:ComputeSpecBreakdownForRecipe(recipeID, catalog, nodeRanks, configID)
+function AuctionHelper:ComputeSpecBreakdownForRecipe(recipeID, catalog, nodeRanks, configID)
 	if not catalog then
 		return nil
 	end
@@ -357,7 +357,7 @@ function ProfessionExporter:ComputeSpecBreakdownForRecipe(recipeID, catalog, nod
 	return result
 end
 
-function ProfessionExporter:AttachSpecCatalogMetadata(professionData, baseSkillLineID)
+function AuctionHelper:AttachSpecCatalogMetadata(professionData, baseSkillLineID)
 	if type(professionData) ~= "table" then
 		return professionData
 	end
@@ -453,7 +453,7 @@ function ProfessionExporter:AttachSpecCatalogMetadata(professionData, baseSkillL
 	return professionData
 end
 
-function ProfessionExporter:BuildSpecCatalogExport(expansionID)
+function AuctionHelper:BuildSpecCatalogExport(expansionID)
 	self:InitSpecCatalogStore()
 	expansionID = tonumber(expansionID) or self.EXPANSION_ID_MIDNIGHT
 	local byProf = self._specCatalog[expansionID]

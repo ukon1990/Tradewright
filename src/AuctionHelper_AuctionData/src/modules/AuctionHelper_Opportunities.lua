@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Flip rows for the Opportunities tab (F50), built from the market insights of the last scans.
 
@@ -10,7 +10,7 @@ end
 
 --- Usual price for the Opportunities lists: the full one (5+ days) or, with early rows allowed in Settings,
 --- one from 2 to 4 days. Returns the usual price, or nil, and whether it is early (F56).
-function ProfessionExporter:GetOpportunityUsual(storageKey)
+function AuctionHelper:GetOpportunityUsual(storageKey)
 	local usual = self:GetUsualPrice(storageKey)
 	if usual or not (allowEarly(self) and self.GetEarlyUsualPrice) then
 		return usual, false
@@ -32,7 +32,7 @@ end
 
 --- How many items of the last scan have enough days of prices (`FlipLogic.HistoryCoverage`), plus
 --- `withSells`: those with a full usual price that also have a sells-a-day estimate. Cached per scan.
-function ProfessionExporter:GetHistoryCoverage(insights)
+function AuctionHelper:GetHistoryCoverage(insights)
 	local state = self:GetState()
 	if state.historyCoverageAt ~= insights.builtAt then
 		local dayCounts, withSells = {}, 0
@@ -49,7 +49,7 @@ function ProfessionExporter:GetHistoryCoverage(insights)
 end
 
 --- Thresholds for flips, from Settings. `minProfit` is in copper.
-function ProfessionExporter:GetFlipOptions()
+function AuctionHelper:GetFlipOptions()
 	return {
 		minDiscount = tonumber(self:GetSetting("opportunities.minDiscount", 0.25)) or 0.25,
 		minProfit = tonumber(self:GetSetting("opportunities.minProfitCopper", 10000)) or 10000,
@@ -91,7 +91,7 @@ end
 --- Flip rows, most profit first, the insights and the funnel (`FlipLogic.FlipFunnel`), or nil while the
 --- market insights are still being built (`onReady` then fires once they are). Cached until the insights
 --- or the thresholds change.
-function ProfessionExporter:GetFlipRows(onReady)
+function AuctionHelper:GetFlipRows(onReady)
 	local insights = self:GetMarketInsights(onReady)
 	if not insights then
 		return nil
@@ -132,7 +132,7 @@ end
 --- Items listed under their vendor price, most gain first, or nil while the market insights are being
 --- built. Vendor prices load on demand, so the list is rebuilt at most every 30 seconds to pick up
 --- items whose price was not known yet.
-function ProfessionExporter:GetVendorRows(onReady)
+function AuctionHelper:GetVendorRows(onReady)
 	local insights = self:GetMarketInsights(onReady)
 	if not insights or not self:GetSetting("opportunities.showVendor", true) then
 		return insights and {} or nil, insights, TURNED_OFF
@@ -153,7 +153,7 @@ function ProfessionExporter:GetVendorRows(onReady)
 end
 
 --- Thresholds for price gaps, from Settings. `maxCost` is in copper.
-function ProfessionExporter:GetGapOptions()
+function AuctionHelper:GetGapOptions()
 	return {
 		minGapPct = 0.25,
 		maxCost = (tonumber(self:GetSetting("opportunities.gapMaxCostGold", 100)) or 100) * 10000,
@@ -185,7 +185,7 @@ end
 
 --- Price gaps, most gain first, or nil while the market insights are being built. Cached until the
 --- insights or the thresholds change.
-function ProfessionExporter:GetGapRows(onReady)
+function AuctionHelper:GetGapRows(onReady)
 	local insights = self:GetMarketInsights(onReady)
 	if not insights or not self:GetSetting("opportunities.showGaps", true) then
 		return insights and {} or nil, insights, TURNED_OFF

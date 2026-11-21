@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
 -- Farm window (E09 F70): a small movable window that shows the run in progress. It appears when a run
 -- starts and hides when the run stops; `/ahfarm` toggles it.
@@ -115,7 +115,7 @@ local function factRows(pe, run, summary)
 end
 
 --- Redraw the farm window from the run in progress. Hidden windows are left alone.
-function ProfessionExporter:RefreshFarmWindow()
+function AuctionHelper:RefreshFarmWindow()
 	local f = self.ui and self.ui.farmWindow
 	local run = self:GetCurrentFarmRun()
 	if not f or not f:IsShown() then
@@ -141,14 +141,14 @@ function ProfessionExporter:RefreshFarmWindow()
 end
 
 --- Show or hide the farm window.
-function ProfessionExporter:ToggleFarmWindow()
+function AuctionHelper:ToggleFarmWindow()
 	local f = ensureWindow(self)
 	f:SetShown(not f:IsShown())
 	self:RefreshFarmWindow()
 end
 
 --- Show the farm window (a run just started).
-function ProfessionExporter:ShowFarmWindow()
+function AuctionHelper:ShowFarmWindow()
 	ensureWindow(self):Show()
 	self:RefreshFarmWindow()
 end

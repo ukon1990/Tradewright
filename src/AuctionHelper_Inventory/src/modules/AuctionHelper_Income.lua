@@ -1,11 +1,11 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Gold changes by source (E10 F80). Every change of the character's gold is filed under vendor,
 -- quest, loot, auction, mail, trade or other, from the windows that were open and the events
 -- around it, and added to per-day totals in `ledger.income[characterKey][day][source]`.
 -- This only listens; it never acts for the player.
 
-local IncomeLogic = ProfessionExporter.IncomeLogic
+local IncomeLogic = AuctionHelper.IncomeLogic
 local VENDOR_LOOK_BACK = 50
 
 local context = { open = {}, closedAt = {}, at = {} }
@@ -36,7 +36,7 @@ end
 -- Crafted and looted amounts per item and day, account-wide (items are mailed between
 -- characters before they are sold): { [itemID] = { [day] = { craft = n, loot = n } } }.
 local function acquiredStore()
-	local L = ProfessionExporter:InitLedger()
+	local L = AuctionHelper:InitLedger()
 	if L then
 		L.acquired = L.acquired or {}
 		return L.acquired
@@ -53,7 +53,7 @@ end
 
 local function pruneOldDays()
 	local firstDay = IncomeLogic.DayOf(time()) - IncomeLogic.KEEP_DAYS
-	local L = ProfessionExporter:InitLedger()
+	local L = AuctionHelper:InitLedger()
 	if L then
 		IncomeLogic.PruneAllDays(L.income or {}, firstDay)
 		IncomeLogic.PruneAllDays(L.acquired or {}, firstDay)
@@ -61,12 +61,12 @@ local function pruneOldDays()
 end
 
 local function incomeDays()
-	local L = ProfessionExporter:InitLedger()
+	local L = AuctionHelper:InitLedger()
 	if not L then
 		return nil
 	end
 	L.income = L.income or {}
-	local key = ProfessionExporter:GetCharacterKey()
+	local key = AuctionHelper:GetCharacterKey()
 	L.income[key] = L.income[key] or {}
 	return L.income[key]
 end
@@ -120,12 +120,12 @@ local function onBagItemUsed(bag, slot)
 		return
 	end
 	local entry = {
-		kind = "vendor", itemID = itemID, characterKey = ProfessionExporter:GetCharacterKey(), ts = time(),
+		kind = "vendor", itemID = itemID, characterKey = AuctionHelper:GetCharacterKey(), ts = time(),
 		quantity = count, unitCopper = price, totalCopper = price * count, source = "merchant",
 	}
-	local L = ProfessionExporter:InitLedger()
+	local L = AuctionHelper:InitLedger()
 	if L and not IncomeLogic.MergeIntoDayEvent(L.events, entry, VENDOR_LOOK_BACK) then
-		ProfessionExporter:LedgerAppendEvent(entry)
+		AuctionHelper:LedgerAppendEvent(entry)
 	end
 end
 
@@ -178,14 +178,14 @@ if hooksecurefunc then
 end
 
 --- Every character's per-day totals: { [characterKey] = { [day] = { [source] = { gain, spend } } } }.
-function ProfessionExporter:GetIncomeDays()
+function AuctionHelper:GetIncomeDays()
 	local L = self:InitLedger()
 	return L and L.income or {}
 end
 
 --- Where each auction sale's units came from: { [sale event] = { origin = units } } (see
 --- IncomeLogic.LabelSaleOrigins).
-function ProfessionExporter:GetSaleOrigins()
+function AuctionHelper:GetSaleOrigins()
 	local L = self:InitLedger()
 	return IncomeLogic.LabelSaleOrigins(self:GetLedgerEvents(), L and L.acquired or {})
 end

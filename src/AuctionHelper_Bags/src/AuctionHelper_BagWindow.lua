@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Bag window (E11 F92, F94; E12 F101): header, character tabs, search, category headings with item
 -- slots (or the item log), an optional bag row and a footer. The logged-in character's bags are live, and with the
@@ -156,7 +156,7 @@ end
 
 -- Tooltip of the gold in the footer: every character's gold, richest first, and the total.
 local function showGoldTooltip(owner)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local theme = pe:GetTheme()
 	local muted, text, gold = theme.textMuted, theme.textPrimary, theme.gold
 	local rows, total = pe.BagLogic.GoldByCharacter(pe:GetBagHoldings())
@@ -549,7 +549,7 @@ local function drawLog(pe, f, view)
 end
 
 --- Redraw the bag window from the bags or the saved lists. A hidden window is left alone.
-function ProfessionExporter:RefreshBagWindow()
+function AuctionHelper:RefreshBagWindow()
 	local f = self.ui.bagWindow
 	if not f or not f:IsShown() then
 		return
@@ -575,7 +575,7 @@ function ProfessionExporter:RefreshBagWindow()
 end
 
 --- Redraw on the next frame, once, however many events asked for it.
-function ProfessionExporter:RequestBagWindowRefresh()
+function AuctionHelper:RequestBagWindowRefresh()
 	local f = self.ui.bagWindow
 	if refreshPending or not f or not f:IsShown() then
 		return
@@ -583,12 +583,12 @@ function ProfessionExporter:RequestBagWindowRefresh()
 	refreshPending = true
 	C_Timer.After(0, function()
 		refreshPending = false
-		ProfessionExporter:RefreshBagWindow()
+		AuctionHelper:RefreshBagWindow()
 	end)
 end
 
 --- Show or hide the window. Opening always starts on the logged-in character's bags.
-function ProfessionExporter:SetBagWindowShown(shown)
+function AuctionHelper:SetBagWindowShown(shown)
 	local f = self.ui.bagWindow
 	if not shown then
 		if f then
@@ -606,7 +606,7 @@ function ProfessionExporter:SetBagWindowShown(shown)
 end
 
 --- The bank was opened: show the window on the logged-in character's Bank view.
-function ProfessionExporter:ShowBagBank()
+function AuctionHelper:ShowBagBank()
 	self:SetBagWindowShown(true)
 	local f = self.ui.bagWindow
 	f.view.tab, f.view.mode = self:GetCharacterKey(), "bank"
@@ -615,7 +615,7 @@ function ProfessionExporter:ShowBagBank()
 end
 
 --- The bank was closed: a view of the bank goes back to the bags.
-function ProfessionExporter:LeaveBagBank()
+function AuctionHelper:LeaveBagBank()
 	local f = self.ui.bagWindow
 	if f and f.view.place ~= "bags" and f.view.live then
 		f.view.tab, f.view.mode = self:GetCharacterKey(), "bags"
@@ -624,7 +624,7 @@ function ProfessionExporter:LeaveBagBank()
 end
 
 --- Light the items of one bag (the bag row is hovered), or none with nil.
-function ProfessionExporter:SetBagHover(bag)
+function AuctionHelper:SetBagHover(bag)
 	local f = self.ui.bagWindow
 	if f and f.view.hoverBag ~= bag then
 		f.view.hoverBag = bag

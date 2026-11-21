@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Who mails what to whom: the auction house / bank character ("seller") of each realm, and the
 -- plans the mailbox panel sends. The decisions are pure functions in ForeverLogic.
@@ -15,7 +15,7 @@ local function realmOf(pe, characterKey)
 end
 
 --- Characters known on the current character's realm (the current one included), sorted.
-function ProfessionExporter:GetRealmCharacterKeys()
+function AuctionHelper:GetRealmCharacterKeys()
 	local current = self:GetCharacterKey()
 	local realm = realmOf(self, current)
 	local keys = { current }
@@ -29,12 +29,12 @@ function ProfessionExporter:GetRealmCharacterKeys()
 end
 
 --- The mail To line for a character: first name and surname on Forever (MailLogic.MailRecipient).
-function ProfessionExporter:GetMailRecipient(characterKey)
+function AuctionHelper:GetMailRecipient(characterKey)
 	return self.MailLogic.MailRecipient(characterKey, self.IS_FOREVER)
 end
 
 --- Sets each destination's To line from its character key; returns the list.
-function ProfessionExporter:SetMailRecipients(destinations)
+function AuctionHelper:SetMailRecipients(destinations)
 	for _, dest in ipairs(destinations) do
 		dest.mailName = self:GetMailRecipient(dest.characterKey)
 	end
@@ -43,7 +43,7 @@ end
 
 --- The auction house / bank character of the current realm (all of Forever), or nil when none is set.
 --- A Forever choice saved per surname before is carried over to the one Forever group.
-function ProfessionExporter:GetSellerCharacterKey()
+function AuctionHelper:GetSellerCharacterKey()
 	local known = {}
 	local keys, realm = self:GetRealmCharacterKeys()
 	for _, characterKey in ipairs(keys) do
@@ -56,7 +56,7 @@ function ProfessionExporter:GetSellerCharacterKey()
 	return self.ForeverLogic.ResolveSellerCharacter(sellers, realm, known)
 end
 
-function ProfessionExporter:IsSellerCharacter()
+function AuctionHelper:IsSellerCharacter()
 	return self:GetSellerCharacterKey() == self:GetCharacterKey()
 end
 
@@ -75,7 +75,7 @@ end
 
 --- What the bags hold, per item: { itemID, name, quantity, quality, sellable }. Sellable means it
 --- can change hands: not bound and not a quest item.
-function ProfessionExporter:GetBagItems()
+function AuctionHelper:GetBagItems()
 	local questClass = Enum and Enum.ItemClass and Enum.ItemClass.Questitem
 	local items = {}
 	for bag = 0, self:GetLastBagIndex() do
@@ -99,7 +99,7 @@ function ProfessionExporter:GetBagItems()
 end
 
 --- A queued craft finished on this character: remember the result so it can be mailed to the seller.
-function ProfessionExporter:NoteCraftForSeller(itemID, quantity)
+function AuctionHelper:NoteCraftForSeller(itemID, quantity)
 	itemID, quantity = tonumber(itemID), tonumber(quantity) or 0
 	local seller = self:GetSellerCharacterKey()
 	if not itemID or quantity <= 0 or not seller or seller == self:GetCharacterKey() then
@@ -110,16 +110,16 @@ function ProfessionExporter:NoteCraftForSeller(itemID, quantity)
 end
 
 --- Whether this character mails everything sellable, not only items with a keep amount. On unless turned off.
-function ProfessionExporter:GetMailSendOthers()
+function AuctionHelper:GetMailSendOthers()
 	return characterStore(self, "surplusByCharacter").sendOthers ~= false
 end
 
-function ProfessionExporter:SetMailSendOthers(enabled)
+function AuctionHelper:SetMailSendOthers(enabled)
 	characterStore(self, "surplusByCharacter").sendOthers = enabled == true
 end
 
 --- How many of an item this character keeps; nil or 0 clears the keep amount.
-function ProfessionExporter:SetMailKeepAmount(itemID, quantity)
+function AuctionHelper:SetMailKeepAmount(itemID, quantity)
 	quantity = math.floor(tonumber(quantity) or 0)
 	characterStore(self, "keepByCharacter")[tonumber(itemID)] = quantity > 0 and quantity or nil
 end
@@ -167,7 +167,7 @@ end
 --- Everything the mailbox panel can send from this character: materials for crafters, and on any
 --- character but the seller the crafted items owed to it and the surplus above keep amounts. Each
 --- destination carries its `kind`.
-function ProfessionExporter:BuildMailPanelPlan()
+function AuctionHelper:BuildMailPanelPlan()
 	local plan = self:BuildShoppingMailSendPlan()
 	for _, dest in ipairs(plan) do
 		dest.kind = "materials"
@@ -191,7 +191,7 @@ function ProfessionExporter:BuildMailPanelPlan()
 end
 
 --- A parcel reached the mail server: crafted items in it are no longer owed to the seller.
-function ProfessionExporter:OnMailParcelSent(parcel)
+function AuctionHelper:OnMailParcelSent(parcel)
 	if parcel.kind ~= "crafts" then
 		return
 	end
@@ -203,29 +203,29 @@ function ProfessionExporter:OnMailParcelSent(parcel)
 end
 
 --- Items skipped for this mailbox visit (review panel ticks); forgotten when the mailbox closes.
-function ProfessionExporter:GetMailSkipped()
+function AuctionHelper:GetMailSkipped()
 	self._mailSkipped = self._mailSkipped or {}
 	return self._mailSkipped
 end
 
-function ProfessionExporter:SetMailSkipped(itemID, skipped)
+function AuctionHelper:SetMailSkipped(itemID, skipped)
 	self:GetMailSkipped()[tonumber(itemID)] = skipped and true or nil
 end
 
-function ProfessionExporter:ClearMailSkipped()
+function AuctionHelper:ClearMailSkipped()
 	self._mailSkipped = nil
 end
 
-function ProfessionExporter:GetMailKeepAmount(itemID)
+function AuctionHelper:GetMailKeepAmount(itemID)
 	return characterStore(self, "keepByCharacter")[tonumber(itemID)]
 end
 
-function ProfessionExporter:ClearMailKeepAmounts()
+function AuctionHelper:ClearMailKeepAmounts()
 	wipe(characterStore(self, "keepByCharacter"))
 end
 
 --- Unit price for the review panel's Worth: the usual price, else the last scanned price.
-function ProfessionExporter:GetMailItemUnitPrice(itemID)
+function AuctionHelper:GetMailItemUnitPrice(itemID)
 	local signals = self.GetItemPriceSignals and self:GetItemPriceSignals(itemID)
 	if signals and signals.usual then
 		return signals.usual
@@ -235,7 +235,7 @@ end
 
 --- The surplus review rows (MailLogic.BuildReviewRows, with names and prices) and the surplus
 --- destination of `panelPlan` (BuildMailPanelPlan, built when not given). No rows on the seller.
-function ProfessionExporter:BuildMailReviewRows(panelPlan)
+function AuctionHelper:BuildMailReviewRows(panelPlan)
 	for _, dest in ipairs(panelPlan or self:BuildMailPanelPlan()) do
 		if dest.kind == "surplus" then
 			return dest.reviewRows, dest
@@ -245,7 +245,7 @@ function ProfessionExporter:BuildMailReviewRows(panelPlan)
 end
 
 --- Keep everything the bags hold now, so nothing goes until the bags grow.
-function ProfessionExporter:KeepCurrentMailBags()
+function AuctionHelper:KeepCurrentMailBags()
 	for _, row in ipairs(self:BuildMailReviewRows()) do
 		if row.bags > 0 then
 			self:SetMailKeepAmount(row.itemID, row.bags)

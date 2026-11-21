@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 local INV_MAX_ROWS = 550
 
@@ -45,7 +45,7 @@ local function compareTriple(leftA, leftB, leftC, rightA, rightB, rightC)
 end
 
 local function rankMarkup(rankIndex)
-	return ProfessionExporter:GetRankMarkup(rankIndex)
+	return AuctionHelper:GetRankMarkup(rankIndex)
 end
 
 -- "Bånkey 30, Alt 10": who holds the item (bags + bank), most first.
@@ -59,7 +59,7 @@ local function holdersText(pe, row)
 	return #parts > 0 and table.concat(parts, ", ") or "-"
 end
 
-function ProfessionExporter:BuildInventoryFilterState()
+function AuctionHelper:BuildInventoryFilterState()
 	local ui = self.ui or {}
 	return {
 		text = trim(ui.invSearchBox and ui.invSearchBox:GetText() or ""),
@@ -74,7 +74,7 @@ function ProfessionExporter:BuildInventoryFilterState()
 	}
 end
 
-function ProfessionExporter:FilterInventoryRows(rows, filters)
+function AuctionHelper:FilterInventoryRows(rows, filters)
 	filters = filters or {}
 	local filter = string.lower(trim(filters.text))
 	local characterFilter = filters.characters or {}
@@ -130,7 +130,7 @@ function ProfessionExporter:FilterInventoryRows(rows, filters)
 	return out
 end
 
-function ProfessionExporter:GetInventoryRoleFilterOptions()
+function AuctionHelper:GetInventoryRoleFilterOptions()
 	return {
 		{ value = "all", label = "All roles" },
 		{ value = "crafted", label = "Crafted" },
@@ -140,7 +140,7 @@ function ProfessionExporter:GetInventoryRoleFilterOptions()
 	}
 end
 
-function ProfessionExporter:GetInventoryCharacterFilterOptions()
+function AuctionHelper:GetInventoryCharacterFilterOptions()
 	self:InitDB()
 	local db = self.db
 	local currentKey = self:GetCharacterKey()
@@ -156,7 +156,7 @@ function ProfessionExporter:GetInventoryCharacterFilterOptions()
 	return options
 end
 
-function ProfessionExporter:GetInventoryTypeFilterOptions(rows)
+function AuctionHelper:GetInventoryTypeFilterOptions(rows)
 	local seen = {}
 	local options = {
 		{ value = "all", label = "All item types" },
@@ -183,7 +183,7 @@ function ProfessionExporter:GetInventoryTypeFilterOptions(rows)
 	return options
 end
 
-function ProfessionExporter:UpgradeLegacyInventoryFilterSelection(singleValue)
+function AuctionHelper:UpgradeLegacyInventoryFilterSelection(singleValue)
 	if type(singleValue) == "string" and singleValue ~= "" and singleValue ~= "all" then
 		return {
 			[singleValue] = true,
@@ -192,14 +192,14 @@ function ProfessionExporter:UpgradeLegacyInventoryFilterSelection(singleValue)
 	return {}
 end
 
-function ProfessionExporter:GetInventoryColumnDefinitions()
+function AuctionHelper:GetInventoryColumnDefinitions()
 	return {
-		ProfessionExporter:CreateItemColumn({
+		AuctionHelper:CreateItemColumn({
 			label = "Item",
 			defaultSort = "asc",
 			getItemID = function(row) return row.itemID end,
 			getName = function(row)
-				return ProfessionExporter:GetItemDisplayName(row.itemID) .. rankMarkup(row.rankIndex)
+				return AuctionHelper:GetItemDisplayName(row.itemID) .. rankMarkup(row.rankIndex)
 			end,
 			getIcon = function(row) return row.icon end,
 			sortValue = function(row) return row.name or "" end,
@@ -218,7 +218,7 @@ function ProfessionExporter:GetInventoryColumnDefinitions()
 				return row.total or 0
 			end,
 			getText = function(row)
-				return ProfessionExporter:FormatNumberGrouped(row.total or 0)
+				return AuctionHelper:FormatNumberGrouped(row.total or 0)
 			end,
 		},
 		{
@@ -238,7 +238,7 @@ function ProfessionExporter:GetInventoryColumnDefinitions()
 				return #(row.holders or {})
 			end,
 			getText = function(row)
-				return holdersText(ProfessionExporter, row)
+				return holdersText(AuctionHelper, row)
 			end,
 		},
 		{
@@ -256,9 +256,9 @@ function ProfessionExporter:GetInventoryColumnDefinitions()
 				return compareTriple(left.bags, left.bank, left.warband, right.bags, right.bank, right.warband)
 			end,
 			getText = function(row)
-				local text = ProfessionExporter:FormatNumberGrouped(row.bags or 0) .. " / " .. ProfessionExporter:FormatNumberGrouped(row.bank or 0)
-				if ProfessionExporter.IS_RETAIL and (row.warband or 0) > 0 then
-					text = text .. " / " .. ProfessionExporter:FormatNumberGrouped(row.warband)
+				local text = AuctionHelper:FormatNumberGrouped(row.bags or 0) .. " / " .. AuctionHelper:FormatNumberGrouped(row.bank or 0)
+				if AuctionHelper.IS_RETAIL and (row.warband or 0) > 0 then
+					text = text .. " / " .. AuctionHelper:FormatNumberGrouped(row.warband)
 				end
 				return text
 			end,
@@ -278,7 +278,7 @@ function ProfessionExporter:GetInventoryColumnDefinitions()
 				return row.currentAhCopper or -1
 			end,
 			getText = function(row)
-				return row.currentAhCopper and ProfessionExporter:FormatCopperShort(row.currentAhCopper) or "-"
+				return row.currentAhCopper and AuctionHelper:FormatCopperShort(row.currentAhCopper) or "-"
 			end,
 		},
 		{
@@ -296,7 +296,7 @@ function ProfessionExporter:GetInventoryColumnDefinitions()
 				return row.lastObservedPrice or -1
 			end,
 			getText = function(row)
-				return row.lastObservedPrice and ProfessionExporter:FormatCopperShort(row.lastObservedPrice) or "-"
+				return row.lastObservedPrice and AuctionHelper:FormatCopperShort(row.lastObservedPrice) or "-"
 			end,
 		},
 		{
@@ -314,7 +314,7 @@ function ProfessionExporter:GetInventoryColumnDefinitions()
 				return row.avgObservedPrice or -1
 			end,
 			getText = function(row)
-				return row.avgObservedPrice and ProfessionExporter:FormatCopperShort(row.avgObservedPrice) or "-"
+				return row.avgObservedPrice and AuctionHelper:FormatCopperShort(row.avgObservedPrice) or "-"
 			end,
 		},
 		{
@@ -332,7 +332,7 @@ function ProfessionExporter:GetInventoryColumnDefinitions()
 				return row.avgCraftCost or -1
 			end,
 			getText = function(row)
-				return row.avgCraftCost and ProfessionExporter:FormatCopperShort(row.avgCraftCost) or "-"
+				return row.avgCraftCost and AuctionHelper:FormatCopperShort(row.avgCraftCost) or "-"
 			end,
 		},
 		{
@@ -350,7 +350,7 @@ function ProfessionExporter:GetInventoryColumnDefinitions()
 				return row.lastCraftCost or -1
 			end,
 			getText = function(row)
-				return row.lastCraftCost and ProfessionExporter:FormatCopperShort(row.lastCraftCost) or "-"
+				return row.lastCraftCost and AuctionHelper:FormatCopperShort(row.lastCraftCost) or "-"
 			end,
 		},
 		{
@@ -368,7 +368,7 @@ function ProfessionExporter:GetInventoryColumnDefinitions()
 				return row.profitCopperPerUnit or -1
 			end,
 			getText = function(row)
-				return row.profitCopperPerUnit and ProfessionExporter:FormatCopperShort(row.profitCopperPerUnit) or "-"
+				return row.profitCopperPerUnit and AuctionHelper:FormatCopperShort(row.profitCopperPerUnit) or "-"
 			end,
 		},
 		{
@@ -386,7 +386,7 @@ function ProfessionExporter:GetInventoryColumnDefinitions()
 				return row.profitCopperStack or -1
 			end,
 			getText = function(row)
-				return row.profitCopperStack and ProfessionExporter:FormatCopperShort(row.profitCopperStack) or "-"
+				return row.profitCopperStack and AuctionHelper:FormatCopperShort(row.profitCopperStack) or "-"
 			end,
 		},
 		{
@@ -424,13 +424,13 @@ function ProfessionExporter:GetInventoryColumnDefinitions()
 				return row.currentAhAt or 0
 			end,
 			getText = function(row)
-				return ProfessionExporter:FormatShortTime(row.currentAhAt)
+				return AuctionHelper:FormatShortTime(row.currentAhAt)
 			end,
 		},
 	}
 end
 
-function ProfessionExporter:GetInventoryColumnOrder()
+function AuctionHelper:GetInventoryColumnOrder()
 	local savedOrder = self:GetSetting("inventory.columnOrder", {})
 	-- The item column always comes first.
 	local definitions = self:GetInventoryColumnDefinitions()
@@ -453,7 +453,7 @@ function ProfessionExporter:GetInventoryColumnOrder()
 	return ordered
 end
 
-function ProfessionExporter:SaveInventoryColumnOrder(columns)
+function AuctionHelper:SaveInventoryColumnOrder(columns)
 	local order = {}
 	for _, column in ipairs(columns or {}) do
 		order[#order + 1] = column.id
@@ -461,7 +461,7 @@ function ProfessionExporter:SaveInventoryColumnOrder(columns)
 	self:SetSetting("inventory.columnOrder", order)
 end
 
-function ProfessionExporter:IsInventoryColumnVisible(columnId)
+function AuctionHelper:IsInventoryColumnVisible(columnId)
 	local hidden = self:GetSetting("inventory.hiddenColumns", {})
 	for _, definition in ipairs(self:GetInventoryColumnDefinitions()) do
 		if definition.id == columnId then
@@ -474,7 +474,7 @@ function ProfessionExporter:IsInventoryColumnVisible(columnId)
 	return hidden[columnId] ~= true
 end
 
-function ProfessionExporter:SetInventoryColumnVisible(columnId, visible)
+function AuctionHelper:SetInventoryColumnVisible(columnId, visible)
 	local hidden = self:GetSetting("inventory.hiddenColumns", {})
 	local defaultVisible = true
 	for _, definition in ipairs(self:GetInventoryColumnDefinitions()) do
@@ -491,7 +491,7 @@ function ProfessionExporter:SetInventoryColumnVisible(columnId, visible)
 	self:SetSetting("inventory.hiddenColumns", hidden)
 end
 
-function ProfessionExporter:BuildInventoryTableColumns()
+function AuctionHelper:BuildInventoryTableColumns()
 	local hidden = self:GetSetting("inventory.hiddenColumns", {})
 	local columns = {}
 	for _, definition in ipairs(self:GetInventoryColumnOrder()) do
@@ -517,7 +517,7 @@ function ProfessionExporter:BuildInventoryTableColumns()
 	return columns
 end
 
-function ProfessionExporter:HandleInventoryRowEnter(rowFrame, rowData)
+function AuctionHelper:HandleInventoryRowEnter(rowFrame, rowData)
 	if not rowData or not rowData.itemID then
 		return
 	end
@@ -537,7 +537,7 @@ end
 local GAP = 12
 local DETAIL_WIDTH = 288
 
-function ProfessionExporter:LayoutInventoryPanel(panel)
+function AuctionHelper:LayoutInventoryPanel(panel)
 	if not panel then
 		return
 	end
@@ -554,7 +554,7 @@ function ProfessionExporter:LayoutInventoryPanel(panel)
 	panel.detailPane:Layout()
 end
 
-function ProfessionExporter:RenderInventoryDetails(itemID)
+function AuctionHelper:RenderInventoryDetails(itemID)
 	local ui = self.ui
 	local panel = ui and ui.inventoryPanel or nil
 	if not panel then
@@ -572,7 +572,7 @@ end
 
 -- Item detail pane shared by item views: header, key facts, a chart with three views, and the
 -- recipes that make or use the item. `opts.metricSettingKey` stores the chosen chart.
-function ProfessionExporter:CreateItemDetailPane(parent, opts)
+function AuctionHelper:CreateItemDetailPane(parent, opts)
 	opts = opts or {}
 	local pe = self
 	local pad = 10
@@ -714,7 +714,7 @@ local function createFilterDropdown(pe, parent, width, allLabel, getOptions, get
 	})
 end
 
-function ProfessionExporter:EnsureInventoryPanel(mainFrame)
+function AuctionHelper:EnsureInventoryPanel(mainFrame)
 	local ui = self.ui
 	if ui.inventoryPanel then
 		return
@@ -742,17 +742,17 @@ function ProfessionExporter:EnsureInventoryPanel(mainFrame)
 	panel.toolbar:SetPoint("TOPRIGHT")
 	panel.toolbar:SetHeight(26)
 	panel.refreshButton = self:CreateButton(panel.toolbar, "Refresh", function()
-		ProfessionExporter:DashboardRefreshInventory()
+		AuctionHelper:DashboardRefreshInventory()
 	end, { primary = true, tooltip = "Read bags and bank again on this character." })
 	panel.refreshButton:SetPoint("RIGHT")
 	panel.columnsDropdown = self:CreateMenuDropdown(panel.toolbar, {
 		width = 104,
 		getText = function()
 			local visible, total = 0, 0
-			for _, column in ipairs(ProfessionExporter:GetInventoryColumnOrder()) do
+			for _, column in ipairs(AuctionHelper:GetInventoryColumnOrder()) do
 				if column.id ~= "name" then
 					total = total + 1
-					if ProfessionExporter:IsInventoryColumnVisible(column.id) then
+					if AuctionHelper:IsInventoryColumnVisible(column.id) then
 						visible = visible + 1
 					end
 				end
@@ -763,16 +763,16 @@ function ProfessionExporter:EnsureInventoryPanel(mainFrame)
 			if level ~= 1 then
 				return
 			end
-			for _, column in ipairs(ProfessionExporter:GetInventoryColumnOrder()) do
+			for _, column in ipairs(AuctionHelper:GetInventoryColumnOrder()) do
 				if column.id ~= "name" then
 					local info = UIDropDownMenu_CreateInfo()
 					info.text = column.label
 					info.isNotRadio = true
 					info.keepShownOnClick = true
-					info.checked = ProfessionExporter:IsInventoryColumnVisible(column.id)
+					info.checked = AuctionHelper:IsInventoryColumnVisible(column.id)
 					info.func = function()
-						ProfessionExporter:SetInventoryColumnVisible(column.id, not ProfessionExporter:IsInventoryColumnVisible(column.id))
-						ProfessionExporter:RefreshInventoryTab()
+						AuctionHelper:SetInventoryColumnVisible(column.id, not AuctionHelper:IsInventoryColumnVisible(column.id))
+						AuctionHelper:RefreshInventoryTab()
 					end
 					UIDropDownMenu_AddButton(info, level)
 				end
@@ -781,19 +781,19 @@ function ProfessionExporter:EnsureInventoryPanel(mainFrame)
 			reset.text = "Reset columns"
 			reset.notCheckable = true
 			reset.func = function()
-				ProfessionExporter:SetSetting("inventory.columnOrder", {})
-				ProfessionExporter:SetSetting("inventory.hiddenColumns", {})
-				ProfessionExporter:RefreshInventoryTab()
+				AuctionHelper:SetSetting("inventory.columnOrder", {})
+				AuctionHelper:SetSetting("inventory.hiddenColumns", {})
+				AuctionHelper:RefreshInventoryTab()
 			end
 			UIDropDownMenu_AddButton(reset, level)
 		end,
 	})
 	panel.rangeDropdown = self:CreateSingleSelectDropdown(panel.toolbar, {
 		width = 100,
-		getOptions = function() return ProfessionExporter:GetInventoryMetricRangeOptions() end,
-		getValue = function() return ProfessionExporter:GetInventoryMetricRange() end,
-		setValue = function(value) ProfessionExporter:SetInventoryMetricRange(value) end,
-		onChanged = function() ProfessionExporter:RefreshInventoryTab() end,
+		getOptions = function() return AuctionHelper:GetInventoryMetricRangeOptions() end,
+		getValue = function() return AuctionHelper:GetInventoryMetricRange() end,
+		setValue = function(value) AuctionHelper:SetInventoryMetricRange(value) end,
+		onChanged = function() AuctionHelper:RefreshInventoryTab() end,
 		tooltip = "Time range for averages and charts",
 	})
 	ui.invTypeDropdown = createFilterDropdown(pe, panel.toolbar, 124, "All item types",
@@ -822,7 +822,7 @@ function ProfessionExporter:EnsureInventoryPanel(mainFrame)
 	chain[#chain + 1] = ui.invCharacterDropdown
 	self:ChainLeft(chain, 8)
 	ui.invSearchBox = self:CreateSearchBox(panel.toolbar, "Search name, ID or type", function()
-		ProfessionExporter:RefreshInventoryTab()
+		AuctionHelper:RefreshInventoryTab()
 	end)
 	ui.invSearchBox:SetPoint("LEFT", panel.toolbar, "LEFT", 6, 0)
 	ui.invSearchBox:SetPoint("RIGHT", ui.invCharacterDropdown, "LEFT", -14, 0)
@@ -895,7 +895,7 @@ function ProfessionExporter:EnsureInventoryPanel(mainFrame)
 		onClose = function()
 			ui.invSelectedItemID = nil
 			ui.inventoryTable:SetSelectedRow(nil)
-			ProfessionExporter:LayoutInventoryPanel(panel)
+			AuctionHelper:LayoutInventoryPanel(panel)
 		end,
 	})
 	panel.detailPane:SetPoint("TOPRIGHT", panel.filterRow, "BOTTOMRIGHT", 0, -GAP)
@@ -906,7 +906,7 @@ function ProfessionExporter:EnsureInventoryPanel(mainFrame)
 		emptyTitle = "No items",
 		emptyHint = "Press Refresh to read bags and bank, or change the filters.",
 		isRowSelected = function(rowData)
-			return rowData and ProfessionExporter.ui.invSelectedItemID ~= nil and tonumber(rowData.itemID) == ProfessionExporter.ui.invSelectedItemID
+			return rowData and AuctionHelper.ui.invSelectedItemID ~= nil and tonumber(rowData.itemID) == AuctionHelper.ui.invSelectedItemID
 		end,
 		maxRows = INV_MAX_ROWS,
 		viewportVirtualize = true,
@@ -919,21 +919,21 @@ function ProfessionExporter:EnsureInventoryPanel(mainFrame)
 			ui.invSortAsc = sortAsc
 		end,
 		onColumnReordered = function(_, _, columns)
-			ProfessionExporter:SaveInventoryColumnOrder(columns)
+			AuctionHelper:SaveInventoryColumnOrder(columns)
 		end,
 		onRowEnter = function(rowFrame, rowData)
-			ProfessionExporter:HandleInventoryRowEnter(rowFrame, rowData)
+			AuctionHelper:HandleInventoryRowEnter(rowFrame, rowData)
 		end,
 		onRowLeave = function()
 			GameTooltip:Hide()
 		end,
 		onRowClick = function(_, rowData, _, tableWidget)
-			if ProfessionExporter:HandleItemRowModifiedClick(rowData and rowData.itemID) then
+			if AuctionHelper:HandleItemRowModifiedClick(rowData and rowData.itemID) then
 				return
 			end
-			ProfessionExporter:OpenItemDetails(rowData and rowData.itemID, {
+			AuctionHelper:OpenItemDetails(rowData and rowData.itemID, {
 				selectedCharacters = ui.invCharacterFilterValues,
-				rangeKey = ProfessionExporter:GetInventoryMetricRange(),
+				rangeKey = AuctionHelper:GetInventoryMetricRange(),
 			})
 			tableWidget:SetSelectedRow(rowData)
 		end,
@@ -942,13 +942,13 @@ function ProfessionExporter:EnsureInventoryPanel(mainFrame)
 	ui.inventoryTable:SetColumns(self:BuildInventoryTableColumns())
 
 	panel:SetScript("OnSizeChanged", function()
-		ProfessionExporter:LayoutInventoryPanel(panel)
+		AuctionHelper:LayoutInventoryPanel(panel)
 	end)
 	self:LayoutInventoryPanel(panel)
 	self:RenderInventoryDetails(ui.invSelectedItemID)
 end
 
-function ProfessionExporter:RefreshInventoryTab()
+function AuctionHelper:RefreshInventoryTab()
 	self:InitDB()
 	local ui = self.ui
 	if not ui or not ui.inventoryPanel or ui.activeMainTab ~= "inventory" then
@@ -1032,7 +1032,7 @@ function ProfessionExporter:RefreshInventoryTab()
 	self:RenderInventoryDetails(ui.invSelectedItemID)
 end
 
-function ProfessionExporter:RefreshInventoryTabIfVisible()
+function AuctionHelper:RefreshInventoryTabIfVisible()
 	local ui = self.ui
 	if ui and ui.activeMainTab == "inventory" then
 		self:RefreshInventoryTab()

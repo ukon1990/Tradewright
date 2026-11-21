@@ -14,7 +14,7 @@ While the auction house is open, clicking a row in **Deals to buy** or **Market 
 
 ## Scope
 
-- `ProfessionExporter:OpenItemInAuctionHouse(itemID)` in `AuctionHelper_Auction.lua`:
+- `AuctionHelper:OpenItemInAuctionHouse(itemID)` in `AuctionHelper_Auction.lua`:
   - returns false when the auction house is closed
   - pauses a running scan (`PauseAuctionScanForManualBuy("dashboard_buy")`)
   - modern frame: reuse `OpenAuctionBrowseSearchForItem(itemID, nil, 1)` so the pending selection opens the buy page

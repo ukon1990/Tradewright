@@ -6,7 +6,7 @@ Every change to the character's gold is filed as gold in or gold out under one s
 
 ## Context
 
-- `ProfessionExporter:PLAYER_MONEY` (`AuctionHelper_Events.lua`) only records the new balance. The change itself is `GetMoney()` minus the last known balance.
+- `AuctionHelper:PLAYER_MONEY` (`AuctionHelper_Events.lua`) only records the new balance. The change itself is `GetMoney()` minus the last known balance.
 - The source comes from what is happening when the change lands:
   - Vendor: between `MERCHANT_SHOW` and `MERCHANT_CLOSED`. A gain is a sale; a loss is a purchase or repair.
   - Quests: a `QUEST_TURNED_IN` (or the quest reward frame closing) just before the change.

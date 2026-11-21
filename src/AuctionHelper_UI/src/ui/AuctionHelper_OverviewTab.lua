@@ -1,9 +1,9 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
-local ACCT_KEY = ProfessionExporter.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
+local ACCT_KEY = AuctionHelper.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
 
 local OverviewTab = {}
-ProfessionExporter.OverviewTab = OverviewTab
+AuctionHelper.OverviewTab = OverviewTab
 
 -- Overview views drawn by a dashboard: key, button label, constructor, note shown beside the buttons.
 local DASHBOARD_VIEWS = {
@@ -83,7 +83,7 @@ function OverviewTab:Layout(panel)
 	if not panel then
 		return
 	end
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	pe:LayoutEvenRow(panel.statsRow, panel.stats, 0, GAP)
 	local detailWidth = panel.detail:GetWidth()
 	panel.goldGraph:SetWidth(math.max(80, detailWidth - 20))
@@ -119,7 +119,7 @@ local function createViewBar(pe, panel)
 end
 
 function OverviewTab:Create(container, uiState)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local panel = CreateFrame("Frame", nil, container)
 	panel:SetAllPoints()
 	uiState.overviewPanel = panel
@@ -241,7 +241,7 @@ function OverviewTab:ApplyTheme()
 end
 
 function OverviewTab:RefreshStats(panel, selectedKey, selectedData, keys)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local agg = pe.db.aggregate or {}
 	local state = pe:GetState()
 	local accountGold = pe:GetCurrentGoldSummaryForOverview(ACCT_KEY)
@@ -275,7 +275,7 @@ function OverviewTab:RefreshStats(panel, selectedKey, selectedData, keys)
 end
 
 function OverviewTab:RefreshCharacterList(panel, currentKey, keys)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local theme = pe:GetTheme()
 	local items = { { key = ACCT_KEY, label = "All characters" } }
 	for _, key in ipairs(keys) do
@@ -289,7 +289,7 @@ function OverviewTab:RefreshCharacterList(panel, currentKey, keys)
 end
 
 function OverviewTab:RefreshDetail(panel, selectedKey, selectedData, currentKey, keys)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local db = pe.db
 	if selectedKey == ACCT_KEY then
 		panel.detailTitle:SetText("All characters")
@@ -333,7 +333,7 @@ function OverviewTab:RefreshDetail(panel, selectedKey, selectedData, currentKey,
 end
 
 function OverviewTab:RefreshGold(panel, selectedKey)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local theme = pe:GetTheme()
 	local graph = panel.goldGraph
 	local rangeKey = pe:GetInventoryMetricRange()
@@ -378,7 +378,7 @@ function OverviewTab:RefreshGold(panel, selectedKey)
 end
 
 function OverviewTab:Refresh()
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	pe:InitDB()
 	if pe:AggregateNeedsRebuild() then
 		pe:BuildAggregate()

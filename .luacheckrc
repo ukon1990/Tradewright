@@ -26,9 +26,9 @@ globals = {
 	"AuctionHelperProfessionsDB",
 	"ProfessionExporterDB",
 	"ProfessionExporterLastExport",
-	"SLASH_PROFESSIONEXPORTER1",
 	"SLASH_AHFARM1",
-	"SLASH_PROFESSIONEXPORTER2",
+	"SLASH_AUCTIONHELPER1",
+	"SLASH_AUCTIONHELPER2",
 	"SlashCmdList",
 	"UISpecialFrames",
 }

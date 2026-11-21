@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
 local AUCTION_TX_MAX_EVENTS = 3000
 local AUTO_SCAN_MAX_AGE_SEC = 60 * 60
@@ -16,7 +16,7 @@ local KNOWN_AH_SIDE_PANELS = {
 }
 
 local function now()
-	return ProfessionExporter:Now()
+	return AuctionHelper:Now()
 end
 
 local function normalizeItemID(item)
@@ -83,7 +83,7 @@ local function auctionHistoryBucketWeightedSum(bucket)
 end
 
 local function getMaxOwnedBagIndex()
-	return ProfessionExporter:GetLastBagIndex()
+	return AuctionHelper:GetLastBagIndex()
 end
 
 local function findBagSlotForItemID(itemID)
@@ -199,7 +199,7 @@ local function getBagSlotStackCount(bag, slot)
 	return nil
 end
 
-function ProfessionExporter:GetAuctionOwnedBagState(forceRefresh)
+function AuctionHelper:GetAuctionOwnedBagState(forceRefresh)
 	local state = self:GetState()
 	if forceRefresh ~= true and type(state.auctionOwnedBagState) == "table" then
 		return state.auctionOwnedBagState
@@ -213,7 +213,7 @@ function ProfessionExporter:GetAuctionOwnedBagState(forceRefresh)
 	return bagState
 end
 
-function ProfessionExporter:GetAuctionRepresentativeBagSlot(itemID, bagState)
+function AuctionHelper:GetAuctionRepresentativeBagSlot(itemID, bagState)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return nil, nil, nil
@@ -233,7 +233,7 @@ local function formatPercent(value)
 	return string.format("%.1f%%", value)
 end
 
-function ProfessionExporter:FormatPercent(value)
+function AuctionHelper:FormatPercent(value)
 	return formatPercent(value)
 end
 
@@ -251,7 +251,7 @@ local function formatDurationShort(seconds)
 	return string.format("%dm %02ds", minutes, remaining)
 end
 
-function ProfessionExporter:FormatDurationShort(seconds)
+function AuctionHelper:FormatDurationShort(seconds)
 	return formatDurationShort(seconds)
 end
 
@@ -260,7 +260,7 @@ local function attachSimpleTooltip(widget, title, body)
 		return
 	end
 	widget:SetScript("OnEnter", function(self)
-		local theme = ProfessionExporter:GetTheme()
+		local theme = AuctionHelper:GetTheme()
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
 		GameTooltip:SetText(title or "", 1, 1, 1)
 		if body and body ~= "" then
@@ -273,7 +273,7 @@ local function attachSimpleTooltip(widget, title, body)
 	end)
 end
 
-function ProfessionExporter:AttachSimpleTooltip(widget, title, body)
+function AuctionHelper:AttachSimpleTooltip(widget, title, body)
 	attachSimpleTooltip(widget, title, body)
 end
 
@@ -287,7 +287,7 @@ local function panelButton(panel, size, text, point, onClick)
 	return button
 end
 
-function ProfessionExporter:CreateAuctionPanelButton(panel, size, text, point, onClick)
+function AuctionHelper:CreateAuctionPanelButton(panel, size, text, point, onClick)
 	return panelButton(panel, size, text, point, onClick)
 end
 
@@ -306,7 +306,7 @@ end
 
 --- Normalize optional fields for C_AuctionHouse.MakeItemKey(itemID, itemLevel, itemSuffix, battlePetSpeciesID).
 --- Returns nil when no narrowing fields are present (use generic item key / commodity path).
-function ProfessionExporter:NormalizeAuctionItemKeyFields(fields)
+function AuctionHelper:NormalizeAuctionItemKeyFields(fields)
 	if type(fields) ~= "table" then
 		return nil
 	end
@@ -324,7 +324,7 @@ function ProfessionExporter:NormalizeAuctionItemKeyFields(fields)
 end
 
 --- Stable sort / map key for (itemID, optional item key fields).
-function ProfessionExporter:SerializeAuctionItemKeyFields(itemID, keyFields)
+function AuctionHelper:SerializeAuctionItemKeyFields(itemID, keyFields)
 	itemID = normalizeItemID(itemID) or 0
 	local f = self:NormalizeAuctionItemKeyFields(keyFields)
 	if not f then
@@ -333,7 +333,7 @@ function ProfessionExporter:SerializeAuctionItemKeyFields(itemID, keyFields)
 	return string.format("%d:%d:%d:%d", itemID, f.itemLevel, f.itemSuffix, f.battlePetSpeciesID)
 end
 
-function ProfessionExporter:DoesAuctionSearchEventMatchItem(scanItemID, eventArg, scanKeyFields)
+function AuctionHelper:DoesAuctionSearchEventMatchItem(scanItemID, eventArg, scanKeyFields)
 	scanItemID = normalizeItemID(scanItemID)
 	if not scanItemID then
 		return false
@@ -359,7 +359,7 @@ function ProfessionExporter:DoesAuctionSearchEventMatchItem(scanItemID, eventArg
 	return self:SerializeAuctionItemKeyFields(scanItemID, scanKeyFields) == self:SerializeAuctionItemKeyFields(evId, evKey)
 end
 
-function ProfessionExporter:MakeAuctionHouseItemKey(itemID, keyFields)
+function AuctionHelper:MakeAuctionHouseItemKey(itemID, keyFields)
 	itemID = normalizeItemID(itemID)
 	if not itemID or not C_AuctionHouse then
 		return nil
@@ -384,7 +384,7 @@ function ProfessionExporter:MakeAuctionHouseItemKey(itemID, keyFields)
 end
 
 local function copyScanKeyFields(fields)
-	local n = ProfessionExporter:NormalizeAuctionItemKeyFields(fields)
+	local n = AuctionHelper:NormalizeAuctionItemKeyFields(fields)
 	if not n then
 		return nil
 	end
@@ -395,24 +395,24 @@ local function copyScanKeyFields(fields)
 	}
 end
 
-function ProfessionExporter:AuctionScanEntryKey(itemID, keyFields)
+function AuctionHelper:AuctionScanEntryKey(itemID, keyFields)
 	return self:SerializeAuctionItemKeyFields(itemID, keyFields)
 end
 
-function ProfessionExporter:GetAuctionSearchedTargetsState()
+function AuctionHelper:GetAuctionSearchedTargetsState()
 	local state = self:GetState()
 	state.auctionSearchedTargets = state.auctionSearchedTargets or {}
 	state.auctionSearchedTargetsMeta = state.auctionSearchedTargetsMeta or {}
 	return state.auctionSearchedTargets, state.auctionSearchedTargetsMeta
 end
 
-function ProfessionExporter:HasAuctionTargetBeenSearchedThisSession(itemID, keyFields)
+function AuctionHelper:HasAuctionTargetBeenSearchedThisSession(itemID, keyFields)
 	local searched = self:GetAuctionSearchedTargetsState()
 	local key = self:AuctionScanEntryKey(itemID, keyFields)
 	return searched[key] == true
 end
 
-function ProfessionExporter:MarkAuctionTargetSearched(itemID, keyFields, source, seenAt)
+function AuctionHelper:MarkAuctionTargetSearched(itemID, keyFields, source, seenAt)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return false
@@ -430,7 +430,7 @@ function ProfessionExporter:MarkAuctionTargetSearched(itemID, keyFields, source,
 	return true
 end
 
-function ProfessionExporter:ExtractAuctionItemKeyFieldsFromEventArg(eventArg)
+function AuctionHelper:ExtractAuctionItemKeyFieldsFromEventArg(eventArg)
 	if type(eventArg) ~= "table" then
 		return nil
 	end
@@ -446,7 +446,7 @@ function ProfessionExporter:ExtractAuctionItemKeyFieldsFromEventArg(eventArg)
 end
 
 --- Sum listed quantity + cheapest unit for commodities; per–ItemKey groups for non-commodity items.
-function ProfessionExporter:GetLiveAuctionSearchAggregate(itemID, keyFields)
+function AuctionHelper:GetLiveAuctionSearchAggregate(itemID, keyFields)
 	itemID = normalizeItemID(itemID)
 	if not itemID or not C_AuctionHouse then
 		return nil
@@ -547,7 +547,7 @@ function ProfessionExporter:GetLiveAuctionSearchAggregate(itemID, keyFields)
 	}
 end
 
-function ProfessionExporter:RecordLiveAuctionObservationsFromAggregate(itemID, agg, sourceTag)
+function AuctionHelper:RecordLiveAuctionObservationsFromAggregate(itemID, agg, sourceTag)
 	itemID = normalizeItemID(itemID)
 	if not itemID or type(agg) ~= "table" then
 		return
@@ -584,7 +584,7 @@ function ProfessionExporter:RecordLiveAuctionObservationsFromAggregate(itemID, a
 	end
 end
 
-function ProfessionExporter:ApplyLiveAggregateToNativePrice(itemID, agg)
+function AuctionHelper:ApplyLiveAggregateToNativePrice(itemID, agg)
 	itemID = normalizeItemID(itemID)
 	if not itemID or type(agg) ~= "table" then
 		return
@@ -599,7 +599,7 @@ function ProfessionExporter:ApplyLiveAggregateToNativePrice(itemID, agg)
 	end
 end
 
-function ProfessionExporter:ProcessAuctionRefreshItem(itemID, scanKeyFields)
+function AuctionHelper:ProcessAuctionRefreshItem(itemID, scanKeyFields)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return self:BuildAuctionPanelPriceState(nil)
@@ -612,7 +612,7 @@ function ProfessionExporter:ProcessAuctionRefreshItem(itemID, scanKeyFields)
 	return self:BuildAuctionPanelPriceState(itemID)
 end
 
-function ProfessionExporter:GetAuctionPanelFallbackPrice(itemID)
+function AuctionHelper:GetAuctionPanelFallbackPrice(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return nil, "missing", nil
@@ -648,7 +648,7 @@ function ProfessionExporter:GetAuctionPanelFallbackPrice(itemID)
 	return nil, "missing", nil
 end
 
-function ProfessionExporter:BuildAuctionPanelPriceState(itemID)
+function AuctionHelper:BuildAuctionPanelPriceState(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return {
@@ -691,7 +691,7 @@ function ProfessionExporter:BuildAuctionPanelPriceState(itemID)
 	}
 end
 
-function ProfessionExporter:ApplyAuctionPanelPriceState(row, priceState)
+function AuctionHelper:ApplyAuctionPanelPriceState(row, priceState)
 	if type(row) ~= "table" then
 		return
 	end
@@ -708,7 +708,7 @@ function ProfessionExporter:ApplyAuctionPanelPriceState(row, priceState)
 	row.fallbackPriceSeenAt = tonumber(priceState.fallbackPriceSeenAt)
 end
 
-function ProfessionExporter:GetAuctionDisplayProfessionQualityRank(itemID)
+function AuctionHelper:GetAuctionDisplayProfessionQualityRank(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return nil
@@ -742,7 +742,7 @@ function ProfessionExporter:GetAuctionDisplayProfessionQualityRank(itemID)
 	return nil
 end
 
-function ProfessionExporter:UpdateAuctionRowDumpState(row)
+function AuctionHelper:UpdateAuctionRowDumpState(row)
 	if type(row) ~= "table" then
 		return
 	end
@@ -759,7 +759,7 @@ function ProfessionExporter:UpdateAuctionRowDumpState(row)
 	end
 end
 
-function ProfessionExporter:UpdateAuctionPanelRowPrice(itemID, priceState)
+function AuctionHelper:UpdateAuctionPanelRowPrice(itemID, priceState)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return
@@ -784,7 +784,7 @@ function ProfessionExporter:UpdateAuctionPanelRowPrice(itemID, priceState)
 	end
 end
 
-function ProfessionExporter:SendAuctionPanelSearchQuery(itemID, scanKeyFields)
+function AuctionHelper:SendAuctionPanelSearchQuery(itemID, scanKeyFields)
 	itemID = normalizeItemID(itemID)
 	if not itemID or not C_AuctionHouse then
 		self:DebugLog("AH", "search skipped", {
@@ -825,7 +825,7 @@ function ProfessionExporter:SendAuctionPanelSearchQuery(itemID, scanKeyFields)
 	return ok == true
 end
 
-function ProfessionExporter:FinishQueuedAuctionRefreshItem(itemID, _priceStateIgnored)
+function AuctionHelper:FinishQueuedAuctionRefreshItem(itemID, _priceStateIgnored)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return
@@ -880,11 +880,11 @@ function ProfessionExporter:FinishQueuedAuctionRefreshItem(itemID, _priceStateIg
 		self:RefreshAuctionHousePanel()
 	end
 	C_Timer.After(tonumber(state.auctionRefreshDelay) or 0.05, function()
-		ProfessionExporter:ContinueQueuedAuctionRefresh()
+		AuctionHelper:ContinueQueuedAuctionRefresh()
 	end)
 end
 
-function ProfessionExporter:OnAuctionRefreshSearchTimeout(token)
+function AuctionHelper:OnAuctionRefreshSearchTimeout(token)
 	local state = self:GetState()
 	local ctx = state.auctionSearchContext
 	if not ctx or tonumber(ctx.token) ~= tonumber(token) then
@@ -896,7 +896,7 @@ function ProfessionExporter:OnAuctionRefreshSearchTimeout(token)
 	self:FinishQueuedAuctionRefreshItem(ctx.itemID, nil)
 end
 
-function ProfessionExporter:ContinueQueuedAuctionRefresh()
+function AuctionHelper:ContinueQueuedAuctionRefresh()
 	local state = self:GetState()
 	if not state.auctionRefreshRunning or state.auctionSearchContext then
 		return
@@ -965,14 +965,14 @@ function ProfessionExporter:ContinueQueuedAuctionRefresh()
 			startedAt = GetTime and GetTime() or 0,
 		}
 		C_Timer.After(1.5, function()
-			ProfessionExporter:OnAuctionRefreshSearchTimeout(token)
+			AuctionHelper:OnAuctionRefreshSearchTimeout(token)
 		end)
 		return
 	end
 	self:FinishQueuedAuctionRefreshItem(itemID, nil)
 end
 
-function ProfessionExporter:BuildAuctionBulkRows(mode)
+function AuctionHelper:BuildAuctionBulkRows(mode)
 	mode = tostring(mode or "post_all")
 	local state = self:GetState()
 	local rows = {}
@@ -996,7 +996,7 @@ function ProfessionExporter:BuildAuctionBulkRows(mode)
 	return rows
 end
 
-function ProfessionExporter:MaybeStartDeferredAuctionBulk()
+function AuctionHelper:MaybeStartDeferredAuctionBulk()
 	local state = self:GetState()
 	local bulk = state.auctionBulk
 	if not bulk or bulk.running ~= true or bulk.awaitingScan ~= true then
@@ -1029,11 +1029,11 @@ function ProfessionExporter:MaybeStartDeferredAuctionBulk()
 	bulk.paused = false
 	self:RefreshAuctionHousePanel()
 	C_Timer.After(0.05, function()
-		ProfessionExporter:ContinueAuctionBulkPost()
+		AuctionHelper:ContinueAuctionBulkPost()
 	end)
 end
 
-function ProfessionExporter:FinishAuctionBulkJob()
+function AuctionHelper:FinishAuctionBulkJob()
 	local state = self:GetState()
 	local bulk = state.auctionBulk
 	if not bulk then
@@ -1058,7 +1058,7 @@ function ProfessionExporter:FinishAuctionBulkJob()
 	self:RefreshAuctionHousePanel()
 end
 
-function ProfessionExporter:ToggleAuctionRefreshPause()
+function AuctionHelper:ToggleAuctionRefreshPause()
 	local state = self:GetState()
 	if state.auctionRefreshRunning ~= true then
 		return
@@ -1078,13 +1078,13 @@ function ProfessionExporter:ToggleAuctionRefreshPause()
 			return
 		end
 		C_Timer.After(0.05, function()
-			ProfessionExporter:ContinueQueuedAuctionRefresh()
+			AuctionHelper:ContinueQueuedAuctionRefresh()
 		end)
 	end
 	self:RefreshAuctionHousePanel()
 end
 
-function ProfessionExporter:FailAuctionBulkCurrent(reason)
+function AuctionHelper:FailAuctionBulkCurrent(reason)
 	local state = self:GetState()
 	local bulk = state.auctionBulk
 	if not bulk or bulk.running ~= true then
@@ -1105,11 +1105,11 @@ function ProfessionExporter:FailAuctionBulkCurrent(reason)
 	})
 	self:RefreshAuctionHousePanel()
 	C_Timer.After(0.08, function()
-		ProfessionExporter:ContinueAuctionBulkPost()
+		AuctionHelper:ContinueAuctionBulkPost()
 	end)
 end
 
-function ProfessionExporter:ConfirmAuctionBulkCurrent(source)
+function AuctionHelper:ConfirmAuctionBulkCurrent(source)
 	local state = self:GetState()
 	local bulk = state.auctionBulk
 	if not bulk or bulk.running ~= true or bulk.phase ~= "waiting_confirmation" then
@@ -1144,7 +1144,7 @@ function ProfessionExporter:ConfirmAuctionBulkCurrent(source)
 	self:PrimeAuctionPanelRows()
 	self:RefreshAuctionHousePanel()
 	C_Timer.After(0.18, function()
-		ProfessionExporter:ContinueAuctionBulkPost()
+		AuctionHelper:ContinueAuctionBulkPost()
 	end)
 	return true
 end
@@ -1153,7 +1153,7 @@ end
 -- accepted, and between two auction cancels.
 local AUCTION_BULK_MIN_INTERVAL = 1.0
 
-function ProfessionExporter:ProcessAuctionBulkPhase(token)
+function AuctionHelper:ProcessAuctionBulkPhase(token)
 	local state = self:GetState()
 	local bulk = state.auctionBulk
 	if not bulk or bulk.running ~= true or tonumber(bulk.token) ~= tonumber(token) then
@@ -1177,18 +1177,18 @@ function ProfessionExporter:ProcessAuctionBulkPhase(token)
 			})
 			self:RefreshAuctionHousePanel()
 			C_Timer.After(0.20, function()
-				ProfessionExporter:ContinueAuctionBulkPost()
+				AuctionHelper:ContinueAuctionBulkPost()
 			end)
 			return
 		end
 		self:RefreshAuctionHousePanel()
 		C_Timer.After(0.25, function()
-			ProfessionExporter:ProcessAuctionBulkPhase(token)
+			AuctionHelper:ProcessAuctionBulkPhase(token)
 		end)
 	end
 end
 
-function ProfessionExporter:ContinueAuctionBulkPost()
+function AuctionHelper:ContinueAuctionBulkPost()
 	local state = self:GetState()
 	local bulk = state.auctionBulk
 	if not bulk or bulk.running ~= true then
@@ -1217,7 +1217,7 @@ function ProfessionExporter:ContinueAuctionBulkPost()
 		})
 		self:RefreshAuctionHousePanel()
 		C_Timer.After(0.05, function()
-			ProfessionExporter:ContinueAuctionBulkPost()
+			AuctionHelper:ContinueAuctionBulkPost()
 		end)
 		return
 	end
@@ -1244,13 +1244,13 @@ function ProfessionExporter:ContinueAuctionBulkPost()
 	bulk.nextPostAt = GetTime() + AUCTION_BULK_MIN_INTERVAL
 	self:RefreshAuctionHousePanel()
 	C_Timer.After(AUCTION_BULK_MIN_INTERVAL, function()
-		ProfessionExporter:RefreshAuctionHousePanel()
+		AuctionHelper:RefreshAuctionHousePanel()
 	end)
 end
 
 --- Posts the item waiting in the sell frame. Must run from a real click: the client rejects
 --- auction posts that don't come from a hardware event, so bulk posting is one click per auction.
-function ProfessionExporter:PostAuctionBulkCurrent()
+function AuctionHelper:PostAuctionBulkCurrent()
 	local bulk = self:GetState().auctionBulk
 	if not bulk or bulk.running ~= true or bulk.paused == true or bulk.phase ~= "waiting_button" then
 		return
@@ -1274,11 +1274,11 @@ function ProfessionExporter:PostAuctionBulkCurrent()
 	})
 	self:RefreshAuctionHousePanel()
 	C_Timer.After(0.25, function()
-		ProfessionExporter:ProcessAuctionBulkPhase(token)
+		AuctionHelper:ProcessAuctionBulkPhase(token)
 	end)
 end
 
-function ProfessionExporter:OnOwnedAuctionsUpdated()
+function AuctionHelper:OnOwnedAuctionsUpdated()
 	if self:GetAuctionPanelActiveTab() == "auctions" then
 		self:RefreshAuctionHousePanel()
 	end
@@ -1296,7 +1296,7 @@ function ProfessionExporter:OnOwnedAuctionsUpdated()
 	end
 end
 
-function ProfessionExporter:ToggleAuctionBulkPause()
+function AuctionHelper:ToggleAuctionBulkPause()
 	local state = self:GetState()
 	local bulk = state.auctionBulk
 	if not bulk or bulk.running ~= true then
@@ -1317,19 +1317,19 @@ function ProfessionExporter:ToggleAuctionBulkPause()
 			local token = tonumber(bulk.token)
 			if token then
 				C_Timer.After(0.05, function()
-					ProfessionExporter:ProcessAuctionBulkPhase(token)
+					AuctionHelper:ProcessAuctionBulkPhase(token)
 				end)
 			end
 		else
 			C_Timer.After(0.05, function()
-				ProfessionExporter:ContinueAuctionBulkPost()
+				AuctionHelper:ContinueAuctionBulkPost()
 			end)
 		end
 	end
 	self:RefreshAuctionHousePanel()
 end
 
-function ProfessionExporter:InitAuctionDB()
+function AuctionHelper:InitAuctionDB()
 	local db = self.db or self:BuildMergedRuntimeDB(self.baseDb or {}, self.professionsDb or {}, self.inventoryDb or {}, self.auctionStorageDb or {})
 	if type(db) ~= "table" then
 		return nil
@@ -1375,7 +1375,7 @@ if C_AuctionHouse and C_AuctionHouse.PostItem and hooksecurefunc then
 			local itemID = normalizeItemID(C_Item.GetItemID(item))
 			local deposit = tonumber(C_AuctionHouse.CalculateItemDeposit(item, duration, quantity))
 			if itemID and deposit and quantity > 0 then
-				ProfessionExporter:InitAuctionDB().itemDepositPerUnit[tostring(itemID)] = deposit / quantity
+				AuctionHelper:InitAuctionDB().itemDepositPerUnit[tostring(itemID)] = deposit / quantity
 			end
 		end)
 	end)
@@ -1384,7 +1384,7 @@ end
 --- The deposit cancelling this auction forfeits, taken as what posting it again would cost at the
 --- sell frame's current duration. Nil when unknown (an item posted before deposits were recorded)
 --- or when the player has turned deposits off.
-function ProfessionExporter:GetOwnedAuctionDeposit(info, itemID)
+function AuctionHelper:GetOwnedAuctionDeposit(info, itemID)
 	if self:GetSetting("auction.repostIncludeDeposit", true) == false then
 		return nil
 	end
@@ -1397,7 +1397,7 @@ function ProfessionExporter:GetOwnedAuctionDeposit(info, itemID)
 	return perUnit and math.floor(perUnit * info.quantity + 0.5) or nil
 end
 
-function ProfessionExporter:NormalizeAuctionSnapshotEntry(entry)
+function AuctionHelper:NormalizeAuctionSnapshotEntry(entry)
 	if type(entry) ~= "table" then
 		return nil
 	end
@@ -1428,7 +1428,7 @@ function ProfessionExporter:NormalizeAuctionSnapshotEntry(entry)
 	}
 end
 
-function ProfessionExporter:BuildCompactAuctionSnapshotEntry(observation)
+function AuctionHelper:BuildCompactAuctionSnapshotEntry(observation)
 	if type(observation) ~= "table" then
 		return nil
 	end
@@ -1457,7 +1457,7 @@ function ProfessionExporter:BuildCompactAuctionSnapshotEntry(observation)
 	return entry
 end
 
-function ProfessionExporter:CompactAuctionStorageData()
+function AuctionHelper:CompactAuctionStorageData()
 	local auction = self:InitAuctionDB()
 	if not auction then
 		return
@@ -1479,12 +1479,12 @@ function ProfessionExporter:CompactAuctionStorageData()
 	self:TrimAuctionHistory()
 end
 
-function ProfessionExporter:GetAuctionPriceFreshnessWindowSeconds()
+function AuctionHelper:GetAuctionPriceFreshnessWindowSeconds()
 	local minutes = tonumber(self:GetSetting("auction.priceFreshnessMinutes", 15)) or 15
 	return math.max(60, minutes * 60)
 end
 
-function ProfessionExporter:IsItemAuctionScanStale(itemID, freshnessWindowSeconds, nowTs)
+function AuctionHelper:IsItemAuctionScanStale(itemID, freshnessWindowSeconds, nowTs)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return false
@@ -1499,7 +1499,7 @@ function ProfessionExporter:IsItemAuctionScanStale(itemID, freshnessWindowSecond
 	return (curTs - lastScanAt) >= window
 end
 
-function ProfessionExporter:GetItemLastAuctionScanAt(itemID)
+function AuctionHelper:GetItemLastAuctionScanAt(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return nil
@@ -1508,7 +1508,7 @@ function ProfessionExporter:GetItemLastAuctionScanAt(itemID)
 	return tonumber(auction.itemLastScanAt and auction.itemLastScanAt[tostring(itemID)])
 end
 
-function ProfessionExporter:TouchItemAuctionScanTimestamp(itemID, ts)
+function AuctionHelper:TouchItemAuctionScanTimestamp(itemID, ts)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return
@@ -1523,19 +1523,19 @@ function ProfessionExporter:TouchItemAuctionScanTimestamp(itemID, ts)
 	end
 end
 
-function ProfessionExporter:MarkAuctionQueueScanCompleted()
+function AuctionHelper:MarkAuctionQueueScanCompleted()
 	local ts = now()
 	local auction = self:InitAuctionDB()
 	auction.lastQueueScanAt = ts
 	self:GetState().auctionLastQueueScanCompletedAt = ts
 end
 
-function ProfessionExporter:GetLastAuctionQueueScanAt()
+function AuctionHelper:GetLastAuctionQueueScanAt()
 	local auction = self:InitAuctionDB()
 	return tonumber(auction.lastQueueScanAt)
 end
 
-function ProfessionExporter:FormatAuctionScanAge(ts)
+function AuctionHelper:FormatAuctionScanAge(ts)
 	ts = tonumber(ts)
 	if not ts or ts <= 0 then
 		return "never"
@@ -1556,7 +1556,7 @@ function ProfessionExporter:FormatAuctionScanAge(ts)
 	return tostring(ts)
 end
 
-function ProfessionExporter:GetAuctionItemRule(itemID)
+function AuctionHelper:GetAuctionItemRule(itemID)
 	local auction = self:InitAuctionDB()
 	itemID = normalizeItemID(itemID)
 	if not auction or not itemID then
@@ -1567,7 +1567,7 @@ function ProfessionExporter:GetAuctionItemRule(itemID)
 	return rule and shallowCopy(rule) or nil
 end
 
-function ProfessionExporter:SetAuctionItemRule(itemID, updates)
+function AuctionHelper:SetAuctionItemRule(itemID, updates)
 	local auction = self:InitAuctionDB()
 	itemID = normalizeItemID(itemID)
 	if not auction or not itemID then
@@ -1602,7 +1602,7 @@ function ProfessionExporter:SetAuctionItemRule(itemID, updates)
 	return true
 end
 
-function ProfessionExporter:ClearAuctionItemRule(itemID)
+function AuctionHelper:ClearAuctionItemRule(itemID)
 	local auction = self:InitAuctionDB()
 	itemID = normalizeItemID(itemID)
 	if not auction or not itemID or not auction.rules or not auction.rules.byItemID then
@@ -1612,7 +1612,7 @@ function ProfessionExporter:ClearAuctionItemRule(itemID)
 	return true
 end
 
-function ProfessionExporter:GetAuctionRowProtectionState(itemID, quantityOwned, bagState)
+function AuctionHelper:GetAuctionRowProtectionState(itemID, quantityOwned, bagState)
 	itemID = normalizeItemID(itemID)
 	quantityOwned = math.max(0, tonumber(quantityOwned) or 0)
 	local rule = self:GetAuctionItemRule(itemID) or {}
@@ -1643,12 +1643,12 @@ function ProfessionExporter:GetAuctionRowProtectionState(itemID, quantityOwned, 
 	}
 end
 
-function ProfessionExporter:GetSelectedAuctionPanelItemID()
+function AuctionHelper:GetSelectedAuctionPanelItemID()
 	local state = self:GetState()
 	return normalizeItemID(state and (state.auctionPanelSelectedItemID or state.auctionLastSellSelectionItemID))
 end
 
-function ProfessionExporter:RefreshAuctionPanelRules()
+function AuctionHelper:RefreshAuctionPanelRules()
 	local selectedItemID = self:GetSelectedAuctionPanelItemID()
 	local rowState = self:GetAuctionRowProtectionState(selectedItemID, 0)
 	local panel = self.ui and self.ui.auctionPanel or nil
@@ -1672,7 +1672,7 @@ function ProfessionExporter:RefreshAuctionPanelRules()
 	end
 end
 
-function ProfessionExporter:ApplyAuctionReserve(itemID, value)
+function AuctionHelper:ApplyAuctionReserve(itemID, value)
 	local qty = math.max(0, math.floor(tonumber(value) or 0))
 	self:SetAuctionItemRule(itemID, { reserveQty = qty > 0 and qty or nil })
 	self:DebugLog("AH", "rule reserve set", { string.format("itemID=%d reserveQty=%d", itemID, qty) })
@@ -1682,7 +1682,7 @@ end
 
 -- Small "Keep in bags" window beside the auction panel. It always acts on the item it was last opened
 -- for (the old StaticPopup kept the first item it was ever shown with).
-function ProfessionExporter:EnsureAuctionReserveWindow()
+function AuctionHelper:EnsureAuctionReserveWindow()
 	if self._auctionReserveWindow then
 		return self._auctionReserveWindow
 	end
@@ -1746,7 +1746,7 @@ function ProfessionExporter:EnsureAuctionReserveWindow()
 	return f
 end
 
-function ProfessionExporter:ShowAuctionReservePrompt(itemID)
+function AuctionHelper:ShowAuctionReservePrompt(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		self:PrintMessage("Select an auction row first.")
@@ -1760,7 +1760,7 @@ end
 
 --- The "Keep in bags" prompt for any keep rule: `label` under the item, the `current` amount, shown
 --- over `anchor` when that is visible, and `onAccept(itemID, text)` when the player confirms.
-function ProfessionExporter:ShowKeepPrompt(itemID, label, current, anchor, onAccept)
+function AuctionHelper:ShowKeepPrompt(itemID, label, current, anchor, onAccept)
 	local f = self:EnsureAuctionReserveWindow()
 	f.itemID = itemID
 	f.onAccept = onAccept
@@ -1785,25 +1785,25 @@ local AUCTION_PANEL_TABS = { sell = true, cart = true, auctions = true }
 
 --- The client only has the player's auctions after they are asked for; the answer arrives as
 --- OWNED_AUCTIONS_UPDATED.
-function ProfessionExporter:RequestOwnedAuctions()
+function AuctionHelper:RequestOwnedAuctions()
 	if C_AuctionHouse and C_AuctionHouse.QueryOwnedAuctions then
 		pcall(C_AuctionHouse.QueryOwnedAuctions, {})
 	end
 end
 
-function ProfessionExporter:OnAuctionCanceled()
+function AuctionHelper:OnAuctionCanceled()
 	if self:GetAuctionPanelActiveTab() == "auctions" then
 		self:RequestOwnedAuctions()
 	end
 end
 
-function ProfessionExporter:GetAuctionPanelActiveTab(defaultTab)
+function AuctionHelper:GetAuctionPanelActiveTab(defaultTab)
 	self.ui = self.ui or {}
 	local tab = tostring(self.ui.auctionPanelActiveTab or defaultTab or "sell")
 	return AUCTION_PANEL_TABS[tab] and tab or "sell"
 end
 
-function ProfessionExporter:SetAuctionPanelActiveTab(tabId, manual)
+function AuctionHelper:SetAuctionPanelActiveTab(tabId, manual)
 	self.ui = self.ui or {}
 	tabId = AUCTION_PANEL_TABS[tabId] and tabId or "sell"
 	self.ui.auctionPanelActiveTab = tabId
@@ -1819,7 +1819,7 @@ function ProfessionExporter:SetAuctionPanelActiveTab(tabId, manual)
 end
 
 --- Track AH purchases until bags catch up so cart Have/Buy update immediately.
-function ProfessionExporter:NoteAuctionCartPurchase(itemID, quantity, source)
+function AuctionHelper:NoteAuctionCartPurchase(itemID, quantity, source)
 	itemID = normalizeItemID(itemID)
 	quantity = math.max(0, math.floor(tonumber(quantity) or 0))
 	if not itemID or quantity <= 0 then
@@ -1845,7 +1845,7 @@ function ProfessionExporter:NoteAuctionCartPurchase(itemID, quantity, source)
 	return true
 end
 
-function ProfessionExporter:GetAuctionCartEffectiveHave(itemID)
+function AuctionHelper:GetAuctionCartEffectiveHave(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return 0
@@ -1871,7 +1871,7 @@ function ProfessionExporter:GetAuctionCartEffectiveHave(itemID)
 	return math.max(live, target)
 end
 
-function ProfessionExporter:ClearSettledAuctionCartPurchaseCredits()
+function AuctionHelper:ClearSettledAuctionCartPurchaseCredits()
 	local state = self:GetState()
 	local credits = state.auctionCartPurchaseCredits
 	if type(credits) ~= "table" then
@@ -1894,7 +1894,7 @@ function ProfessionExporter:ClearSettledAuctionCartPurchaseCredits()
 	end
 end
 
-function ProfessionExporter:ScheduleAuctionCartPurchaseRefresh()
+function AuctionHelper:ScheduleAuctionCartPurchaseRefresh()
 	local state = self:GetState()
 	if state.auctionCartPurchaseRefreshPending then
 		return
@@ -1916,15 +1916,15 @@ function ProfessionExporter:ScheduleAuctionCartPurchaseRefresh()
 	refreshOnce()
 	for _, delaySec in ipairs({ 0.15, 0.45, 1.0 }) do
 		C_Timer.After(delaySec, function()
-			ProfessionExporter:ClearSettledAuctionCartPurchaseCredits()
-			if ProfessionExporter.RefreshAuctionHousePanel then
-				ProfessionExporter:RefreshAuctionHousePanel()
+			AuctionHelper:ClearSettledAuctionCartPurchaseCredits()
+			if AuctionHelper.RefreshAuctionHousePanel then
+				AuctionHelper:RefreshAuctionHousePanel()
 			end
 		end)
 	end
 end
 
-function ProfessionExporter:BuildAuctionCraftCartRows()
+function AuctionHelper:BuildAuctionCraftCartRows()
 	self:ClearSettledAuctionCartPurchaseCredits()
 	local summary = self:BuildCraftQueueSummary()
 	local workSummary = self.BuildCraftingOrderWorkQueueSummary and self:BuildCraftingOrderWorkQueueSummary() or { reagentLines = {} }
@@ -2060,7 +2060,7 @@ function ProfessionExporter:BuildAuctionCraftCartRows()
 	return rows, summary, workSummary
 end
 
-function ProfessionExporter:FilterAuctionCraftCartRows(rows)
+function AuctionHelper:FilterAuctionCraftCartRows(rows)
 	self.ui = self.ui or {}
 	local text = string.lower(tostring(self.ui.auctionCartFilterText or ""))
 	local out = {}
@@ -2082,7 +2082,7 @@ local function moneyColumn(pe, id, label, field, optional)
 	}
 end
 
-function ProfessionExporter:BuildAuctionCartColumns()
+function AuctionHelper:BuildAuctionCartColumns()
 	local pe = self
 	local function count(id, label, field, optional)
 		return {
@@ -2112,7 +2112,7 @@ function ProfessionExporter:BuildAuctionCartColumns()
 	}
 end
 
-function ProfessionExporter:PauseAuctionScanForManualBuy(reason)
+function AuctionHelper:PauseAuctionScanForManualBuy(reason)
 	local state = self:GetState()
 	if state.auctionRefreshRunning == true and state.auctionRefreshPaused ~= true then
 		state.auctionRefreshPaused = true
@@ -2127,7 +2127,7 @@ function ProfessionExporter:PauseAuctionScanForManualBuy(reason)
 	return false
 end
 
-function ProfessionExporter:PauseAuctionScanForBulkPost()
+function AuctionHelper:PauseAuctionScanForBulkPost()
 	local state = self:GetState()
 	if self:PauseAuctionScanForManualBuy("bulk_post") then
 		state.auctionRefreshPausedForBulk = true
@@ -2136,7 +2136,7 @@ function ProfessionExporter:PauseAuctionScanForBulkPost()
 	return false
 end
 
-function ProfessionExporter:StopAuctionScanForDump()
+function AuctionHelper:StopAuctionScanForDump()
 	local state = self:GetState()
 	local wasRunning = state.auctionRefreshRunning == true
 	if wasRunning then
@@ -2162,7 +2162,7 @@ function ProfessionExporter:StopAuctionScanForDump()
 	return wasRunning
 end
 
-function ProfessionExporter:ResumeAuctionScanAfterBulkPost()
+function AuctionHelper:ResumeAuctionScanAfterBulkPost()
 	local state = self:GetState()
 	if state.auctionRefreshPausedForBulk ~= true then
 		return false
@@ -2179,12 +2179,12 @@ function ProfessionExporter:ResumeAuctionScanAfterBulkPost()
 		return true
 	end
 	C_Timer.After(0.05, function()
-		ProfessionExporter:ContinueQueuedAuctionRefresh()
+		AuctionHelper:ContinueQueuedAuctionRefresh()
 	end)
 	return true
 end
 
-function ProfessionExporter:TryPrefillAuctionBuyQuantity(quantity)
+function AuctionHelper:TryPrefillAuctionBuyQuantity(quantity)
 	quantity = math.max(1, math.floor(tonumber(quantity) or 0))
 	if quantity <= 0 then
 		return false
@@ -2215,7 +2215,7 @@ function ProfessionExporter:TryPrefillAuctionBuyQuantity(quantity)
 	return false
 end
 
-function ProfessionExporter:OpenAuctionBrowseSearchForItem(itemID, itemName, quantity)
+function AuctionHelper:OpenAuctionBrowseSearchForItem(itemID, itemName, quantity)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return false
@@ -2258,7 +2258,7 @@ function ProfessionExporter:OpenAuctionBrowseSearchForItem(itemID, itemName, qua
 	return false
 end
 
-function ProfessionExporter:TrySelectPendingAuctionBrowseResult()
+function AuctionHelper:TrySelectPendingAuctionBrowseResult()
 	local state = self:GetState()
 	local pending = state and state.auctionPendingBrowseSearch or nil
 	if not pending then
@@ -2286,13 +2286,13 @@ function ProfessionExporter:TrySelectPendingAuctionBrowseResult()
 		state.auctionCartSelectedItemID = pending.itemID
 		local qty = tonumber(pending.quantity) or 1
 		C_Timer.After(0, function()
-			ProfessionExporter:TryPrefillAuctionBuyQuantity(qty)
+			AuctionHelper:TryPrefillAuctionBuyQuantity(qty)
 		end)
 		C_Timer.After(0.1, function()
-			ProfessionExporter:TryPrefillAuctionBuyQuantity(qty)
+			AuctionHelper:TryPrefillAuctionBuyQuantity(qty)
 		end)
 		C_Timer.After(0.25, function()
-			ProfessionExporter:TryPrefillAuctionBuyQuantity(qty)
+			AuctionHelper:TryPrefillAuctionBuyQuantity(qty)
 		end)
 		state.auctionPendingBrowseSearch = nil
 		return true
@@ -2317,7 +2317,7 @@ local function searchClassicAuctionFrame(itemName)
 end
 
 --- Show an item's buy page in the open auction house (F30). Searches only; buying stays a player click.
-function ProfessionExporter:OpenItemInAuctionHouse(itemID)
+function AuctionHelper:OpenItemInAuctionHouse(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID or not self:IsAuctionHouseFrameOpen() then
 		return false
@@ -2337,7 +2337,7 @@ function ProfessionExporter:OpenItemInAuctionHouse(itemID)
 	return ok
 end
 
-function ProfessionExporter:SearchAuctionCartRow(row)
+function AuctionHelper:SearchAuctionCartRow(row)
 	row = type(row) == "table" and row or nil
 	self:PauseAuctionScanForManualBuy("cart_search")
 	local itemID = normalizeItemID(row and row.itemID or self:GetState().auctionCartSelectedItemID)
@@ -2354,7 +2354,7 @@ function ProfessionExporter:SearchAuctionCartRow(row)
 	return self:SendAuctionPanelSearchQuery(itemID, nil)
 end
 
-function ProfessionExporter:SearchAuctionCartRows(rows)
+function AuctionHelper:SearchAuctionCartRows(rows)
 	local ids = {}
 	for _, row in ipairs(rows or {}) do
 		local itemID = normalizeItemID(row and row.itemID)
@@ -2369,7 +2369,7 @@ function ProfessionExporter:SearchAuctionCartRows(rows)
 	return true
 end
 
-function ProfessionExporter:TryBuyAuctionCartRow(row)
+function AuctionHelper:TryBuyAuctionCartRow(row)
 	if not self.IS_RETAIL then -- Forever may expose the commodity purchase API, but buying is retail-only.
 		return false
 	end
@@ -2406,8 +2406,8 @@ function ProfessionExporter:TryBuyAuctionCartRow(row)
 		self:PrintMessage(string.format("Buying %s x%s.", self:GetItemDisplayName(itemID), self:FormatNumberGrouped(quantity)))
 		self:ScheduleAuctionCartPurchaseRefresh()
 		C_Timer.After(0.6, function()
-			ProfessionExporter:SearchAuctionCartRow({ itemID = itemID })
-			ProfessionExporter:RefreshAuctionHousePanel()
+			AuctionHelper:SearchAuctionCartRow({ itemID = itemID })
+			AuctionHelper:RefreshAuctionHousePanel()
 		end)
 		return true
 	end
@@ -2418,7 +2418,7 @@ function ProfessionExporter:TryBuyAuctionCartRow(row)
 	return attemptPurchase()
 end
 
-function ProfessionExporter:HideExtraAuctionHousePanels(keepPanel)
+function AuctionHelper:HideExtraAuctionHousePanels(keepPanel)
 	for _, frameName in ipairs(KNOWN_AH_SIDE_PANELS) do
 		local frame = _G[frameName]
 		if frame and frame ~= keepPanel and frame.IsObjectType and frame:IsObjectType("Frame") and frame.Hide then
@@ -2429,22 +2429,22 @@ end
 
 local function searchSelectedCartRow(panel)
 	local rows = panel.cartTable and panel.cartTable.rows or nil
-	local selected = ProfessionExporter:GetState().auctionCartSelectedItemID
+	local selected = AuctionHelper:GetState().auctionCartSelectedItemID
 	if selected then
-		ProfessionExporter:SearchAuctionCartRow({ itemID = selected })
+		AuctionHelper:SearchAuctionCartRow({ itemID = selected })
 	elseif type(rows) == "table" and #rows > 0 then
-		ProfessionExporter:SearchAuctionCartRow(rows[1])
+		AuctionHelper:SearchAuctionCartRow(rows[1])
 	end
 end
 
 local function priceAllCartRows()
-	local rows = ProfessionExporter:FilterAuctionCraftCartRows(select(1, ProfessionExporter:BuildAuctionCraftCartRows()))
-	ProfessionExporter:SearchAuctionCartRows(rows)
+	local rows = AuctionHelper:FilterAuctionCraftCartRows(select(1, AuctionHelper:BuildAuctionCraftCartRows()))
+	AuctionHelper:SearchAuctionCartRows(rows)
 end
 
 -- Selected cart item, or the first shown cart row when nothing is selected.
 local function selectedOrFirstCartItemID(panel)
-	local selected = ProfessionExporter:GetState().auctionCartSelectedItemID
+	local selected = AuctionHelper:GetState().auctionCartSelectedItemID
 	if not selected and panel.cartTable and panel.cartTable.rows then
 		local rows = panel.cartTable.rows or {}
 		selected = rows[1] and rows[1].itemID or nil
@@ -2455,25 +2455,25 @@ end
 local function buyCheapestCartSelection(panel)
 	local selected = selectedOrFirstCartItemID(panel)
 	if not selected then
-		ProfessionExporter:PrintMessage("Select a shopping-cart row first.")
+		AuctionHelper:PrintMessage("Select a shopping-cart row first.")
 		return
 	end
-	local rows = ProfessionExporter:FilterAuctionCraftCartRows(select(1, ProfessionExporter:BuildAuctionCraftCartRows()))
+	local rows = AuctionHelper:FilterAuctionCraftCartRows(select(1, AuctionHelper:BuildAuctionCraftCartRows()))
 	for _, row in ipairs(rows) do
 		if tonumber(row.itemID) == tonumber(selected) then
-			ProfessionExporter:TryBuyAuctionCartRow(row)
+			AuctionHelper:TryBuyAuctionCartRow(row)
 			break
 		end
 	end
 end
 
 local function removeSelectedCartSources()
-	local selected = ProfessionExporter:GetState().auctionCartSelectedItemID
+	local selected = AuctionHelper:GetState().auctionCartSelectedItemID
 	if not selected then
-		ProfessionExporter:PrintMessage("Select a shopping-cart row first.")
+		AuctionHelper:PrintMessage("Select a shopping-cart row first.")
 		return
 	end
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local removedCrafts = pe.RemoveCraftQueueLinesByReagentItem and pe:RemoveCraftQueueLinesByReagentItem(selected) or 0
 	local removedOrders = pe.RemoveCraftingOrdersByReagentItem and pe:RemoveCraftingOrdersByReagentItem(selected) or 0
 	if (removedCrafts + removedOrders) > 0 then
@@ -2489,15 +2489,15 @@ local function removeSelectedCartSources()
 end
 
 local function clearCartSources()
-	if ProfessionExporter.ClearCraftQueue then
-		ProfessionExporter:ClearCraftQueue()
+	if AuctionHelper.ClearCraftQueue then
+		AuctionHelper:ClearCraftQueue()
 	end
-	if ProfessionExporter.ClearCraftingOrderWorkQueue then
-		ProfessionExporter:ClearCraftingOrderWorkQueue()
+	if AuctionHelper.ClearCraftingOrderWorkQueue then
+		AuctionHelper:ClearCraftingOrderWorkQueue()
 	end
-	ProfessionExporter:GetState().auctionCartSelectedItemID = nil
-	ProfessionExporter:PrintMessage("Cleared shopping-cart sources.")
-	ProfessionExporter:RefreshAuctionHousePanel()
+	AuctionHelper:GetState().auctionCartSelectedItemID = nil
+	AuctionHelper:PrintMessage("Cleared shopping-cart sources.")
+	AuctionHelper:RefreshAuctionHousePanel()
 end
 
 -- Cart summary line and the search box that filters cart rows.
@@ -2513,9 +2513,9 @@ local function buildCartHeader(panel, title)
 	panel.cartSearchBox:SetAutoFocus(false)
 	panel.cartSearchBox:SetPoint("TOPLEFT", panel.cartSummary, "BOTTOMLEFT", 0, -8)
 	panel.cartSearchBox:SetScript("OnTextChanged", function(box)
-		ProfessionExporter.ui = ProfessionExporter.ui or {}
-		ProfessionExporter.ui.auctionCartFilterText = box:GetText() or ""
-		ProfessionExporter:RefreshAuctionHousePanel()
+		AuctionHelper.ui = AuctionHelper.ui or {}
+		AuctionHelper.ui.auctionCartFilterText = box:GetText() or ""
+		AuctionHelper:RefreshAuctionHousePanel()
 	end)
 	panel.cartSearchBox:Hide()
 end
@@ -2558,7 +2558,7 @@ local function showCartRowTooltip(rowFrame, rowData)
 	if not rowData or not rowData.itemID then
 		return
 	end
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local lines = {
 		{ "Need", pe:FormatNumberGrouped(rowData.quantityNeeded or 0) },
 		{ "Have here", pe:FormatNumberGrouped(rowData.quantityOnCharacter or rowData.quantityHave or 0) },
@@ -2580,7 +2580,7 @@ local function buildCartTable(self, panel)
 		emptyTitle = "Cart is empty",
 		emptyHint = "Queue crafts to add their reagents here.",
 		isRowSelected = function(rowData)
-			return rowData and rowData.itemID ~= nil and rowData.itemID == ProfessionExporter:GetState().auctionCartSelectedItemID
+			return rowData and rowData.itemID ~= nil and rowData.itemID == AuctionHelper:GetState().auctionCartSelectedItemID
 		end,
 		maxRows = 120,
 		sortKey = "quantityToBuy",
@@ -2591,13 +2591,13 @@ local function buildCartTable(self, panel)
 			GameTooltip:Hide()
 		end,
 		onRowClick = function(_, rowData, button)
-			ProfessionExporter:GetState().auctionCartSelectedItemID = rowData and rowData.itemID or nil
+			AuctionHelper:GetState().auctionCartSelectedItemID = rowData and rowData.itemID or nil
 			if button == "RightButton" and rowData then
-				ProfessionExporter:ShowVendorWaypoint(rowData.itemID)
+				AuctionHelper:ShowVendorWaypoint(rowData.itemID)
 			else
-				ProfessionExporter:SearchAuctionCartRow(rowData)
+				AuctionHelper:SearchAuctionCartRow(rowData)
 			end
-			ProfessionExporter:RefreshAuctionHousePanel()
+			AuctionHelper:RefreshAuctionHousePanel()
 		end,
 	})
 	if panel.cartTable and panel.cartTable.frame then
@@ -2609,7 +2609,7 @@ local function buildCartTable(self, panel)
 end
 
 -- Cart tab: reagent summary, search, buy/remove/clear actions and the reagent table (hidden until shown).
-function ProfessionExporter:BuildAuctionPanelCartTab(panel, title)
+function AuctionHelper:BuildAuctionPanelCartTab(panel, title)
 	buildCartHeader(panel, title)
 	buildCartButtons(panel)
 	buildCartTable(self, panel)
@@ -2622,12 +2622,12 @@ local OWNED_CHECK_TIP = "Looks up the current lowest price of every item you hav
 
 local function recheckOwnedAuctionPrices()
 	local ids = {}
-	for _, row in ipairs(ProfessionExporter:BuildOwnedAuctionRows()) do
+	for _, row in ipairs(AuctionHelper:BuildOwnedAuctionRows()) do
 		if not row.sold then
 			ids[#ids + 1] = row.itemID
 		end
 	end
-	ProfessionExporter:QueuePriorityAuctionRefresh(ids)
+	AuctionHelper:QueuePriorityAuctionRefresh(ids)
 end
 
 local function buildOwnedButtons(panel)
@@ -2639,7 +2639,7 @@ local function buildOwnedButtons(panel)
 	panel.btnOwnedCancel = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.btnOwnedCancel:SetText("Cancel undercut")
 	panel.btnOwnedCancel:SetScript("OnClick", function()
-		ProfessionExporter:CancelUndercutHoldingScan()
+		AuctionHelper:CancelUndercutHoldingScan()
 	end)
 	attachSimpleTooltip(panel.btnOwnedCancel, "Cancel undercut", OWNED_CANCEL_TIP)
 	attachSimpleTooltip(panel.btnOwnedCheck, "Check prices", OWNED_CHECK_TIP)
@@ -2681,7 +2681,7 @@ local function buildOwnedTable(self, panel)
 		sortAsc = false,
 		autoFitToScroll = true,
 		onRowEnter = function(rowFrame, rowData)
-			local pe = ProfessionExporter
+			local pe = AuctionHelper
 			local lines = ownedRowTooltipLines(pe, panel, rowData)
 			pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, not rowData.sold and "Click to recheck its price" or nil)
 		end,
@@ -2690,7 +2690,7 @@ local function buildOwnedTable(self, panel)
 		end,
 		onRowClick = function(_, rowData)
 			if not rowData.sold then
-				ProfessionExporter:QueuePriorityAuctionRefresh({ rowData.itemID })
+				AuctionHelper:QueuePriorityAuctionRefresh({ rowData.itemID })
 			end
 		end,
 	})
@@ -2699,7 +2699,7 @@ local function buildOwnedTable(self, panel)
 end
 
 -- Auctions tab: totals, a price recheck and the player's own auctions.
-function ProfessionExporter:BuildAuctionPanelOwnedTab(panel)
+function AuctionHelper:BuildAuctionPanelOwnedTab(panel)
 	buildOwnedButtons(panel)
 	buildOwnedTable(self, panel)
 end
@@ -2716,7 +2716,7 @@ local AUCTION_SCAN_CHOICES = {
 	{ value = "shown", label = "Save shown prices" },
 }
 
-function ProfessionExporter:RunAuctionPanelScanChoice()
+function AuctionHelper:RunAuctionPanelScanChoice()
 	local choice = self:GetSetting("auction.panelScanChoice", "both")
 	if choice == "crafts" then
 		self:QueueAuctionEconomyScan({ crafts = true })
@@ -2748,7 +2748,7 @@ end
 
 -- Re-anchors the panel to the shared design: 34px header with Sell / Cart / Auctions switch, rows of 26px controls
 -- 8px apart inside a 12px inset, the table filling the rest, a progress row and a 24px status footer.
-function ProfessionExporter:BuildAuctionPanelLayout(panel)
+function AuctionHelper:BuildAuctionPanelLayout(panel)
 	local pe = self
 	local ui = self.ui
 	local theme = self:GetTheme()
@@ -2963,7 +2963,7 @@ function ProfessionExporter:BuildAuctionPanelLayout(panel)
 end
 
 -- Places the active tab's table between its controls and the progress row or footer.
-function ProfessionExporter:LayoutAuctionPanelBody(panel, activeTab, progressShown)
+function AuctionHelper:LayoutAuctionPanelBody(panel, activeTab, progressShown)
 	local sell = activeTab == "sell"
 	for _, row in ipairs(panel.sellRows or {}) do
 		row:SetShown(sell)
@@ -2983,7 +2983,7 @@ function ProfessionExporter:LayoutAuctionPanelBody(panel, activeTab, progressSho
 	end
 end
 
-function ProfessionExporter:GetAuctionClassFilterOptions(rows)
+function AuctionHelper:GetAuctionClassFilterOptions(rows)
 	local seen = {}
 	local options = {
 		{ value = "all", label = "All classes" },
@@ -3010,7 +3010,7 @@ function ProfessionExporter:GetAuctionClassFilterOptions(rows)
 	return options
 end
 
-function ProfessionExporter:GetAuctionSubclassFilterOptions(rows, classSelection)
+function AuctionHelper:GetAuctionSubclassFilterOptions(rows, classSelection)
 	local seen = {}
 	local options = {
 		{ value = "all", label = "All subclasses" },
@@ -3040,7 +3040,7 @@ function ProfessionExporter:GetAuctionSubclassFilterOptions(rows, classSelection
 end
 
 local function rankMarkup(rankIndex)
-	return ProfessionExporter:GetRankMarkup(rankIndex)
+	return AuctionHelper:GetRankMarkup(rankIndex)
 end
 
 -- A badge-like word in its own colour, for the Flag column.
@@ -3049,7 +3049,7 @@ local function flagText(pe, text, colorKey)
 	return string.format("|cff%02x%02x%02x%s|r", color.r * 255, color.g * 255, color.b * 255, string.upper(text))
 end
 
-function ProfessionExporter:BuildAuctionPanelColumns()
+function AuctionHelper:BuildAuctionPanelColumns()
 	local pe = self
 	return {
 		self:CreateItemColumn({
@@ -3139,7 +3139,7 @@ function ProfessionExporter:BuildAuctionPanelColumns()
 	}
 end
 
-function ProfessionExporter:BuildOwnedAuctionColumns()
+function AuctionHelper:BuildOwnedAuctionColumns()
 	local pe = self
 	return {
 		self:CreateItemColumn({
@@ -3180,7 +3180,7 @@ function ProfessionExporter:BuildOwnedAuctionColumns()
 end
 
 --- The player's own auctions with totals; undercut compares against prices scanned this visit.
-function ProfessionExporter:BuildOwnedAuctionRows()
+function AuctionHelper:BuildOwnedAuctionRows()
 	local owned, lowest = {}, {}
 	local soldStatus = Enum and Enum.AuctionStatus and Enum.AuctionStatus.Sold
 	for _, info in ipairs(C_AuctionHouse and C_AuctionHouse.GetOwnedAuctions and C_AuctionHouse.GetOwnedAuctions() or {}) do
@@ -3214,7 +3214,7 @@ end
 --- Undercut auctions a bulk cancel may take, most undercut first. Left alone: auctions with a
 --- cancel fee (someone has bid), and ones where a repost at the lowest price would pay nothing
 --- after the cut and the forfeited deposit.
-function ProfessionExporter:GetCancelableUndercutAuctions(rows)
+function AuctionHelper:GetCancelableUndercutAuctions(rows)
 	local out = {}
 	for _, row in ipairs(rows) do
 		if row.undercut and not row.canceling and row.repostNet > 0 and C_AuctionHouse.CanCancelAuction(row.auctionID)
@@ -3228,7 +3228,7 @@ end
 
 --- Cancels the most undercut auction. Must run from a real click: like posting, the client
 --- rejects cancels that don't come from a hardware event, so it is one click per auction.
-function ProfessionExporter:CancelNextUndercutAuction()
+function AuctionHelper:CancelNextUndercutAuction()
 	local state = self:GetState()
 	local nowSec = GetTime()
 	if nowSec < (state.auctionNextCancelAt or 0) or not C_AuctionHouse.IsThrottledMessageSystemReady() then
@@ -3244,11 +3244,11 @@ function ProfessionExporter:CancelNextUndercutAuction()
 	state.auctionNextCancelAt = nowSec + AUCTION_BULK_MIN_INTERVAL
 	self:RefreshAuctionHousePanel()
 	C_Timer.After(AUCTION_BULK_MIN_INTERVAL, function()
-		ProfessionExporter:RefreshAuctionHousePanel()
+		AuctionHelper:RefreshAuctionHousePanel()
 	end)
 end
 
-function ProfessionExporter:FilterAuctionPanelRows(rows)
+function AuctionHelper:FilterAuctionPanelRows(rows)
 	self.ui = self.ui or {}
 	local ui = self.ui
 	local text = string.lower(tostring(ui.ahFilterText or ""))
@@ -3288,7 +3288,7 @@ function ProfessionExporter:FilterAuctionPanelRows(rows)
 	return out
 end
 
-function ProfessionExporter:TrySendItemToAuctionSellFrame(itemID, bag, slot)
+function AuctionHelper:TrySendItemToAuctionSellFrame(itemID, bag, slot)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return false
@@ -3378,7 +3378,7 @@ function ProfessionExporter:TrySendItemToAuctionSellFrame(itemID, bag, slot)
 	return clicked == true
 end
 
-function ProfessionExporter:GetAuctionPostButton()
+function AuctionHelper:GetAuctionPostButton()
 	local ah = _G.AuctionHouseFrame
 	if not ah then
 		return nil
@@ -3402,7 +3402,7 @@ function ProfessionExporter:GetAuctionPostButton()
 	return nil
 end
 
-function ProfessionExporter:GetAuctionSellFrameUnitPriceCopper()
+function AuctionHelper:GetAuctionSellFrameUnitPriceCopper()
 	local ah = _G.AuctionHouseFrame
 	if not ah then
 		return nil
@@ -3444,7 +3444,7 @@ function ProfessionExporter:GetAuctionSellFrameUnitPriceCopper()
 	return nil
 end
 
-function ProfessionExporter:GetLiveAuctionResultUnitPrice(itemID)
+function AuctionHelper:GetLiveAuctionResultUnitPrice(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return nil, nil, nil
@@ -3462,7 +3462,7 @@ function ProfessionExporter:GetLiveAuctionResultUnitPrice(itemID)
 	return nil, nil, nil
 end
 
-function ProfessionExporter:TryClickAuctionPostButton()
+function AuctionHelper:TryClickAuctionPostButton()
 	local button = self:GetAuctionPostButton()
 	if button and button.IsEnabled and button:IsEnabled() and button.Click then
 		button:Click()
@@ -3471,7 +3471,7 @@ function ProfessionExporter:TryClickAuctionPostButton()
 	return false
 end
 
-function ProfessionExporter:GetAuctionPanelPersonalSaleRate(itemID, characterKey)
+function AuctionHelper:GetAuctionPanelPersonalSaleRate(itemID, characterKey)
 	local auction = self:InitAuctionDB()
 	if not auction or not auction.transactions or type(auction.transactions.events) ~= "table" then
 		return nil, "-"
@@ -3499,7 +3499,7 @@ function ProfessionExporter:GetAuctionPanelPersonalSaleRate(itemID, characterKey
 	return ratio, string.format("%.0f%%", ratio * 100)
 end
 
-function ProfessionExporter:RunAuctionPanelBulkAction(mode)
+function AuctionHelper:RunAuctionPanelBulkAction(mode)
 	mode = tostring(mode or "post_all")
 	local state = self:GetState()
 	if state.auctionBulk and state.auctionBulk.running == true then
@@ -3559,7 +3559,7 @@ function ProfessionExporter:RunAuctionPanelBulkAction(mode)
 		b.awaitingScan = false
 		b.status = "Starting..."
 		self:RefreshAuctionHousePanel()
-		ProfessionExporter:ContinueAuctionBulkPost()
+		AuctionHelper:ContinueAuctionBulkPost()
 	end
 	if state.auctionSearchContext then
 		state.auctionBulk.awaitingScan = true
@@ -3569,11 +3569,11 @@ function ProfessionExporter:RunAuctionPanelBulkAction(mode)
 		return
 	end
 	C_Timer.After(0.05, function()
-		ProfessionExporter:ContinueAuctionBulkPost()
+		AuctionHelper:ContinueAuctionBulkPost()
 	end)
 end
 
-function ProfessionExporter:PrimeAuctionPanelRows()
+function AuctionHelper:PrimeAuctionPanelRows()
 	local state = self:GetState()
 	local bagState = self:GetAuctionOwnedBagState(true)
 	if type(state.auctionPanelRows) == "table"
@@ -3590,7 +3590,7 @@ function ProfessionExporter:PrimeAuctionPanelRows()
 	return state.auctionPanelRows
 end
 
-function ProfessionExporter:RetryPrimeAuctionPanelRows(attempt)
+function AuctionHelper:RetryPrimeAuctionPanelRows(attempt)
 	attempt = tonumber(attempt) or 1
 	local state = self:GetState()
 	local rows = (state and state.auctionPanelRows) or {}
@@ -3601,17 +3601,17 @@ function ProfessionExporter:RetryPrimeAuctionPanelRows(attempt)
 		return
 	end
 	C_Timer.After(0.2, function()
-		ProfessionExporter:PrimeAuctionPanelRows()
-		ProfessionExporter:RefreshAuctionHousePanel()
-		ProfessionExporter:RetryPrimeAuctionPanelRows(attempt + 1)
+		AuctionHelper:PrimeAuctionPanelRows()
+		AuctionHelper:RefreshAuctionHousePanel()
+		AuctionHelper:RetryPrimeAuctionPanelRows(attempt + 1)
 	end)
 end
 
-function ProfessionExporter:GetAuctionRegionKey()
+function AuctionHelper:GetAuctionRegionKey()
 	return tostring(GetCurrentRegion and GetCurrentRegion() or "unknown")
 end
 
-function ProfessionExporter:GetAuctionConnectedRealmID()
+function AuctionHelper:GetAuctionConnectedRealmID()
 	local id = tonumber(GetNormalizedRealmID and GetNormalizedRealmID() or nil)
 	if id and id > 0 then
 		return id
@@ -3619,7 +3619,7 @@ function ProfessionExporter:GetAuctionConnectedRealmID()
 	return tonumber(GetRealmID and GetRealmID() or 0) or 0
 end
 
-function ProfessionExporter:BuildAuctionStorageKey(itemID, marketScope, itemKey)
+function AuctionHelper:BuildAuctionStorageKey(itemID, marketScope, itemKey)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return nil
@@ -3641,7 +3641,7 @@ local function getBucketTable(root, storageKey)
 	return root[storageKey]
 end
 
-function ProfessionExporter:RecordAuctionObservation(observation)
+function AuctionHelper:RecordAuctionObservation(observation)
 	if type(observation) ~= "table" then
 		return false
 	end
@@ -3675,7 +3675,7 @@ function ProfessionExporter:RecordAuctionObservation(observation)
 	return true
 end
 
-function ProfessionExporter:IsAuctionDumpAhOriginPrice(row)
+function AuctionHelper:IsAuctionDumpAhOriginPrice(row)
 	if type(row) ~= "table" then
 		return false
 	end
@@ -3699,7 +3699,7 @@ function ProfessionExporter:IsAuctionDumpAhOriginPrice(row)
 	return false
 end
 
-function ProfessionExporter:ResolveDumpItemCommodity(itemKey, fallback)
+function AuctionHelper:ResolveDumpItemCommodity(itemKey, fallback)
 	if C_AuctionHouse and C_AuctionHouse.GetItemCommodityStatus and Enum and Enum.ItemCommodityStatus then
 		local ok, status = pcall(C_AuctionHouse.GetItemCommodityStatus, itemKey)
 		if ok and status == Enum.ItemCommodityStatus.Commodity then
@@ -3718,7 +3718,7 @@ end
 --- Persist a dump/replicate observation: always stamp last-updated and session-searched;
 --- write snapshot/native price when a usable unit price is present.
 --- Ignores the 1-hour auto-scan gate. Timestamps use now() unless the caller passes a newer value.
-function ProfessionExporter:PersistAuctionDumpObservation(observation)
+function AuctionHelper:PersistAuctionDumpObservation(observation)
 	if type(observation) ~= "table" then
 		return false
 	end
@@ -3756,7 +3756,7 @@ function ProfessionExporter:PersistAuctionDumpObservation(observation)
 	return true
 end
 
-function ProfessionExporter:UpdateAuctionHistoryFromObservation(storageKey, entry)
+function AuctionHelper:UpdateAuctionHistoryFromObservation(storageKey, entry)
 	local auction = self:InitAuctionDB()
 	if not storageKey or type(entry) ~= "table" then
 		return
@@ -3794,7 +3794,7 @@ function ProfessionExporter:UpdateAuctionHistoryFromObservation(storageKey, entr
 	self:TrimAuctionHistory()
 end
 
-function ProfessionExporter:TrimAuctionHistory()
+function AuctionHelper:TrimAuctionHistory()
 	-- Called per observation; walking all history each time made full dumps quadratic.
 	local state = self:GetState()
 	if state.auctionHistoryTrimmedAt and now() - state.auctionHistoryTrimmedAt < 600 then
@@ -3860,7 +3860,7 @@ end
 
 --- Per-hour aggregated AH sample quantity (`weightedQty` in history buckets) for graph overlays.
 --- Uses the same time range cutoff as item detail graphs (`GetHistoryRangeCutoff` from ItemAnalytics).
-function ProfessionExporter:GetAuctionHistoryQuantitySeriesForItem(itemID, rangeKey)
+function AuctionHelper:GetAuctionHistoryQuantitySeriesForItem(itemID, rangeKey)
 	itemID = tonumber(itemID)
 	if not itemID then
 		return {}
@@ -3907,7 +3907,7 @@ function ProfessionExporter:GetAuctionHistoryQuantitySeriesForItem(itemID, range
 	return list
 end
 
-function ProfessionExporter:RecordAuctionTransaction(event)
+function AuctionHelper:RecordAuctionTransaction(event)
 	if type(event) ~= "table" then
 		return false
 	end
@@ -3938,7 +3938,7 @@ function ProfessionExporter:RecordAuctionTransaction(event)
 	return true
 end
 
-function ProfessionExporter:GetAuctionSnapshot(itemKey, marketScope)
+function AuctionHelper:GetAuctionSnapshot(itemKey, marketScope)
 	local auction = self:InitAuctionDB()
 	if not itemKey then
 		return nil
@@ -3957,7 +3957,7 @@ function ProfessionExporter:GetAuctionSnapshot(itemKey, marketScope)
 	return snap and self:NormalizeAuctionSnapshotEntry(snap) or nil
 end
 
-function ProfessionExporter:GetItemEconomySummary(itemID, opts)
+function AuctionHelper:GetItemEconomySummary(itemID, opts)
 	opts = opts or {}
 	itemID = normalizeItemID(itemID)
 	if not itemID then
@@ -4007,7 +4007,7 @@ function ProfessionExporter:GetItemEconomySummary(itemID, opts)
 	}
 end
 
-function ProfessionExporter:UpsertNativeAuctionPrice(itemID, price, source, sampleSize, seenAt)
+function AuctionHelper:UpsertNativeAuctionPrice(itemID, price, source, sampleSize, seenAt)
 	itemID = normalizeItemID(itemID)
 	price = tonumber(price)
 	if not itemID or not price or price <= 0 then
@@ -4026,7 +4026,7 @@ function ProfessionExporter:UpsertNativeAuctionPrice(itemID, price, source, samp
 	return true
 end
 
-function ProfessionExporter:GetNativeAhPrice(itemID)
+function AuctionHelper:GetNativeAhPrice(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return nil
@@ -4039,7 +4039,7 @@ function ProfessionExporter:GetNativeAhPrice(itemID)
 	return tonumber(entry.price), tostring(entry.source or "native"), tonumber(entry.seenAt), tonumber(entry.sampleSize)
 end
 
-function ProfessionExporter:ResolveCurrentAuctionPrice(itemID, opts)
+function AuctionHelper:ResolveCurrentAuctionPrice(itemID, opts)
 	opts = opts or {}
 	itemID = normalizeItemID(itemID)
 	if not itemID then
@@ -4102,7 +4102,7 @@ function ProfessionExporter:ResolveCurrentAuctionPrice(itemID, opts)
 	return nil, "missing", nil
 end
 
-function ProfessionExporter:ResolveReagentUnitPrice(itemID, opts)
+function AuctionHelper:ResolveReagentUnitPrice(itemID, opts)
 	opts = opts or {}
 	local price, source, seenAt = self:ResolveCurrentAuctionPrice(itemID, {
 		allowFallback = opts.allowFallback ~= false,
@@ -4121,17 +4121,17 @@ function ProfessionExporter:ResolveReagentUnitPrice(itemID, opts)
 	return nil, "missing", nil
 end
 
-function ProfessionExporter:GetLastObservedAuctionPrice(itemID)
+function AuctionHelper:GetLastObservedAuctionPrice(itemID)
 	local summary = self:GetItemEconomySummary(itemID, {})
 	return summary and summary.lastPrice or nil
 end
 
-function ProfessionExporter:GetAuctionUnitPriceForCraftCost(itemID)
+function AuctionHelper:GetAuctionUnitPriceForCraftCost(itemID)
 	local price, source = self:ResolveReagentUnitPrice(itemID, { allowFallback = true })
 	return price, source
 end
 
-function ProfessionExporter:GetAuctionUnitPriceForCraftSale(itemID)
+function AuctionHelper:GetAuctionUnitPriceForCraftSale(itemID)
 	local price, source = self:ResolveCurrentAuctionPrice(itemID, { allowFallback = true })
 	if price and price > 0 then
 		return price, source
@@ -4143,7 +4143,7 @@ function ProfessionExporter:GetAuctionUnitPriceForCraftSale(itemID)
 	return nil, "missing"
 end
 
-function ProfessionExporter:EstimateCraftROIForItem(itemID)
+function AuctionHelper:EstimateCraftROIForItem(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return nil
@@ -4154,7 +4154,7 @@ function ProfessionExporter:EstimateCraftROIForItem(itemID)
 	return best and shallowCopy(best) or nil
 end
 
-function ProfessionExporter:GetCraftCostEstimateForItem(itemID, _opts)
+function AuctionHelper:GetCraftCostEstimateForItem(itemID, _opts)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return nil
@@ -4173,7 +4173,7 @@ function ProfessionExporter:GetCraftCostEstimateForItem(itemID, _opts)
 	}
 end
 
-function ProfessionExporter:BuildAuctionInventoryRows(opts)
+function AuctionHelper:BuildAuctionInventoryRows(opts)
 	opts = opts or {}
 	local includeCraftEstimates = opts.includeCraftEstimates == true
 	local bagState = opts.bagState or self:GetAuctionOwnedBagState(false)
@@ -4250,7 +4250,7 @@ function ProfessionExporter:BuildAuctionInventoryRows(opts)
 	return rows
 end
 
-function ProfessionExporter:OnAuctionHouseAuctionCreated()
+function AuctionHelper:OnAuctionHouseAuctionCreated()
 	local state = self:GetState()
 	if self:ConfirmAuctionBulkCurrent("auction_created") then
 		return
@@ -4277,7 +4277,7 @@ function ProfessionExporter:OnAuctionHouseAuctionCreated()
 	self:RefreshAuctionHousePanel()
 end
 
-function ProfessionExporter:OnAuctionHouseAuctionSold()
+function AuctionHelper:OnAuctionHouseAuctionSold()
 	local state = self:GetState()
 	local itemID = normalizeItemID(state and state.auctionActiveItemID)
 	if itemID then
@@ -4292,7 +4292,7 @@ function ProfessionExporter:OnAuctionHouseAuctionSold()
 	self:RefreshAuctionHousePanel()
 end
 
-function ProfessionExporter:RunQueuedAuctionRefresh()
+function AuctionHelper:RunQueuedAuctionRefresh()
 	local state = self:GetState()
 	if not self:CanStartFullAuctionSideActions(false) then
 		return
@@ -4352,14 +4352,14 @@ end
 
 -- The one record of when this realm's last full scan finished (saved, so it survives
 -- /reload and relog). The badge, dashboard, AH panel and the cooldown all read it.
-function ProfessionExporter:GetLastFullAuctionScanAt()
+function AuctionHelper:GetLastFullAuctionScanAt()
 	local auction = self:InitAuctionDB()
 	local byRealm = auction and auction.lastFullScanAt
 	local realmKey = self:GetAuctionRegionKey() .. ":" .. self:GetAuctionConnectedRealmID()
 	return type(byRealm) == "table" and tonumber(byRealm[realmKey]) or nil
 end
 
-function ProfessionExporter:SetLastFullAuctionScanAt(ts)
+function AuctionHelper:SetLastFullAuctionScanAt(ts)
 	local auction = self:InitAuctionDB()
 	if not auction then
 		return
@@ -4371,13 +4371,13 @@ end
 --- The server answers one full scan request per cooldown, so the cooldown also runs from the last
 --- request. That time is saved too: after a /reload in the middle of a scan the button shows the
 --- wait instead of starting a scan the server will not answer.
-function ProfessionExporter:SetLastFullAuctionScanRequestAt(ts)
+function AuctionHelper:SetLastFullAuctionScanRequestAt(ts)
 	local auction = self:InitAuctionDB()
 	auction.lastFullScanRequestAt = type(auction.lastFullScanRequestAt) == "table" and auction.lastFullScanRequestAt or {}
 	auction.lastFullScanRequestAt[self:GetAuctionRegionKey() .. ":" .. self:GetAuctionConnectedRealmID()] = ts
 end
 
-function ProfessionExporter:GetFullAuctionDumpCooldownRemaining()
+function AuctionHelper:GetFullAuctionDumpCooldownRemaining()
 	local requests = self:InitAuctionDB().lastFullScanRequestAt
 	local requestedAt = type(requests) == "table"
 		and tonumber(requests[self:GetAuctionRegionKey() .. ":" .. self:GetAuctionConnectedRealmID()]) or 0
@@ -4385,12 +4385,12 @@ function ProfessionExporter:GetFullAuctionDumpCooldownRemaining()
 	return math.max(0, lastAt + FULL_AH_DUMP_COOLDOWN_SEC - now())
 end
 
-function ProfessionExporter:IsFullAuctionDumpRunning()
+function AuctionHelper:IsFullAuctionDumpRunning()
 	local dump = self:GetState().auctionDump
 	return dump and dump.mode == "full" and dump.running == true
 end
 
-function ProfessionExporter:CanStartFullAuctionSideActions(announce)
+function AuctionHelper:CanStartFullAuctionSideActions(announce)
 	if self:IsFullAuctionDumpRunning() then
 		if announce then
 			self:PrintMessage("Full AH dump in progress. Wait for it to finish before starting another AH scan.")
@@ -4400,7 +4400,7 @@ function ProfessionExporter:CanStartFullAuctionSideActions(announce)
 	return true
 end
 
-function ProfessionExporter:QueueVisibleAuctionRefresh(itemIDs)
+function AuctionHelper:QueueVisibleAuctionRefresh(itemIDs)
 	if not self:CanStartFullAuctionSideActions(false) then
 		return
 	end
@@ -4414,7 +4414,7 @@ function ProfessionExporter:QueueVisibleAuctionRefresh(itemIDs)
 	self:QueueAuctionScanTargets(targets)
 end
 
-function ProfessionExporter:BuildVisibleCraftsTabAuctionTargets()
+function AuctionHelper:BuildVisibleCraftsTabAuctionTargets()
 	local ui = self.ui or nil
 	local rows = ui and ui.craftsTable and ui.craftsTable.GetVisibleRows and ui.craftsTable:GetVisibleRows() or nil
 	if type(rows) ~= "table" or #rows == 0 then
@@ -4452,7 +4452,7 @@ function ProfessionExporter:BuildVisibleCraftsTabAuctionTargets()
 	return targets
 end
 
-function ProfessionExporter:QueueVisibleCraftsTabAuctionRefresh(force)
+function AuctionHelper:QueueVisibleCraftsTabAuctionRefresh(force)
 	if not self:CanStartFullAuctionSideActions(false) then
 		return 0
 	end
@@ -4494,7 +4494,7 @@ function ProfessionExporter:QueueVisibleCraftsTabAuctionRefresh(force)
 	return #filtered
 end
 
-function ProfessionExporter:QueueAuctionScanTargets(targets, opts)
+function AuctionHelper:QueueAuctionScanTargets(targets, opts)
 	if not self:CanStartFullAuctionSideActions(false) then
 		return
 	end
@@ -4528,7 +4528,7 @@ function ProfessionExporter:QueueAuctionScanTargets(targets, opts)
 	self:RunQueuedAuctionRefresh()
 end
 
-function ProfessionExporter:BuildPrioritizedAuctionAutoScanTargets(opts)
+function AuctionHelper:BuildPrioritizedAuctionAutoScanTargets(opts)
 	opts = type(opts) == "table" and opts or {}
 	self:InitDB()
 	local currentCharacterKey = tostring(self:GetCharacterKey() or "")
@@ -4604,7 +4604,7 @@ function ProfessionExporter:BuildPrioritizedAuctionAutoScanTargets(opts)
 end
 
 --- Unique AH queue targets from saved snapshots: any item with stock on any character, tradable by static bind type.
-function ProfessionExporter:BuildAccountTradableInventoryAuctionTargets()
+function AuctionHelper:BuildAccountTradableInventoryAuctionTargets()
 	self:InitDB()
 	local seenQty = {}
 	for _, characterData in pairs(self.db.characters or {}) do
@@ -4631,7 +4631,7 @@ function ProfessionExporter:BuildAccountTradableInventoryAuctionTargets()
 end
 
 --- opts.crafts / opts.accountInventory: queue AH lookups (deduped). Crafts refresh invalidates craft caches when opts.crafts.
-function ProfessionExporter:QueueAuctionEconomyScan(opts)
+function AuctionHelper:QueueAuctionEconomyScan(opts)
 	opts = type(opts) == "table" and opts or {}
 	if self:GetSetting("auction.enabled", true) == false then
 		self:PrintMessage("Auction module is disabled.")
@@ -4688,14 +4688,14 @@ function ProfessionExporter:QueueAuctionEconomyScan(opts)
 	self:RefreshAuctionHousePanel()
 end
 
-function ProfessionExporter:QueueCraftEconomyAuctionRefresh(opts)
+function AuctionHelper:QueueCraftEconomyAuctionRefresh(opts)
 	opts = type(opts) == "table" and opts or {}
 	opts.crafts = true
 	opts.accountInventory = false
 	self:QueueAuctionEconomyScan(opts)
 end
 
-function ProfessionExporter:StartAuctionRoiEnrichment(itemIDs)
+function AuctionHelper:StartAuctionRoiEnrichment(itemIDs)
 	if not self:CanStartFullAuctionSideActions(false) then
 		return
 	end
@@ -4763,7 +4763,7 @@ function ProfessionExporter:StartAuctionRoiEnrichment(itemIDs)
 end
 
 --- Prefer retail AuctionHouseFrame; Forever / classic clients often expose AuctionFrame.
-function ProfessionExporter:GetAuctionHouseAnchorFrame()
+function AuctionHelper:GetAuctionHouseAnchorFrame()
 	local ah = _G.AuctionHouseFrame
 	if ah then
 		return ah
@@ -4771,25 +4771,25 @@ function ProfessionExporter:GetAuctionHouseAnchorFrame()
 	return _G.AuctionFrame
 end
 
-function ProfessionExporter:IsAuctionHouseFrameOpen()
+function AuctionHelper:IsAuctionHouseFrameOpen()
 	local ah = self:GetAuctionHouseAnchorFrame()
 	return ah and ah.IsShown and ah:IsShown() and true or false
 end
 
-function ProfessionExporter:CanUseClassicAuctionDump()
+function AuctionHelper:CanUseClassicAuctionDump()
 	return type(QueryAuctionItems) == "function"
 		and type(GetNumAuctionItems) == "function"
 		and type(GetAuctionItemInfo) == "function"
 end
 
-function ProfessionExporter:CanUseReplicateAuctionDump()
+function AuctionHelper:CanUseReplicateAuctionDump()
 	return C_AuctionHouse
 		and type(C_AuctionHouse.ReplicateItems) == "function"
 		and type(C_AuctionHouse.GetNumReplicateItems) == "function"
 		and type(C_AuctionHouse.GetReplicateItemInfo) == "function"
 end
 
-function ProfessionExporter:FailFullAuctionDump(reason)
+function AuctionHelper:FailFullAuctionDump(reason)
 	local state = self:GetState()
 	local dump = state.auctionDump
 	if not dump or dump.mode ~= "full" then
@@ -4814,7 +4814,7 @@ function ProfessionExporter:FailFullAuctionDump(reason)
 	self:RefreshAuctionHousePanel()
 end
 
-function ProfessionExporter:FinishFullAuctionDump()
+function AuctionHelper:FinishFullAuctionDump()
 	local state = self:GetState()
 	local dump = state.auctionDump
 	if not dump or dump.mode ~= "full" then
@@ -4834,7 +4834,7 @@ function ProfessionExporter:FinishFullAuctionDump()
 	end
 end
 
-function ProfessionExporter:PersistFullAuctionDumpChunk(token)
+function AuctionHelper:PersistFullAuctionDumpChunk(token)
 	local state = self:GetState()
 	local dump = state.auctionDump
 	if not dump or dump.mode ~= "full" or dump.running ~= true or tonumber(dump.token) ~= tonumber(token) then
@@ -4870,11 +4870,11 @@ function ProfessionExporter:PersistFullAuctionDumpChunk(token)
 	end
 	self:RefreshAuctionHousePanel()
 	C_Timer.After(0, function()
-		ProfessionExporter:PersistFullAuctionDumpChunk(token)
+		AuctionHelper:PersistFullAuctionDumpChunk(token)
 	end)
 end
 
-function ProfessionExporter:ProcessFullAuctionDumpChunk(token)
+function AuctionHelper:ProcessFullAuctionDumpChunk(token)
 	local state = self:GetState()
 	local dump = state.auctionDump
 	if not dump or dump.mode ~= "full" or dump.running ~= true or tonumber(dump.token) ~= tonumber(token) then
@@ -4910,7 +4910,7 @@ function ProfessionExporter:ProcessFullAuctionDumpChunk(token)
 	dump.done = dump.index
 	self:RefreshAuctionHousePanel()
 	C_Timer.After(0, function()
-		ProfessionExporter:ProcessFullAuctionDumpChunk(token)
+		AuctionHelper:ProcessFullAuctionDumpChunk(token)
 	end)
 end
 
@@ -4930,7 +4930,7 @@ end
 --- Polls once a second while a full scan waits for the server. Processing starts only when the
 --- answer to this request is in (the list event fired, or the list changed) and the list has
 --- stopped changing for one poll; a list left over from an earlier scan is never processed.
-function ProfessionExporter:OnFullAuctionDumpTimeout(token)
+function AuctionHelper:OnFullAuctionDumpTimeout(token)
 	local state = self:GetState()
 	local dump = state.auctionDump
 	if not dump or dump.mode ~= "full" or tonumber(dump.token) ~= tonumber(token) or dump.status ~= "requesting" or dump.running ~= true then
@@ -4958,19 +4958,19 @@ function ProfessionExporter:OnFullAuctionDumpTimeout(token)
 		return
 	end
 	C_Timer.After(FULL_AH_DUMP_REQUEST_POLL_SEC, function()
-		ProfessionExporter:OnFullAuctionDumpTimeout(token)
+		AuctionHelper:OnFullAuctionDumpTimeout(token)
 	end)
 end
 
 --- REPLICATE_ITEM_LIST_UPDATE: the server answered the full scan request. The poll picks it up.
-function ProfessionExporter:OnReplicateItemListUpdate()
+function AuctionHelper:OnReplicateItemListUpdate()
 	local dump = self:GetState().auctionDump
 	if dump and dump.mode == "full" and dump.running == true and dump.status == "requesting" then
 		dump.listUpdated = true
 	end
 end
 
-function ProfessionExporter:TrimFullDumpMarketHistory()
+function AuctionHelper:TrimFullDumpMarketHistory()
 	self:InitDB()
 	local settings = self.db and self.db.settings and self.db.settings.auction or nil
 	local retentionDays = tonumber(settings and settings.historyRetentionDays) or 30
@@ -4989,7 +4989,7 @@ function ProfessionExporter:TrimFullDumpMarketHistory()
 	end
 end
 
-function ProfessionExporter:ContinueAuctionDump(token)
+function AuctionHelper:ContinueAuctionDump(token)
 	local state = self:GetState()
 	local dump = state.auctionDump
 	if not dump or dump.running ~= true or tonumber(dump.token) ~= tonumber(token) then
@@ -5045,12 +5045,12 @@ function ProfessionExporter:ContinueAuctionDump(token)
 			self:RefreshAuctionHousePanel()
 		end
 		C_Timer.After(0, function()
-			ProfessionExporter:ContinueAuctionDump(token)
+			AuctionHelper:ContinueAuctionDump(token)
 		end)
 	end
 end
 
-function ProfessionExporter:CollectVisibleAuctionDumpRows()
+function AuctionHelper:CollectVisibleAuctionDumpRows()
 	local rows = {}
 	local seen = {}
 	local function addOrOverlay(row, overlay)
@@ -5121,7 +5121,7 @@ function ProfessionExporter:CollectVisibleAuctionDumpRows()
 	return rows
 end
 
-function ProfessionExporter:StartClassicFullAuctionDump(existingToken)
+function AuctionHelper:StartClassicFullAuctionDump(existingToken)
 	if not self:CanUseClassicAuctionDump() then
 		self:PrintMessage("Full AH dump is unavailable in this client/API context.")
 		return false
@@ -5167,7 +5167,7 @@ function ProfessionExporter:StartClassicFullAuctionDump(existingToken)
 	return true
 end
 
-function ProfessionExporter:QueryClassicAuctionDumpPage(token, page, retries)
+function AuctionHelper:QueryClassicAuctionDumpPage(token, page, retries)
 	local state = self:GetState()
 	local dump = state.auctionDump
 	if not dump or dump.mode ~= "full" or dump.classic ~= true or dump.running ~= true or tonumber(dump.token) ~= tonumber(token) then
@@ -5186,7 +5186,7 @@ function ProfessionExporter:QueryClassicAuctionDumpPage(token, page, retries)
 		dump.status = "waiting_query"
 		dump.queryRetries = retries + 1
 		C_Timer.After(CLASSIC_AH_DUMP_QUERY_RETRY_SEC, function()
-			ProfessionExporter:QueryClassicAuctionDumpPage(token, page, retries + 1)
+			AuctionHelper:QueryClassicAuctionDumpPage(token, page, retries + 1)
 		end)
 		return
 	end
@@ -5202,7 +5202,7 @@ function ProfessionExporter:QueryClassicAuctionDumpPage(token, page, retries)
 	self:RefreshAuctionHousePanel()
 end
 
-function ProfessionExporter:OnAuctionItemListUpdate()
+function AuctionHelper:OnAuctionItemListUpdate()
 	local state = self:GetState()
 	local dump = state.auctionDump
 	if not dump or dump.mode ~= "full" or dump.classic ~= true or dump.running ~= true then
@@ -5236,7 +5236,7 @@ function ProfessionExporter:OnAuctionItemListUpdate()
 	self:RefreshAuctionHousePanel()
 	if numBatch >= pageSize and dump.done < totalAuctions then
 		C_Timer.After(0.15, function()
-			ProfessionExporter:QueryClassicAuctionDumpPage(dump.token, page + 1)
+			AuctionHelper:QueryClassicAuctionDumpPage(dump.token, page + 1)
 		end)
 		return true
 	end
@@ -5254,7 +5254,7 @@ function ProfessionExporter:OnAuctionItemListUpdate()
 	return true
 end
 
-function ProfessionExporter:StartAuctionDump(mode)
+function AuctionHelper:StartAuctionDump(mode)
 	mode = tostring(mode or "visible")
 	local state = self:GetState()
 	local activeDump = state.auctionDump
@@ -5294,7 +5294,7 @@ function ProfessionExporter:StartAuctionDump(mode)
 			self:SetLastFullAuctionScanRequestAt(now())
 			self:RefreshAuctionHousePanel()
 			C_Timer.After(FULL_AH_DUMP_REQUEST_POLL_SEC, function()
-				ProfessionExporter:OnFullAuctionDumpTimeout(token)
+				AuctionHelper:OnFullAuctionDumpTimeout(token)
 			end)
 			return true
 		end
@@ -5327,17 +5327,17 @@ function ProfessionExporter:StartAuctionDump(mode)
 	end
 	self:RefreshAuctionHousePanel()
 	C_Timer.After(0, function()
-		ProfessionExporter:ContinueAuctionDump(token)
+		AuctionHelper:ContinueAuctionDump(token)
 	end)
 	return true
 end
 
-function ProfessionExporter:BuildAuctionVisibleItemIDs()
+function AuctionHelper:BuildAuctionVisibleItemIDs()
 	local bagState = self:GetAuctionOwnedBagState(false)
 	return shallowCopy(bagState and bagState.orderedItemIDs or {})
 end
 
-function ProfessionExporter:OnAuctionHouseShow()
+function AuctionHelper:OnAuctionHouseShow()
 	if self:GetSetting("auction.enabled", true) == false then
 		return
 	end
@@ -5375,7 +5375,7 @@ function ProfessionExporter:OnAuctionHouseShow()
 	end
 end
 
-function ProfessionExporter:OnAuctionHouseClosed()
+function AuctionHelper:OnAuctionHouseClosed()
 	local state = self:GetState()
 	if state.auctionDump and state.auctionDump.running == true then
 		state.auctionDump.running = false
@@ -5418,7 +5418,7 @@ function ProfessionExporter:OnAuctionHouseClosed()
 	end
 end
 
-function ProfessionExporter:ApplyAuctionSearchResultToDatabase(itemID, keyFields, sourceTag)
+function AuctionHelper:ApplyAuctionSearchResultToDatabase(itemID, keyFields, sourceTag)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
 		return false
@@ -5439,7 +5439,7 @@ end
 --- Gold dashboard read that entry. A live search lands under other keys, so copy its price,
 --- quantity and auction count there when they changed; otherwise only mark the entry as seen now.
 --- `quiet` leaves the view refresh to the caller (a result list saves many items at once).
-function ProfessionExporter:SaveLiveSearchToScanEntry(itemID, agg, quiet)
+function AuctionHelper:SaveLiveSearchToScanEntry(itemID, agg, quiet)
 	local price = tonumber(agg.minUnitPrice or agg.cheapestUnitPrice)
 	if not price or price <= 0 then
 		return false
@@ -5473,7 +5473,7 @@ end
 
 --- A live search changed saved prices: let the dashboard rebuild now instead of waiting out the
 --- scan throttle.
-function ProfessionExporter:RefreshViewsAfterLiveSearch()
+function AuctionHelper:RefreshViewsAfterLiveSearch()
 	self:GetState().marketInsightsForceRebuild = true
 	local dash = self.ui and self.ui.goldDashboard
 	if dash and dash:IsVisible() then
@@ -5487,7 +5487,7 @@ end
 --- The auction house's own result list (a name search, or browsing a category) carries the lowest
 --- price and the quantity of every item it shows: save those too. An item ID can appear once per
 --- variant, so the lowest price wins and the quantities add up.
-function ProfessionExporter:SaveBrowseResultsToScanEntries()
+function AuctionHelper:SaveBrowseResultsToScanEntries()
 	local byItem = {}
 	for _, result in ipairs(C_AuctionHouse.GetBrowseResults and C_AuctionHouse.GetBrowseResults() or {}) do
 		local itemID = normalizeItemID(result.itemKey)
@@ -5508,21 +5508,21 @@ function ProfessionExporter:SaveBrowseResultsToScanEntries()
 	end
 end
 
-function ProfessionExporter:OnAuctionHouseBrowseResultsUpdated()
+function AuctionHelper:OnAuctionHouseBrowseResultsUpdated()
 	local state = self:GetState()
 	self:DebugLog("AH", "event browse results", {
 		string.format("pending=%s", tostring(state and state.auctionPendingBrowseSearch and state.auctionPendingBrowseSearch.itemID)),
 	})
 	if self:TrySelectPendingAuctionBrowseResult() then
 		C_Timer.After(0, function()
-			ProfessionExporter:TrySelectPendingAuctionBrowseResult()
+			AuctionHelper:TrySelectPendingAuctionBrowseResult()
 		end)
 	end
 	self:SaveBrowseResultsToScanEntries()
 	self:RefreshAuctionHousePanel()
 end
 
-function ProfessionExporter:OnCommoditySearchResultsUpdated(itemID)
+function AuctionHelper:OnCommoditySearchResultsUpdated(itemID)
 	local state = self:GetState()
 	self:DebugLog("AH", "event commodity results", {
 		string.format("arg=%s selected=%s ctx=%s", tostring(normalizeSearchEventItemID(itemID)),
@@ -5540,7 +5540,7 @@ function ProfessionExporter:OnCommoditySearchResultsUpdated(itemID)
 	self:RefreshAuctionHousePanel()
 end
 
-function ProfessionExporter:OnItemSearchResultsUpdated(itemKey)
+function AuctionHelper:OnItemSearchResultsUpdated(itemKey)
 	local state = self:GetState()
 	self:DebugLog("AH", "event item results", {
 		string.format("arg=%s selected=%s ctx=%s", tostring(normalizeSearchEventItemID(itemKey)),
@@ -5559,7 +5559,7 @@ function ProfessionExporter:OnItemSearchResultsUpdated(itemKey)
 	self:RefreshAuctionHousePanel()
 end
 
-function ProfessionExporter:OnAuctionBagUpdate()
+function AuctionHelper:OnAuctionBagUpdate()
 	if self:IsAuctionHouseFrameOpen() then
 		local panel = self.ui and self.ui.auctionPanel
 		if panel and panel.IsShown and panel:IsShown() then
@@ -5575,7 +5575,7 @@ function ProfessionExporter:OnAuctionBagUpdate()
 	end
 end
 
-function ProfessionExporter:OnCommodityPurchased(itemID, quantity)
+function AuctionHelper:OnCommodityPurchased(itemID, quantity)
 	itemID = normalizeItemID(itemID)
 	quantity = math.max(0, math.floor(tonumber(quantity) or 0))
 	self:DebugLog("AH", "event commodity purchased", {
@@ -5597,7 +5597,7 @@ function ProfessionExporter:OnCommodityPurchased(itemID, quantity)
 	self:ScheduleAuctionCartPurchaseRefresh()
 end
 
-function ProfessionExporter:OnItemPurchased(itemID)
+function AuctionHelper:OnItemPurchased(itemID)
 	itemID = normalizeItemID(itemID)
 	self:DebugLog("AH", "event item purchased", {
 		string.format("itemID=%s", tostring(itemID)),
@@ -5609,14 +5609,14 @@ function ProfessionExporter:OnItemPurchased(itemID)
 	self:ScheduleAuctionCartPurchaseRefresh()
 end
 
-function ProfessionExporter:OnAuctionHousePurchaseCompleted(auctionID)
+function AuctionHelper:OnAuctionHousePurchaseCompleted(auctionID)
 	self:DebugLog("AH", "event auction house purchase completed", {
 		string.format("auctionID=%s", tostring(auctionID)),
 	})
 	self:ScheduleAuctionCartPurchaseRefresh()
 end
 
-function ProfessionExporter:OnCommodityPurchaseSucceeded(...)
+function AuctionHelper:OnCommodityPurchaseSucceeded(...)
 	local a1, a2, a3 = ...
 	self:DebugLog("AH", "event commodity purchase succeeded", {
 		string.format("args=%s", table.concat({ tostring(a1), tostring(a2), tostring(a3) }, ",")),
@@ -5633,7 +5633,7 @@ function ProfessionExporter:OnCommodityPurchaseSucceeded(...)
 	self:ScheduleAuctionCartPurchaseRefresh()
 end
 
-function ProfessionExporter:OnCommodityPurchaseFailed(...)
+function AuctionHelper:OnCommodityPurchaseFailed(...)
 	local a1, a2, a3 = ...
 	self:DebugLog("AH", "event commodity purchase failed", {
 		string.format("args=%s", table.concat({ tostring(a1), tostring(a2), tostring(a3) }, ",")),
@@ -5648,11 +5648,11 @@ function ProfessionExporter:OnCommodityPurchaseFailed(...)
 	end
 end
 
-if not ProfessionExporter.__ahCartPurchaseHooksInstalled then
-	ProfessionExporter.__ahCartPurchaseHooksInstalled = true
+if not AuctionHelper.__ahCartPurchaseHooksInstalled then
+	AuctionHelper.__ahCartPurchaseHooksInstalled = true
 	if C_AuctionHouse and C_AuctionHouse.ConfirmCommoditiesPurchase then
 		hooksecurefunc(C_AuctionHouse, "ConfirmCommoditiesPurchase", function(itemID, quantity)
-			local pe = ProfessionExporter
+			local pe = AuctionHelper
 			itemID = normalizeItemID(itemID)
 			quantity = math.max(0, math.floor(tonumber(quantity) or 0))
 			if not itemID or quantity <= 0 then

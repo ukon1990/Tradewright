@@ -1,8 +1,8 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 --- Pure Forever / client helpers (offline-testable).
 local ForeverLogic = {}
-ProfessionExporter.ForeverLogic = ForeverLogic
+AuctionHelper.ForeverLogic = ForeverLogic
 
 --- Detect Forever vs true retail. Forever shares WOW_PROJECT_MAINLINE; use interface band 16000-16999.
 function ForeverLogic.DetectClientFlags(interfaceVersion, projectId, mainlineId)
@@ -17,7 +17,7 @@ function ForeverLogic.DetectClientFlags(interfaceVersion, projectId, mainlineId)
 end
 
 function ForeverLogic.ApplyClientFlags(target)
-	target = target or ProfessionExporter
+	target = target or AuctionHelper
 	local flags = ForeverLogic.DetectClientFlags(
 		select(4, GetBuildInfo()),
 		WOW_PROJECT_ID,
@@ -30,7 +30,7 @@ function ForeverLogic.ApplyClientFlags(target)
 end
 
 if type(GetBuildInfo) == "function" then
-	ForeverLogic.ApplyClientFlags(ProfessionExporter)
+	ForeverLogic.ApplyClientFlags(AuctionHelper)
 end
 
 --- Fold one classic/replicate auction list row into a full-dump aggregate bucket (by itemID).

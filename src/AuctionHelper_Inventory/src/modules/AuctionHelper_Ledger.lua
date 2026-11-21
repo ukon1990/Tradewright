@@ -1,10 +1,10 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 local MAX_EVENTS = 2500
 
 --- Normalized transaction ledger (purchases, sales, crafts). Best-effort capture; many sources are not exposed by the WoW API.
 --- Must not call InitDB (InitDB invokes InitLedger at the end — would recurse).
-function ProfessionExporter:InitLedger()
+function AuctionHelper:InitLedger()
 	local db = self.db or self:BuildMergedRuntimeDB(self.baseDb or {}, self.professionsDb or {}, self.inventoryDb or {}, self.auctionStorageDb or {})
 	if type(db) ~= "table" then
 		return nil
@@ -19,7 +19,7 @@ end
 
 --- @param entry table { kind, ts, characterKey, itemID, itemName?, quantity, unitCopper, totalCopper, source, recipeID?, meta? }
 --- An entry needs an itemID, or at least an itemName when the id could not be resolved.
-function ProfessionExporter:LedgerAppendEvent(entry)
+function AuctionHelper:LedgerAppendEvent(entry)
 	if type(entry) ~= "table" then
 		return
 	end
@@ -53,7 +53,7 @@ end
 local AUCTION_MAIL_DAYS = 30
 local pendingSales = {}
 
-function ProfessionExporter:OnMailInboxUpdate()
+function AuctionHelper:OnMailInboxUpdate()
 	wipe(pendingSales)
 	for index = 1, GetInboxNumItems() do
 		local _, _, _, _, money, _, daysLeft = GetInboxHeaderInfo(index)
@@ -65,7 +65,7 @@ function ProfessionExporter:OnMailInboxUpdate()
 			pendingSales[index] = {
 				kind = "sell",
 				ts = time() - math.max(0, math.min(AUCTION_MAIL_DAYS * 86400, age)),
-				itemID = ProfessionExporter:ResolveItemIDByName(itemName),
+				itemID = AuctionHelper:ResolveItemIDByName(itemName),
 				itemName = itemName,
 				quantity = quantity,
 				unitCopper = bid / quantity,
@@ -82,7 +82,7 @@ local function recordCollectedSale(index)
 	local sale = pendingSales[index]
 	if sale then
 		pendingSales[index] = nil
-		ProfessionExporter:LedgerAppendEvent(sale)
+		AuctionHelper:LedgerAppendEvent(sale)
 	end
 end
 
@@ -92,7 +92,7 @@ if hooksecurefunc and TakeInboxMoney and AutoLootMailItem then
 end
 
 local function itemIDsByName()
-	local L = ProfessionExporter:InitLedger()
+	local L = AuctionHelper:InitLedger()
 	if L then
 		L.itemIDsByName = L.itemIDsByName or {}
 		return L.itemIDsByName
@@ -106,7 +106,7 @@ end
 
 --- Remembers the name of an item the addon has shown, so a sale of it (whose mail names the item
 --- but carries no id) still finds its icon after the item has left the client's cache.
-function ProfessionExporter:LearnItemName(itemID, name)
+function AuctionHelper:LearnItemName(itemID, name)
 	local map = itemIDsByName()
 	itemID = tonumber(itemID)
 	if map and itemID and type(name) == "string" and name ~= "" then
@@ -114,7 +114,7 @@ function ProfessionExporter:LearnItemName(itemID, name)
 	end
 end
 
-function ProfessionExporter:ResolveItemIDByName(name)
+function AuctionHelper:ResolveItemIDByName(name)
 	local map = itemIDsByName()
 	return map and map[name] or lookupItemID(name)
 end
@@ -135,7 +135,7 @@ local function fillMissingItemIDs(events, map)
 end
 
 --- The ledger's events, with the item ids of sales recorded by name filled in where known.
-function ProfessionExporter:GetLedgerEvents()
+function AuctionHelper:GetLedgerEvents()
 	local L = self:InitLedger()
 	if not L then
 		return {}
@@ -145,7 +145,7 @@ function ProfessionExporter:GetLedgerEvents()
 end
 
 --- Sales statistics for the last `days` days (nil for all time); see ForeverLogic.SummarizeSales.
-function ProfessionExporter:GetSalesSummary(days)
+function AuctionHelper:GetSalesSummary(days)
 	return self.ForeverLogic.SummarizeSales(self:GetLedgerEvents(), time(), days)
 end
 
@@ -174,7 +174,7 @@ local function iterEvents(L, kind, itemID, characterKey)
 end
 
 --- Weighted average unit copper for purchases of itemID (optional characterKey filter).
-function ProfessionExporter:LedgerAverageUnitBuyCopper(itemID, characterKey)
+function AuctionHelper:LedgerAverageUnitBuyCopper(itemID, characterKey)
 	local L = self:InitLedger()
 	itemID = tonumber(itemID)
 	if not itemID or not L then
@@ -198,7 +198,7 @@ function ProfessionExporter:LedgerAverageUnitBuyCopper(itemID, characterKey)
 	return total / qty, n
 end
 
-function ProfessionExporter:LedgerAverageUnitSellCopper(itemID, characterKey)
+function AuctionHelper:LedgerAverageUnitSellCopper(itemID, characterKey)
 	local L = self:InitLedger()
 	itemID = tonumber(itemID)
 	if not itemID or not L then
@@ -222,7 +222,7 @@ function ProfessionExporter:LedgerAverageUnitSellCopper(itemID, characterKey)
 	return total / qty, n
 end
 
-function ProfessionExporter:LedgerPurchaseStats(itemID, characterKey)
+function AuctionHelper:LedgerPurchaseStats(itemID, characterKey)
 	local avg, count = self:LedgerAverageUnitBuyCopper(itemID, characterKey)
 	local lastBuy, lastTs = nil, nil
 	itemID = tonumber(itemID)
@@ -246,7 +246,7 @@ function ProfessionExporter:LedgerPurchaseStats(itemID, characterKey)
 	}
 end
 
-function ProfessionExporter:LedgerSaleStats(itemID, characterKey)
+function AuctionHelper:LedgerSaleStats(itemID, characterKey)
 	local avg, count = self:LedgerAverageUnitSellCopper(itemID, characterKey)
 	local lastSell, lastTs = nil, nil
 	itemID = tonumber(itemID)

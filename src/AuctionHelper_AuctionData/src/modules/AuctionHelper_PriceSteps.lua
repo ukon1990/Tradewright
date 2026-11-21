@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Cheapest price steps of each item, kept from a full scan (F41).
 -- `auction.priceSteps[itemID] = { t = seenAt, l = { price1, qty1, price2, qty2, … } }`, cheapest first.
@@ -13,15 +13,15 @@ end
 
 --- Fold one auction row of a full scan into its item's aggregate, and remember its price level.
 --- Called as a plain function: `aggregateRow(aggregate, itemID, count, buyoutPrice)`.
-function ProfessionExporter.AggregateAuctionRow(aggregate, itemID, count, buyoutPrice)
-	ProfessionExporter.ForeverLogic.AggregateClassicAuctionRow(aggregate, itemID, count, buyoutPrice)
+function AuctionHelper.AggregateAuctionRow(aggregate, itemID, count, buyoutPrice)
+	AuctionHelper.ForeverLogic.AggregateClassicAuctionRow(aggregate, itemID, count, buyoutPrice)
 	local bucket = itemID and aggregate[itemID]
 	local buyout = tonumber(buyoutPrice)
 	if not bucket or not buyout or buyout <= 0 then
 		return aggregate
 	end
 	local quantity = math.max(1, tonumber(count) or 1)
-	bucket.levels = ProfessionExporter.MarketSignals.AddPriceStep(bucket.levels or {}, buyout / quantity, quantity, MAX_STEPS)
+	bucket.levels = AuctionHelper.MarketSignals.AddPriceStep(bucket.levels or {}, buyout / quantity, quantity, MAX_STEPS)
 	return aggregate
 end
 
@@ -37,7 +37,7 @@ end
 
 --- Save one item's full-scan aggregate: its snapshot and hourly history, its item history point and
 --- its cheapest price steps.
-function ProfessionExporter:PersistDumpAggregate(itemID, aggregate, dump, seenAt)
+function AuctionHelper:PersistDumpAggregate(itemID, aggregate, dump, seenAt)
 	local sourceLabel = tostring(dump.sourceLabel or (dump.classic and "classic_full" or "replicate_full"))
 	self:PersistAuctionDumpObservation({
 		itemID = itemID,
@@ -59,7 +59,7 @@ function ProfessionExporter:PersistDumpAggregate(itemID, aggregate, dump, seenAt
 end
 
 --- Price steps of an item from the last full scan: `steps, seenAt`, or nil when none are kept.
-function ProfessionExporter:GetPriceSteps(itemID)
+function AuctionHelper:GetPriceSteps(itemID)
 	local auction = self:InitAuctionDB()
 	local entry = auction and auction.priceSteps and auction.priceSteps[tonumber(itemID)]
 	if not entry then
@@ -69,7 +69,7 @@ function ProfessionExporter:GetPriceSteps(itemID)
 end
 
 --- Drop price steps older than the hourly history is kept. Runs at load.
-function ProfessionExporter:TrimPriceSteps()
+function AuctionHelper:TrimPriceSteps()
 	local auction = self:InitAuctionDB()
 	if not (auction and auction.priceSteps) then
 		return

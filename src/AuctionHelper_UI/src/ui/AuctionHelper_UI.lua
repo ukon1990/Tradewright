@@ -1,9 +1,9 @@
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
 
-ProfessionExporter.ui = ProfessionExporter.ui or {}
+AuctionHelper.ui = AuctionHelper.ui or {}
 
-function ProfessionExporter:GetDashboardCharacterKeyList(db)
+function AuctionHelper:GetDashboardCharacterKeyList(db)
 	db = db or self.db
 	local seen = {}
 	local keys = {}
@@ -25,7 +25,7 @@ function ProfessionExporter:GetDashboardCharacterKeyList(db)
 	return keys
 end
 
-function ProfessionExporter:GetDashboardSidebarCharacterLabel(characterKey, charData, currentKey)
+function AuctionHelper:GetDashboardSidebarCharacterLabel(characterKey, charData, currentKey)
 	if characterKey == currentKey then
 		local base = characterKey
 		local meta = charData and charData.meta
@@ -42,7 +42,7 @@ function ProfessionExporter:GetDashboardSidebarCharacterLabel(characterKey, char
 end
 
 -- Character name without realm, in its class color when known.
-function ProfessionExporter:GetCharacterNameMarkup(characterKey)
+function AuctionHelper:GetCharacterNameMarkup(characterKey)
 	local data = self.db and self.db.characters and self.db.characters[characterKey]
 	local meta = data and data.meta
 	local name = meta and meta.name or (tostring(characterKey or "?"):match("^([^%-]+)") or "?")
@@ -54,7 +54,7 @@ function ProfessionExporter:GetCharacterNameMarkup(characterKey)
 end
 
 -- "today 14:32", "yesterday 21:40", else "2026-11-17 09:05"; "never" when missing.
-function ProfessionExporter:FormatScanTimestamp(ts)
+function AuctionHelper:FormatScanTimestamp(ts)
 	ts = tonumber(ts)
 	if not ts or ts <= 0 then
 		return "never"
@@ -76,7 +76,7 @@ local itemNameRequested = {}
 local itemNameRefreshPending = false
 
 -- `noRequest`: return "#id" for unknown items without asking the client (bulk list building).
-function ProfessionExporter:GetItemDisplayName(itemID, noRequest)
+function AuctionHelper:GetItemDisplayName(itemID, noRequest)
 	if not itemID then
 		return "?"
 	end
@@ -100,7 +100,7 @@ end
 
 -- Re-renders the rows of every visible table without rebuilding their data. Every table created with
 -- `CreateReusableTable` is listed in `ReusableTables`, so new tabs need nothing here.
-function ProfessionExporter:RefreshVisibleItemRows()
+function AuctionHelper:RefreshVisibleItemRows()
 	local ui = self.ui or {}
 	for tableWidget in pairs(self.ReusableTables or {}) do
 		if tableWidget.frame and tableWidget.frame:IsVisible() then
@@ -126,18 +126,18 @@ itemNameLoader:SetScript("OnEvent", function(_, _, itemID)
 	itemNameRefreshPending = true
 	C_Timer.After(0.3, function()
 		itemNameRefreshPending = false
-		ProfessionExporter:RefreshVisibleItemRows()
+		AuctionHelper:RefreshVisibleItemRows()
 	end)
 end)
 
-function ProfessionExporter:NotifyDashboardUpdate(skipRebuild)
+function AuctionHelper:NotifyDashboardUpdate(skipRebuild)
 	local ui = self.ui
 	if ui and ui.mainFrame and ui.mainFrame:IsShown() then
 		self:RefreshDashboard(skipRebuild)
 	end
 end
 
-function ProfessionExporter:DashboardRefreshInventory()
+function AuctionHelper:DashboardRefreshInventory()
 	local key, data = self:GetOrCreateCharacterDataForLiveUpdate()
 	data.lastLiveInventoryUpdate = time()
 	self:UpdateInventorySnapshot(data, {
@@ -154,13 +154,13 @@ function ProfessionExporter:DashboardRefreshInventory()
 	})
 end
 
-function ProfessionExporter:ExportProgressEncodeStageFrac(steps)
+function AuctionHelper:ExportProgressEncodeStageFrac(steps)
 	local k = self.EXPORT_PROGRESS_ENCODE_PROGRESS_K or 80000
 	local s = math.max(0, steps or 0)
 	return s / (s + k)
 end
 
-function ProfessionExporter:RefreshExportProgressPhaseLine(f)
+function AuctionHelper:RefreshExportProgressPhaseLine(f)
 	if not f or not f.phaseStr then
 		return
 	end
@@ -172,7 +172,7 @@ function ProfessionExporter:RefreshExportProgressPhaseLine(f)
 	end
 end
 
-function ProfessionExporter:RefreshExportProgressPctLine(f)
+function AuctionHelper:RefreshExportProgressPctLine(f)
 	if not f or not f.pctStr or not f.bar then
 		return
 	end
@@ -180,7 +180,7 @@ function ProfessionExporter:RefreshExportProgressPctLine(f)
 end
 
 --- Floating progress while export gathers data and packs compressed exports (staged monotonic bar).
-function ProfessionExporter:ShowExportProgress(scopeLabel)
+function AuctionHelper:ShowExportProgress(scopeLabel)
 	self.ui = self.ui or {}
 	local ui = self.ui
 	local f = ui.exportProgressFrame
@@ -217,16 +217,16 @@ function ProfessionExporter:ShowExportProgress(scopeLabel)
 			if sf.barMode ~= "gather" or not sf:IsShown() then
 				return
 			end
-			local wG = ProfessionExporter.EXPORT_PROGRESS_GATHER_WEIGHT or 0.30
-			local cap = ProfessionExporter.EXPORT_PROGRESS_GATHER_CREEP_CAP or 0.95
-			local tmax = ProfessionExporter.EXPORT_PROGRESS_GATHER_CREEP_MAX_SEC or 5
+			local wG = AuctionHelper.EXPORT_PROGRESS_GATHER_WEIGHT or 0.30
+			local cap = AuctionHelper.EXPORT_PROGRESS_GATHER_CREEP_CAP or 0.95
+			local tmax = AuctionHelper.EXPORT_PROGRESS_GATHER_CREEP_MAX_SEC or 5
 			local t0 = sf.gatherStartTime or GetTime()
 			local elapsed = GetTime() - t0
 			local sliceFrac = math.min(cap, elapsed / math.max(0.001, tmax))
 			local overall = wG * sliceFrac
 			sf.lastOverall = math.max(sf.lastOverall or 0, overall)
 			sf.bar:SetValue(sf.lastOverall)
-			ProfessionExporter:RefreshExportProgressPctLine(sf)
+			AuctionHelper:RefreshExportProgressPctLine(sf)
 		end)
 
 		ui.exportProgressFrame = f
@@ -246,7 +246,7 @@ function ProfessionExporter:ShowExportProgress(scopeLabel)
 end
 
 --- useStepSuffix: when true, text is a prefix; UpdateExportProgressSteps appends " (N steps)".
-function ProfessionExporter:SetExportProgressPhase(text, useStepSuffix)
+function AuctionHelper:SetExportProgressPhase(text, useStepSuffix)
 	local f = self.ui and self.ui.exportProgressFrame
 	if not f or not f.phaseStr then
 		return
@@ -267,7 +267,7 @@ function ProfessionExporter:SetExportProgressPhase(text, useStepSuffix)
 	end
 end
 
-function ProfessionExporter:UpdateExportProgressSteps(steps)
+function AuctionHelper:UpdateExportProgressSteps(steps)
 	local f = self.ui and self.ui.exportProgressFrame
 	if not f or not f:IsShown() or not f.phaseStr or not f.phaseBaseText then
 		return
@@ -284,7 +284,7 @@ function ProfessionExporter:UpdateExportProgressSteps(steps)
 end
 
 --- markComplete: set bar to 100%% before hiding (successful encode).
-function ProfessionExporter:HideExportProgress(markComplete)
+function AuctionHelper:HideExportProgress(markComplete)
 	local f = self.ui and self.ui.exportProgressFrame
 	if f then
 		f.indeterminateBar = false

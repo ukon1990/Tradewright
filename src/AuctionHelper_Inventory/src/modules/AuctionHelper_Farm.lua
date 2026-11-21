@@ -1,10 +1,10 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Farm runs (E09 F70): while a run is active, the player's own loot, looted coin and vendor sales are
 -- recorded. This only listens to what the player does; it never moves, loots or sells for them.
 -- The run lives in `ledger.farm.current` so it survives a reload; saved runs go to `ledger.farm.farms`.
 
-local IncomeLogic = ProfessionExporter.IncomeLogic
+local IncomeLogic = AuctionHelper.IncomeLogic
 local COIN_WINDOW = 1
 local LATEST = 3
 
@@ -28,7 +28,7 @@ local function farmStore(pe)
 end
 
 --- The run in progress (possibly paused), or nil.
-function ProfessionExporter:GetCurrentFarmRun()
+function AuctionHelper:GetCurrentFarmRun()
 	local store = farmStore(self)
 	return store and store.current or nil
 end
@@ -57,7 +57,7 @@ local function newRun(pe, name)
 end
 
 --- Start a run named `name` (default: the zone). Does nothing while a run is in progress.
-function ProfessionExporter:StartFarmRun(name)
+function AuctionHelper:StartFarmRun(name)
 	local store = farmStore(self)
 	if not store then
 		return nil
@@ -73,7 +73,7 @@ function ProfessionExporter:StartFarmRun(name)
 end
 
 --- Pause or resume the run; paused time is not counted.
-function ProfessionExporter:ToggleFarmPause()
+function AuctionHelper:ToggleFarmPause()
 	local run = self:GetCurrentFarmRun()
 	if not run then
 		return
@@ -88,7 +88,7 @@ function ProfessionExporter:ToggleFarmPause()
 end
 
 --- Price facts for the farm value rule: vendor price, usual price and sells a day of an item.
-function ProfessionExporter:GetFarmItemPrice(itemID)
+function AuctionHelper:GetFarmItemPrice(itemID)
 	local usual, sells
 	if self.GetItemPriceSignals then
 		usual, sells = self:GetItemPriceSignals(itemID)
@@ -97,7 +97,7 @@ function ProfessionExporter:GetFarmItemPrice(itemID)
 end
 
 --- Value of a run at today's prices (see FarmLogic.SummarizeRun).
-function ProfessionExporter:SummarizeFarmRun(run)
+function AuctionHelper:SummarizeFarmRun(run)
 	local cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05
 	return self.FarmLogic.SummarizeRun(run, function(itemID)
 		return self:GetFarmItemPrice(itemID)
@@ -105,7 +105,7 @@ function ProfessionExporter:SummarizeFarmRun(run)
 end
 
 --- Stop the run and save it under its name; a farm of that name gets one more run. Returns the summary.
-function ProfessionExporter:StopFarmRun()
+function AuctionHelper:StopFarmRun()
 	local store = farmStore(self)
 	local run = store and store.current
 	if not run then
@@ -128,7 +128,7 @@ function ProfessionExporter:StopFarmRun()
 end
 
 --- Saved farms as table rows, each with its summary at today's prices (see FarmLogic.SummarizeFarm).
-function ProfessionExporter:GetFarmRows()
+function AuctionHelper:GetFarmRows()
 	local store = farmStore(self)
 	local cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05
 	local rows = {}
@@ -143,7 +143,7 @@ function ProfessionExporter:GetFarmRows()
 end
 
 --- Remove a saved farm and all its runs.
-function ProfessionExporter:DeleteFarm(name)
+function AuctionHelper:DeleteFarm(name)
 	local store = farmStore(self)
 	if store then
 		store.farms[name] = nil
@@ -189,13 +189,13 @@ end
 
 -- Selling a looted item to a vendor: its gold is counted as a vendor sale, so it leaves the item list.
 local function onBagItemUsed(bag, slot)
-	local run = merchantOpen and activeRun(ProfessionExporter)
+	local run = merchantOpen and activeRun(AuctionHelper)
 	if not (run and C_Container and C_Container.GetContainerItemInfo) then
 		return
 	end
 	local info = C_Container.GetContainerItemInfo(bag, slot)
 	if info and info.itemID then
-		ProfessionExporter.FarmLogic.RemoveItems(run, info.itemID, info.stackCount or 1)
+		AuctionHelper.FarmLogic.RemoveItems(run, info.itemID, info.stackCount or 1)
 	end
 end
 
@@ -210,8 +210,8 @@ local HANDLERS = {
 
 local frame = CreateFrame("Frame")
 frame:SetScript("OnEvent", function(_, event, message)
-	if ProfessionExporter.db then
-		HANDLERS[event](ProfessionExporter, message)
+	if AuctionHelper.db then
+		HANDLERS[event](AuctionHelper, message)
 	end
 end)
 for event in pairs(HANDLERS) do
@@ -222,7 +222,7 @@ if hooksecurefunc and C_Container and C_Container.UseContainerItem then
 end
 
 local function farmSlash(input)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local command, rest = pe:Trim(input or ""):match("^(%S*)%s*(.*)$")
 	if command == "start" then
 		pe:StartFarmRun(rest)

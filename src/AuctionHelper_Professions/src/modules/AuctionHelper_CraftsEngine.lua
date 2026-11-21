@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 --- Last-resort: profession variant line when output item expansionID is not available yet.
 --- TWW / Midnight IDs from https://wowpedia.fandom.com/wiki/TradeSkillLineID
@@ -46,7 +46,7 @@ local function trim(s)
 	return (string.gsub(tostring(s), "^%s*(.-)%s*$", "%1"))
 end
 
-function ProfessionExporter:GetRetailCurrentExpansionCraftTag()
+function AuctionHelper:GetRetailCurrentExpansionCraftTag()
 	local iface = tonumber((select(4, GetBuildInfo()))) or 0
 	if iface >= 120000 then
 		return "midnight"
@@ -60,7 +60,7 @@ function ProfessionExporter:GetRetailCurrentExpansionCraftTag()
 	return "legacy"
 end
 
-function ProfessionExporter:GetCraftExpansionTag(professionData, recipeData, outputItemID)
+function AuctionHelper:GetCraftExpansionTag(professionData, recipeData, outputItemID)
 	local desc = outputItemID and self:ResolveItemDescriptor(outputItemID) or nil
 	local expansionID = desc and tonumber(desc.expansionID) or nil
 	if expansionID then
@@ -97,17 +97,17 @@ function ProfessionExporter:GetCraftExpansionTag(professionData, recipeData, out
 	return "legacy"
 end
 
-function ProfessionExporter:GetCraftExpansionFilterOptions()
+function AuctionHelper:GetCraftExpansionFilterOptions()
 	return self:GetExpansionFilterOptions()
 end
 
-function ProfessionExporter:GetCraftsAhCutFraction()
+function AuctionHelper:GetCraftsAhCutFraction()
 	local pct = tonumber(self:GetSetting("crafts.ahCutPercent", 5)) or 5
 	pct = math.max(0, math.min(50, pct))
 	return pct / 100
 end
 
-function ProfessionExporter:ApplyAhCutToSaleCopper(copper)
+function AuctionHelper:ApplyAhCutToSaleCopper(copper)
 	if not copper or copper ~= copper or copper <= 0 then
 		return nil
 	end
@@ -184,7 +184,7 @@ local function outputItemForQuality(recipeData, qualityIndex)
 			return tonumber(v.itemID), tonumber(v.qualityIndex) or idx
 		end
 	end
-	local pid = ProfessionExporter:RecipeOutputsPrimaryItemId(outs)
+	local pid = AuctionHelper:RecipeOutputsPrimaryItemId(outs)
 	return tonumber(pid), 1
 end
 
@@ -300,12 +300,12 @@ local function estimateConcentrationNeeded(crafting, maxQ, baseQ, targetQ, plan)
 end
 
 local function recipeDisplayName(recipeData)
-	local info = ProfessionExporter:RecipeDataInfo(recipeData)
+	local info = AuctionHelper:RecipeDataInfo(recipeData)
 	return (info and info.name) and tostring(info.name) or "Recipe"
 end
 
 local function recipeCategoryId(recipeData)
-	local info = ProfessionExporter:RecipeDataInfo(recipeData)
+	local info = AuctionHelper:RecipeDataInfo(recipeData)
 	if not info then
 		return nil
 	end
@@ -361,11 +361,11 @@ local function liveCategoryName(categoryID)
 	if not (C_TradeSkillUI and C_TradeSkillUI.GetCategoryInfo) then
 		return nil
 	end
-	return categoryInfoName(ProfessionExporter:SafeCall(C_TradeSkillUI.GetCategoryInfo, categoryID))
+	return categoryInfoName(AuctionHelper:SafeCall(C_TradeSkillUI.GetCategoryInfo, categoryID))
 end
 
 local function recipeCategoryName(recipeData, professionData)
-	local info = ProfessionExporter:RecipeDataInfo(recipeData)
+	local info = AuctionHelper:RecipeDataInfo(recipeData)
 	if info then
 		local directName = info.categoryName or info.recipeCategoryName or info.category
 		if directName and tostring(directName) ~= "" then
@@ -426,7 +426,7 @@ local function resolveCategoryLabelFromProfessionCategory(categoryEntry, categor
 	return walk(categoryEntry, categoryID, {})
 end
 
-function ProfessionExporter:ResolveCraftCategoryLabel(skillLineID, categoryID)
+function AuctionHelper:ResolveCraftCategoryLabel(skillLineID, categoryID)
 	self:InitDB()
 	local cid = tonumber(categoryID)
 	if not cid then
@@ -463,14 +463,14 @@ local function craftIsEnchantRecipe(professionData, recipeData)
 	end
 	-- Fallback: some clients/scans store Enchant as recipeType 3 without a reliable Enum match.
 	if recipeType == 3 then
-		local info = ProfessionExporter:RecipeDataInfo(recipeData)
+		local info = AuctionHelper:RecipeDataInfo(recipeData)
 		local recipeName = string.lower(tostring(info and info.name or ""))
 		if string.find(recipeName, "enchant", 1, true) ~= nil then
 			return true
 		end
 	end
 	if containsText(professionData and professionData.professionName, "enchant") then
-		local info = ProfessionExporter:RecipeDataInfo(recipeData)
+		local info = AuctionHelper:RecipeDataInfo(recipeData)
 		local recipeName = string.lower(tostring(info and info.name or ""))
 		return string.find(recipeName, "enchant", 1, true) ~= nil
 	end
@@ -695,7 +695,7 @@ local function cloneReagentPlan(plan)
 	return out
 end
 
-function ProfessionExporter:GetCraftRecommendedCrafter(row)
+function AuctionHelper:GetCraftRecommendedCrafter(row)
     if not row or not row.bestCharacterKey then
         return nil, nil
     end
@@ -705,7 +705,7 @@ function ProfessionExporter:GetCraftRecommendedCrafter(row)
 end
 
 --- Aggregate item totals across all stored character snapshots.
-function ProfessionExporter:BuildAccountItemInventoryTotals(itemID)
+function AuctionHelper:BuildAccountItemInventoryTotals(itemID)
 	self:InitDB()
 	itemID = tonumber(itemID)
 	local totals = { bags = 0, bank = 0, warband = 0, total = 0 }
@@ -741,7 +741,7 @@ local function reagentSlotIncluded(qty, slotClass, slot, override)
 end
 
 --- Build a baseline reagent plan from slot metadata and optional live selections.
-function ProfessionExporter:PickCheapestReagentsPerSlot(recipeData, professionData, unitPriceFn, opts)
+function AuctionHelper:PickCheapestReagentsPerSlot(recipeData, professionData, unitPriceFn, opts)
 	local slots = self:RecipeDataSlots(recipeData)
 	local plan = {}
 	opts = opts or {}
@@ -956,7 +956,7 @@ local function planForHigherTargetQuality(self, st)
 	return (bestPlan or maxPlan), bestPlan ~= nil
 end
 
-function ProfessionExporter:PickCheapestReagentsPerSlotForTargetQuality(recipeData, professionData, unitPriceFn, targetQualityIndex, opts)
+function AuctionHelper:PickCheapestReagentsPerSlotForTargetQuality(recipeData, professionData, unitPriceFn, targetQualityIndex, opts)
 	opts = opts or {}
 	local basePlan = self:PickCheapestReagentsPerSlot(recipeData, professionData, unitPriceFn, opts)
 	local crafting = recipeData and recipeData.crafting or nil
@@ -974,7 +974,7 @@ function ProfessionExporter:PickCheapestReagentsPerSlotForTargetQuality(recipeDa
 	return ensureEnchantingVellumInPlan(plan, professionData, recipeData, forceVellumFinalize), reachable
 end
 
-function ProfessionExporter:ComputeMatCostForReagentPlan(plan, unitPriceFn, sourceMode, getInventoryTotalsFn)
+function AuctionHelper:ComputeMatCostForReagentPlan(plan, unitPriceFn, sourceMode, getInventoryTotalsFn)
 	sourceMode = sourceMode or "market"
 	local total = 0
 	local fullMarketTotal = 0
@@ -1031,7 +1031,7 @@ end
 
 --- Fragment for material lines in economics tooltips. With owned_first / mixed, lineCost is only AH
 --- spend for missing qty; this avoids "x4 @ 45s = 0" looking like a broken calculation.
-function ProfessionExporter:FormatReagentSlotEconomicsTooltipSuffix(slot)
+function AuctionHelper:FormatReagentSlotEconomicsTooltipSuffix(slot)
 	local unit = slot.priceUnit and self:FormatCopperShort(slot.priceUnit) or "?"
 	local bought = tonumber(slot.purchasedQuantity)
 	local fromInv = tonumber(slot.ownedQuantity)
@@ -1055,7 +1055,7 @@ function ProfessionExporter:FormatReagentSlotEconomicsTooltipSuffix(slot)
 	)
 end
 
-function ProfessionExporter:ReagentPlanMeetsInventory(plan, getInventoryTotalsFn)
+function AuctionHelper:ReagentPlanMeetsInventory(plan, getInventoryTotalsFn)
 	if type(getInventoryTotalsFn) ~= "function" then
 		getInventoryTotalsFn = function(id)
 			return self:BuildAccountItemInventoryTotals(id)
@@ -1074,7 +1074,7 @@ function ProfessionExporter:ReagentPlanMeetsInventory(plan, getInventoryTotalsFn
 	return true
 end
 
-function ProfessionExporter:ProfessionRecipeIsVendorSourced(recipeID, recipeData)
+function AuctionHelper:ProfessionRecipeIsVendorSourced(recipeID, recipeData)
 	local recipeSpellID = self:GetRecipeSpellID(recipeData) or tonumber(recipeID)
 	local function sourceIsVendor(st)
 		st = tonumber(st)
@@ -1349,7 +1349,7 @@ local function buildCraftEvalResult(self, c)
 end
 
 --- Evaluate one character's learned recipe for a specific quality target.
-function ProfessionExporter:EvaluateCraftScenario(characterKey, professionData, recipeID, recipeData, opts)
+function AuctionHelper:EvaluateCraftScenario(characterKey, professionData, recipeID, recipeData, opts)
     opts = opts or {}
     local c = {
         characterKey = characterKey, professionData = professionData, recipeID = recipeID, recipeData = recipeData,
@@ -1376,7 +1376,7 @@ function ProfessionExporter:EvaluateCraftScenario(characterKey, professionData, 
 end
 
 -- Prefer OrderView schematic when Crafting Orders tab is showing an order.
-function ProfessionExporter:GetOpenProfessionSchematicForm()
+function AuctionHelper:GetOpenProfessionSchematicForm()
 	if not self.IS_SUPPORTED then
 		return nil
 	end
@@ -1401,7 +1401,7 @@ function ProfessionExporter:GetOpenProfessionSchematicForm()
 	return form
 end
 
-function ProfessionExporter:GetOpenCraftingOrder()
+function AuctionHelper:GetOpenCraftingOrder()
 	if not self.IS_RETAIL then
 		return nil
 	end
@@ -1420,7 +1420,7 @@ end
 
 -- Build reagent plan from currently selected allocations in Blizzard's transaction.
 -- Returns nil when no usable live allocations are available.
-function ProfessionExporter:BuildLiveSelectedReagentPlanForOpenRecipe(recipeData)
+function AuctionHelper:BuildLiveSelectedReagentPlanForOpenRecipe(recipeData)
 	if not self.IS_SUPPORTED then
 		return nil
 	end
@@ -1546,7 +1546,7 @@ end
 
 --- Unique sorted item IDs for AH pricing: outputs + reagents from stored learned recipes.
 --- opts.characterKey: restrict to one character; default = all characters in db.
-function ProfessionExporter:BuildCraftEconomyItemIDs(opts)
+function AuctionHelper:BuildCraftEconomyItemIDs(opts)
 	self:InitDB()
 	opts = type(opts) == "table" and opts or {}
 	local includeOptional = self:GetSetting("auction.craftScanIncludeOptionalSlots", false) == true
@@ -1606,7 +1606,7 @@ function ProfessionExporter:BuildCraftEconomyItemIDs(opts)
 end
 
 --- Targets for AH search queue: itemID plus optional auction item-key fields when present on stored outputs.
-function ProfessionExporter:BuildCraftEconomyAuctionTargets(opts)
+function AuctionHelper:BuildCraftEconomyAuctionTargets(opts)
 	opts = type(opts) == "table" and opts or {}
 	local ids = self:BuildCraftEconomyItemIDs(opts)
 	local targets = {}
@@ -1805,7 +1805,7 @@ local function abortCraftEvalAsyncBuild(state)
 	state.craftEvalIdx = nil
 end
 
-function ProfessionExporter:InvalidateCraftOpportunityCaches()
+function AuctionHelper:InvalidateCraftOpportunityCaches()
 	local state = self:GetState()
 	abortCraftEvalAsyncBuild(state)
 	state.craftsEvaluationCacheKey = nil
@@ -1817,7 +1817,7 @@ function ProfessionExporter:InvalidateCraftOpportunityCaches()
 	state.craftOpportunityRoiIndex = nil
 end
 
-function ProfessionExporter:CraftEvalProcessNextChunk(gen)
+function AuctionHelper:CraftEvalProcessNextChunk(gen)
 	local state = self:GetState()
 	if gen ~= (state.craftEvalAsyncGen or 0) then
 		return
@@ -1855,7 +1855,7 @@ function ProfessionExporter:CraftEvalProcessNextChunk(gen)
 	if curKey ~= targetKey then
 		abortCraftEvalAsyncBuild(state)
 		C_Timer.After(0, function()
-			ProfessionExporter:BuildCraftOpportunityRows()
+			AuctionHelper:BuildCraftOpportunityRows()
 		end)
 		return
 	end
@@ -1873,7 +1873,7 @@ function ProfessionExporter:CraftEvalProcessNextChunk(gen)
 	end
 end
 
-function ProfessionExporter:BuildCraftOpportunityRows(opts)
+function AuctionHelper:BuildCraftOpportunityRows(opts)
 	opts = type(opts) == "table" and opts or {}
 	self:InitDB()
 	local state = self:GetState()
@@ -1919,7 +1919,7 @@ function ProfessionExporter:BuildCraftOpportunityRows(opts)
 	return state.craftOpportunityRowsStale or {}
 end
 
-function ProfessionExporter:FilterCraftRows(rows, filters)
+function AuctionHelper:FilterCraftRows(rows, filters)
 	filters = filters or {}
 	local text = string.lower(trim(filters.text))
 	local charSel = filters.characters or {}
@@ -1985,7 +1985,7 @@ function ProfessionExporter:FilterCraftRows(rows, filters)
 	return out
 end
 
-function ProfessionExporter:GetCraftProfessionFilterOptions()
+function AuctionHelper:GetCraftProfessionFilterOptions()
 	self:InitDB()
 	local seen = {}
 	local opts = { { value = "all", label = "All professions" } }
@@ -2013,7 +2013,7 @@ function ProfessionExporter:GetCraftProfessionFilterOptions()
 	return opts
 end
 
-function ProfessionExporter:GetCraftCategoryFilterOptions(rows)
+function AuctionHelper:GetCraftCategoryFilterOptions(rows)
 	local seen = {}
 	local opts = { { value = "all", label = "All categories" } }
 	for _, row in ipairs(rows or {}) do
@@ -2042,7 +2042,7 @@ function ProfessionExporter:GetCraftCategoryFilterOptions(rows)
 	return opts
 end
 
-function ProfessionExporter:ResolveCraftConfidenceState(eval, dataSource)
+function AuctionHelper:ResolveCraftConfidenceState(eval, dataSource)
 	if not eval then
 		return "stale_scan"
 	end
@@ -2058,7 +2058,7 @@ function ProfessionExporter:ResolveCraftConfidenceState(eval, dataSource)
 	return "ok"
 end
 
-function ProfessionExporter:FindCraftOpportunityRowForRecipe(recipeID, outputItemID)
+function AuctionHelper:FindCraftOpportunityRowForRecipe(recipeID, outputItemID)
 	if not recipeID or not outputItemID then
 		return nil
 	end
@@ -2081,7 +2081,7 @@ local function recipeDataHasUsableOutput(recipeData)
 	if not outs then
 		return false
 	end
-	if tonumber(ProfessionExporter:RecipeOutputsPrimaryItemId(outs)) then
+	if tonumber(AuctionHelper:RecipeOutputsPrimaryItemId(outs)) then
 		return true
 	end
 	for _, variant in ipairs(outs.qualityVariants or {}) do
@@ -2093,7 +2093,7 @@ local function recipeDataHasUsableOutput(recipeData)
 end
 
 --- Prefer live C_TradeSkillUI data when the profession window is open; else last scanned recipe blob for this character.
-function ProfessionExporter:GetLiveOrScannedRecipeDataForOpenProfession(recipeID)
+function AuctionHelper:GetLiveOrScannedRecipeDataForOpenProfession(recipeID)
 	recipeID = tonumber(recipeID)
 	if not recipeID then
 		return nil, nil
@@ -2134,7 +2134,7 @@ function ProfessionExporter:GetLiveOrScannedRecipeDataForOpenProfession(recipeID
 	return nil, nil
 end
 
-function ProfessionExporter:GetProfessionDescriptorForOpenRecipe(recipeID)
+function AuctionHelper:GetProfessionDescriptorForOpenRecipe(recipeID)
 	recipeID = tonumber(recipeID)
 	if not recipeID then
 		return nil
@@ -2174,7 +2174,7 @@ function ProfessionExporter:GetProfessionDescriptorForOpenRecipe(recipeID)
 end
 
 --- UI may expose a spell/skill-line ability id; scans and C_TradeSkillUI use TradeSkillRecipe id. Prefer info.recipeID when GetRecipeInfo succeeds.
-function ProfessionExporter:NormalizeTradeSkillRecipeId(candidate)
+function AuctionHelper:NormalizeTradeSkillRecipeId(candidate)
 	candidate = tonumber(candidate)
 	if not candidate or candidate <= 0 then
 		return nil
@@ -2191,7 +2191,7 @@ function ProfessionExporter:NormalizeTradeSkillRecipeId(candidate)
 	return candidate
 end
 
-function ProfessionExporter:GetOpenProfessionRecipeID()
+function AuctionHelper:GetOpenProfessionRecipeID()
 	if not self.IS_SUPPORTED then
 		return nil
 	end
@@ -2250,7 +2250,7 @@ end
 
 -- Best-effort detection of live concentration toggle in Blizzard profession UI.
 -- Falls back to addon scenario setting when UI internals are unavailable.
-function ProfessionExporter:GetOpenProfessionScenario()
+function AuctionHelper:GetOpenProfessionScenario()
 	local fallback = self:GetSetting("crafts.scenario", "default")
 	if not self.IS_RETAIL then
 		return fallback
@@ -2315,7 +2315,7 @@ function ProfessionExporter:GetOpenProfessionScenario()
 end
 
 --- Live evaluation for the recipe selected in Blizzard's profession UI (same rules as Crafts tab).
-function ProfessionExporter:EvaluateSelectedProfessionRecipe()
+function AuctionHelper:EvaluateSelectedProfessionRecipe()
 	self:InitDB()
 	if not self.IS_SUPPORTED then
 		return nil, "not_supported"
@@ -2383,7 +2383,7 @@ end
 --- @param recipeID number|nil
 --- @param opts table|nil { skillLineID, skipSelect }
 --- @return table|nil, string reason
-function ProfessionExporter:BuildProfessionRecipeQueueContext(recipeID, opts)
+function AuctionHelper:BuildProfessionRecipeQueueContext(recipeID, opts)
 	self:InitDB()
 	opts = opts or {}
 	if not self.IS_SUPPORTED then
@@ -2489,7 +2489,7 @@ end
 --- @param quantity number|nil
 --- @param opts table|nil { recipeID, skillLineID, quiet }
 --- @return string|nil queueKey, string|nil err
-function ProfessionExporter:QueueOpenProfessionRecipe(quantity, opts)
+function AuctionHelper:QueueOpenProfessionRecipe(quantity, opts)
 	opts = opts or {}
 	quantity = math.max(1, math.floor(tonumber(quantity) or 1))
 	local recipeID = tonumber(opts.recipeID) or self:GetOpenProfessionRecipeID()

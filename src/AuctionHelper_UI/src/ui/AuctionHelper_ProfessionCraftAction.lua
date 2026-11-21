@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Starting a craft in the open profession window: find its quantity box and Create button, set the
 -- quantity, and press Create. Used by the queue's Craft button; every craft follows a click.
@@ -37,7 +37,7 @@ local QUANTITY_PATHS = {
 	{ "Footer", "QuantityInput", "InputBox" }, { "Footer", "QuantityInput" },
 }
 
-function ProfessionExporter:TrySetCurrentProfessionCraftQuantity(amount)
+function AuctionHelper:TrySetCurrentProfessionCraftQuantity(amount)
 	amount = math.max(1, math.floor(tonumber(amount) or 0))
 	if not self.IS_SUPPORTED then
 		return false
@@ -78,7 +78,7 @@ local function callIfPresent(object, method)
 end
 
 --- The open recipe's reagent choices for the craft API: `reagentInfo, isRecraft, allocationGUID`.
-function ProfessionExporter:BuildCurrentProfessionCraftingReagentInfo(_recipeID)
+function AuctionHelper:BuildCurrentProfessionCraftingReagentInfo(_recipeID)
 	local transaction = self.IS_SUPPORTED and openTransaction()
 	if not transaction then
 		return nil, false, nil
@@ -92,7 +92,7 @@ local CREATE_BUTTON_PATHS = {
 	{ "Details", "CreateButton" }, { "DetailsView", "CreateButton" }, { "Schematic", "CreateButton" },
 }
 
-function ProfessionExporter:FindCurrentProfessionCreateButton()
+function AuctionHelper:FindCurrentProfessionCreateButton()
 	return findCraftingWidget(CREATE_BUTTON_PATHS, function(node)
 		return node.Click and node.IsEnabled and node:IsEnabled()
 	end)
@@ -123,7 +123,7 @@ local function craftThroughApi(pe, recipeID, amount)
 end
 
 --- Starts the craft of the open recipe: presses its Create button, or uses the craft API without one.
-function ProfessionExporter:TryTriggerCurrentProfessionCraft(recipeID, amount)
+function AuctionHelper:TryTriggerCurrentProfessionCraft(recipeID, amount)
 	if not self.IS_SUPPORTED then
 		return false
 	end
@@ -205,7 +205,7 @@ end
 --- Crafts a queue row inside the click: through the open recipe's Create button, or by recipe id
 --- while another recipe shows, which is then opened with the queued quantity filled in. A crafting
 --- order row instead steps through its order in the orders tab.
-function ProfessionExporter:CraftProfessionQueueRecipe(row)
+function AuctionHelper:CraftProfessionQueueRecipe(row)
 	if type(row) ~= "table" then
 		return false
 	end

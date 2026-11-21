@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Debounce rapid fires (BAG_UPDATE_DELAYED, etc.). Profession UI list churn uses TRADE_SKILL_LIST_UPDATE
 -- very frequently; we do not run a full merge on that event (only refresh remembered skill line id).
@@ -26,13 +26,13 @@ local function sortNumericIds(ids)
 	return ids
 end
 
-function ProfessionExporter:LiveUpdatesBlocked()
+function AuctionHelper:LiveUpdatesBlocked()
 	local state = self:GetState()
 	return not self.IS_SUPPORTED or state.scanInProgress
 end
 
 --- Ensure the logged-in character has a DB row; create a fresh scan record if missing (live updates / dashboard refresh).
-function ProfessionExporter:GetOrCreateCharacterDataForLiveUpdate()
+function AuctionHelper:GetOrCreateCharacterDataForLiveUpdate()
 	self:InitDB()
 	local key = self:GetCharacterKey()
 	local charData = self.db.characters[key]
@@ -46,7 +46,7 @@ function ProfessionExporter:GetOrCreateCharacterDataForLiveUpdate()
 end
 
 --- Refresh profession-relevant inventory counts for the current character; creates stored data if none exists yet.
-function ProfessionExporter:ScheduleLiveInventoryRefresh()
+function AuctionHelper:ScheduleLiveInventoryRefresh()
 	if self:LiveUpdatesBlocked() then
 		self:DebugLog("LIVE", "ScheduleLiveInventoryRefresh skipped", {
 			(not self.IS_SUPPORTED and "not supported") or "scanInProgress blocks live inventory",
@@ -100,7 +100,7 @@ end
 --- Build a structured fingerprint for the open profession UI.
 --- Returns nil when the trade skill UI has no usable profession info.
 --- Fields: fingerprint, metaFingerprint, skillLineID, recipeIDs, recipeCount, recipeHash, stable
-function ProfessionExporter:BuildOpenProfessionQuickFingerprint()
+function AuctionHelper:BuildOpenProfessionQuickFingerprint()
 	if not self.IS_SUPPORTED or not C_TradeSkillUI then
 		return nil
 	end
@@ -158,7 +158,7 @@ function ProfessionExporter:BuildOpenProfessionQuickFingerprint()
 	}
 end
 
-function ProfessionExporter:CancelLiveFingerprintTimer()
+function AuctionHelper:CancelLiveFingerprintTimer()
 	local state = self:GetState()
 	if state.liveFingerprintTimer then
 		state.liveFingerprintTimer:Cancel()
@@ -167,7 +167,7 @@ function ProfessionExporter:CancelLiveFingerprintTimer()
 end
 
 --- Apply a fingerprint snapshot into session state. Only locks openFingerprint once stable.
-function ProfessionExporter:ApplyOpenProfessionFingerprintInfo(info)
+function AuctionHelper:ApplyOpenProfessionFingerprintInfo(info)
 	if type(info) ~= "table" or not info.fingerprint then
 		return
 	end
@@ -185,13 +185,13 @@ function ProfessionExporter:ApplyOpenProfessionFingerprintInfo(info)
 	end
 end
 
-function ProfessionExporter:RefreshOpenProfessionFingerprintNow()
+function AuctionHelper:RefreshOpenProfessionFingerprintNow()
 	local info = self:BuildOpenProfessionQuickFingerprint()
 	self:ApplyOpenProfessionFingerprintInfo(info)
 	return info
 end
 
-function ProfessionExporter:ScheduleOpenProfessionFingerprintRefresh()
+function AuctionHelper:ScheduleOpenProfessionFingerprintRefresh()
 	local state = self:GetState()
 	self:CancelLiveFingerprintTimer()
 	state.liveFingerprintTimer = C_Timer.NewTimer(LIVE_FINGERPRINT_DEBOUNCE_SEC, function()
@@ -204,7 +204,7 @@ function ProfessionExporter:ScheduleOpenProfessionFingerprintRefresh()
 end
 
 --- Remember which profession the crafting UI is showing (cheap). Fingerprint rebuild is debounced.
-function ProfessionExporter:RememberOpenProfessionSkillLineID()
+function AuctionHelper:RememberOpenProfessionSkillLineID()
 	if not C_TradeSkillUI.GetBaseProfessionInfo then
 		return
 	end
@@ -228,7 +228,7 @@ function ProfessionExporter:RememberOpenProfessionSkillLineID()
 	self:ScheduleOpenProfessionFingerprintRefresh()
 end
 
-function ProfessionExporter:CancelLiveProfessionRefreshTimer()
+function AuctionHelper:CancelLiveProfessionRefreshTimer()
 	local state = self:GetState()
 	if state.liveProfessionTimer then
 		state.liveProfessionTimer:Cancel()
@@ -236,7 +236,7 @@ function ProfessionExporter:CancelLiveProfessionRefreshTimer()
 	end
 end
 
-function ProfessionExporter:CancelLiveProfessionMergeJob()
+function AuctionHelper:CancelLiveProfessionMergeJob()
 	local state = self:GetState()
 	if state.liveProfessionMergeJob then
 		state.liveProfessionMergeJob.cancelled = true
@@ -245,7 +245,7 @@ function ProfessionExporter:CancelLiveProfessionMergeJob()
 end
 
 --- Re-scan the currently open profession into saved character data, then refresh inventory snapshot.
-function ProfessionExporter:ScheduleLiveProfessionRefresh()
+function AuctionHelper:ScheduleLiveProfessionRefresh()
 	if self:LiveUpdatesBlocked() then
 		self:DebugLog("LIVE", "ScheduleLiveProfessionRefresh skipped", {
 			(not self.IS_SUPPORTED and "not supported") or "scanInProgress blocks live profession merge",
@@ -315,7 +315,7 @@ local function buildSpellIDSet(recipeIDs)
 	return set
 end
 
-function ProfessionExporter:FindProfessionDescriptorForSkillLineID(openSkillLineID)
+function AuctionHelper:FindProfessionDescriptorForSkillLineID(openSkillLineID)
 	openSkillLineID = tonumber(openSkillLineID)
 	if not openSkillLineID then
 		return nil
@@ -328,7 +328,7 @@ function ProfessionExporter:FindProfessionDescriptorForSkillLineID(openSkillLine
 	return nil
 end
 
-function ProfessionExporter:CommitLiveProfessionMergeResult(key, charData, openSkillLineID, professionData, opts)
+function AuctionHelper:CommitLiveProfessionMergeResult(key, charData, openSkillLineID, professionData, opts)
 	opts = type(opts) == "table" and opts or {}
 	charData.professions[tostring(openSkillLineID)] = professionData
 	charData.lastLiveProfessionUpdate = time()
@@ -364,7 +364,7 @@ function ProfessionExporter:CommitLiveProfessionMergeResult(key, charData, openS
 	return professionData
 end
 
-function ProfessionExporter:StartChunkedRecipeMergeJob(job)
+function AuctionHelper:StartChunkedRecipeMergeJob(job)
 	local state = self:GetState()
 	self:CancelLiveProfessionMergeJob()
 	state.liveProfessionMergeJob = job
@@ -424,7 +424,7 @@ end
 --- One merge for a known skill line (window may already be closing; APIs may still be valid briefly).
 --- opts.forceFull — full rescan (Scan button / explicit). opts.fingerprintInfo — prebuilt fingerprint.
 --- opts.allowChunked — default true for live path; false for forceFull sync scans.
-function ProfessionExporter:ApplyLiveProfessionMergeForSkillLineID(openSkillLineID, opts)
+function AuctionHelper:ApplyLiveProfessionMergeForSkillLineID(openSkillLineID, opts)
 	opts = type(opts) == "table" and opts or {}
 	local forceFull = opts.forceFull == true
 	local allowChunked = opts.allowChunked
@@ -621,7 +621,7 @@ function ProfessionExporter:ApplyLiveProfessionMergeForSkillLineID(openSkillLine
 	})
 end
 
-function ProfessionExporter:ApplyLiveOpenProfessionMerge()
+function AuctionHelper:ApplyLiveOpenProfessionMerge()
 	if self:LiveUpdatesBlocked() or self:GetState().pendingScan then
 		self:DebugLog("LIVE", "ApplyLiveOpenProfessionMerge skipped", {
 			string.format("blocked=%s pendingScan=%s", tostring(self:LiveUpdatesBlocked()), tostring(self:GetState().pendingScan)),
@@ -646,7 +646,7 @@ function ProfessionExporter:ApplyLiveOpenProfessionMerge()
 end
 
 --- Final merge when the crafting window closes (cancels any pending debounced merge from open).
-function ProfessionExporter:ApplyLiveProfessionMergeOnWindowClose()
+function AuctionHelper:ApplyLiveProfessionMergeOnWindowClose()
 	local state = self:GetState()
 	self:CancelLiveProfessionRefreshTimer()
 	self:CancelLiveFingerprintTimer()

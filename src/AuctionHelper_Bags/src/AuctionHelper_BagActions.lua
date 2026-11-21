@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Acting on one stack or several (E12 F102, F104): move to the bank, the warband bank or the bags,
 -- sell to a vendor, destroy. A move is the same two calls as dragging a stack to a free slot.
@@ -27,7 +27,7 @@ local function targetBagIDs(pe, target)
 end
 
 --- The free slots of `target` ("bags", "bank" or "warband") that take any item: { { bag, slot } }.
-function ProfessionExporter:FindFreeBagSlots(target)
+function AuctionHelper:FindFreeBagSlots(target)
 	local free = {}
 	for _, bag in ipairs(targetBagIDs(self, target)) do
 		local _, family = C_Container.GetContainerNumFreeSlots(bag)
@@ -50,7 +50,7 @@ end
 
 -- Calls `step(entry)` for one entry per tick, then `done()`. `step` returning false ends the run.
 local function runQueue(queue, step, done)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	if running then
 		pe:PrintMessage("Still busy with the last bag action.")
 		return
@@ -70,7 +70,7 @@ local function runQueue(queue, step, done)
 end
 
 --- Move stacks to the free slots of `target`, as far as they fit.
-function ProfessionExporter:RunBagMoves(items, target)
+function AuctionHelper:RunBagMoves(items, target)
 	local pe = self
 	local moves, left = self.BagLogic.PlanMoves(items, self:FindFreeBagSlots(target))
 	runQueue(moves, function(move)
@@ -88,12 +88,12 @@ function ProfessionExporter:RunBagMoves(items, target)
 	end)
 end
 
-function ProfessionExporter:IsMerchantOpen()
+function AuctionHelper:IsMerchantOpen()
 	return MerchantFrame ~= nil and MerchantFrame:IsShown() == true
 end
 
 --- Sell stacks to the open merchant. Stops the moment the merchant window closes.
-function ProfessionExporter:RunBagSell(items)
+function AuctionHelper:RunBagSell(items)
 	local pe = self
 	local sold, total = 0, 0
 	runQueue(self.BagLogic.SellQueue(items), function(item)
@@ -110,7 +110,7 @@ function ProfessionExporter:RunBagSell(items)
 end
 
 --- Delete one stack of a destroy queue. Only ever called from a click of the player.
-function ProfessionExporter:DestroyBagStack(item)
+function AuctionHelper:DestroyBagStack(item)
 	if stillThere(item) then
 		local each = math.max(item.sellPrice or 0, self:GetBagItemAuctionPrice(item.itemID) or 0)
 		self:DeleteBagStack({ item = item, value = each * item.count })
@@ -129,7 +129,7 @@ end
 
 --- Menu of what can be done with `items`, which all sit in `place` ("bags", "bank" or "warband").
 --- Opens at `anchor`, or at the mouse.
-function ProfessionExporter:ShowBagActionMenu(items, place, anchor)
+function AuctionHelper:ShowBagActionMenu(items, place, anchor)
 	local pe = self
 	local targets = self.BagLogic.MoveTargets(place, { bankOpen = self:IsBankOpen(), hasWarband = #self:GetWarbandBagIDs() > 0 })
 	menu = menu or CreateFrame("Frame", "AuctionHelperBagActionMenu", UIParent, "UIDropDownMenuTemplate")
@@ -150,4 +150,4 @@ function ProfessionExporter:ShowBagActionMenu(items, place, anchor)
 	ToggleDropDownMenu(1, nil, menu, anchor or "cursor", 0, 0)
 end
 
-ProfessionExporter.BAG_DESTROY_KEPT_TEXT = KEPT_TEXT
+AuctionHelper.BAG_DESTROY_KEPT_TEXT = KEPT_TEXT

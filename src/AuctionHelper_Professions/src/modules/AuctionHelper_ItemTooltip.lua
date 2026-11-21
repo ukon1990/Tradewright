@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- The AuctionHelper block on the game's item tooltips: price and how fresh it is, how it compares
 -- with the usual price, how much is listed and what you own. Shift adds craft profit, who holds
@@ -95,7 +95,7 @@ end
 
 --- What a gold maker needs about an item, from every source the addon has. All fields may be nil.
 --- `detail` also looks up the recipes the item is part of.
-function ProfessionExporter:BuildItemGoldSummary(itemID, detail)
+function AuctionHelper:BuildItemGoldSummary(itemID, detail)
 	itemID = tonumber(itemID)
 	if not itemID then
 		return nil
@@ -147,7 +147,7 @@ local function toneColour(theme, tone, plain)
 	return c.r, c.g, c.b
 end
 
-function ProfessionExporter:AppendPricingToItemTooltip(tooltip, itemID)
+function AuctionHelper:AppendPricingToItemTooltip(tooltip, itemID)
 	itemID = tonumber(itemID)
 	if not tooltip or not itemID or itemID <= 0 or blockSkipped(self, tooltip) then
 		return false
@@ -184,7 +184,7 @@ local function itemIDFromData(data)
 	return positive(data.id or data.itemID) or itemIDFromLink(data.hyperlink)
 end
 
-function ProfessionExporter:AppendPricingToTooltipFromData(tooltip, data)
+function AuctionHelper:AppendPricingToTooltipFromData(tooltip, data)
 	if not tooltip then
 		return
 	end
@@ -200,7 +200,7 @@ end
 --- game's item tooltip, then the row's own label/value pairs under the addon name and a muted
 --- hint. The general block is left out (blockSkipped), so no fact shows twice.
 --- `pairs`: { { label, value }, ... }.
-function ProfessionExporter:ShowItemRowTooltip(owner, itemID, pairs, hint)
+function AuctionHelper:ShowItemRowTooltip(owner, itemID, pairs, hint)
 	if not owner then
 		return
 	end
@@ -249,13 +249,13 @@ end
 local function hookTooltip(tooltip)
 	if tooltip and tooltip.HookScript and not tooltip._professionExporterPricingHooked then
 		tooltip:HookScript("OnTooltipSetItem", function(tip)
-			ProfessionExporter:AppendPricingToTooltipFromData(tip, nil)
+			AuctionHelper:AppendPricingToTooltipFromData(tip, nil)
 		end)
 		tooltip._professionExporterPricingHooked = true
 	end
 end
 
-function ProfessionExporter:InitItemTooltipPricingHooks()
+function AuctionHelper:InitItemTooltipPricingHooks()
 	if self._itemTooltipPricingHooksInit then
 		return
 	end
@@ -264,7 +264,7 @@ function ProfessionExporter:InitItemTooltipPricingHooks()
 
 	if TooltipDataProcessor and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Item then
 		TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tooltip, data)
-			ProfessionExporter:AppendPricingToTooltipFromData(tooltip, data)
+			AuctionHelper:AppendPricingToTooltipFromData(tooltip, data)
 		end)
 		return
 	end

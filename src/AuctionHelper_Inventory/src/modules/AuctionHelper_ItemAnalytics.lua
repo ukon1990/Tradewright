@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 local RANGE_TO_SECONDS = {
 	["24h"] = 24 * 60 * 60,
@@ -49,7 +49,7 @@ local function quantityRowValue(row, shortKey, longKey)
 	return tonumber(row and (row[shortKey] or row[longKey])) or 0
 end
 
-function ProfessionExporter:GetItemHistoryRetentionSeconds()
+function AuctionHelper:GetItemHistoryRetentionSeconds()
 	local settings = self.db and self.db.settings and self.db.settings.inventory or nil
 	local days = tonumber(settings and settings.historyRetentionDays) or 30
 	days = math.max(1, math.floor(days))
@@ -92,7 +92,7 @@ local function isCharacterSelected(selection, characterKey)
 end
 
 --- itemID -> quality rank from scanned recipe quality variants (fallback when item link has no tier).
-function ProfessionExporter:BuildOutputItemQualityRankIndex(selectedCharacters)
+function AuctionHelper:BuildOutputItemQualityRankIndex(selectedCharacters)
 	self:InitDB()
 	local index = {}
 	for characterKey, characterData in pairs(self.db.characters or {}) do
@@ -131,7 +131,7 @@ function ProfessionExporter:BuildOutputItemQualityRankIndex(selectedCharacters)
 	return index
 end
 
-function ProfessionExporter:GetItemCraftQualityRank(itemID, selectedCharacters, rankIndex)
+function AuctionHelper:GetItemCraftQualityRank(itemID, selectedCharacters, rankIndex)
 	self:InitDB()
 	itemID = tonumber(itemID)
 	if not itemID then
@@ -168,7 +168,7 @@ function ProfessionExporter:GetItemCraftQualityRank(itemID, selectedCharacters, 
 end
 
 --- Tier shown next to inventory icon: prefer live item link (matches tooltip), then scan, then 1.
-function ProfessionExporter:GetItemDisplayProfessionQualityRank(itemID, selectedCharacters, rankIndex)
+function AuctionHelper:GetItemDisplayProfessionQualityRank(itemID, selectedCharacters, rankIndex)
 	itemID = tonumber(itemID)
 	if not itemID then
 		return 1
@@ -189,7 +189,7 @@ function ProfessionExporter:GetItemDisplayProfessionQualityRank(itemID, selected
 	return 1
 end
 
-function ProfessionExporter:GetInventoryMetricRangeOptions()
+function AuctionHelper:GetInventoryMetricRangeOptions()
 	return {
 		{ value = "all", label = "All time" },
 		{ value = "24h", label = "24 hours" },
@@ -201,7 +201,7 @@ function ProfessionExporter:GetInventoryMetricRangeOptions()
 end
 
 -- "Last 30 days" / "All time": the range as the player reads it, for labels and summaries.
-function ProfessionExporter:GetRangeLabel(rangeKey)
+function AuctionHelper:GetRangeLabel(rangeKey)
 	for _, option in ipairs(self:GetInventoryMetricRangeOptions()) do
 		if option.value == rangeKey then
 			return option.value == "all" and option.label or ("Last " .. option.label)
@@ -210,11 +210,11 @@ function ProfessionExporter:GetRangeLabel(rangeKey)
 	return tostring(rangeKey or "")
 end
 
-function ProfessionExporter:GetInventoryMetricRange()
+function AuctionHelper:GetInventoryMetricRange()
 	return self:GetSetting("inventory.metricRange", "30d")
 end
 
-function ProfessionExporter:SetInventoryMetricRange(value)
+function AuctionHelper:SetInventoryMetricRange(value)
 	local chosen = "30d"
 	for _, option in ipairs(self:GetInventoryMetricRangeOptions()) do
 		if option.value == value then
@@ -225,7 +225,7 @@ function ProfessionExporter:SetInventoryMetricRange(value)
 	self:SetSetting("inventory.metricRange", chosen)
 end
 
-function ProfessionExporter:GetHistoryRangeCutoff(rangeKey)
+function AuctionHelper:GetHistoryRangeCutoff(rangeKey)
 	if not rangeKey or rangeKey == "all" then
 		return nil
 	end
@@ -236,7 +236,7 @@ function ProfessionExporter:GetHistoryRangeCutoff(rangeKey)
 	return time() - seconds
 end
 
-function ProfessionExporter:EnsureItemHistory(itemID)
+function AuctionHelper:EnsureItemHistory(itemID)
 	self:InitDB()
 	itemID = tonumber(itemID)
 	if not itemID or itemID <= 0 then
@@ -258,7 +258,7 @@ function ProfessionExporter:EnsureItemHistory(itemID)
 	return row
 end
 
-function ProfessionExporter:CompactItemHistoryStorage()
+function AuctionHelper:CompactItemHistoryStorage()
 	local cutoff = time() - self:GetItemHistoryRetentionSeconds()
 	for itemKey, row in pairs(self.db.itemHistory or {}) do
 		if type(row) == "table" then
@@ -331,7 +331,7 @@ local function historyObservationIsRedundant(store, value, source)
 	return tostring(latest.source or "") == tostring(source or "")
 end
 
-function ProfessionExporter:RecordItemHistoryObservation(itemID, historyKey, value, source, observedAt)
+function AuctionHelper:RecordItemHistoryObservation(itemID, historyKey, value, source, observedAt)
 	local n = tonumber(value)
 	if not n or n <= 0 then
 		return
@@ -369,7 +369,7 @@ function ProfessionExporter:RecordItemHistoryObservation(itemID, historyKey, val
 	trimHistoryBuckets(store.buckets, time() - self:GetItemHistoryRetentionSeconds())
 end
 
-function ProfessionExporter:GetItemHistorySeries(itemID, historyKey, rangeKey)
+function AuctionHelper:GetItemHistorySeries(itemID, historyKey, rangeKey)
 	self:InitDB()
 	local itemHistory = self.db.itemHistory and self.db.itemHistory[tostring(itemID)] or nil
 	if not itemHistory or type(itemHistory[historyKey]) ~= "table" then
@@ -378,11 +378,11 @@ function ProfessionExporter:GetItemHistorySeries(itemID, historyKey, rangeKey)
 	return sortedBucketList(itemHistory[historyKey].buckets, self:GetHistoryRangeCutoff(rangeKey))
 end
 
-function ProfessionExporter:GetItemHistoryStats(itemID, historyKey, rangeKey)
+function AuctionHelper:GetItemHistoryStats(itemID, historyKey, rangeKey)
 	return summarizeSeries(self:GetItemHistorySeries(itemID, historyKey, rangeKey))
 end
 
-function ProfessionExporter:GetItemHistoryStatsMemo(itemID, historyKey, rangeKey, memoTbl)
+function AuctionHelper:GetItemHistoryStatsMemo(itemID, historyKey, rangeKey, memoTbl)
 	if not memoTbl then
 		return self:GetItemHistoryStats(itemID, historyKey, rangeKey)
 	end
@@ -396,7 +396,7 @@ function ProfessionExporter:GetItemHistoryStatsMemo(itemID, historyKey, rangeKey
 	return hit
 end
 
-function ProfessionExporter:GetItemRecipeRelationships(itemID, selectedCharacters)
+function AuctionHelper:GetItemRecipeRelationships(itemID, selectedCharacters)
 	self:InitDB()
 	itemID = tonumber(itemID)
 	local relationships = {
@@ -462,7 +462,7 @@ function ProfessionExporter:GetItemRecipeRelationships(itemID, selectedCharacter
 	return relationships
 end
 
-function ProfessionExporter:BuildInventoryItemTotals(itemID, selectedCharacters)
+function AuctionHelper:BuildInventoryItemTotals(itemID, selectedCharacters)
 	self:InitDB()
 	local totals = {
 		bags = 0,
@@ -499,7 +499,7 @@ function ProfessionExporter:BuildInventoryItemTotals(itemID, selectedCharacters)
 	return totals
 end
 
-function ProfessionExporter:BuildItemCraftingSnapshot(itemID, selectedCharacters, rangeKey)
+function AuctionHelper:BuildItemCraftingSnapshot(itemID, selectedCharacters, rangeKey)
 	local stats = self:GetItemHistoryStats(itemID, "crafting", rangeKey)
 	local relationships = self:GetItemRecipeRelationships(itemID, selectedCharacters)
 	return {
@@ -513,7 +513,7 @@ function ProfessionExporter:BuildItemCraftingSnapshot(itemID, selectedCharacters
 	}
 end
 
-function ProfessionExporter:BuildItemEconomySnapshot(itemID, selectedCharacters, rangeKey)
+function AuctionHelper:BuildItemEconomySnapshot(itemID, selectedCharacters, rangeKey)
 	local marketStats = self:GetItemHistoryStats(itemID, "market", rangeKey)
 	local itemHistory = self.db and self.db.itemHistory and self.db.itemHistory[tostring(itemID)] or {}
 	local latestMarket = itemHistory.market and itemHistory.market.latest or nil
@@ -530,7 +530,7 @@ function ProfessionExporter:BuildItemEconomySnapshot(itemID, selectedCharacters,
 	}
 end
 
-function ProfessionExporter:BuildItemDetailSnapshot(itemID, context)
+function AuctionHelper:BuildItemDetailSnapshot(itemID, context)
 	context = context or {}
 	local selectedCharacters = context.selectedCharacters
 	local rangeKey = context.rangeKey or self:GetInventoryMetricRange()
@@ -553,7 +553,7 @@ function ProfessionExporter:BuildItemDetailSnapshot(itemID, context)
 	}
 end
 
-function ProfessionExporter:EnrichInventoryRowAnalytics(row, characterData, roleMap, selectedCharacters, rangeKey, rankIndex, historyStatsMemo, perCharacterRoleMaps)
+function AuctionHelper:EnrichInventoryRowAnalytics(row, characterData, roleMap, selectedCharacters, rangeKey, rankIndex, historyStatsMemo, perCharacterRoleMaps)
 	if row.aggregatedInventory then
 		self:ApplyEconomyToAggregatedInventoryRow(row, selectedCharacters, roleMap, perCharacterRoleMaps)
 	else
@@ -590,7 +590,7 @@ function ProfessionExporter:EnrichInventoryRowAnalytics(row, characterData, role
 	row.rankIndex = self:GetItemDisplayProfessionQualityRank(row.itemID, selectedCharacters, rankIndex)
 end
 
-function ProfessionExporter:OpenItemDetails(itemID, context)
+function AuctionHelper:OpenItemDetails(itemID, context)
 	local ui = self.ui or {}
 	ui.invSelectedItemID = tonumber(itemID)
 	ui.invDetailsContext = context or ui.invDetailsContext or {}
@@ -620,7 +620,7 @@ function ProfessionExporter:OpenItemDetails(itemID, context)
 	end
 end
 
-function ProfessionExporter:RecordItemQuantityObservation(itemID, characterKey, bags, bank, warband, total, observedAt)
+function AuctionHelper:RecordItemQuantityObservation(itemID, characterKey, bags, bank, warband, total, observedAt)
 	itemID = tonumber(itemID)
 	characterKey = characterKey and tostring(characterKey) or nil
 	if not itemID or itemID <= 0 or not characterKey or characterKey == "" then
@@ -707,7 +707,7 @@ local function sortedQuantityBucketList(bucketMap, cutoff, selectedCharacters)
 	return list
 end
 
-function ProfessionExporter:GetItemQuantityHistorySeries(itemID, selectedCharacters, rangeKey)
+function AuctionHelper:GetItemQuantityHistorySeries(itemID, selectedCharacters, rangeKey)
 	self:InitDB()
 	local itemHistory = self.db.itemHistory and self.db.itemHistory[tostring(itemID)] or nil
 	if not itemHistory or type(itemHistory.quantity) ~= "table" then
@@ -720,7 +720,7 @@ function ProfessionExporter:GetItemQuantityHistorySeries(itemID, selectedCharact
 	)
 end
 
-function ProfessionExporter:ItemHistoryBucketsToGraphSeries(itemID, historyKey, rangeKey)
+function AuctionHelper:ItemHistoryBucketsToGraphSeries(itemID, historyKey, rangeKey)
 	local raw = self:GetItemHistorySeries(itemID, historyKey, rangeKey)
 	local out = {}
 	for _, p in ipairs(raw) do
@@ -741,7 +741,7 @@ function ProfessionExporter:ItemHistoryBucketsToGraphSeries(itemID, historyKey, 
 	return out
 end
 
-function ProfessionExporter:ItemQuantitySeriesToGraphPoints(series)
+function AuctionHelper:ItemQuantitySeriesToGraphPoints(series)
 	local out = {}
 	for _, p in ipairs(series or {}) do
 		out[#out + 1] = {
@@ -754,7 +754,7 @@ function ProfessionExporter:ItemQuantitySeriesToGraphPoints(series)
 end
 
 --- Stable item id for itemHistory / quantity graphs when scan output id is wrong (e.g. recipe id stored as output).
-function ProfessionExporter:ResolveGraphItemIDForCraftRow(row)
+function AuctionHelper:ResolveGraphItemIDForCraftRow(row)
 	if not row then
 		return nil
 	end
@@ -815,7 +815,7 @@ function ProfessionExporter:ResolveGraphItemIDForCraftRow(row)
 	return nil
 end
 
-function ProfessionExporter:EnsureWalletHistoryStore(characterKey)
+function AuctionHelper:EnsureWalletHistoryStore(characterKey)
 	self:InitDB()
 	characterKey = characterKey and tostring(characterKey) or ""
 	if characterKey == "" then
@@ -830,7 +830,7 @@ function ProfessionExporter:EnsureWalletHistoryStore(characterKey)
 	return w
 end
 
-function ProfessionExporter:RecordWalletObservation(characterKey, copper, observedAt)
+function AuctionHelper:RecordWalletObservation(characterKey, copper, observedAt)
 	characterKey = characterKey and tostring(characterKey) or ""
 	local n = tonumber(copper)
 	if characterKey == "" or not n or n < 0 then
@@ -860,7 +860,7 @@ function ProfessionExporter:RecordWalletObservation(characterKey, copper, observ
 	self:NotifyWalletHistoryUpdate()
 end
 
-function ProfessionExporter:NotifyWalletHistoryUpdate()
+function AuctionHelper:NotifyWalletHistoryUpdate()
 	local ui = self.ui
 	if not ui or ui.activeMainTab ~= "overview" then
 		return
@@ -874,7 +874,7 @@ function ProfessionExporter:NotifyWalletHistoryUpdate()
 	end
 end
 
-function ProfessionExporter:RecordWalletObservationFromCharacterData(characterData)
+function AuctionHelper:RecordWalletObservationFromCharacterData(characterData)
 	local key = characterData and characterData.meta and characterData.meta.key
 	if not key or key ~= self:GetCharacterKey() then
 		return
@@ -882,7 +882,7 @@ function ProfessionExporter:RecordWalletObservationFromCharacterData(characterDa
 	self:RecordWalletObservation(key, GetMoney(), time())
 end
 
-function ProfessionExporter:RecordQuantityObservationsFromSnapshot(characterData)
+function AuctionHelper:RecordQuantityObservationsFromSnapshot(characterData)
 	local key = characterData and characterData.meta and characterData.meta.key
 	if not key or key ~= self:GetCharacterKey() then
 		return
@@ -908,7 +908,7 @@ function ProfessionExporter:RecordQuantityObservationsFromSnapshot(characterData
 	end
 end
 
-function ProfessionExporter:OnInventorySnapshotWritten(characterData)
+function AuctionHelper:OnInventorySnapshotWritten(characterData)
 	self:RecordWalletObservationFromCharacterData(characterData)
 	self:RecordQuantityObservationsFromSnapshot(characterData)
 end
@@ -931,7 +931,7 @@ local function walletSortedList(bucketMap, cutoff)
 	return list
 end
 
-function ProfessionExporter:WalletHistoryToGraphSeries(characterKey, rangeKey)
+function AuctionHelper:WalletHistoryToGraphSeries(characterKey, rangeKey)
 	self:InitDB()
 	local wh = self.db.walletHistory and self.db.walletHistory[tostring(characterKey)] or nil
 	if not wh then
@@ -948,7 +948,7 @@ function ProfessionExporter:WalletHistoryToGraphSeries(characterKey, rangeKey)
 	return out
 end
 
-function ProfessionExporter:WalletBalanceSeriesToEarned(balanceSeries)
+function AuctionHelper:WalletBalanceSeriesToEarned(balanceSeries)
 	local out = {}
 	for i = 2, #(balanceSeries or {}) do
 		local prev = balanceSeries[i - 1].value
@@ -965,7 +965,7 @@ function ProfessionExporter:WalletBalanceSeriesToEarned(balanceSeries)
 	return out
 end
 
-function ProfessionExporter:BuildAccountWalletBalanceSeries(rangeKey)
+function AuctionHelper:BuildAccountWalletBalanceSeries(rangeKey)
 	self:InitDB()
 	local cutoff = self:GetHistoryRangeCutoff(rangeKey)
 	local charLists = {}
@@ -1010,7 +1010,7 @@ function ProfessionExporter:BuildAccountWalletBalanceSeries(rangeKey)
 	return result
 end
 
-function ProfessionExporter:GetOverviewWalletGraphSeries(selectedCharacterKey, rangeKey, mode)
+function AuctionHelper:GetOverviewWalletGraphSeries(selectedCharacterKey, rangeKey, mode)
 	local acct = self.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
 	local balance
 	if selectedCharacterKey == acct then
@@ -1024,7 +1024,7 @@ function ProfessionExporter:GetOverviewWalletGraphSeries(selectedCharacterKey, r
 	return balance
 end
 
-function ProfessionExporter:GetCurrentGoldSummaryForOverview(selectedCharacterKey)
+function AuctionHelper:GetCurrentGoldSummaryForOverview(selectedCharacterKey)
 	local acct = self.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
 	self:InitDB()
 	local currentKey = self:GetCharacterKey()
@@ -1079,7 +1079,7 @@ local function formatCopperFullLocal(pe, copper)
 	return pe:FormatCopperFull(copper)
 end
 
-function ProfessionExporter:BuildItemDetailScrollBodyLines(detail)
+function AuctionHelper:BuildItemDetailScrollBodyLines(detail)
 	if not detail or type(detail) ~= "table" then
 		return {}
 	end
@@ -1088,13 +1088,13 @@ function ProfessionExporter:BuildItemDetailScrollBodyLines(detail)
 		"|cffffffffOverview|r",
 		string.format(
 			"Inventory total: %s (bags %s / bank %s / warband %s)",
-			ProfessionExporter:FormatNumberGrouped(totals.total or 0),
-			ProfessionExporter:FormatNumberGrouped(totals.bags or 0),
-			ProfessionExporter:FormatNumberGrouped(totals.bank or 0),
-			ProfessionExporter:FormatNumberGrouped(totals.warband or 0)
+			AuctionHelper:FormatNumberGrouped(totals.total or 0),
+			AuctionHelper:FormatNumberGrouped(totals.bags or 0),
+			AuctionHelper:FormatNumberGrouped(totals.bank or 0),
+			AuctionHelper:FormatNumberGrouped(totals.warband or 0)
 		),
-		string.format("Average AH observation: %s", formatCopperFullLocal(ProfessionExporter, detail.economy and detail.economy.avgObservedPrice)),
-		string.format("Average crafting cost: %s", formatCopperFullLocal(ProfessionExporter, detail.crafting and detail.crafting.avgCraftCost)),
+		string.format("Average AH observation: %s", formatCopperFullLocal(AuctionHelper, detail.economy and detail.economy.avgObservedPrice)),
+		string.format("Average crafting cost: %s", formatCopperFullLocal(AuctionHelper, detail.crafting and detail.crafting.avgCraftCost)),
 		string.format(
 			"Observed price points: %d  |  crafting points: %d",
 			(detail.economy and detail.economy.count) or 0,
@@ -1135,7 +1135,7 @@ function ProfessionExporter:BuildItemDetailScrollBodyLines(detail)
 	return lines
 end
 
-function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, config)
+function AuctionHelper:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, config)
 	config = config or {}
 	if not graphWidget or not graphWidget.SetSeries then
 		return
@@ -1168,7 +1168,7 @@ function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, 
 		local m = pt.meta or {}
 		if m.ahHistory then
 			tip:AddLine(
-				string.format("AH sample quantity: %s", ProfessionExporter:FormatNumberGrouped(tonumber(pt.value) or 0)),
+				string.format("AH sample quantity: %s", AuctionHelper:FormatNumberGrouped(tonumber(pt.value) or 0)),
 				0.85,
 				0.92,
 				1
@@ -1177,14 +1177,14 @@ function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, 
 				tip:AddLine(string.format("Price observations in hour: %d", m.sampleCount), 0.72, 0.8, 0.88)
 			end
 		else
-			tip:AddLine(string.format("Total quantity: %s", ProfessionExporter:FormatNumberGrouped(tonumber(pt.value) or 0)), 0.85, 0.92, 1)
+			tip:AddLine(string.format("Total quantity: %s", AuctionHelper:FormatNumberGrouped(tonumber(pt.value) or 0)), 0.85, 0.92, 1)
 			if (m.sampleCount or 0) > 0 then
 				tip:AddLine(
 					string.format(
 						"Bags %s  |  Bank %s  |  Warband %s",
-						ProfessionExporter:FormatNumberGrouped(m.bags or 0),
-						ProfessionExporter:FormatNumberGrouped(m.bank or 0),
-						ProfessionExporter:FormatNumberGrouped(m.warband or 0)
+						AuctionHelper:FormatNumberGrouped(m.bags or 0),
+						AuctionHelper:FormatNumberGrouped(m.bank or 0),
+						AuctionHelper:FormatNumberGrouped(m.warband or 0)
 					),
 					0.72,
 					0.8,
@@ -1195,7 +1195,7 @@ function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, 
 	end
 	local function craftingTooltip(tip, pt)
 		tip:AddLine(graphTimestampForSeries(pt.at), 1, 1, 1)
-		tip:AddLine("|cffffcc00Crafting cost|r  " .. formatCopperFullLocal(ProfessionExporter, pt.value), 0.85, 0.92, 1)
+		tip:AddLine("|cffffcc00Crafting cost|r  " .. formatCopperFullLocal(AuctionHelper, pt.value), 0.85, 0.92, 1)
 		local m = pt.meta or {}
 		if m.flat then
 			tip:AddLine("Current estimate (flat)", 0.72, 0.8, 0.88)
@@ -1207,8 +1207,8 @@ function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, 
 			tip:AddLine(
 				string.format(
 					"Min %s  |  Max %s",
-					formatCopperFullLocal(ProfessionExporter, m.min),
-					formatCopperFullLocal(ProfessionExporter, m.max)
+					formatCopperFullLocal(AuctionHelper, m.min),
+					formatCopperFullLocal(AuctionHelper, m.max)
 				),
 				0.72,
 				0.8,
@@ -1218,7 +1218,7 @@ function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, 
 	end
 	local function marketTooltip(tip, pt)
 		tip:AddLine(graphTimestampForSeries(pt.at), 1, 1, 1)
-		tip:AddLine("|cffffffffMarket|r  " .. formatCopperFullLocal(ProfessionExporter, pt.value), 0.85, 0.92, 1)
+		tip:AddLine("|cffffffffMarket|r  " .. formatCopperFullLocal(AuctionHelper, pt.value), 0.85, 0.92, 1)
 		local m = pt.meta or {}
 		if m.source then
 			tip:AddLine(string.format("Source: %s", tostring(m.source)), 0.72, 0.8, 0.88)
@@ -1230,8 +1230,8 @@ function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, 
 			tip:AddLine(
 				string.format(
 					"Min %s  |  Max %s",
-					formatCopperFullLocal(ProfessionExporter, m.min),
-					formatCopperFullLocal(ProfessionExporter, m.max)
+					formatCopperFullLocal(AuctionHelper, m.min),
+					formatCopperFullLocal(AuctionHelper, m.max)
 				),
 				0.72,
 				0.8,
@@ -1243,7 +1243,7 @@ function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, 
 		local qtyRaw = self:GetItemQuantityHistorySeries(graphItemID, qtyFilter, rangeKey)
 		series = self:ItemQuantitySeriesToGraphPoints(qtyRaw)
 		yFormatter = function(v)
-			return ProfessionExporter:FormatNumberGrouped(math.floor(tonumber(v) or 0))
+			return AuctionHelper:FormatNumberGrouped(math.floor(tonumber(v) or 0))
 		end
 		emptyExtra = emptyQty
 		tooltipBuilder = function(tip, hit)
@@ -1253,7 +1253,7 @@ function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, 
 	elseif metric == "crafting" then
 		series = self:ItemHistoryBucketsToGraphSeries(graphItemID, "crafting", rangeKey)
 		yFormatter = function(v)
-			return ProfessionExporter:FormatCopperShort(tonumber(v) or 0)
+			return AuctionHelper:FormatCopperShort(tonumber(v) or 0)
 		end
 		if config.quantityOverlay then
 			local qtyRaw = self:GetAuctionHistoryQuantitySeriesForItem(graphItemID, rangeKey)
@@ -1271,7 +1271,7 @@ function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, 
 	else
 		series = self:ItemHistoryBucketsToGraphSeries(graphItemID, "market", rangeKey)
 		yFormatter = function(v)
-			return ProfessionExporter:FormatCopperShort(tonumber(v) or 0)
+			return AuctionHelper:FormatCopperShort(tonumber(v) or 0)
 		end
 		if config.secondaryCraftingOverlay then
 			secondarySeries = self:ItemHistoryBucketsToGraphSeries(graphItemID, "crafting", rangeKey)
@@ -1302,7 +1302,7 @@ function ProfessionExporter:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, 
 	end
 	if graphWidget.SetRightYFormatter then
 		graphWidget:SetRightYFormatter(function(v)
-			return ProfessionExporter:FormatNumberGrouped(math.floor(tonumber(v) or 0))
+			return AuctionHelper:FormatNumberGrouped(math.floor(tonumber(v) or 0))
 		end)
 	end
 	graphWidget:SetEmptyText(emptyExtra)

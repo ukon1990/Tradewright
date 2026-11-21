@@ -1,11 +1,11 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Bag data (E11): reads the carried bags for the bag window, and turns the per-character holdings
 -- of the inventory database (AuctionHelper_Holdings.lua) into items for the read-only tabs (F94).
 
 local BACKPACK = 0
 
-function ProfessionExporter:GetReagentBagIndex()
+function AuctionHelper:GetReagentBagIndex()
 	return Enum and Enum.BagIndex and tonumber(Enum.BagIndex.ReagentBag) or nil
 end
 
@@ -34,7 +34,7 @@ end
 
 --- One item of the bag window: what it is and how to draw it. `info` holds what the caller already
 --- knows: count, and for a live slot quality, icon and link.
-function ProfessionExporter:DescribeBagItem(itemID, info)
+function AuctionHelper:DescribeBagItem(itemID, info)
 	local _, typeName, subtypeName, equipLoc, icon, classID, subclassID = C_Item.GetItemInfoInstant(itemID)
 	local quality, name = qualityAndName(self, itemID, info)
 	return {
@@ -112,7 +112,7 @@ end
 --- The containers `bagIDs` (default: the carried bags) as they are now: `items` (one per filled
 --- slot), `bags` ({ bag, slots, free, isReagent }) and `firstFree` ({ bag, slot } in a normal
 --- bag, or nil).
-function ProfessionExporter:ScanBags(bagIDs)
+function AuctionHelper:ScanBags(bagIDs)
 	local scan = { items = {}, bags = {} }
 	local marks = slotMarks(self)
 	local reagentBag = self:GetReagentBagIndex()
@@ -135,11 +135,11 @@ function ProfessionExporter:ScanBags(bagIDs)
 	return scan
 end
 
-ProfessionExporter.BAG_WARBAND_KEY = "warband"
+AuctionHelper.BAG_WARBAND_KEY = "warband"
 
 --- Saved holdings for the bag window: every character, and the warband bank (retail) under
 --- BAG_WARBAND_KEY once it has been seen. It has the shape of a character with only a bank.
-function ProfessionExporter:GetBagHoldings()
+function AuctionHelper:GetBagHoldings()
 	local characters = self:GetItemHoldings()
 	local warband = self:GetWarbandHoldings()
 	if not warband then
@@ -154,7 +154,7 @@ end
 
 --- Read-only items of a saved character, or of all of them (`tabKey` "all"), for `mode`
 --- ("bags", "bank" or "both"): one entry per item with the count added up.
-function ProfessionExporter:GetSavedBagItems(tabKey, mode)
+function AuctionHelper:GetSavedBagItems(tabKey, mode)
 	local characters = self:GetBagHoldings()
 	local logic = self.BagLogic
 	local counts = tabKey == "all" and logic.MergeAll(characters, mode) or logic.MergeCounts(characters[tabKey] or {}, mode)
@@ -198,7 +198,7 @@ end
 
 local events = CreateFrame("Frame")
 events:SetScript("OnEvent", function(_, event)
-	handlers[event](ProfessionExporter)
+	handlers[event](AuctionHelper)
 end)
 for event in pairs(handlers) do
 	-- Not every client has every event.

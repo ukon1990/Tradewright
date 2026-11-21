@@ -1,6 +1,6 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
-function ProfessionExporter:FinishScan()
+function AuctionHelper:FinishScan()
 	self:DebugLog("SCAN", "FinishScan", {
 		string.format("characterKey=%s", tostring(self:GetCharacterKey())),
 	})
@@ -47,7 +47,7 @@ function ProfessionExporter:FinishScan()
 	end
 end
 
-function ProfessionExporter:StartFullCharacterDump()
+function AuctionHelper:StartFullCharacterDump()
 	local state = self:GetState()
 	if state.scanInProgress then
 		self:PrintMessage("A scan is already in progress. Wait for it to finish, then run the full dump again.")
@@ -62,7 +62,7 @@ function ProfessionExporter:StartFullCharacterDump()
 	end
 end
 
-function ProfessionExporter:ProcessNextProfession()
+function AuctionHelper:ProcessNextProfession()
 	local state = self:GetState()
 	if not state.scanInProgress then
 		return
@@ -85,7 +85,7 @@ function ProfessionExporter:ProcessNextProfession()
 	C_TradeSkillUI.OpenTradeSkill(nextProfession.skillLineID)
 end
 
-function ProfessionExporter:TryScanCurrentProfession()
+function AuctionHelper:TryScanCurrentProfession()
 	local state = self:GetState()
 	if not state.scanInProgress or not state.currentProfession or state.pendingScan then
 		return
@@ -149,7 +149,7 @@ function ProfessionExporter:TryScanCurrentProfession()
 	end)
 end
 
-function ProfessionExporter:ScanOpenProfession(opts)
+function AuctionHelper:ScanOpenProfession(opts)
 	opts = type(opts) == "table" and opts or {}
 	if not self.IS_SUPPORTED then
 		self:PrintMessage("Profession scan requires retail or Forever WoW.")
@@ -199,7 +199,7 @@ function ProfessionExporter:ScanOpenProfession(opts)
 	return true
 end
 
-function ProfessionExporter:StartScan()
+function AuctionHelper:StartScan()
 	if not self.IS_SUPPORTED then
 		self:PrintMessage("This exporter currently supports retail and Forever only.")
 		return

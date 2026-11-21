@@ -14,7 +14,7 @@ end
 -- Minimal addon table so ForeverLogic can attach.
 local pe = {}
 _G.AuctionHelper = pe
-_G.ProfessionExporter = pe
+_G.AuctionHelper = pe
 
 local chunk, err = loadfile(root .. "/src/util/AuctionHelper_ForeverLogic.lua")
 assert(chunk, err)

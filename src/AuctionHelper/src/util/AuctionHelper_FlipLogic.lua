@@ -1,8 +1,8 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 --- Pure flip maths for the Opportunities tab (offline-testable, no WoW API). Builds on MarketSignals.
 local FlipLogic = {}
-ProfessionExporter.FlipLogic = FlipLogic
+AuctionHelper.FlipLogic = FlipLogic
 
 local DEFAULTS = { minDiscount = 0.25, minProfit = 10000, minSellsPerDay = 1, dayShare = 1 / 3, cut = 0.05 }
 
@@ -14,7 +14,7 @@ end
 -- How many to buy and what it costs. With price steps: everything listed at or under the limit price,
 -- capped at a share of a day's sales. Without: one unit at the lowest price, quantity unknown.
 local function flipQuantity(item, limitPrice, opts)
-	local MS = ProfessionExporter.MarketSignals
+	local MS = AuctionHelper.MarketSignals
 	if not (item.steps and #item.steps > 0) then
 		return { units = 1, cost = item.price }
 	end
@@ -165,7 +165,7 @@ function FlipLogic.BuildGapRow(item, opts)
 	if not (item.steps and #item.steps >= 4) then
 		return nil
 	end
-	local gap = ProfessionExporter.MarketSignals.FindPriceGap(item.steps, gapOption(opts, "minGapPct", 0.25))
+	local gap = AuctionHelper.MarketSignals.FindPriceGap(item.steps, gapOption(opts, "minGapPct", 0.25))
 	if not gapQualifies(item, gap, opts) then
 		return nil
 	end

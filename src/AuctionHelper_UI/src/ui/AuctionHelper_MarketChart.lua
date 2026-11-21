@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- The price chart of the Market item view: the last 48 scanned hours, or 14 or 90 days of daily prices
 -- with the usual price drawn as a flat line (F40).
@@ -56,7 +56,7 @@ local function dailySeries(pe, storageKey, days)
 end
 
 --- Heading above the Market item chart with its range buttons. Replaces the plain "Hourly price" heading.
-function ProfessionExporter:CreateMarketChartHeading(view)
+function AuctionHelper:CreateMarketChartHeading(view)
 	local pe = self
 	local heading = self:CreateHeading(view, "Price history")
 	heading:SetPoint("TOPLEFT", view.facts, "BOTTOMLEFT", 0, -10)
@@ -84,7 +84,7 @@ end
 
 --- Draw the chart of `view` for a Market row in the chosen range. `hourly` holds the series the view
 --- already built from the last 48 scanned hours: `{ primary, secondary, quantity }`.
-function ProfessionExporter:ShowMarketChart(view, rowData, hourly)
+function AuctionHelper:ShowMarketChart(view, rowData, hourly)
 	local range = rangeById(self:GetSetting("market.chartRange", "hours"))
 	view.chartRow = rowData
 	for _, button in ipairs(view.rangeButtons or {}) do

@@ -1,6 +1,6 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
--- SavedVariables initialisation, defaults and the one-time ProfessionExporter* import.
+-- SavedVariables initialisation, defaults and the one-time import of ProfessionExporter* data.
 
 local LEGACY_SETTING_PATHS_BY_ROOT = {
 	lastActiveTab = "general.lastActiveTab",
@@ -116,11 +116,11 @@ local function applyNilDefaults(t, defaults)
 	end
 end
 
-function ProfessionExporter:GetLegacySettingRootKey(path)
+function AuctionHelper:GetLegacySettingRootKey(path)
 	return LEGACY_SETTING_ROOTS_BY_PATH[tostring(path or "")]
 end
 
-function ProfessionExporter:SyncLegacySettingAlias(path, value)
+function AuctionHelper:SyncLegacySettingAlias(path, value)
 	local rootKey = self:GetLegacySettingRootKey(path)
 	if not rootKey then
 		return
@@ -142,7 +142,7 @@ local function ensureExpansionSelection(t)
 	end
 end
 
-function ProfessionExporter:BuildMergedRuntimeDB(baseDb, professionsDb, inventoryDb, auctionDb)
+function AuctionHelper:BuildMergedRuntimeDB(baseDb, professionsDb, inventoryDb, auctionDb)
 	return {
 		schemaVersion = self.SCHEMA_VERSION,
 		addonVersion = self.VERSION,
@@ -201,7 +201,10 @@ local function tableOrNil(value)
 	return type(value) == "table" and value or nil
 end
 
-function ProfessionExporter:RunLegacyMigrationIfNeeded(baseDb, professionsDb, inventoryDb, auctionDb)
+-- One-time import of saved data from the addon's old name (ProfessionExporter). Remove this,
+-- the helpers above and ProfessionExporterDB / ProfessionExporterLastExport in the TOCs and
+-- .luacheckrc once no player still has pre-AuctionHelper saved data.
+function AuctionHelper:RunLegacyMigrationIfNeeded(baseDb, professionsDb, inventoryDb, auctionDb)
 	AuctionHelperMigrationDB = AuctionHelperMigrationDB or {}
 	local migration = AuctionHelperMigrationDB
 	if migration.professionExporterImported == true then
@@ -299,7 +302,7 @@ local function syncAuctionModuleSettings(self, auctionSettings)
 	end
 end
 
-function ProfessionExporter:InitDB()
+function AuctionHelper:InitDB()
 	ensureSavedVariableRoots()
 	local baseDb, professionsDb = AuctionHelperDB, AuctionHelperProfessionsDB
 	local inventoryDb, auctionDb = AuctionHelperInventoryDB, AuctionHelperAuctionDB
@@ -318,15 +321,15 @@ function ProfessionExporter:InitDB()
 	self.db = self:BuildMergedRuntimeDB(baseDb, professionsDb, inventoryDb, auctionDb)
 
 	syncAuctionModuleSettings(self, applySettingDefaults(self.db.settings))
-	if ProfessionExporter.InitLedger then
-		ProfessionExporter:InitLedger()
+	if AuctionHelper.InitLedger then
+		AuctionHelper:InitLedger()
 	end
 	if needsStorageCompaction then
 		self:CompactSavedVariablesStorage()
 	end
 end
 
-function ProfessionExporter:CompactSavedVariablesStorage()
+function AuctionHelper:CompactSavedVariablesStorage()
 	if self.db and self.db.debug then
 		self.db.debug.lines = {}
 		self.db.debug.maxLines = math.max(20, math.min(100, tonumber(self.db.debug.maxLines) or 100))

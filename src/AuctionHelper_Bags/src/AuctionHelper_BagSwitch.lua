@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- The on/off switch of the bag window (E11 F91). On: the game's bag frames are parked under a
 -- hidden frame and the AuctionHelper window is shown whenever one of them is open, so the bag key,
@@ -40,7 +40,7 @@ end
 
 local function sync()
 	syncPending = false
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	if pe:IsBagWindowEnabled() then
 		pe:SetBagWindowShown(anyGameBagOpen())
 	end
@@ -85,12 +85,12 @@ local function showGameBags()
 	originalParents = {}
 end
 
-function ProfessionExporter:IsBagWindowEnabled()
+function AuctionHelper:IsBagWindowEnabled()
 	return self:GetSetting("bags.enabled", true) == true
 end
 
 --- Bring the game in line with the setting: park or restore the game's bag frames.
-function ProfessionExporter:ApplyBagTakeover()
+function AuctionHelper:ApplyBagTakeover()
 	if self:IsBagWindowEnabled() then
 		installHooks()
 		hideGameBags()
@@ -102,7 +102,7 @@ function ProfessionExporter:ApplyBagTakeover()
 	self:ApplyBankTakeover()
 end
 
-function ProfessionExporter:SetBagWindowEnabled(enabled)
+function AuctionHelper:SetBagWindowEnabled(enabled)
 	self:SetSetting("bags.enabled", enabled and true or false)
 	self:ApplyBagTakeover()
 	self:PrintMessage(enabled and "AuctionHelper bags are on."
@@ -114,7 +114,7 @@ end
 
 --- The window was closed by its button or Escape: close the game's parked bags too, so the next
 --- press of the bag key opens again. It also ends the bank session it stood in for.
-function ProfessionExporter:OnBagWindowClosed()
+function AuctionHelper:OnBagWindowClosed()
 	self:CloseBagBank()
 	if self:IsBagWindowEnabled() and anyGameBagOpen() and CloseAllBags then
 		CloseAllBags()
@@ -122,8 +122,8 @@ function ProfessionExporter:OnBagWindowClosed()
 end
 
 -- `/ah bags [on|off]`: AuctionHelper_Data.lua is at its size limit, so the command is added here.
-local baseHandleSlash = ProfessionExporter.HandleSlash
-function ProfessionExporter:HandleSlash(input)
+local baseHandleSlash = AuctionHelper.HandleSlash
+function AuctionHelper:HandleSlash(input)
 	local command, rest = string.match(string.lower(self:Trim(input)), "^(%S+)%s*(.-)$")
 	if command ~= "bags" then
 		return baseHandleSlash(self, input)

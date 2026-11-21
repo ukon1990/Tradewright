@@ -1,6 +1,6 @@
 -- Auction house side panel: one-time construction of frames, buttons, tables and their script handlers.
 -- Per-refresh widget state lives in AuctionHelper_AuctionPanelRefresh.lua.
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
 local function isAuctionHousePanelReady(panel)
 	return panel
@@ -27,7 +27,7 @@ local function wipeFrameChildren(frame)
 end
 
 local function attachSimpleTooltip(widget, title, body)
-	ProfessionExporter:AttachSimpleTooltip(widget, title, body)
+	AuctionHelper:AttachSimpleTooltip(widget, title, body)
 end
 
 -- Anchor spec for a widget placed 4px to the right of `frame`.
@@ -36,7 +36,7 @@ local function rightOf(frame)
 end
 
 local function panelButton(panel, size, text, point, onClick)
-	return ProfessionExporter:CreateAuctionPanelButton(panel, size, text, point, onClick)
+	return AuctionHelper:CreateAuctionPanelButton(panel, size, text, point, onClick)
 end
 
 local function adoptPanel(self, ui, panel)
@@ -117,7 +117,7 @@ end
 
 local function tabClick(tab)
 	return function()
-		ProfessionExporter:SetAuctionPanelActiveTab(tab, true)
+		AuctionHelper:SetAuctionPanelActiveTab(tab, true)
 	end
 end
 
@@ -155,29 +155,29 @@ local function buildPanelHeader(panel, w)
 end
 
 local function refreshShownPrices()
-	if not ProfessionExporter:CanStartFullAuctionSideActions(true) then
+	if not AuctionHelper:CanStartFullAuctionSideActions(true) then
 		return
 	end
-	local ids = ProfessionExporter:BuildAuctionVisibleItemIDs()
-	ProfessionExporter:QueueVisibleAuctionRefresh(ids)
-	ProfessionExporter:RefreshAuctionHousePanel()
+	local ids = AuctionHelper:BuildAuctionVisibleItemIDs()
+	AuctionHelper:QueueVisibleAuctionRefresh(ids)
+	AuctionHelper:RefreshAuctionHousePanel()
 end
 
 -- First sell-tab row: refresh shown prices plus the three economy scan buttons.
 local function buildSellScanButtons(panel, w)
 	w.btnRefresh = panelButton(panel, { 86, 20 }, "Refresh shown", { "TOPLEFT", w.stats, "BOTTOMLEFT", 0, -6 }, refreshShownPrices)
 	w.btnScanCraftPrices = panelButton(panel, { 60, 20 }, "Crafts", rightOf(w.btnRefresh), function()
-		ProfessionExporter:QueueAuctionEconomyScan({ crafts = true })
+		AuctionHelper:QueueAuctionEconomyScan({ crafts = true })
 	end)
 	attachSimpleTooltip(w.btnScanCraftPrices, "Craft prices", "Looks up the price of everything your scanned recipes make and use.")
 	panel.btnScanCraftPrices = w.btnScanCraftPrices
 	w.btnScanAccountInv = panelButton(panel, { 64, 20 }, "Account", rightOf(w.btnScanCraftPrices), function()
-		ProfessionExporter:QueueAuctionEconomyScan({ accountInventory = true })
+		AuctionHelper:QueueAuctionEconomyScan({ accountInventory = true })
 	end)
 	attachSimpleTooltip(w.btnScanAccountInv, "Account items", "Looks up the price of tradable items any of your characters owns.")
 	panel.btnScanAccountInv = w.btnScanAccountInv
 	w.btnScanCraftAndAccount = panelButton(panel, { 46, 20 }, "Both", rightOf(w.btnScanAccountInv), function()
-		ProfessionExporter:QueueAuctionEconomyScan({ crafts = true, accountInventory = true })
+		AuctionHelper:QueueAuctionEconomyScan({ crafts = true, accountInventory = true })
 	end)
 	attachSimpleTooltip(
 		w.btnScanCraftAndAccount,
@@ -188,19 +188,19 @@ local function buildSellScanButtons(panel, w)
 end
 
 local function dumpVisibleAuctions()
-	if not ProfessionExporter:CanStartFullAuctionSideActions(true) then
+	if not AuctionHelper:CanStartFullAuctionSideActions(true) then
 		return
 	end
-	ProfessionExporter:StartAuctionDump("visible")
-	ProfessionExporter:RefreshAuctionHousePanel()
+	AuctionHelper:StartAuctionDump("visible")
+	AuctionHelper:RefreshAuctionHousePanel()
 end
 
 local function buildSellDumpButtons(panel, w)
 	w.btnDump = panelButton(panel, { 62, 20 }, "Dump", rightOf(w.btnScanCraftAndAccount), dumpVisibleAuctions)
 	panel.btnDumpVisible = w.btnDump
 	w.btnDumpFull = panelButton(panel, { 72, 20 }, "Full scan", rightOf(w.btnDump), function()
-		ProfessionExporter:StartAuctionDump("full")
-		ProfessionExporter:RefreshAuctionHousePanel()
+		AuctionHelper:StartAuctionDump("full")
+		AuctionHelper:RefreshAuctionHousePanel()
 	end)
 	attachSimpleTooltip(w.btnDumpFull, "Full scan", "Reads every auction in the house and adds an hour to each item's price history.")
 	panel.btnDumpFull = w.btnDumpFull
@@ -209,7 +209,7 @@ end
 -- Second sell-tab row, part one: bulk posting and its pause toggle.
 local function buildSellPostButtons(panel, w)
 	w.btnPostProfitable = panelButton(panel, { 96, 20 }, "Post profitable", { "TOPLEFT", w.btnRefresh, "BOTTOMLEFT", 0, -4 }, function()
-		ProfessionExporter:RunAuctionPanelBulkAction("post_profitable")
+		AuctionHelper:RunAuctionPanelBulkAction("post_profitable")
 	end)
 	attachSimpleTooltip(
 		w.btnPostProfitable,
@@ -218,7 +218,7 @@ local function buildSellPostButtons(panel, w)
 	)
 	panel.btnPostProfitable = w.btnPostProfitable
 	w.btnPostAll = panelButton(panel, { 68, 20 }, "Post all", rightOf(w.btnPostProfitable), function()
-		ProfessionExporter:RunAuctionPanelBulkAction("post_all")
+		AuctionHelper:RunAuctionPanelBulkAction("post_all")
 	end)
 	attachSimpleTooltip(
 		w.btnPostAll,
@@ -227,7 +227,7 @@ local function buildSellPostButtons(panel, w)
 	)
 	panel.btnPostAll = w.btnPostAll
 	w.btnPauseBulk = panelButton(panel, { 58, 20 }, "Pause", rightOf(w.btnPostAll), function()
-		ProfessionExporter:ToggleAuctionBulkPause()
+		AuctionHelper:ToggleAuctionBulkPause()
 	end)
 	attachSimpleTooltip(w.btnPauseBulk, "Pause / Resume", "Pauses or resumes the current bulk post worker without clearing its queue position.")
 	w.btnPauseBulk:Hide()
@@ -235,32 +235,32 @@ local function buildSellPostButtons(panel, w)
 end
 
 local function toggleSelectedIgnoreRule()
-	local itemID = ProfessionExporter:GetSelectedAuctionPanelItemID()
+	local itemID = AuctionHelper:GetSelectedAuctionPanelItemID()
 	if not itemID then
-		ProfessionExporter:PrintMessage("Select an auction row first.")
+		AuctionHelper:PrintMessage("Select an auction row first.")
 		return
 	end
-	local rule = ProfessionExporter:GetAuctionItemRule(itemID) or {}
-	ProfessionExporter:SetAuctionItemRule(itemID, { ignore = rule.ignore == true and nil or true })
-	ProfessionExporter:DebugLog("AH", "rule ignore toggled", {
+	local rule = AuctionHelper:GetAuctionItemRule(itemID) or {}
+	AuctionHelper:SetAuctionItemRule(itemID, { ignore = rule.ignore == true and nil or true })
+	AuctionHelper:DebugLog("AH", "rule ignore toggled", {
 		string.format("itemID=%d ignore=%s", itemID, tostring(rule.ignore ~= true)),
 	})
-	ProfessionExporter:PrimeAuctionPanelRows()
-	ProfessionExporter:RefreshAuctionHousePanel()
+	AuctionHelper:PrimeAuctionPanelRows()
+	AuctionHelper:RefreshAuctionHousePanel()
 end
 
 local function clearSelectedItemRule()
-	local itemID = ProfessionExporter:GetSelectedAuctionPanelItemID()
+	local itemID = AuctionHelper:GetSelectedAuctionPanelItemID()
 	if not itemID then
-		ProfessionExporter:PrintMessage("Select an auction row first.")
+		AuctionHelper:PrintMessage("Select an auction row first.")
 		return
 	end
-	ProfessionExporter:ClearAuctionItemRule(itemID)
-	ProfessionExporter:DebugLog("AH", "rule cleared", {
+	AuctionHelper:ClearAuctionItemRule(itemID)
+	AuctionHelper:DebugLog("AH", "rule cleared", {
 		string.format("itemID=%d", itemID),
 	})
-	ProfessionExporter:PrimeAuctionPanelRows()
-	ProfessionExporter:RefreshAuctionHousePanel()
+	AuctionHelper:PrimeAuctionPanelRows()
+	AuctionHelper:RefreshAuctionHousePanel()
 end
 
 -- Second sell-tab row, part two: per-item bulk rules for the selected row.
@@ -269,7 +269,7 @@ local function buildSellRuleButtons(panel, w)
 	attachSimpleTooltip(w.btnIgnoreItem, "Ignore", "Never post the selected item in bulk.")
 	panel.btnIgnoreItem = w.btnIgnoreItem
 	w.btnReserveItem = panelButton(panel, { 58, 20 }, "Keep…", rightOf(w.btnIgnoreItem), function()
-		ProfessionExporter:ShowAuctionReservePrompt(ProfessionExporter:GetSelectedAuctionPanelItemID())
+		AuctionHelper:ShowAuctionReservePrompt(AuctionHelper:GetSelectedAuctionPanelItemID())
 	end)
 	attachSimpleTooltip(w.btnReserveItem, "Keep", "Keep a number of the selected item in your bags when posting in bulk.")
 	panel.btnReserveItem = w.btnReserveItem
@@ -288,7 +288,7 @@ local function filterCheckButton(panel, ui, point, label, uiKey)
 	end
 	check:SetScript("OnClick", function(btn)
 		ui[uiKey] = btn:GetChecked() == true
-		ProfessionExporter:RefreshAuctionHousePanel()
+		AuctionHelper:RefreshAuctionHousePanel()
 	end)
 	return check
 end
@@ -301,7 +301,7 @@ local function buildSellSearchFilters(panel, ui, w)
 	search:SetPoint("TOPLEFT", w.btnPostProfitable, "BOTTOMLEFT", 6, -8)
 	search:SetScript("OnTextChanged", function(box)
 		ui.ahFilterText = box:GetText() or ""
-		ProfessionExporter:RefreshAuctionHousePanel()
+		AuctionHelper:RefreshAuctionHousePanel()
 	end)
 	panel.searchBox = search
 	w.search = search
@@ -324,7 +324,7 @@ local function buildClassDropdowns(self, panel, ui, w)
 		end,
 		onChanged = function()
 			ui.ahSubclassFilterValues = {}
-			ProfessionExporter:RefreshAuctionHousePanel()
+			AuctionHelper:RefreshAuctionHousePanel()
 		end,
 	})
 	ui.ahClassDropdown:SetPoint("TOPLEFT", w.search, "BOTTOMLEFT", 0, -8)
@@ -340,7 +340,7 @@ local function buildClassDropdowns(self, panel, ui, w)
 			ui.ahSubclassFilterValues = selection or {}
 		end,
 		onChanged = function()
-			ProfessionExporter:RefreshAuctionHousePanel()
+			AuctionHelper:RefreshAuctionHousePanel()
 		end,
 	})
 	ui.ahSubclassDropdown:SetPoint("TOPLEFT", ui.ahClassDropdown, "TOPRIGHT", 4, 0)
@@ -366,17 +366,17 @@ local function buildExpansionDropdown(self, panel, ui)
 		width = 114,
 		allLabel = "All expansions",
 		getOptions = function()
-			return ProfessionExporter:GetExpansionFilterOptions()
+			return AuctionHelper:GetExpansionFilterOptions()
 		end,
 		getSelection = function()
 			return ui.ahExpansionFilterValues or {}
 		end,
 		setSelection = function(selection)
 			ui.ahExpansionFilterValues = selection or {}
-			ProfessionExporter:SetSetting("auction.selectedExpansions", selection)
+			AuctionHelper:SetSetting("auction.selectedExpansions", selection)
 		end,
 		onChanged = function()
-			ProfessionExporter:RefreshAuctionHousePanel()
+			AuctionHelper:RefreshAuctionHousePanel()
 		end,
 	})
 	ui.ahExpansionDropdown:SetPoint("TOPLEFT", ui.ahSubclassDropdown, "TOPRIGHT", 4, 0)
@@ -393,7 +393,7 @@ local function resetSellFilters(panel, ui)
 	panel.searchBox:SetText("")
 	panel.craftedOnly:SetChecked(false)
 	panel.profitableOnly:SetChecked(false)
-	ProfessionExporter:SetSetting("auction.selectedExpansions", {})
+	AuctionHelper:SetSetting("auction.selectedExpansions", {})
 	if ui.ahClassDropdown then
 		ui.ahClassDropdown:RefreshText()
 	end
@@ -403,7 +403,7 @@ local function resetSellFilters(panel, ui)
 	if ui.ahExpansionDropdown then
 		ui.ahExpansionDropdown:RefreshText()
 	end
-	ProfessionExporter:RefreshAuctionHousePanel()
+	AuctionHelper:RefreshAuctionHousePanel()
 end
 
 local function buildSellFilters(self, panel, ui, w)
@@ -456,7 +456,7 @@ local function showSellRowTooltip(rowFrame, rowData)
 	if not rowData or not rowData.itemID then
 		return
 	end
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local lines = sellRowTooltipLines(pe, rowData)
 	local hint = "Click to put it in the sell slot · Shift-click to link"
 	if rowData.isDumpedLow then
@@ -467,27 +467,27 @@ end
 
 local function onSellRowClick(_, rowData, _, tableWidget)
 	local id = rowData and rowData.itemID
-	if not id or ProfessionExporter:HandleItemRowModifiedClick(id) then
+	if not id or AuctionHelper:HandleItemRowModifiedClick(id) then
 		return
 	end
-	ProfessionExporter:GetState().auctionPanelSelectedItemID = id
+	AuctionHelper:GetState().auctionPanelSelectedItemID = id
 	tableWidget:SetSelectedRow(rowData)
-	ProfessionExporter:RefreshAuctionPanelRules()
+	AuctionHelper:RefreshAuctionPanelRules()
 	-- Clicking a row should also revalidate this item's current market value.
-	if ProfessionExporter:CanStartFullAuctionSideActions(true) then
-		ProfessionExporter:QueuePriorityAuctionRefresh({ id })
+	if AuctionHelper:CanStartFullAuctionSideActions(true) then
+		AuctionHelper:QueuePriorityAuctionRefresh({ id })
 	end
-	local ok = ProfessionExporter:TrySendItemToAuctionSellFrame(id, rowData and rowData.firstBag, rowData and rowData.firstSlot)
-	ProfessionExporter:GetState().auctionPanelSelectedItemID = id
+	local ok = AuctionHelper:TrySendItemToAuctionSellFrame(id, rowData and rowData.firstBag, rowData and rowData.firstSlot)
+	AuctionHelper:GetState().auctionPanelSelectedItemID = id
 	if ok then
-		ProfessionExporter:GetState().auctionLastSellSelectionItemID = id
-		ProfessionExporter:RefreshAuctionPanelRules()
-		ProfessionExporter:PrintMessage(string.format("Selected %s for AH sell.", ProfessionExporter:GetItemDisplayName(id)))
+		AuctionHelper:GetState().auctionLastSellSelectionItemID = id
+		AuctionHelper:RefreshAuctionPanelRules()
+		AuctionHelper:PrintMessage(string.format("Selected %s for AH sell.", AuctionHelper:GetItemDisplayName(id)))
 	else
-		ProfessionExporter:RefreshAuctionPanelRules()
-		ProfessionExporter:PrintMessage(string.format(
+		AuctionHelper:RefreshAuctionPanelRules()
+		AuctionHelper:PrintMessage(string.format(
 			"Could not put %s in the sell slot (not sellable, or its data is still loading).",
-			ProfessionExporter:GetItemDisplayName(id)
+			AuctionHelper:GetItemDisplayName(id)
 		))
 	end
 end
@@ -511,7 +511,7 @@ local function buildSellTable(self, panel, ui)
 		emptyTitle = "Nothing to sell",
 		emptyHint = "No items in your bags match the filters.",
 		isRowSelected = function(rowData)
-			return rowData and rowData.itemID ~= nil and rowData.itemID == ProfessionExporter:GetSelectedAuctionPanelItemID()
+			return rowData and rowData.itemID ~= nil and rowData.itemID == AuctionHelper:GetSelectedAuctionPanelItemID()
 		end,
 		maxRows = 120,
 		sortKey = ui.ahSortKey,
@@ -557,7 +557,7 @@ local function buildProgressWidgets(self, panel)
 	self:StyleProgressBar(panel.progressBar)
 	panel.progressBarBg = panel.progressBar.ahTrack
 	panel.btnPauseScan = panelButton(panel, { 64, 18 }, "Pause", { "BOTTOMRIGHT", panel, "BOTTOMRIGHT", -28, 4 }, function()
-		ProfessionExporter:ToggleAuctionRefreshPause()
+		AuctionHelper:ToggleAuctionRefreshPause()
 	end)
 	attachSimpleTooltip(
 		panel.btnPauseScan,
@@ -629,7 +629,7 @@ local function buildSellTab(self, panel, ui, w)
 	buildProgressWidgets(self, panel)
 end
 
-function ProfessionExporter:EnsureAuctionHousePanel()
+function AuctionHelper:EnsureAuctionHousePanel()
 	self.ui = self.ui or {}
 	local ui = self.ui
 	local panel, done, ah = acquirePanelFrame(self, ui)

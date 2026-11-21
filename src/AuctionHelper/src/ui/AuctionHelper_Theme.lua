@@ -1,6 +1,6 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
-ProfessionExporter.ui = ProfessionExporter.ui or {}
+AuctionHelper.ui = AuctionHelper.ui or {}
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 
@@ -37,7 +37,7 @@ local THEME = {
 	},
 }
 
-function ProfessionExporter:GetSetting(path, defaultValue)
+function AuctionHelper:GetSetting(path, defaultValue)
 	self:InitDB()
 	local node = self.db and self.db.settings
 	for segment in string.gmatch(path or "", "[^%.]+") do
@@ -52,7 +52,7 @@ function ProfessionExporter:GetSetting(path, defaultValue)
 	return node
 end
 
-function ProfessionExporter:SetSetting(path, value)
+function AuctionHelper:SetSetting(path, value)
 	self:InitDB()
 	local node = self.db.settings
 
@@ -75,7 +75,7 @@ function ProfessionExporter:SetSetting(path, value)
 	self:InitDB()
 end
 
-function ProfessionExporter:GetWindowScaleOptions()
+function AuctionHelper:GetWindowScaleOptions()
 	return {
 		{ value = 0.9, label = "90%" },
 		{ value = 1.0, label = "100%" },
@@ -84,11 +84,11 @@ function ProfessionExporter:GetWindowScaleOptions()
 	}
 end
 
-function ProfessionExporter:GetTheme()
+function AuctionHelper:GetTheme()
 	return THEME
 end
 
-function ProfessionExporter:ApplyBackdrop(frame, bg, border)
+function AuctionHelper:ApplyBackdrop(frame, bg, border)
 	if not frame then
 		return
 	end
@@ -98,7 +98,7 @@ function ProfessionExporter:ApplyBackdrop(frame, bg, border)
 end
 
 -- A raised region inside a window (never a second window outline).
-function ProfessionExporter:StylePanel(frame, tone)
+function AuctionHelper:StylePanel(frame, tone)
 	self:ApplyBackdrop(frame, THEME[tone or "surface2"], THEME.borderSubtle)
 end
 
@@ -119,7 +119,7 @@ local function addCornerTicks(frame)
 end
 
 -- The outer frame of a window or docked panel: window fill, 1px outline, gold corner ticks, clipped.
-function ProfessionExporter:StyleWindow(frame)
+function AuctionHelper:StyleWindow(frame)
 	if not frame then
 		return
 	end
@@ -147,7 +147,7 @@ local function hideRegions(frame, keys)
 end
 
 -- Fill plus four 1px edges, inset by `pad` (x, y) around the frame. Returns the surface table.
-function ProfessionExporter:AddSurface(frame, fill, edge, padX, padY)
+function AuctionHelper:AddSurface(frame, fill, edge, padX, padY)
 	if frame.ahSurface then
 		return frame.ahSurface
 	end
@@ -217,7 +217,7 @@ local function onButtonEnter(button)
 end
 
 -- Any Button with a font string: transparent fill, 1px outline, gold wash on hover.
-function ProfessionExporter:SkinButton(button)
+function AuctionHelper:SkinButton(button)
 	if not button or button.ahSkinned then
 		return button
 	end
@@ -249,14 +249,14 @@ function ProfessionExporter:SkinButton(button)
 end
 
 -- The one main action of a region: gold label, gold outline.
-function ProfessionExporter:SetButtonPrimary(button, primary)
+function AuctionHelper:SetButtonPrimary(button, primary)
 	self:SkinButton(button)
 	button.ahPrimary = primary and true or nil
 	applyButtonState(button)
 end
 
 -- Tab and segment buttons: the selected one is gold with a gold outline, the rest muted.
-function ProfessionExporter:StyleShellButton(button, selected)
+function AuctionHelper:StyleShellButton(button, selected)
 	if not button then
 		return
 	end
@@ -266,7 +266,7 @@ function ProfessionExporter:StyleShellButton(button, selected)
 	applyButtonState(button)
 end
 
-function ProfessionExporter:SkinEditBox(editBox)
+function AuctionHelper:SkinEditBox(editBox)
 	if not editBox or editBox.ahSkinned then
 		return editBox
 	end
@@ -288,7 +288,7 @@ function ProfessionExporter:SkinEditBox(editBox)
 end
 
 -- 14px square box with an 8px gold check; the label sits to the right, muted text colour.
-function ProfessionExporter:SkinCheckButton(check)
+function AuctionHelper:SkinCheckButton(check)
 	if not check or check.ahSkinned then
 		return check
 	end
@@ -366,7 +366,7 @@ local GLYPHS = {
 }
 
 -- Replaces the red close button art with a 22px outlined square holding a drawn glyph (X by default).
-function ProfessionExporter:SkinCloseButton(button, glyph)
+function AuctionHelper:SkinCloseButton(button, glyph)
 	if not button or button.ahSkinned then
 		return button
 	end
@@ -394,7 +394,7 @@ function ProfessionExporter:SkinCloseButton(button, glyph)
 end
 
 -- 22px square header button with a drawn glyph ("close" or "window"); `tooltip` is optional.
-function ProfessionExporter:CreateIconButton(parent, glyph, onClick, tooltip)
+function AuctionHelper:CreateIconButton(parent, glyph, onClick, tooltip)
 	local button = CreateFrame("Button", nil, parent, glyph == "close" and "UIPanelCloseButton" or nil)
 	button:ClearAllPoints()
 	self:SkinCloseButton(button, glyph)
@@ -412,7 +412,7 @@ end
 
 -- Walks a frame tree once per call and skins every template control it finds. Safe to repeat:
 -- each control is skinned once; new children added since the last call get skinned too.
-function ProfessionExporter:SkinTree(root)
+function AuctionHelper:SkinTree(root)
 	if not root or not root.GetChildren then
 		return
 	end
@@ -437,7 +437,7 @@ end
 
 -- Retail profession quality tier as an inline icon after an item name. Forever has no quality tiers,
 -- so it draws nothing there.
-function ProfessionExporter:GetRankMarkup(rankIndex)
+function AuctionHelper:GetRankMarkup(rankIndex)
 	rankIndex = tonumber(rankIndex)
 	if not self.IS_RETAIL or not rankIndex or rankIndex <= 0 then
 		return ""
@@ -445,7 +445,7 @@ function ProfessionExporter:GetRankMarkup(rankIndex)
 	return string.format(" |A:Professions-Icon-Quality-Tier%d-Small:14:14|a", rankIndex)
 end
 
-function ProfessionExporter:ApplyWindowScale()
+function AuctionHelper:ApplyWindowScale()
 	local ui = self.ui
 	if ui and ui.mainFrame then
 		ui.mainFrame:SetScale(self:GetSetting("appearance.windowScale", 1))
@@ -456,7 +456,7 @@ end
 -- StartMoving() from OnDragStart only begins after the drag threshold (often a frame late), so the
 -- grab point slipped and the window popped to a new offset; manual moves avoid that and any scale skew.
 local dragDriver
-function ProfessionExporter:MakeWindowDraggable(frame, handle)
+function AuctionHelper:MakeWindowDraggable(frame, handle)
 	dragDriver = dragDriver or CreateFrame("Frame")
 	local function stop()
 		dragDriver:SetScript("OnUpdate", nil)

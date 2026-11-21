@@ -1,9 +1,9 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Pure mail helpers (F23, F24): what a character's surplus mail sends, and the rows of the review
 -- panel that shows and changes it. No WoW API here, so the offline tests can load this file alone.
 local MailLogic = {}
-ProfessionExporter.MailLogic = MailLogic
+AuctionHelper.MailLogic = MailLogic
 
 --- The To line for a character key ("First-Second"). On WoW Forever there are no realms: the
 --- second part is the surname and mail needs the full name, "First Second". On retail it is the

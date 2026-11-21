@@ -1,6 +1,6 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
-if not ProfessionExporter.IS_RETAIL then
+if not AuctionHelper.IS_RETAIL then
 	return
 end
 
@@ -91,7 +91,7 @@ end
 -- Attuned Thalassian Rune-Prism reuse dataSlotIndex across dataSlotTypes.
 local function buildOrderSlotSchematicLookup(order)
 	local lookup = {}
-	local recipeID = ProfessionExporter.NormalizeTradeSkillRecipeId and ProfessionExporter:NormalizeTradeSkillRecipeId(order and order.spellID)
+	local recipeID = AuctionHelper.NormalizeTradeSkillRecipeId and AuctionHelper:NormalizeTradeSkillRecipeId(order and order.spellID)
 	recipeID = tonumber(recipeID or order and order.spellID)
 	if not recipeID or not C_TradeSkillUI or not C_TradeSkillUI.GetRecipeSchematic then
 		return lookup
@@ -224,7 +224,7 @@ end
 --- Reagents the crafter may need to supply.
 --- Only Customer-provided reagents reduce the buy need; Crafter/Any entries in
 --- order.reagents must not be treated as already supplied (that under-counts).
-function ProfessionExporter:ExtractCrafterShoppingReagentsFromOrder(order)
+function AuctionHelper:ExtractCrafterShoppingReagentsFromOrder(order)
 	local totals = {}
 	if type(order) ~= "table" then
 		return totals
@@ -297,7 +297,7 @@ function ProfessionExporter:ExtractCrafterShoppingReagentsFromOrder(order)
 	return totals
 end
 
-function ProfessionExporter:GetCraftingOrderWorkQueueStorage()
+function AuctionHelper:GetCraftingOrderWorkQueueStorage()
 	self:InitDB()
 	if type(self.db.craftingOrderWorkQueue) ~= "table" then
 		self.db.craftingOrderWorkQueue = {}
@@ -305,7 +305,7 @@ function ProfessionExporter:GetCraftingOrderWorkQueueStorage()
 	return self.db.craftingOrderWorkQueue
 end
 
-function ProfessionExporter:IsCraftingOrderInWorkQueue(orderID)
+function AuctionHelper:IsCraftingOrderInWorkQueue(orderID)
 	orderID = tonumber(orderID)
 	if not orderID then
 		return false
@@ -404,7 +404,7 @@ local function buildOrderFromWorkQueueEntry(entry)
 	return order
 end
 
-function ProfessionExporter:AddCraftingOrderToWorkQueue(order)
+function AuctionHelper:AddCraftingOrderToWorkQueue(order)
 	if type(order) ~= "table" or not order.orderID then
 		self:PrintMessage("Crafting order add failed: missing order data.")
 		return nil, "bad_order"
@@ -456,7 +456,7 @@ function ProfessionExporter:AddCraftingOrderToWorkQueue(order)
 	return key
 end
 
-function ProfessionExporter:RemoveCraftingOrderFromWorkQueue(orderID)
+function AuctionHelper:RemoveCraftingOrderFromWorkQueue(orderID)
 	orderID = tonumber(orderID)
 	if not orderID then
 		return
@@ -468,7 +468,7 @@ function ProfessionExporter:RemoveCraftingOrderFromWorkQueue(orderID)
 	self:NotifyWorkOrderQueueChanged()
 end
 
-function ProfessionExporter:RemoveCraftingOrdersByReagentItem(itemID)
+function AuctionHelper:RemoveCraftingOrdersByReagentItem(itemID)
 	itemID = tonumber(itemID)
 	if not itemID then
 		return 0
@@ -497,7 +497,7 @@ function ProfessionExporter:RemoveCraftingOrdersByReagentItem(itemID)
 	return removed
 end
 
-function ProfessionExporter:ClearCraftingOrderWorkQueue()
+function AuctionHelper:ClearCraftingOrderWorkQueue()
 	local st = self:GetCraftingOrderWorkQueueStorage()
 	for k in pairs(st) do
 		st[k] = nil
@@ -505,7 +505,7 @@ function ProfessionExporter:ClearCraftingOrderWorkQueue()
 	self:NotifyWorkOrderQueueChanged()
 end
 
-function ProfessionExporter:GetCraftingOrderWorkQueueRows()
+function AuctionHelper:GetCraftingOrderWorkQueueRows()
 	local st = self:GetCraftingOrderWorkQueueStorage()
 	local list = {}
 	local currentKey = self:GetCharacterKey()
@@ -523,7 +523,7 @@ function ProfessionExporter:GetCraftingOrderWorkQueueRows()
 	return list
 end
 
-function ProfessionExporter:BuildCraftingOrderWorkQueueSummary()
+function AuctionHelper:BuildCraftingOrderWorkQueueSummary()
 	local rows = self:GetCraftingOrderWorkQueueRows()
 	local reagentTotals = {}
 	local currentCharacterKey = self:GetCharacterKey()
@@ -593,7 +593,7 @@ function ProfessionExporter:BuildCraftingOrderWorkQueueSummary()
 	}
 end
 
-function ProfessionExporter:NotifyWorkOrderQueueChanged()
+function AuctionHelper:NotifyWorkOrderQueueChanged()
 	if self.RefreshCraftsQueuePanel then
 		self:RefreshCraftsQueuePanel()
 	end
@@ -613,7 +613,7 @@ local function getLiveCraftingOrderView()
 	return ordersPage and ordersPage.OrderView or nil
 end
 
-function ProfessionExporter:OnCraftingOrderFulfilled(orderID)
+function AuctionHelper:OnCraftingOrderFulfilled(orderID)
 	orderID = tonumber(orderID)
 	if not orderID then
 		return
@@ -627,12 +627,12 @@ function ProfessionExporter:OnCraftingOrderFulfilled(orderID)
 	self:RemoveCraftingOrderFromWorkQueue(orderID)
 	if orderViewVisible and nextEntry and self.OpenCraftingOrderWorkQueueEntry then
 		C_Timer.After(0.25, function()
-			ProfessionExporter:OpenCraftingOrderWorkQueueEntry(nextEntry)
+			AuctionHelper:OpenCraftingOrderWorkQueueEntry(nextEntry)
 		end)
 	end
 end
 
-function ProfessionExporter:GetCraftingOrderWorkQueueIndex(orderID)
+function AuctionHelper:GetCraftingOrderWorkQueueIndex(orderID)
 	orderID = tonumber(orderID)
 	if not orderID then
 		return nil, 0
@@ -646,7 +646,7 @@ function ProfessionExporter:GetCraftingOrderWorkQueueIndex(orderID)
 	return nil, #rows
 end
 
-function ProfessionExporter:GetAdjacentCraftingOrderWorkQueueEntry(orderID, delta)
+function AuctionHelper:GetAdjacentCraftingOrderWorkQueueEntry(orderID, delta)
 	orderID = tonumber(orderID)
 	delta = tonumber(delta) or 0
 	if not orderID or delta == 0 then
@@ -670,7 +670,7 @@ function ProfessionExporter:GetAdjacentCraftingOrderWorkQueueEntry(orderID, delt
 	return rows[target]
 end
 
-function ProfessionExporter:FindLiveCraftingOrder(orderID)
+function AuctionHelper:FindLiveCraftingOrder(orderID)
 	orderID = tonumber(orderID)
 	if not orderID or not C_CraftingOrders then
 		return nil
@@ -691,7 +691,7 @@ function ProfessionExporter:FindLiveCraftingOrder(orderID)
 	return nil
 end
 
-function ProfessionExporter:OpenCraftingOrderWorkQueueEntry(entry)
+function AuctionHelper:OpenCraftingOrderWorkQueueEntry(entry)
 	if type(entry) ~= "table" then
 		return false
 	end
@@ -761,9 +761,9 @@ function ProfessionExporter:OpenCraftingOrderWorkQueueEntry(entry)
 			self._professionCraftPanel._navOrderID = orderID
 		end
 		C_Timer.After(0, function()
-			ProfessionExporter:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), order)
-			if ProfessionExporter.ScheduleRefreshProfessionCraftEconomyPanel then
-				ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
+			AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), order)
+			if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
+				AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
 			end
 		end)
 		return true
@@ -813,28 +813,28 @@ local function hideLegacyOrderInfoButtons(orderView)
 		return
 	end
 	-- Legacy OrderInfo-hosted controls (pre side-panel). Keep hidden if still present.
-	if info.peAddWorkOrderBtn and info.peAddWorkOrderBtn ~= (ProfessionExporter._professionCraftPanel and ProfessionExporter._professionCraftPanel.peAddWorkOrderBtn) then
+	if info.peAddWorkOrderBtn and info.peAddWorkOrderBtn ~= (AuctionHelper._professionCraftPanel and AuctionHelper._professionCraftPanel.peAddWorkOrderBtn) then
 		info.peAddWorkOrderBtn:Hide()
 	end
-	if info.peRemoveWorkOrderBtn and info.peRemoveWorkOrderBtn ~= (ProfessionExporter._professionCraftPanel and ProfessionExporter._professionCraftPanel.peRemoveWorkOrderBtn) then
+	if info.peRemoveWorkOrderBtn and info.peRemoveWorkOrderBtn ~= (AuctionHelper._professionCraftPanel and AuctionHelper._professionCraftPanel.peRemoveWorkOrderBtn) then
 		info.peRemoveWorkOrderBtn:Hide()
 	end
-	if info.pePrevOrderBtn and info.pePrevOrderBtn ~= (ProfessionExporter._professionCraftPanel and ProfessionExporter._professionCraftPanel.pePrevOrderBtn) then
+	if info.pePrevOrderBtn and info.pePrevOrderBtn ~= (AuctionHelper._professionCraftPanel and AuctionHelper._professionCraftPanel.pePrevOrderBtn) then
 		info.pePrevOrderBtn:Hide()
 	end
-	if info.peNextOrderBtn and info.peNextOrderBtn ~= (ProfessionExporter._professionCraftPanel and ProfessionExporter._professionCraftPanel.peNextOrderBtn) then
+	if info.peNextOrderBtn and info.peNextOrderBtn ~= (AuctionHelper._professionCraftPanel and AuctionHelper._professionCraftPanel.peNextOrderBtn) then
 		info.peNextOrderBtn:Hide()
 	end
-	if info.peQueueStatusText and info.peQueueStatusText ~= (ProfessionExporter._professionCraftPanel and ProfessionExporter._professionCraftPanel.peQueueStatusText) then
+	if info.peQueueStatusText and info.peQueueStatusText ~= (AuctionHelper._professionCraftPanel and AuctionHelper._professionCraftPanel.peQueueStatusText) then
 		info.peQueueStatusText:Hide()
 	end
 end
 
 local function getProfessionSidePanelOrderControls()
-	if not ProfessionExporter.EnsureProfessionCraftEconomyPanel then
+	if not AuctionHelper.EnsureProfessionCraftEconomyPanel then
 		return nil
 	end
-	local panel = ProfessionExporter:EnsureProfessionCraftEconomyPanel()
+	local panel = AuctionHelper:EnsureProfessionCraftEconomyPanel()
 	if not panel or not panel.peAddWorkOrderBtn then
 		return nil
 	end
@@ -863,7 +863,7 @@ local function layoutOrderQueueButtons(panel)
 	end
 end
 
-function ProfessionExporter:EnsureCraftingOrderViewActionButtons(orderView)
+function AuctionHelper:EnsureCraftingOrderViewActionButtons(orderView)
 	hideLegacyOrderInfoButtons(orderView)
 	local panel = getProfessionSidePanelOrderControls()
 	if not panel then
@@ -878,12 +878,12 @@ function ProfessionExporter:EnsureCraftingOrderViewActionButtons(orderView)
 		local view = getLiveCraftingOrderView()
 		local oid = resolveCurrentWorkQueueOrderID(view, panel)
 		if not oid then
-			ProfessionExporter:PrintMessage("No crafting order selected to navigate from.")
+			AuctionHelper:PrintMessage("No crafting order selected to navigate from.")
 			return
 		end
-		local nextEntry = ProfessionExporter:GetAdjacentCraftingOrderWorkQueueEntry(oid, delta)
+		local nextEntry = AuctionHelper:GetAdjacentCraftingOrderWorkQueueEntry(oid, delta)
 		if nextEntry then
-			ProfessionExporter:OpenCraftingOrderWorkQueueEntry(nextEntry)
+			AuctionHelper:OpenCraftingOrderWorkQueueEntry(nextEntry)
 		end
 	end
 
@@ -895,7 +895,7 @@ function ProfessionExporter:EnsureCraftingOrderViewActionButtons(orderView)
 	end)
 end
 
-function ProfessionExporter:CraftingOrderViewRefreshButtons(orderView, order)
+function AuctionHelper:CraftingOrderViewRefreshButtons(orderView, order)
 	orderView = orderView or getLiveCraftingOrderView()
 	self:EnsureCraftingOrderViewActionButtons(orderView)
 	local panel = getProfessionSidePanelOrderControls()
@@ -969,19 +969,19 @@ function ProfessionExporter:CraftingOrderViewRefreshButtons(orderView, order)
 		end)
 		panel.peAddWorkOrderBtn:SetScript("OnLeave", GameTooltip_Hide)
 		panel.peAddWorkOrderBtn:SetScript("OnClick", function()
-			if ProfessionExporter.QueueOpenProfessionRecipe then
-				ProfessionExporter:QueueOpenProfessionRecipe(1, { recipeID = recipeID })
+			if AuctionHelper.QueueOpenProfessionRecipe then
+				AuctionHelper:QueueOpenProfessionRecipe(1, { recipeID = recipeID })
 			end
-			ProfessionExporter:CraftingOrderViewRefreshButtons()
+			AuctionHelper:CraftingOrderViewRefreshButtons()
 		end)
 		panel.peRemoveWorkOrderBtn:SetScript("OnClick", function()
-			if ProfessionExporter.RemoveCraftQueueLinesForRecipeID then
-				ProfessionExporter:RemoveCraftQueueLinesForRecipeID(recipeID)
+			if AuctionHelper.RemoveCraftQueueLinesForRecipeID then
+				AuctionHelper:RemoveCraftQueueLinesForRecipeID(recipeID)
 			end
-			if ProfessionExporter.ScheduleRefreshProfessionCraftEconomyPanel then
-				ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
+			if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
+				AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
 			end
-			ProfessionExporter:CraftingOrderViewRefreshButtons()
+			AuctionHelper:CraftingOrderViewRefreshButtons()
 		end)
 		return
 	end
@@ -1028,19 +1028,19 @@ function ProfessionExporter:CraftingOrderViewRefreshButtons(orderView, order)
 		local live = getLiveCraftingOrderView()
 		local o = (live and live.order) or order
 		if o then
-			ProfessionExporter:PrintMessage(string.format("Queueing crafting order #%s...", tostring(o.orderID or "?")))
-			ProfessionExporter:AddCraftingOrderToWorkQueue(o)
-			ProfessionExporter:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), o)
+			AuctionHelper:PrintMessage(string.format("Queueing crafting order #%s...", tostring(o.orderID or "?")))
+			AuctionHelper:AddCraftingOrderToWorkQueue(o)
+			AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), o)
 		else
-			ProfessionExporter:PrintMessage("Crafting order button clicked, but no live order data was found.")
+			AuctionHelper:PrintMessage("Crafting order button clicked, but no live order data was found.")
 		end
 	end)
 	panel.peRemoveWorkOrderBtn:SetScript("OnClick", function()
 		local live = getLiveCraftingOrderView()
 		local o = (live and live.order) or order
 		if o and o.orderID then
-			ProfessionExporter:RemoveCraftingOrderFromWorkQueue(o.orderID)
-			ProfessionExporter:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), o)
+			AuctionHelper:RemoveCraftingOrderFromWorkQueue(o.orderID)
+			AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), o)
 		end
 	end)
 	panel.peAddWorkOrderBtn:Show()
@@ -1069,7 +1069,7 @@ function ProfessionExporter:CraftingOrderViewRefreshButtons(orderView, order)
 	end
 end
 
-function ProfessionExporter:HookLiveCraftingOrderView(orderView)
+function AuctionHelper:HookLiveCraftingOrderView(orderView)
 	if not orderView or orderView.__ahOrderButtonsHooked then
 		return
 	end
@@ -1078,9 +1078,9 @@ function ProfessionExporter:HookLiveCraftingOrderView(orderView)
 	if type(orderView.SetOrder) == "function" then
 		hooksecurefunc(orderView, "SetOrder", function(view, order)
 			C_Timer.After(0, function()
-				ProfessionExporter:CraftingOrderViewRefreshButtons(view, order)
-				if ProfessionExporter.ScheduleRefreshProfessionCraftEconomyPanel then
-					ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
+				AuctionHelper:CraftingOrderViewRefreshButtons(view, order)
+				if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
+					AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
 				end
 			end)
 		end)
@@ -1088,14 +1088,14 @@ function ProfessionExporter:HookLiveCraftingOrderView(orderView)
 	if orderView.HookScript then
 		orderView:HookScript("OnShow", function(view)
 			C_Timer.After(0, function()
-				ProfessionExporter:CraftingOrderViewRefreshButtons(view, view.order)
-				if ProfessionExporter.ScheduleRefreshProfessionCraftEconomyPanel then
-					ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
+				AuctionHelper:CraftingOrderViewRefreshButtons(view, view.order)
+				if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
+					AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
 				end
 			end)
 		end)
 		orderView:HookScript("OnHide", function()
-			ProfessionExporter:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), nil)
+			AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), nil)
 		end)
 	end
 	local pf = _G.ProfessionsFrame
@@ -1104,9 +1104,9 @@ function ProfessionExporter:HookLiveCraftingOrderView(orderView)
 		ordersPage.__ahViewOrderHooked = true
 		hooksecurefunc(ordersPage, "ViewOrder", function(_, order)
 			C_Timer.After(0, function()
-				ProfessionExporter:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), order)
-				if ProfessionExporter.ScheduleRefreshProfessionCraftEconomyPanel then
-					ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
+				AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), order)
+				if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
+					AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
 				end
 			end)
 		end)
@@ -1163,14 +1163,14 @@ local function ensureCrafterOrderListContextMenuHook()
 		end
 		rootDescription:CreateDivider()
 		local oid = tonumber(order.orderID)
-		if ProfessionExporter:IsCraftingOrderInWorkQueue(oid) then
+		if AuctionHelper:IsCraftingOrderInWorkQueue(oid) then
 			rootDescription:CreateButton("Remove from shopping", function()
 				local live = ownerRegion and ownerRegion.option
 				local liveID = live and tonumber(live.orderID) or oid
-				ProfessionExporter:RemoveCraftingOrderFromWorkQueue(liveID)
-				ProfessionExporter:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), live)
-				if ProfessionExporter.ScheduleRefreshProfessionCraftEconomyPanel then
-					ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
+				AuctionHelper:RemoveCraftingOrderFromWorkQueue(liveID)
+				AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), live)
+				if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
+					AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
 				end
 			end)
 		else
@@ -1179,11 +1179,11 @@ local function ensureCrafterOrderListContextMenuHook()
 				if type(live) ~= "table" or not live.orderID then
 					return
 				end
-				ProfessionExporter:PrintMessage(string.format("Queueing crafting order #%s...", tostring(live.orderID)))
-				ProfessionExporter:AddCraftingOrderToWorkQueue(live)
-				ProfessionExporter:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), live)
-				if ProfessionExporter.ScheduleRefreshProfessionCraftEconomyPanel then
-					ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
+				AuctionHelper:PrintMessage(string.format("Queueing crafting order #%s...", tostring(live.orderID)))
+				AuctionHelper:AddCraftingOrderToWorkQueue(live)
+				AuctionHelper:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), live)
+				if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
+					AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
 				end
 			end)
 		end
@@ -1206,32 +1206,32 @@ local function ensureRecipeListContextMenuHook()
 			return
 		end
 		-- Skip when an order is open on the Orders page — order shopping owns that flow.
-		if ProfessionExporter.GetOpenCraftingOrder and ProfessionExporter:GetOpenCraftingOrder() then
+		if AuctionHelper.GetOpenCraftingOrder and AuctionHelper:GetOpenCraftingOrder() then
 			return
 		end
 		rootDescription:CreateDivider()
-		local inQueue = ProfessionExporter.IsRecipeInCraftShoppingQueue
-			and ProfessionExporter:IsRecipeInCraftShoppingQueue(recipeID)
+		local inQueue = AuctionHelper.IsRecipeInCraftShoppingQueue
+			and AuctionHelper:IsRecipeInCraftShoppingQueue(recipeID)
 		if inQueue then
 			rootDescription:CreateButton("Remove from shopping", function()
-				if ProfessionExporter.RemoveCraftQueueLinesForRecipeID then
-					ProfessionExporter:RemoveCraftQueueLinesForRecipeID(recipeID)
+				if AuctionHelper.RemoveCraftQueueLinesForRecipeID then
+					AuctionHelper:RemoveCraftQueueLinesForRecipeID(recipeID)
 				end
-				if ProfessionExporter.ScheduleRefreshProfessionCraftEconomyPanel then
-					ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
+				if AuctionHelper.ScheduleRefreshProfessionCraftEconomyPanel then
+					AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
 				end
 			end)
 		else
 			rootDescription:CreateButton("Add to shopping", function()
-				if ProfessionExporter.QueueOpenProfessionRecipe then
-					ProfessionExporter:QueueOpenProfessionRecipe(1, { recipeID = recipeID })
+				if AuctionHelper.QueueOpenProfessionRecipe then
+					AuctionHelper:QueueOpenProfessionRecipe(1, { recipeID = recipeID })
 				end
 			end)
 		end
 	end)
 end
 
-function ProfessionExporter:InitCraftingOrdersMaterialsHooks()
+function AuctionHelper:InitCraftingOrdersMaterialsHooks()
 	ensureCrafterOrderListContextMenuHook()
 	ensureRecipeListContextMenuHook()
 	if _orderViewButtonsHooked then
@@ -1250,16 +1250,16 @@ function ProfessionExporter:InitCraftingOrdersMaterialsHooks()
 	if mixin and type(mixin.SetOrder) == "function" then
 		hooksecurefunc(mixin, "SetOrder", function(orderView, order)
 			C_Timer.After(0, function()
-				ProfessionExporter:HookLiveCraftingOrderView(orderView)
-				ProfessionExporter:CraftingOrderViewRefreshButtons(orderView, order)
+				AuctionHelper:HookLiveCraftingOrderView(orderView)
+				AuctionHelper:CraftingOrderViewRefreshButtons(orderView, order)
 			end)
 		end)
 	end
 	C_Timer.After(0.5, function()
 		local delayedView = getLiveCraftingOrderView()
 		if delayedView then
-			ProfessionExporter:HookLiveCraftingOrderView(delayedView)
-			ProfessionExporter:CraftingOrderViewRefreshButtons(delayedView, delayedView.order)
+			AuctionHelper:HookLiveCraftingOrderView(delayedView)
+			AuctionHelper:CraftingOrderViewRefreshButtons(delayedView, delayedView.order)
 		end
 	end)
 end

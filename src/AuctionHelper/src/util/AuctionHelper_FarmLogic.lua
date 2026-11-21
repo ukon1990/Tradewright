@@ -1,9 +1,9 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 --- Pure farm-run maths (E09). A run is `{ name, zone, startedAt, endedAt, pausedSeconds, pausedAt,
 --- coin, vendorSold, items = { [itemID] = qty } }`. No WoW API.
 local FarmLogic = {}
-ProfessionExporter.FarmLogic = FarmLogic
+AuctionHelper.FarmLogic = FarmLogic
 
 --- Seconds the run was active: wall time less pauses, including a pause still in progress.
 function FarmLogic.ActiveSeconds(run, now)

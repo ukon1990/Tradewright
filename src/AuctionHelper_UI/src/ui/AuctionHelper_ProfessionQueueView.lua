@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Queue view of the profession side panel: the queued crafts, and the shopping list of materials
 -- this character still misses, with the other characters that hold them.
@@ -7,7 +7,7 @@ local TALL_ROW = 36
 local MAX_HOLDERS_SHOWN = 3
 
 local function rankMarkup(rankIndex)
-	return ProfessionExporter:GetRankMarkup(rankIndex)
+	return AuctionHelper:GetRankMarkup(rankIndex)
 end
 
 local function buttonCell(pe, label, width)
@@ -85,7 +85,7 @@ end
 
 --- A queued craft opens its recipe in the profession window; a queued crafting order opens the order.
 --- Used by a row click and by the Craft button's first click on a crafting order.
-function ProfessionExporter:OpenProfessionQueueRow(row)
+function AuctionHelper:OpenProfessionQueueRow(row)
 	if not row then
 		return
 	end
@@ -263,7 +263,7 @@ local function createReagentTable(pe, f, card, actions)
 	f.reagentTable:SetColumns(reagentColumns(pe))
 end
 
-function ProfessionExporter:CreateProfessionQueueView(f)
+function AuctionHelper:CreateProfessionQueueView(f)
 	local host = CreateFrame("Frame", nil, f)
 	host:SetPoint("TOPLEFT", f.infoHost, "TOPLEFT")
 	host:SetPoint("BOTTOMRIGHT", f.infoHost, "BOTTOMRIGHT")
@@ -466,7 +466,7 @@ local function overviewText(pe, summary, recipeRows, totals)
 	return text
 end
 
-function ProfessionExporter:RefreshProfessionQueueCard(panel)
+function AuctionHelper:RefreshProfessionQueueCard(panel)
 	if not panel or not panel.recipeTable then
 		return
 	end

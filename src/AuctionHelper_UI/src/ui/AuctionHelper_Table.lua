@@ -1,7 +1,7 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 local TableMixin = {}
-ProfessionExporter.ReusableTables = setmetatable({}, { __mode = "k" }) -- every table, to redraw item names as they load
+AuctionHelper.ReusableTables = setmetatable({}, { __mode = "k" }) -- every table, to redraw item names as they load
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 local CELL_PAD = 5
@@ -228,7 +228,7 @@ function TableMixin:ShowHeaderTooltip(button)
 		return
 	end
 
-	local theme = ProfessionExporter:GetTheme()
+	local theme = AuctionHelper:GetTheme()
 	local gold, muted = theme.gold, theme.textMuted
 	GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
 	GameTooltip:SetText(column.tooltipTitle or column.label or column.id or "Column", gold.r, gold.g, gold.b)
@@ -306,7 +306,7 @@ function TableMixin:CreateDefaultCell(rowFrame, column)
 	local fontString = rowFrame:CreateFontString(nil, "OVERLAY", column.fontObject or (column.justifyH == "RIGHT" and "NumberFontNormalSmall" or "GameFontHighlightSmall"))
 	fontString:SetJustifyH(column.justifyH or "LEFT")
 	fontString:SetWordWrap(false)
-	local text = ProfessionExporter:GetTheme().textPrimary
+	local text = AuctionHelper:GetTheme().textPrimary
 	fontString:SetTextColor(text.r, text.g, text.b)
 	return fontString
 end
@@ -324,7 +324,7 @@ function TableMixin:AcquireRow(index)
 	row:GetHighlightTexture():SetVertexColor(1, 1, 1, 0.04)
 	row.selectedFill = row:CreateTexture(nil, "BACKGROUND")
 	row.selectedFill:SetAllPoints()
-	local gold = ProfessionExporter:GetTheme().gold
+	local gold = AuctionHelper:GetTheme().gold
 	row.selectedFill:SetColorTexture(gold.r, gold.g, gold.b, 0.07)
 	row.selectedFill:Hide()
 	row.cells = {}
@@ -470,7 +470,7 @@ function TableMixin:UpdateHeader()
 	self:RecomputeLayoutColumnWidths()
 	local visibleColumns = self:GetLayoutColumns()
 	local x = self.paddingX
-	local theme = ProfessionExporter:GetTheme()
+	local theme = AuctionHelper:GetTheme()
 
 	for index, column in ipairs(visibleColumns) do
 		local button = self:AcquireHeaderButton(index)
@@ -649,7 +649,7 @@ function TableMixin:RefreshRows(opts)
 	self.totalRowCount = count
 	-- maxRows is the page size. Paging needs the footer for its controls; without one only the
 	-- first page is shown.
-	self.page, self.pageCount, self.pageFirst, self.pageLast = ProfessionExporter.ForeverLogic.PageBounds(count, self.maxRows,
+	self.page, self.pageCount, self.pageFirst, self.pageLast = AuctionHelper.ForeverLogic.PageBounds(count, self.maxRows,
 		self.pager and self.page or 1)
 	if self.pageCount > 1 then
 		local pageRows = {}
@@ -735,7 +735,7 @@ function TableMixin:UpdateFooter()
 	if not self.footer then
 		return
 	end
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local left, right = self.footer.left, self.footer.right
 	local paged = (self.pageCount or 1) > 1
 	left:SetText(paged and string.format("Showing %s-%s of %s", pe:FormatNumberGrouped(self.pageFirst), pe:FormatNumberGrouped(self.pageLast),
@@ -770,16 +770,16 @@ function TableMixin:Refresh(opts)
 	self:UpdateFooter()
 end
 
-function ProfessionExporter:CreateReusableTable(parent, options)
+function AuctionHelper:CreateReusableTable(parent, options)
 	options = options or {}
 
 	local widget = setmetatable({}, { __index = TableMixin })
 	widget.columns, widget.columnsById = {}, {}
 	widget.rows, widget.context = {}, {}
-	ProfessionExporter.ReusableTables[widget] = true
+	AuctionHelper.ReusableTables[widget] = true
 	widget.rowPool = {}
 	widget.headerButtons = {}
-	local sizes = ProfessionExporter:GetTheme().size
+	local sizes = AuctionHelper:GetTheme().size
 	widget.paddingX = options.paddingX or 4
 	widget.rowHeight = math.max(options.rowHeight or sizes.row, sizes.row)
 	widget.headerHeight = options.headerHeight or sizes.tableHead
@@ -797,14 +797,14 @@ function ProfessionExporter:CreateReusableTable(parent, options)
 	widget._layoutColumnWidths = {}
 	widget.useViewportVirtualization = options.viewportVirtualize == true
 
-	local theme = ProfessionExporter:GetTheme()
+	local theme = AuctionHelper:GetTheme()
 	local gutter = theme.size.scrollGutter
 	local frame = CreateFrame("Frame", nil, parent)
 	widget.frame = frame
 	if frame.SetClipsChildren then
 		frame:SetClipsChildren(true)
 	end
-	ProfessionExporter:AddSurface(frame, { r = 0, g = 0, b = 0, a = 0 }, theme.borderSubtle)
+	AuctionHelper:AddSurface(frame, { r = 0, g = 0, b = 0, a = 0 }, theme.borderSubtle)
 
 	local header = CreateFrame("Frame", nil, frame)
 	header:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
@@ -853,12 +853,12 @@ function ProfessionExporter:CreateReusableTable(parent, options)
 			local pager = CreateFrame("Frame", nil, footer)
 			pager:SetPoint("RIGHT", -gutter, 0)
 			pager:SetHeight(footerHeight)
-			pager.next = ProfessionExporter:CreateButton(pager, "Next", function() widget:SetPage(widget.page + 1) end, { small = true })
+			pager.next = AuctionHelper:CreateButton(pager, "Next", function() widget:SetPage(widget.page + 1) end, { small = true })
 			pager.next:SetPoint("RIGHT")
 			pager.label = pager:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 			pager.label:SetPoint("RIGHT", pager.next, "LEFT", -8, 0)
 			pager.label:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
-			pager.prev = ProfessionExporter:CreateButton(pager, "Prev", function() widget:SetPage(widget.page - 1) end, { small = true })
+			pager.prev = AuctionHelper:CreateButton(pager, "Prev", function() widget:SetPage(widget.page - 1) end, { small = true })
 			pager.prev:SetPoint("RIGHT", pager.label, "LEFT", -8, 0)
 			for _, button in ipairs({ pager.prev, pager.next }) do
 				button:SetHeight(footerHeight - 6)
@@ -878,7 +878,7 @@ function ProfessionExporter:CreateReusableTable(parent, options)
 	end
 	scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -(gutter + 1), footerHeight + 1)
 	widget.scrollFrame = scrollFrame
-	ProfessionExporter:SkinTree(frame)
+	AuctionHelper:SkinTree(frame)
 
 	local empty = CreateFrame("Frame", nil, frame)
 	empty:SetPoint("TOPLEFT", scrollFrame, "TOPLEFT", 24, -24)

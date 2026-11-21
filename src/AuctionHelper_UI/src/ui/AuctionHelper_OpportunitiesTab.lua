@@ -1,10 +1,10 @@
-local ProfessionExporter = select(2, ...)
+local AuctionHelper = select(2, ...)
 
 -- Opportunities tab: one table and side pane, switched between lists (views).
 -- Each view lives in AuctionHelper_OpportunityViews.lua and supplies its rows, columns and side-pane text.
 
 local OpportunitiesTab = {}
-ProfessionExporter.OpportunitiesTab = OpportunitiesTab
+AuctionHelper.OpportunitiesTab = OpportunitiesTab
 
 local GAP = 12
 local PAD = 10
@@ -175,7 +175,7 @@ local function reselect(pe, panel, rows)
 end
 
 function OpportunitiesTab:Create(container, uiState)
-	uiState.opportunitiesPanel = uiState.opportunitiesPanel or buildPanel(ProfessionExporter, container)
+	uiState.opportunitiesPanel = uiState.opportunitiesPanel or buildPanel(AuctionHelper, container)
 	uiState.opportunitiesPanel:Show()
 	return uiState.opportunitiesPanel
 end
@@ -184,7 +184,7 @@ function OpportunitiesTab:ApplyTheme() -- luacheck: ignore 212
 end
 
 function OpportunitiesTab:Refresh()
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local panel = pe.ui and pe.ui.opportunitiesPanel
 	if not panel then
 		return

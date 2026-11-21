@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Gold dashboard (Overview → Gold): five headline numbers and four cards that answer
 -- "what should I buy, craft and sell right now". Market numbers come from GetMarketInsights,
@@ -8,7 +8,7 @@ local GAP = 12
 local PAD = 10
 local ROW = 36
 local MIN_CARD_HEIGHT = 150
-local ACCT_KEY = ProfessionExporter.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
+local ACCT_KEY = AuctionHelper.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
 
 local function colorize(pe, colorKey, text)
 	local c = pe:GetTheme()[colorKey]
@@ -112,7 +112,7 @@ end
 
 --- Click on an item row `{ itemID, storageKey }`: details window, auction house buy page or Market (F30).
 --- `buyable` rows go to the auction house on right-click while it is open. Shared with other item lists.
-function ProfessionExporter:HandleDealRowClick(row, button, buyable)
+function AuctionHelper:HandleDealRowClick(row, button, buyable)
 	local target = self.ForeverLogic.ResolveDealRowClick(button, canBuyNow(self, buyable))
 	if target == "details" then
 		self:ShowItemDetailsWindow(row.itemID, row.storageKey)
@@ -124,7 +124,7 @@ function ProfessionExporter:HandleDealRowClick(row, button, buyable)
 end
 
 --- The tooltip line naming what a click on such a row does.
-function ProfessionExporter:DealRowHint(buyable)
+function AuctionHelper:DealRowHint(buyable)
 	return "Click for price history · Right-click to "
 		.. (canBuyNow(self, buyable) and "buy at the auction house" or "open in Market")
 		.. " · Shift-click to link"
@@ -142,7 +142,7 @@ local function rowHint(pe, buyable)
 	end
 end
 
-function ProfessionExporter:CreateGoldDashboard(parent)
+function AuctionHelper:CreateGoldDashboard(parent)
 	local pe = self
 	local dash = CreateFrame("Frame", nil, parent)
 	dash:SetAllPoints()

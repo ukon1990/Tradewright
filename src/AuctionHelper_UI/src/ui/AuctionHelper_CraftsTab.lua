@@ -1,10 +1,10 @@
-local ProfessionExporter = select(2, ...)
+local AuctionHelper = select(2, ...)
 
 local CraftsTab = {}
-ProfessionExporter.CraftsTab = CraftsTab
+AuctionHelper.CraftsTab = CraftsTab
 
 function CraftsTab:Create(container, uiState)
-	ProfessionExporter:EnsureCraftsPanel(container)
+	AuctionHelper:EnsureCraftsPanel(container)
 	local panel = uiState.craftsPanel
 	if panel then
 		panel:SetAllPoints()
@@ -14,16 +14,16 @@ function CraftsTab:Create(container, uiState)
 end
 
 function CraftsTab:ApplyTheme()
-	local ui = ProfessionExporter.ui
+	local ui = AuctionHelper.ui
 	if not ui or not ui.craftsPanel then
 		return
 	end
-	ProfessionExporter:LayoutCraftsPanel(ui.craftsPanel)
+	AuctionHelper:LayoutCraftsPanel(ui.craftsPanel)
 end
 
 function CraftsTab:Refresh()
-	if ProfessionExporter.ui and ProfessionExporter.ui.craftsPanel then
-		ProfessionExporter.ui.craftsPanel:Show()
+	if AuctionHelper.ui and AuctionHelper.ui.craftsPanel then
+		AuctionHelper.ui.craftsPanel:Show()
 	end
-	ProfessionExporter:RefreshCraftsTab()
+	AuctionHelper:RefreshCraftsTab()
 end

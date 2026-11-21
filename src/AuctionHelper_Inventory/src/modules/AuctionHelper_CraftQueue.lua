@@ -1,6 +1,6 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
-function ProfessionExporter:CraftQueueMakeKey(recipeID, outputItemID, characterKey, scenario)
+function AuctionHelper:CraftQueueMakeKey(recipeID, outputItemID, characterKey, scenario)
 	return table.concat({
 		tostring(recipeID or ""),
 		tostring(outputItemID or ""),
@@ -9,7 +9,7 @@ function ProfessionExporter:CraftQueueMakeKey(recipeID, outputItemID, characterK
 	}, "|")
 end
 
-function ProfessionExporter:GetCraftQueueStorage()
+function AuctionHelper:GetCraftQueueStorage()
 	self:InitDB()
 	if type(self.db.craftQueue) ~= "table" then
 		self.db.craftQueue = {}
@@ -18,7 +18,7 @@ function ProfessionExporter:GetCraftQueueStorage()
 end
 
 --- @return table[] ordered list of queue entries (each has .queueKey)
-function ProfessionExporter:GetCraftQueueRows()
+function AuctionHelper:GetCraftQueueRows()
 	local storage = self:GetCraftQueueStorage()
 	local list = {}
 	for key, entry in pairs(storage) do
@@ -34,7 +34,7 @@ function ProfessionExporter:GetCraftQueueRows()
 end
 
 --- Remove all queue lines matching the opportunity row (same recipe, output, scenario as crafts settings).
-function ProfessionExporter:RemoveCraftQueueLinesForOpportunityRow(row)
+function AuctionHelper:RemoveCraftQueueLinesForOpportunityRow(row)
 	if not row or not row.recipeID or not row.outputItemID then
 		return
 	end
@@ -54,7 +54,7 @@ end
 
 --- Remove non-order craft-queue lines for a recipe ID (any output/scenario on this character's shopping).
 --- @return number removed count
-function ProfessionExporter:RemoveCraftQueueLinesForRecipeID(recipeID)
+function AuctionHelper:RemoveCraftQueueLinesForRecipeID(recipeID)
 	recipeID = tonumber(recipeID)
 	if not recipeID then
 		return 0
@@ -78,7 +78,7 @@ function ProfessionExporter:RemoveCraftQueueLinesForRecipeID(recipeID)
 end
 
 --- Whether any craft-queue lines exist for this recipe (non-order entries).
-function ProfessionExporter:IsRecipeInCraftShoppingQueue(recipeID)
+function AuctionHelper:IsRecipeInCraftShoppingQueue(recipeID)
 	recipeID = tonumber(recipeID)
 	if not recipeID then
 		return false
@@ -110,7 +110,7 @@ local function clearCraftingOrderWorkQueueEntry(self, orderID)
 	return true
 end
 
-function ProfessionExporter:ClearCraftQueue()
+function AuctionHelper:ClearCraftQueue()
 	local storage = self:GetCraftQueueStorage()
 	for k in pairs(storage) do
 		storage[k] = nil
@@ -129,7 +129,7 @@ function ProfessionExporter:ClearCraftQueue()
 	end
 end
 
-function ProfessionExporter:RemoveCraftFromQueue(queueKey)
+function AuctionHelper:RemoveCraftFromQueue(queueKey)
 	if not queueKey then
 		return
 	end
@@ -144,7 +144,7 @@ function ProfessionExporter:RemoveCraftFromQueue(queueKey)
 	end
 end
 
-function ProfessionExporter:RemoveCraftQueueLinesByReagentItem(itemID)
+function AuctionHelper:RemoveCraftQueueLinesByReagentItem(itemID)
 	itemID = tonumber(itemID)
 	if not itemID then
 		return 0
@@ -176,7 +176,7 @@ function ProfessionExporter:RemoveCraftQueueLinesByReagentItem(itemID)
 	return removed
 end
 
-function ProfessionExporter:UpdateCraftQueueQuantity(queueKey, quantity)
+function AuctionHelper:UpdateCraftQueueQuantity(queueKey, quantity)
 	if not queueKey then
 		return
 	end
@@ -239,7 +239,7 @@ local function buildEntryFromEval(ctx, quantity)
 	if not eval then
 		return nil
 	end
-	local scenario = ctx.scenario or ProfessionExporter:GetSetting("crafts.scenario", "default")
+	local scenario = ctx.scenario or AuctionHelper:GetSetting("crafts.scenario", "default")
 	local characterKey = ctx.characterKey
 	if not characterKey then
 		return nil
@@ -252,17 +252,17 @@ local function buildEntryFromEval(ctx, quantity)
 
 	local crafterLabel = ctx.recommendedCrafterLabel
 	if not crafterLabel and ctx.opportunityRow then
-		crafterLabel = select(1, ProfessionExporter:GetCraftRecommendedCrafter(ctx.opportunityRow))
+		crafterLabel = select(1, AuctionHelper:GetCraftRecommendedCrafter(ctx.opportunityRow))
 	end
 	if not crafterLabel then
-		crafterLabel = ProfessionExporter:GetDashboardSidebarCharacterLabel(
+		crafterLabel = AuctionHelper:GetDashboardSidebarCharacterLabel(
 			characterKey,
-			ProfessionExporter.db.characters and ProfessionExporter.db.characters[characterKey],
-			ProfessionExporter:GetCharacterKey()
+			AuctionHelper.db.characters and AuctionHelper.db.characters[characterKey],
+			AuctionHelper:GetCharacterKey()
 		)
 	end
 
-	local confidence = ctx.confidence or ProfessionExporter:ResolveCraftConfidenceState(eval, ctx.dataSource)
+	local confidence = ctx.confidence or AuctionHelper:ResolveCraftConfidenceState(eval, ctx.dataSource)
 
 	return {
 		recipeID = recipeID,
@@ -271,7 +271,7 @@ local function buildEntryFromEval(ctx, quantity)
 		scenario = scenario,
 		quantity = math.max(1, math.floor(tonumber(quantity) or 1)),
 		recipeName = ctx.recipeName or eval.recipeName,
-		outputName = ctx.outputName or ProfessionExporter:GetItemDisplayName(outputItemID),
+		outputName = ctx.outputName or AuctionHelper:GetItemDisplayName(outputItemID),
 		professionName = ctx.professionName or eval.professionName,
 		skillLineID = tonumber(ctx.skillLineID or eval.skillLineID),
 		outputQty = math.max(1, tonumber(eval.outputQty) or 1),
@@ -305,7 +305,7 @@ end
 
 --- @param rowOrContext table opportunity row from BuildCraftOpportunityRows OR context from EvaluateSelectedProfessionRecipe + overrides
 --- @param quantity number
-function ProfessionExporter:AddCraftToQueue(rowOrContext, quantity)
+function AuctionHelper:AddCraftToQueue(rowOrContext, quantity)
 	if type(rowOrContext) ~= "table" then
 		return nil, "bad_arg"
 	end
@@ -386,7 +386,7 @@ function ProfessionExporter:AddCraftToQueue(rowOrContext, quantity)
 end
 
 --- Sum queue quantities matching opportunity row (same recipe, output, scenario as crafts settings).
-function ProfessionExporter:GetCraftQueueQuantityForOpportunityRow(row)
+function AuctionHelper:GetCraftQueueQuantityForOpportunityRow(row)
 	if not row or not row.recipeID or not row.outputItemID then
 		return 0
 	end
@@ -405,7 +405,7 @@ function ProfessionExporter:GetCraftQueueQuantityForOpportunityRow(row)
 	return sum
 end
 
-function ProfessionExporter:GetCharacterItemTotal(characterKey, itemID)
+function AuctionHelper:GetCharacterItemTotal(characterKey, itemID)
 	characterKey = tostring(characterKey or "")
 	itemID = tonumber(itemID)
 	if characterKey == "" or not itemID then
@@ -426,7 +426,7 @@ end
 
 --- @param sources table[] entries with characterKey and quantity
 --- @return table[] { characterKey, quantityNeeded, quantityHave, mailQuantity }
-function ProfessionExporter:BuildReagentMailAllocations(itemID, sources)
+function AuctionHelper:BuildReagentMailAllocations(itemID, sources)
 	itemID = tonumber(itemID)
 	if not itemID or type(sources) ~= "table" then
 		return {}
@@ -461,7 +461,7 @@ end
 
 --- Per-crafter mail plan from the bags and the queue's material needs; see ForeverLogic.BuildMailPlan.
 --- @return table[] { characterKey, mailName, items, totalQuantity, missing, complete }
-function ProfessionExporter:BuildShoppingMailSendPlan()
+function AuctionHelper:BuildShoppingMailSendPlan()
 	local summary = self:BuildCraftQueueSummary()
 	local woSummary = self.BuildCraftingOrderWorkQueueSummary and self:BuildCraftingOrderWorkQueueSummary() or { reagentLines = {} }
 	local mirroredOrderIDs = {}
@@ -507,7 +507,7 @@ function ProfessionExporter:BuildShoppingMailSendPlan()
 	return self:SetMailRecipients(self.ForeverLogic.BuildMailPlan(lines, stock))
 end
 
-function ProfessionExporter:FormatMailAllocationsShort(allocations, maxEntries)
+function AuctionHelper:FormatMailAllocationsShort(allocations, maxEntries)
 	allocations = allocations or {}
 	maxEntries = tonumber(maxEntries) or 3
 	local parts = {}
@@ -531,7 +531,7 @@ function ProfessionExporter:FormatMailAllocationsShort(allocations, maxEntries)
 	return table.concat(parts, ", ")
 end
 
-function ProfessionExporter:RemoveCraftQueueByOrderID(orderID)
+function AuctionHelper:RemoveCraftQueueByOrderID(orderID)
 	orderID = tonumber(orderID)
 	if not orderID then
 		return 0
@@ -550,12 +550,12 @@ function ProfessionExporter:RemoveCraftQueueByOrderID(orderID)
 	return removed
 end
 
-function ProfessionExporter:CraftQueueMakeOrderKey(orderID)
+function AuctionHelper:CraftQueueMakeOrderKey(orderID)
 	return string.format("craftingOrder|%s", tostring(orderID or ""))
 end
 
 --- Upsert a craft-queue marker for a crafting-order work-queue entry.
-function ProfessionExporter:UpsertCraftQueueForCraftingOrder(orderEntry)
+function AuctionHelper:UpsertCraftQueueForCraftingOrder(orderEntry)
 	if type(orderEntry) ~= "table" or not orderEntry.orderID then
 		return nil
 	end
@@ -639,7 +639,7 @@ local function resolveQueueReagentUnitPrice(self, itemID, slot)
 end
 
 --- Aggregated totals and reagents for UI / future shopping-list hooks.
-function ProfessionExporter:BuildCraftQueueSummary()
+function AuctionHelper:BuildCraftQueueSummary()
 	local rows = self:GetCraftQueueRows()
 	local reagentTotals = {}
 	local totalMat = 0
@@ -770,7 +770,7 @@ function ProfessionExporter:BuildCraftQueueSummary()
 	}
 end
 
-function ProfessionExporter:NotifyCraftQueueChanged()
+function AuctionHelper:NotifyCraftQueueChanged()
 	if self.RefreshProfessionCraftEconomyPanel then
 		self:RefreshProfessionCraftEconomyPanel()
 	end

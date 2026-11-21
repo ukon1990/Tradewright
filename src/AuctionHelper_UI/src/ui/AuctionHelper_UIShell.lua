@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
 local ADDON_FOREGROUND_STRATA = "HIGH"
 local ADDON_BACKGROUND_STRATA = "MEDIUM"
@@ -26,7 +26,7 @@ local TRACKED_BLIZZARD_FRAMES = {
 	"ScrappingMachineFrame",
 }
 
-local TAB_ORDER = ProfessionExporter.DASHBOARD_TABS
+local TAB_ORDER = AuctionHelper.DASHBOARD_TABS
 
 local ADDON_ICON = "Interface\\Icons\\INV_Misc_Coin_01"
 
@@ -41,7 +41,7 @@ end
 
 -- A tab: text only, muted; selected tab is gold with a 2px gold underline.
 local function createTabButton(parent, label)
-	local theme = ProfessionExporter:GetTheme()
+	local theme = AuctionHelper:GetTheme()
 	local button = CreateFrame("Button", nil, parent)
 	button:SetHeight(theme.size.tabs)
 	local text = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -62,12 +62,12 @@ local function createTabButton(parent, label)
 		end
 	end)
 	button:SetScript("OnLeave", function(self)
-		ProfessionExporter:StyleDashboardTab(self, self.selected)
+		AuctionHelper:StyleDashboardTab(self, self.selected)
 	end)
 	return button
 end
 
-function ProfessionExporter:StyleDashboardTab(button, selected)
+function AuctionHelper:StyleDashboardTab(button, selected)
 	local theme = self:GetTheme()
 	local color = selected and theme.gold or theme.textMuted
 	button.selected = selected and true or nil
@@ -108,12 +108,12 @@ local function registerEscClosableFrame(frame)
 	UISpecialFrames[#UISpecialFrames + 1] = frameName
 end
 
-function ProfessionExporter:GetActiveMainTab()
+function AuctionHelper:GetActiveMainTab()
 	local ui = self.ui or {}
 	return ui.activeMainTab or self:GetSetting("general.lastActiveTab", "overview")
 end
 
-function ProfessionExporter:EnsureDynamicLayeringState()
+function AuctionHelper:EnsureDynamicLayeringState()
 	self.ui = self.ui or {}
 	local state = self.ui.dynamicLayering
 	if state then
@@ -131,7 +131,7 @@ function ProfessionExporter:EnsureDynamicLayeringState()
 	return state
 end
 
-function ProfessionExporter:IsTrackedExternalOwnerVisible(owner)
+function AuctionHelper:IsTrackedExternalOwnerVisible(owner)
 	if type(owner) ~= "string" or owner == "" or owner == "addon" then
 		return false
 	end
@@ -139,7 +139,7 @@ function ProfessionExporter:IsTrackedExternalOwnerVisible(owner)
 	return frame and frame.IsShown and frame:IsShown() or false
 end
 
-function ProfessionExporter:RecordExternalFrameInteraction(owner, reason)
+function AuctionHelper:RecordExternalFrameInteraction(owner, reason)
 	local state = self:EnsureDynamicLayeringState()
 	if not owner or owner == "" then
 		return
@@ -149,7 +149,7 @@ function ProfessionExporter:RecordExternalFrameInteraction(owner, reason)
 	self:UpdateDynamicPanelLayering(reason or "interaction")
 end
 
-function ProfessionExporter:UpdateDynamicPanelLayering(_reason)
+function AuctionHelper:UpdateDynamicPanelLayering(_reason)
 	local ui = self.ui
 	local frame = ui and ui.mainFrame
 	if not frame then
@@ -174,7 +174,7 @@ function ProfessionExporter:UpdateDynamicPanelLayering(_reason)
 	end
 end
 
-function ProfessionExporter:HookExternalFrameForDynamicLayering(owner)
+function AuctionHelper:HookExternalFrameForDynamicLayering(owner)
 	if type(owner) ~= "string" or owner == "" then
 		return false
 	end
@@ -189,26 +189,26 @@ function ProfessionExporter:HookExternalFrameForDynamicLayering(owner)
 	end
 
 	frame:HookScript("OnMouseDown", function()
-		ProfessionExporter:RecordExternalFrameInteraction(owner, "external_mouse_down")
+		AuctionHelper:RecordExternalFrameInteraction(owner, "external_mouse_down")
 	end)
 	frame:HookScript("OnShow", function()
-		ProfessionExporter:RecordExternalFrameInteraction(owner, "external_show")
+		AuctionHelper:RecordExternalFrameInteraction(owner, "external_show")
 	end)
 	frame:HookScript("OnHide", function()
-		local layerState = ProfessionExporter:EnsureDynamicLayeringState()
+		local layerState = AuctionHelper:EnsureDynamicLayeringState()
 		if layerState.lastClickedOwner == owner then
 			layerState.lastClickedOwner = "addon"
 		end
 		if layerState.activeFrameOwner == owner then
 			layerState.activeFrameOwner = nil
 		end
-		ProfessionExporter:UpdateDynamicPanelLayering("external_hide")
+		AuctionHelper:UpdateDynamicPanelLayering("external_hide")
 	end)
 	state.hookedFrames[owner] = true
 	return true
 end
 
-function ProfessionExporter:InitDynamicLayeringHooks()
+function AuctionHelper:InitDynamicLayeringHooks()
 	local state = self:EnsureDynamicLayeringState()
 	local missing = false
 	for _, owner in ipairs(TRACKED_BLIZZARD_FRAMES) do
@@ -219,13 +219,13 @@ function ProfessionExporter:InitDynamicLayeringHooks()
 	if missing and not state.hasRetry then
 		state.hasRetry = true
 		C_Timer.After(3, function()
-			ProfessionExporter:InitDynamicLayeringHooks()
+			AuctionHelper:InitDynamicLayeringHooks()
 		end)
 	end
 	self:UpdateDynamicPanelLayering("init_dynamic_hooks")
 end
 
-function ProfessionExporter:CreateDashboardFrame()
+function AuctionHelper:CreateDashboardFrame()
 	local ui = self.ui
 	if ui.mainFrame then
 		return ui.mainFrame
@@ -294,13 +294,13 @@ function ProfessionExporter:CreateDashboardFrame()
 	frame.title:SetText("AuctionHelper")
 
 	frame:HookScript("OnMouseDown", function()
-		ProfessionExporter:RecordExternalFrameInteraction("addon", "dashboard_mouse_down")
+		AuctionHelper:RecordExternalFrameInteraction("addon", "dashboard_mouse_down")
 	end)
 	frame.titleBar:HookScript("OnMouseDown", function()
-		ProfessionExporter:RecordExternalFrameInteraction("addon", "title_mouse_down")
+		AuctionHelper:RecordExternalFrameInteraction("addon", "title_mouse_down")
 	end)
 	frame:HookScript("OnShow", function()
-		ProfessionExporter:UpdateDynamicPanelLayering("dashboard_show")
+		AuctionHelper:UpdateDynamicPanelLayering("dashboard_show")
 	end)
 
 	-- Tab strip.
@@ -329,8 +329,8 @@ function ProfessionExporter:CreateDashboardFrame()
 	end)
 	frame.resizeHandle:SetScript("OnDragStop", function()
 		frame:StopMovingOrSizing()
-		ProfessionExporter:SetSetting("appearance.windowWidth", frame:GetWidth())
-		ProfessionExporter:SetSetting("appearance.windowHeight", frame:GetHeight())
+		AuctionHelper:SetSetting("appearance.windowWidth", frame:GetWidth())
+		AuctionHelper:SetSetting("appearance.windowHeight", frame:GetHeight())
 	end)
 	frame.resizeHandle:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
@@ -374,7 +374,7 @@ function ProfessionExporter:CreateDashboardFrame()
 		end
 		previous = button
 		button:SetScript("OnClick", function()
-			ProfessionExporter:ShowDashboardTab(tab.id)
+			AuctionHelper:ShowDashboardTab(tab.id)
 		end)
 		ui.tabButtons[tab.id] = button
 
@@ -395,7 +395,7 @@ function ProfessionExporter:CreateDashboardFrame()
 end
 
 -- Title bar: gold on every stored character (this one live, the others as last seen).
-function ProfessionExporter:AccountGoldLabel()
+function AuctionHelper:AccountGoldLabel()
 	if not self.GetCurrentGoldSummaryForOverview then
 		return ""
 	end
@@ -403,7 +403,7 @@ function ProfessionExporter:AccountGoldLabel()
 	return gold and ("Gold on all characters " .. self:FormatCopperShort(gold)) or ""
 end
 
-function ProfessionExporter:RefreshShellStatus()
+function AuctionHelper:RefreshShellStatus()
 	local ui = self.ui
 	if not (ui and ui.mainFrame and ui.mainFrame.statusText) then
 		return
@@ -434,7 +434,7 @@ function ProfessionExporter:RefreshShellStatus()
 	ui.mainFrame.subtitle:SetText(self:AccountGoldLabel())
 end
 
-function ProfessionExporter:ApplyThemeToUI()
+function AuctionHelper:ApplyThemeToUI()
 	local ui = self.ui
 	local theme = self:GetTheme()
 	if ui.mainFrame then
@@ -450,7 +450,7 @@ function ProfessionExporter:ApplyThemeToUI()
 	self:SkinTree(ui.mainFrame)
 end
 
-function ProfessionExporter:EnsureDashboardTabCreated(tabId)
+function AuctionHelper:EnsureDashboardTabCreated(tabId)
 	local ui = self.ui
 	if not ui or not tabId then
 		return
@@ -483,7 +483,7 @@ function ProfessionExporter:EnsureDashboardTabCreated(tabId)
 	ui.tabInited[tabId] = true
 end
 
-function ProfessionExporter:OpenCraftsTabWithQueueFocus()
+function AuctionHelper:OpenCraftsTabWithQueueFocus()
 	self:InitDB()
 	if not self.ui.mainFrame then
 		self:CreateDashboardFrame()
@@ -495,7 +495,7 @@ function ProfessionExporter:OpenCraftsTabWithQueueFocus()
 	self:ShowDashboardTab("crafts")
 end
 
-function ProfessionExporter:ShowDashboardTab(tabId)
+function AuctionHelper:ShowDashboardTab(tabId)
 	local ui = self.ui
 	if not ui.mainFrame then
 		self:CreateDashboardFrame()
@@ -529,7 +529,7 @@ function ProfessionExporter:ShowDashboardTab(tabId)
 	self:ApplyThemeToUI()
 end
 
-function ProfessionExporter:RefreshDashboard(skipRebuild)
+function AuctionHelper:RefreshDashboard(skipRebuild)
 	self:InitDB()
 	if not skipRebuild and self:AggregateNeedsRebuild() then
 		self:BuildAggregate()
@@ -550,7 +550,7 @@ function ProfessionExporter:RefreshDashboard(skipRebuild)
 	self:SkinTree(self.ui and self.ui.mainFrame)
 end
 
-function ProfessionExporter:ToggleDashboard()
+function AuctionHelper:ToggleDashboard()
 	self:InitDB()
 	if not self.ui.mainFrame then
 		self:CreateDashboardFrame()
@@ -569,7 +569,7 @@ function ProfessionExporter:ToggleDashboard()
 	self:ShowDashboardTab(self:GetActiveMainTab())
 end
 
-function ProfessionExporter:OpenDocumentationTab()
+function AuctionHelper:OpenDocumentationTab()
 	self:InitDB()
 	if not self.ui.mainFrame then
 		self:CreateDashboardFrame()
@@ -579,7 +579,7 @@ function ProfessionExporter:OpenDocumentationTab()
 	self:ShowDashboardTab("docs")
 end
 
-function ProfessionExporter:OpenSettingsTab()
+function AuctionHelper:OpenSettingsTab()
 	self:InitDB()
 	if not self.ui.mainFrame then
 		self:CreateDashboardFrame()
@@ -589,7 +589,7 @@ function ProfessionExporter:OpenSettingsTab()
 	self:ShowDashboardTab("settings")
 end
 
-function ProfessionExporter:EnsureMinimapButton()
+function AuctionHelper:EnsureMinimapButton()
 	if not Minimap then
 		return
 	end
@@ -633,28 +633,28 @@ function ProfessionExporter:EnsureMinimapButton()
 
 	btn:SetScript("OnClick", function(_, mouse)
 		if mouse == "RightButton" then
-			ProfessionExporter:OpenSettingsTab()
+			AuctionHelper:OpenSettingsTab()
 		else
-			ProfessionExporter:ToggleDashboard()
+			AuctionHelper:ToggleDashboard()
 		end
 	end)
 	btn:SetScript("OnDragStart", function(self)
 		self:SetScript("OnUpdate", function()
-			ProfessionExporter:InitDB()
+			AuctionHelper:InitDB()
 			local mx, my = Minimap:GetCenter()
 			local px, py = GetCursorPosition()
 			local scale = Minimap:GetEffectiveScale()
 			px, py = px / scale, py / scale
 			local angle = math.deg(math.atan2(py - my, px - mx))
-			ProfessionExporter:SetSetting("integrations.minimapButtonAngle", angle)
-			ProfessionExporter:UpdateMinimapButtonPosition(self)
+			AuctionHelper:SetSetting("integrations.minimapButtonAngle", angle)
+			AuctionHelper:UpdateMinimapButtonPosition(self)
 		end)
 	end)
 	btn:SetScript("OnDragStop", function(self)
 		self:SetScript("OnUpdate", nil)
 	end)
 	btn:SetScript("OnEnter", function(self)
-		local theme = ProfessionExporter:GetTheme()
+		local theme = AuctionHelper:GetTheme()
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 		GameTooltip:SetText("AuctionHelper", theme.gold.r, theme.gold.g, theme.gold.b)
 		for _, pair in ipairs({ { "Click", "Open the dashboard" }, { "Right-click", "Open settings" }, { "Drag", "Move this button" } }) do
@@ -669,7 +669,7 @@ function ProfessionExporter:EnsureMinimapButton()
 	self:UpdateMinimapButtonPosition(btn)
 end
 
-function ProfessionExporter:UpdateMinimapButtonPosition(button)
+function AuctionHelper:UpdateMinimapButtonPosition(button)
 	if not button or not Minimap then
 		return
 	end
@@ -680,7 +680,7 @@ function ProfessionExporter:UpdateMinimapButtonPosition(button)
 	button:SetPoint("CENTER", Minimap, "CENTER", math.cos(rad) * radius, math.sin(rad) * radius)
 end
 
-function ProfessionExporter:OpenBlizzardSettings()
+function AuctionHelper:OpenBlizzardSettings()
 	if not self.settingsCategoryId then
 		self:RegisterBlizzardSettings()
 	end
@@ -693,7 +693,7 @@ function ProfessionExporter:OpenBlizzardSettings()
 	end
 end
 
-function ProfessionExporter:RegisterBlizzardSettings()
+function AuctionHelper:RegisterBlizzardSettings()
 	if self.settingsCategoryId or not Settings or not Settings.RegisterCanvasLayoutCategory then
 		return
 	end
@@ -718,7 +718,7 @@ function ProfessionExporter:RegisterBlizzardSettings()
 	openButton:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -12)
 	openButton:SetText("Open AuctionHelper")
 	openButton:SetScript("OnClick", function()
-		ProfessionExporter:OpenSettingsTab()
+		AuctionHelper:OpenSettingsTab()
 	end)
 
 	local function createCheckbox(anchor, offsetY, label, getter, setter)
@@ -739,22 +739,22 @@ function ProfessionExporter:RegisterBlizzardSettings()
 	end
 
 	local minimapCheck = createCheckbox(openButton, -14, "Show minimap button", function()
-		return ProfessionExporter:GetSetting("general.showMinimapButton", true)
+		return AuctionHelper:GetSetting("general.showMinimapButton", true)
 	end, function(value)
-		ProfessionExporter:SetSetting("general.showMinimapButton", value)
-		ProfessionExporter:EnsureMinimapButton()
+		AuctionHelper:SetSetting("general.showMinimapButton", value)
+		AuctionHelper:EnsureMinimapButton()
 	end)
 
 	local specCheck = createCheckbox(minimapCheck, -8, "Capture specialization tree", function()
-		return ProfessionExporter:GetSetting("capture.captureSpecializationTree", true)
+		return AuctionHelper:GetSetting("capture.captureSpecializationTree", true)
 	end, function(value)
-		ProfessionExporter:SetSetting("capture.captureSpecializationTree", value)
+		AuctionHelper:SetSetting("capture.captureSpecializationTree", value)
 	end)
 
 	local outputCheck = createCheckbox(specCheck, -8, "Include detailed recipe output data", function()
-		return ProfessionExporter:GetSetting("capture.includeRecipeOutputItemData", false)
+		return AuctionHelper:GetSetting("capture.includeRecipeOutputItemData", false)
 	end, function(value)
-		ProfessionExporter:SetSetting("capture.includeRecipeOutputItemData", value)
+		AuctionHelper:SetSetting("capture.includeRecipeOutputItemData", value)
 	end)
 
 	local scaleButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
@@ -763,12 +763,12 @@ function ProfessionExporter:RegisterBlizzardSettings()
 	local function refreshScaleButton()
 		scaleButton:SetText(string.format(
 			"Window scale: %d%%",
-			math.floor((ProfessionExporter:GetSetting("appearance.windowScale", 1) or 1) * 100 + 0.5)
+			math.floor((AuctionHelper:GetSetting("appearance.windowScale", 1) or 1) * 100 + 0.5)
 		))
 	end
 	scaleButton:SetScript("OnClick", function()
-		local options = ProfessionExporter:GetWindowScaleOptions()
-		local current = tonumber(ProfessionExporter:GetSetting("appearance.windowScale", 1)) or 1
+		local options = AuctionHelper:GetWindowScaleOptions()
+		local current = tonumber(AuctionHelper:GetSetting("appearance.windowScale", 1)) or 1
 		local nextIndex = 1
 		for index, option in ipairs(options) do
 			if math.abs(option.value - current) < 0.001 then
@@ -776,8 +776,8 @@ function ProfessionExporter:RegisterBlizzardSettings()
 				break
 			end
 		end
-		ProfessionExporter:SetSetting("appearance.windowScale", options[nextIndex].value)
-		ProfessionExporter:ApplyWindowScale()
+		AuctionHelper:SetSetting("appearance.windowScale", options[nextIndex].value)
+		AuctionHelper:ApplyWindowScale()
 		refreshScaleButton()
 	end)
 	refreshScaleButton()
@@ -798,9 +798,9 @@ local SKIN_AFTER_REFRESH = {
 	EnsureCraftingOrdersFilterBar = function(_, frame) return frame end,
 }
 for method, getFrame in pairs(SKIN_AFTER_REFRESH) do
-	if type(ProfessionExporter[method]) == "function" then
-		local original = ProfessionExporter[method]
-		ProfessionExporter[method] = function(self, ...)
+	if type(AuctionHelper[method]) == "function" then
+		local original = AuctionHelper[method]
+		AuctionHelper[method] = function(self, ...)
 			local result = original(self, ...)
 			self:SkinTree(getFrame(self, result))
 			return result

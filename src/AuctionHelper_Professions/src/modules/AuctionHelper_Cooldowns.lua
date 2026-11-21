@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Recipe cooldowns (F62). Read from the client while a profession window is open and kept per character
 -- in `db.characters[characterKey].recipeCooldowns[recipeID] = readyAt` (server time).
@@ -31,7 +31,7 @@ local function secondsLeft(recipeID)
 end
 
 --- Read the cooldown of every recipe of the open profession. Returns how many are on cooldown.
-function ProfessionExporter:ReadOpenProfessionCooldowns()
+function AuctionHelper:ReadOpenProfessionCooldowns()
 	if not (C_TradeSkillUI and C_TradeSkillUI.GetAllRecipeIDs and C_TradeSkillUI.GetRecipeCooldown) then
 		return 0
 	end
@@ -52,14 +52,14 @@ function ProfessionExporter:ReadOpenProfessionCooldowns()
 end
 
 --- Cooldown of a craft row for its best crafter: `{ state = "ready" | "waiting" | "none", secondsLeft }`.
-function ProfessionExporter:GetCraftRowCooldown(row)
+function AuctionHelper:GetCraftRowCooldown(row)
 	local store = row and cooldownStore(self, row.bestCharacterKey)
 	local readyAt = store and (store[tonumber(row.recipeID)] or store[tonumber(row.recipeSpellID)])
 	return self.MaterialLogic.CooldownState(readyAt, now())
 end
 
 --- Does any character's stored cooldown mark this recipe as a cooldown recipe?
-function ProfessionExporter:IsCooldownRecipe(recipeID)
+function AuctionHelper:IsCooldownRecipe(recipeID)
 	recipeID = tonumber(recipeID)
 	for _, character in pairs(self.db and self.db.characters or {}) do
 		if recipeID and character.recipeCooldowns and character.recipeCooldowns[recipeID] then
@@ -78,8 +78,8 @@ local function scheduleRead()
 	pending = true
 	C_Timer.After(READ_DELAY, function()
 		pending = false
-		if ProfessionExporter.db then
-			ProfessionExporter:ReadOpenProfessionCooldowns()
+		if AuctionHelper.db then
+			AuctionHelper:ReadOpenProfessionCooldowns()
 		end
 	end)
 end

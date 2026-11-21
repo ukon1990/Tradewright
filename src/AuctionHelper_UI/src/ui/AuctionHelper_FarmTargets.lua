@@ -1,4 +1,4 @@
-local ProfessionExporter = select(2, ...)
+local AuctionHelper = select(2, ...)
 
 -- "What to farm" (E09 F72): trade goods ranked by the gold that changes hands in them each day, with
 -- the farm where you looted each one before. The addon ships no drop data: the last two columns come
@@ -56,7 +56,7 @@ local function targetCandidates(pe, insights, early)
 end
 
 --- Rows for "What to farm" and the empty-list title and hint, or nil while the market insights are being built.
-function ProfessionExporter:GetFarmTargetRows(onReady)
+function AuctionHelper:GetFarmTargetRows(onReady)
 	local insights = self:GetMarketInsights(onReady)
 	if not insights then
 		return nil
@@ -173,7 +173,7 @@ local function materialCount(rows)
 end
 
 --- The "What to farm" view: a note, two filter buttons and the table. Call `:Refresh()` when shown.
-function ProfessionExporter:CreateFarmTargetsView(panel)
+function AuctionHelper:CreateFarmTargetsView(panel)
 	local pe = self
 	local view = CreateFrame("Frame", nil, panel)
 	view.note = pe:CreateText(view, "GameFontHighlightSmall", "textMuted")
@@ -212,7 +212,7 @@ function ProfessionExporter:CreateFarmTargetsView(panel)
 end
 
 --- The two list buttons at the left of the Farming toolbar. Returns the last button, for anchoring.
-function ProfessionExporter:BuildFarmViewButtons(panel, onChanged)
+function AuctionHelper:BuildFarmViewButtons(panel, onChanged)
 	local pe = self
 	panel.viewButtons = {}
 	local previous
@@ -230,7 +230,7 @@ function ProfessionExporter:BuildFarmViewButtons(panel, onChanged)
 end
 
 --- Show the chosen list of the Farming tab and hide the other. Returns true for "What to farm".
-function ProfessionExporter:ApplyFarmView(panel)
+function AuctionHelper:ApplyFarmView(panel)
 	local current = self:GetSetting("farming.view", "farms")
 	local showTargets = current == "targets"
 	for _, button in ipairs(panel.viewButtons or {}) do

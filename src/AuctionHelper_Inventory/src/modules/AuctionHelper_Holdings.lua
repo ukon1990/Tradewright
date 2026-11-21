@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Holdings: everything each character carries and banks, and its gold, saved per character in the
 -- inventory database (AuctionHelperInventoryDB.holdings). Unlike inventorySnapshot, which only
@@ -16,7 +16,7 @@ local BANK_SETTLE_SECONDS = 0.3
 local bankOpen = false
 
 --- Every character's holdings, keyed by character key.
-function ProfessionExporter:GetItemHoldings()
+function AuctionHelper:GetItemHoldings()
 	if not self.inventoryDb then
 		self:InitDB()
 	end
@@ -25,7 +25,7 @@ function ProfessionExporter:GetItemHoldings()
 end
 
 --- The logged-in character's holdings, created on first use.
-function ProfessionExporter:GetOwnItemHoldings()
+function AuctionHelper:GetOwnItemHoldings()
 	local holdings = self:GetItemHoldings()
 	local key = self:GetCharacterKey()
 	holdings[key] = holdings[key] or { bags = {}, bank = {} }
@@ -35,7 +35,7 @@ end
 
 --- The other characters that hold `itemID` in their bags or bank, as saved when each was last
 --- played: { { characterKey, quantity }, … } (unsorted).
-function ProfessionExporter:GetItemHoldersOnOtherCharacters(itemID)
+function AuctionHelper:GetItemHoldersOnOtherCharacters(itemID)
 	itemID = tonumber(itemID)
 	local own = self:GetCharacterKey()
 	local holders = {}
@@ -85,7 +85,7 @@ local function bankBagIDs(pe)
 end
 
 --- Save what the logged-in character carries, and its gold.
-function ProfessionExporter:SaveBagHoldings()
+function AuctionHelper:SaveBagHoldings()
 	local own = self:GetOwnItemHoldings()
 	local bagIDs = {}
 	for bag = BACKPACK, self:GetLastBagIndex() do
@@ -97,7 +97,7 @@ function ProfessionExporter:SaveBagHoldings()
 end
 
 --- Save the bank's contents. Does nothing unless the bank is open.
-function ProfessionExporter:SaveBankHoldings()
+function AuctionHelper:SaveBankHoldings()
 	if not bankOpen then
 		return
 	end
@@ -107,7 +107,7 @@ function ProfessionExporter:SaveBankHoldings()
 end
 
 --- The saved warband bank, or nil when it was never seen (always nil on Forever).
-function ProfessionExporter:GetWarbandHoldings()
+function AuctionHelper:GetWarbandHoldings()
 	if not self.inventoryDb then
 		self:InitDB()
 	end
@@ -126,16 +126,16 @@ local function warbandBagIDs()
 	return ids
 end
 
-function ProfessionExporter:IsBankOpen()
+function AuctionHelper:IsBankOpen()
 	return bankOpen
 end
 
 --- The containers of the logged-in character's bank, and of the warband bank (none on Forever).
-function ProfessionExporter:GetBankBagIDs()
+function AuctionHelper:GetBankBagIDs()
 	return bankBagIDs(self)
 end
 
-function ProfessionExporter:GetWarbandBagIDs()
+function AuctionHelper:GetWarbandBagIDs()
 	return warbandBagIDs()
 end
 
@@ -145,7 +145,7 @@ local function warbandMoney()
 end
 
 --- Save the warband bank's contents and gold. Does nothing unless the bank is open and has tabs.
-function ProfessionExporter:SaveWarbandHoldings()
+function AuctionHelper:SaveWarbandHoldings()
 	local bagIDs = bankOpen and warbandBagIDs() or {}
 	if #bagIDs == 0 then
 		return
@@ -202,7 +202,7 @@ end
 
 local events = CreateFrame("Frame")
 events:SetScript("OnEvent", function(_, event)
-	handlers[event](ProfessionExporter)
+	handlers[event](AuctionHelper)
 end)
 for event in pairs(handlers) do
 	-- Not every client has every event.

@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Daily price history and the usual price built from it (F40).
 -- `auction.history.daily[storageKey][dayTs] = { p, lo, hi, q, n }`; `auction.history.dailyThrough` is the
@@ -48,7 +48,7 @@ end
 
 --- Fold every finished day of hourly history into daily history, then drop days past their retention.
 --- Runs once at load; a day is rolled up the first time the addon loads after it ended.
-function ProfessionExporter:RollupDailyAuctionHistory()
+function AuctionHelper:RollupDailyAuctionHistory()
 	local auction = self:InitAuctionDB()
 	local MS = self.MarketSignals
 	if not (auction and MS) then
@@ -129,25 +129,25 @@ end
 
 --- Weekday price pattern of one stored listing (see AuctionHelper_WeekdayPattern.lua), or nil when the
 --- scans do not show one.
-function ProfessionExporter:GetWeekdayPattern(storageKey)
+function AuctionHelper:GetWeekdayPattern(storageKey)
 	return cachedSignal(self, "weekday", storageKey, computeWeekdayPattern)
 end
 
 --- Usual price of one stored listing: `{ usual, mad, low, high, days }`, or nil with fewer than 5 days.
-function ProfessionExporter:GetUsualPrice(storageKey)
+function AuctionHelper:GetUsualPrice(storageKey)
 	return cachedSignal(self, "usual", storageKey, computeUsualPrice)
 end
 
 --- The price over however many days of history an item has (fewer than 5 allowed): `{ usual, days, … }`, or nil.
 --- For early estimates only; everything else uses `GetUsualPrice`.
-function ProfessionExporter:GetEarlyUsualPrice(storageKey)
+function AuctionHelper:GetEarlyUsualPrice(storageKey)
 	local window = tonumber(self:GetSetting("auction.usualPriceDays", 14)) or 14
 	return self.MarketSignals.UsualPrice(dailyHistory(self, storageKey), now(), window)
 end
 
 --- Estimated units sold per day of one stored listing: `{ perDay, confidence, pairs }`, or nil when the
 --- scans do not say. Built from finished days, so it appears the day after two scans of an item.
-function ProfessionExporter:GetSellsPerDay(storageKey)
+function AuctionHelper:GetSellsPerDay(storageKey)
 	return cachedSignal(self, "sells", storageKey, computeSellsPerDay)
 end
 
@@ -169,7 +169,7 @@ local function bestStorageKey(pe, itemID)
 end
 
 --- Usual price and sells per day for an item ID (tooltip, Inventory): `usual, sells`, either may be nil.
-function ProfessionExporter:GetItemPriceSignals(itemID)
+function AuctionHelper:GetItemPriceSignals(itemID)
 	local storageKey = bestStorageKey(self, itemID)
 	if not storageKey then
 		return nil, nil
@@ -195,7 +195,7 @@ end
 
 --- Fill a tooltip summary with what the price is compared with: the usual price once an item has enough daily history
 -- (usualDays is then set), else the 7-day average. Also notes how many sell a day when the scans say.
-function ProfessionExporter:FillPriceBaseline(out, itemID)
+function AuctionHelper:FillPriceBaseline(out, itemID)
 	local pe = self
 	local usual, sells = pe:GetItemPriceSignals(itemID)
 	if usual then

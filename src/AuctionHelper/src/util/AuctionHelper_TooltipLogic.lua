@@ -1,9 +1,9 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Pure item-tooltip helpers: which lines the AuctionHelper block shows for an item, and who holds
 -- it. No WoW API here, so the offline tests can load this file on its own.
 local TooltipLogic = {}
-ProfessionExporter.TooltipLogic = TooltipLogic
+AuctionHelper.TooltipLogic = TooltipLogic
 
 local MAX_OWNER_LINES = 5
 local MAX_NAMES = 3

@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Item slots of the bag window (E11 F92, F94). Live slots are the game's own item buttons, so use,
 -- drag, split and tooltips run the game's code; read-only slots are plain buttons.
@@ -96,7 +96,7 @@ local function createLiveSlot(pe, content, bag, slot)
 end
 
 --- The game's item button for one bag slot, parented under `content`.
-function ProfessionExporter:AcquireLiveBagSlot(content, bag, slot)
+function AuctionHelper:AcquireLiveBagSlot(content, bag, slot)
 	live[bag] = live[bag] or {}
 	if not live[bag][slot] then
 		live[bag][slot] = createLiveSlot(self, content, bag, slot)
@@ -117,7 +117,7 @@ end
 
 -- Tooltip of a read-only slot: the item, then who holds how many.
 local function showSavedTooltip(button)
-	local pe, item = ProfessionExporter, button.ahItem
+	local pe, item = AuctionHelper, button.ahItem
 	if not item then
 		return
 	end
@@ -135,7 +135,7 @@ local function showSavedTooltip(button)
 end
 
 --- A plain slot that only shows an item: tooltip and shift-click to link, nothing else.
-function ProfessionExporter:AcquireReadOnlyBagSlot(content, index)
+function AuctionHelper:AcquireReadOnlyBagSlot(content, index)
 	if not readOnly[index] then
 		local pe = self
 		local gold = self:GetTheme().gold
@@ -155,7 +155,7 @@ function ProfessionExporter:AcquireReadOnlyBagSlot(content, index)
 	return readOnly[index]
 end
 
-function ProfessionExporter:HideBagSlots()
+function AuctionHelper:HideBagSlots()
 	for _, slots in pairs(live) do
 		for _, button in pairs(slots) do
 			button:Hide()
@@ -178,7 +178,7 @@ end
 
 --- Draw an item on a slot. `look.dim`: a search miss or an item of another bag than the hovered
 --- one; `look.glow`: an item of the hovered bag; `look.selected`: a selected stack.
-function ProfessionExporter:SetBagSlotItem(button, item, look)
+function AuctionHelper:SetBagSlotItem(button, item, look)
 	local theme = self:GetTheme()
 	local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[item.quality] or theme.borderStrong
 	if look.glow or look.selected then
@@ -200,7 +200,7 @@ function ProfessionExporter:SetBagSlotItem(button, item, look)
 end
 
 --- Draw the free-slot tile: an empty slot showing how many normal slots are free.
-function ProfessionExporter:SetBagSlotFree(button, freeCount)
+function AuctionHelper:SetBagSlotFree(button, freeCount)
 	local theme = self:GetTheme()
 	button.ahItem = nil
 	button.ahSelect:Hide()

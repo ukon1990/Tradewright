@@ -40,7 +40,6 @@ Load order: `AuctionHelper` → `AuctionHelper_AuctionData` + `AuctionHelper_Pro
 - **Code must be maintainable by a human**: a developer new to a file can read, understand and safely change it. Lint limits, names, comments and tests serve this; passing lint is not enough. Details: `.agents/skills/wow-addon-issue-work/focus/code-quality.md`.
 - Clear names, one word per concept (see the glossary in `focus/code-quality.md`). Comments explain why, API quirks or invariants; no feature or epic ids in code comments (they belong in commit messages and issue files).
 - Tests guard behaviour that could break (math, selection, saved formats, Forever-vs-retail branches); no tests for their own sake.
-- The addon object is named `ProfessionExporter` for historical reasons; it is the same table as `AuctionHelper`.
 - Forever detection is by **interface version** `16000–16999`, not `WOW_PROJECT_ID` alone (Forever shares mainline project id).
 - `IS_RETAIL` = true mainline only; `IS_SUPPORTED` = retail **or** Forever.
 - Midnight-only systems (crafting orders, concentration, commodity auto-buy, warband when API missing) stay behind `IS_RETAIL` / capability checks.

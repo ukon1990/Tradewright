@@ -1,6 +1,6 @@
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
-function ProfessionExporter:GetState()
+function AuctionHelper:GetState()
 	self.state = self.state or {
 		scanInProgress = false,
 		currentProfession = nil,
@@ -24,12 +24,12 @@ function ProfessionExporter:GetState()
 	return self.state
 end
 
-function ProfessionExporter:BumpDataRevision()
+function AuctionHelper:BumpDataRevision()
 	local s = self:GetState()
 	s.dataRevision = (s.dataRevision or 0) + 1
 end
 
-function ProfessionExporter:AggregateNeedsRebuild()
+function AuctionHelper:AggregateNeedsRebuild()
 	self:InitDB()
 	local s = self:GetState()
 	local agg = self.db.aggregate
@@ -42,7 +42,7 @@ function ProfessionExporter:AggregateNeedsRebuild()
 	return s.builtAggregateRevision ~= (s.dataRevision or 0)
 end
 
-function ProfessionExporter:GetCharacterMetadata()
+function AuctionHelper:GetCharacterMetadata()
 	local _, classFile = UnitClass("player")
 	local _, raceFile = UnitRace("player")
 	local name, realm = UnitFullName("player")
@@ -62,7 +62,7 @@ function ProfessionExporter:GetCharacterMetadata()
 	}
 end
 
-function ProfessionExporter:GetPlayerProfessions()
+function AuctionHelper:GetPlayerProfessions()
 	local professions = {}
 	local professionIndices = { GetProfessions() }
 
@@ -96,7 +96,7 @@ function ProfessionExporter:GetPlayerProfessions()
 	return professions
 end
 
-function ProfessionExporter:CreateCharacterScanRecord()
+function AuctionHelper:CreateCharacterScanRecord()
 	local metadata = self:GetCharacterMetadata()
 
 	return {
@@ -109,7 +109,7 @@ function ProfessionExporter:CreateCharacterScanRecord()
 	}
 end
 
-function ProfessionExporter:SnapshotFilters()
+function AuctionHelper:SnapshotFilters()
 	return {
 		showUnlearned = C_TradeSkillUI.GetShowUnlearned and C_TradeSkillUI.GetShowUnlearned() or nil,
 		onlyShowMakeable = C_TradeSkillUI.GetOnlyShowMakeableRecipes and C_TradeSkillUI.GetOnlyShowMakeableRecipes() or nil,
@@ -119,7 +119,7 @@ function ProfessionExporter:SnapshotFilters()
 	}
 end
 
-function ProfessionExporter:ApplyExportFilters()
+function AuctionHelper:ApplyExportFilters()
 	if C_TradeSkillUI.SetShowLearned then
 		C_TradeSkillUI.SetShowLearned(true)
 	end
@@ -146,7 +146,7 @@ function ProfessionExporter:ApplyExportFilters()
 	end
 end
 
-function ProfessionExporter:RestoreFilters(snapshot)
+function AuctionHelper:RestoreFilters(snapshot)
 	if not snapshot then
 		return
 	end
@@ -168,7 +168,7 @@ function ProfessionExporter:RestoreFilters(snapshot)
 	end
 end
 
-function ProfessionExporter:GetQualityThresholds(maxQuality, recipeDifficulty)
+function AuctionHelper:GetQualityThresholds(maxQuality, recipeDifficulty)
 	if not maxQuality or not recipeDifficulty or recipeDifficulty <= 0 then
 		return {}
 	end
@@ -184,7 +184,7 @@ function ProfessionExporter:GetQualityThresholds(maxQuality, recipeDifficulty)
 	return {}
 end
 
-function ProfessionExporter:BuildMaxQualityRequiredReagentInfo(schematic)
+function AuctionHelper:BuildMaxQualityRequiredReagentInfo(schematic)
 	local craftingReagentInfo = {}
 	if not schematic or type(schematic.reagentSlotSchematics) ~= "table" then
 		return craftingReagentInfo
@@ -222,7 +222,7 @@ function ProfessionExporter:BuildMaxQualityRequiredReagentInfo(schematic)
 	return craftingReagentInfo
 end
 
-function ProfessionExporter:DescribeOperationInfo(recipeID, schematic)
+function AuctionHelper:DescribeOperationInfo(recipeID, schematic)
 	if not C_TradeSkillUI.GetCraftingOperationInfo then
 		return nil
 	end
@@ -261,7 +261,7 @@ function ProfessionExporter:DescribeOperationInfo(recipeID, schematic)
 	return result
 end
 
-function ProfessionExporter:DescribeRecipeOutput(recipeID, _recipeInfo, schematic)
+function AuctionHelper:DescribeRecipeOutput(recipeID, _recipeInfo, schematic)
 	local includeRawOutput = self._includeRecipeOutputItemData == true
 
 	local output = {
@@ -300,7 +300,7 @@ function ProfessionExporter:DescribeRecipeOutput(recipeID, _recipeInfo, schemati
 	return output
 end
 
-function ProfessionExporter:DescribeReagentSlot(reagentSlotSchematic, slotIndex)
+function AuctionHelper:DescribeReagentSlot(reagentSlotSchematic, slotIndex)
 	local slot = {
 		slotIndex = slotIndex,
 		dataSlotIndex = reagentSlotSchematic.dataSlotIndex,
@@ -333,7 +333,7 @@ function ProfessionExporter:DescribeReagentSlot(reagentSlotSchematic, slotIndex)
 	return slot
 end
 
-function ProfessionExporter:CollectRecipeCategories()
+function AuctionHelper:CollectRecipeCategories()
 	local categories = {}
 	if not C_TradeSkillUI.GetCategories then
 		return categories
@@ -379,7 +379,7 @@ function ProfessionExporter:CollectRecipeCategories()
 	return categories
 end
 
-function ProfessionExporter:SkillLineHasSpecializationConfig(skillLineID)
+function AuctionHelper:SkillLineHasSpecializationConfig(skillLineID)
 	skillLineID = tonumber(skillLineID)
 	if not skillLineID or skillLineID <= 0 or not C_ProfSpecs or not C_ProfSpecs.GetConfigIDForSkillLine then
 		return false
@@ -389,7 +389,7 @@ function ProfessionExporter:SkillLineHasSpecializationConfig(skillLineID)
 end
 
 --- Expansion-tier skill lines from recipe category headers (e.g. Midnight Mining = 2916, not base 186).
-function ProfessionExporter:ExtractExpansionSkillLineIDsFromCategories(categories, baseSkillLineID)
+function AuctionHelper:ExtractExpansionSkillLineIDsFromCategories(categories, baseSkillLineID)
 	baseSkillLineID = tonumber(baseSkillLineID)
 	local found = {}
 	local function walk(nodes)
@@ -409,7 +409,7 @@ function ProfessionExporter:ExtractExpansionSkillLineIDsFromCategories(categorie
 end
 
 --- Resolve expansion variant skill line IDs that own a C_ProfSpecs config for this base profession.
-function ProfessionExporter:ResolveProfessionSpecSkillLineIDs(baseSkillLineID, childInfo, categories)
+function AuctionHelper:ResolveProfessionSpecSkillLineIDs(baseSkillLineID, childInfo, categories)
 	baseSkillLineID = tonumber(baseSkillLineID)
 	if not baseSkillLineID or baseSkillLineID <= 0 then
 		return {}
@@ -459,7 +459,7 @@ function ProfessionExporter:ResolveProfessionSpecSkillLineIDs(baseSkillLineID, c
 	return ordered
 end
 
-function ProfessionExporter:PickPrimarySpecializationSkillLineID(candidates, currentLevelName, childInfo)
+function AuctionHelper:PickPrimarySpecializationSkillLineID(candidates, currentLevelName, childInfo)
 	if type(candidates) ~= "table" or #candidates == 0 then
 		return nil
 	end
@@ -489,14 +489,14 @@ function ProfessionExporter:PickPrimarySpecializationSkillLineID(candidates, cur
 	return candidates[1]
 end
 
-function ProfessionExporter:ExtractPerkIDFromApiValue(perkValue)
+function AuctionHelper:ExtractPerkIDFromApiValue(perkValue)
 	if type(perkValue) == "table" then
 		return tonumber(perkValue.perkID)
 	end
 	return tonumber(perkValue)
 end
 
-function ProfessionExporter:ResolveSpecEntryName(definitionInfo, pathDescription)
+function AuctionHelper:ResolveSpecEntryName(definitionInfo, pathDescription)
 	if type(definitionInfo) == "table" then
 		local name = definitionInfo.overrideName
 		if name and tostring(name) ~= "" then
@@ -513,7 +513,7 @@ function ProfessionExporter:ResolveSpecEntryName(definitionInfo, pathDescription
 	return nil
 end
 
-function ProfessionExporter:ResolveSpecEntryDescription(definitionInfo, perkDescription, pathDescription)
+function AuctionHelper:ResolveSpecEntryDescription(definitionInfo, perkDescription, pathDescription)
 	if type(perkDescription) == "string" and perkDescription ~= "" then
 		return perkDescription
 	end
@@ -529,12 +529,12 @@ function ProfessionExporter:ResolveSpecEntryDescription(definitionInfo, perkDesc
 	return nil
 end
 
-function ProfessionExporter:ClassifySpecNodeKind(nodeInfo)
+function AuctionHelper:ClassifySpecNodeKind(nodeInfo)
 	local maxRanks = tonumber(nodeInfo and (nodeInfo.maxRanks or nodeInfo.totalMaxRanks)) or 1
 	return maxRanks > 1 and "path" or "milestone"
 end
 
-function ProfessionExporter:FinalizeSpecializationTabGraph(tab)
+function AuctionHelper:FinalizeSpecializationTabGraph(tab)
 	if type(tab) ~= "table" then
 		return tab
 	end
@@ -604,7 +604,7 @@ function ProfessionExporter:FinalizeSpecializationTabGraph(tab)
 	return tab
 end
 
-function ProfessionExporter:CollectSpecializationTreeForSkillLine(skillLineID)
+function AuctionHelper:CollectSpecializationTreeForSkillLine(skillLineID)
 	skillLineID = tonumber(skillLineID)
 	if not skillLineID or skillLineID <= 0 or not self:SkillLineHasSpecializationConfig(skillLineID) then
 		return nil
@@ -709,7 +709,7 @@ function ProfessionExporter:CollectSpecializationTreeForSkillLine(skillLineID)
 end
 
 --- Backwards-compatible wrapper; prefer CollectSpecializationTreesForProfession during scans.
-function ProfessionExporter:CollectSpecializationTree(skillLineID, fallbackSkillLineID)
+function AuctionHelper:CollectSpecializationTree(skillLineID, fallbackSkillLineID)
 	local candidates = {}
 	if tonumber(skillLineID) and self:SkillLineHasSpecializationConfig(skillLineID) then
 		table.insert(candidates, tonumber(skillLineID))
@@ -737,7 +737,7 @@ function ProfessionExporter:CollectSpecializationTree(skillLineID, fallbackSkill
 end
 
 --- Full specialization dump keyed by expansion variant skill line (tostring(skillLineID)).
-function ProfessionExporter:CollectSpecializationTreesForProfession(baseSkillLineID, childInfo, categories, currentLevelName)
+function AuctionHelper:CollectSpecializationTreesForProfession(baseSkillLineID, childInfo, categories, currentLevelName)
 	local candidates = self:ResolveProfessionSpecSkillLineIDs(baseSkillLineID, childInfo, categories)
 	if #candidates == 0 then
 		self:DebugLog("SCAN", "CollectSpecializationTreesForProfession no candidates", {
@@ -781,7 +781,7 @@ function ProfessionExporter:CollectSpecializationTreesForProfession(baseSkillLin
 	}
 end
 
-function ProfessionExporter:CollectClassicRecipeReagentSlots(recipeSpellID)
+function AuctionHelper:CollectClassicRecipeReagentSlots(recipeSpellID)
 	local slots = {}
 	local makeSlot = self.ForeverLogic and self.ForeverLogic.MakeClassicReagentSlot
 	local function pushSlot(slotIndex, itemID, quantity)
@@ -878,7 +878,7 @@ function ProfessionExporter:CollectClassicRecipeReagentSlots(recipeSpellID)
 	return slots
 end
 
-function ProfessionExporter:CollectRecipeData(recipeSpellID)
+function AuctionHelper:CollectRecipeData(recipeSpellID)
 	recipeSpellID = tonumber(recipeSpellID)
 	if not recipeSpellID then
 		return nil
@@ -913,20 +913,20 @@ function ProfessionExporter:CollectRecipeData(recipeSpellID)
 	return recipeData
 end
 
-function ProfessionExporter:BeginProfessionCollectCaches()
+function AuctionHelper:BeginProfessionCollectCaches()
 	self._itemDescCache = {}
 	self._currencyDescCache = {}
 	self._includeRecipeOutputItemData = self:GetSetting("capture.includeRecipeOutputItemData", false) == true
 end
 
-function ProfessionExporter:EndProfessionCollectCaches()
+function AuctionHelper:EndProfessionCollectCaches()
 	self._itemDescCache = nil
 	self._currencyDescCache = nil
 	self._includeRecipeOutputItemData = nil
 end
 
 --- Rebuild recipeIDs array + recipeCount from the recipes map.
-function ProfessionExporter:RebuildProfessionRecipeIndex(professionData)
+function AuctionHelper:RebuildProfessionRecipeIndex(professionData)
 	if not professionData then
 		return
 	end
@@ -953,7 +953,7 @@ function ProfessionExporter:RebuildProfessionRecipeIndex(professionData)
 end
 
 --- Insert/overwrite recipes for the given crafting spell IDs. Returns how many were written.
-function ProfessionExporter:CollectRecipesIntoProfessionData(professionData, recipeSpellIDs, fromIndex, toIndex)
+function AuctionHelper:CollectRecipesIntoProfessionData(professionData, recipeSpellIDs, fromIndex, toIndex)
 	if not professionData then
 		return 0
 	end
@@ -976,7 +976,7 @@ function ProfessionExporter:CollectRecipesIntoProfessionData(professionData, rec
 end
 
 --- Drop stored recipes whose crafting spell id is not in the current open recipe set.
-function ProfessionExporter:PruneProfessionRecipesNotInSpellSet(professionData, spellIDSet)
+function AuctionHelper:PruneProfessionRecipesNotInSpellSet(professionData, spellIDSet)
 	if not professionData or type(professionData.recipes) ~= "table" or type(spellIDSet) ~= "table" then
 		return 0
 	end
@@ -991,7 +991,7 @@ function ProfessionExporter:PruneProfessionRecipesNotInSpellSet(professionData, 
 	return removed
 end
 
-function ProfessionExporter:StampProfessionLiveFingerprint(professionData, fingerprintInfo)
+function AuctionHelper:StampProfessionLiveFingerprint(professionData, fingerprintInfo)
 	if not professionData then
 		return
 	end
@@ -1011,7 +1011,7 @@ function ProfessionExporter:StampProfessionLiveFingerprint(professionData, finge
 	end
 end
 
-function ProfessionExporter:UpdateProfessionDescriptorFields(professionData, professionDescriptor, baseInfo, childInfo)
+function AuctionHelper:UpdateProfessionDescriptorFields(professionData, professionDescriptor, baseInfo, childInfo)
 	if not professionData or not professionDescriptor then
 		return
 	end
@@ -1031,7 +1031,7 @@ function ProfessionExporter:UpdateProfessionDescriptorFields(professionData, pro
 	end
 end
 
-function ProfessionExporter:ApplySpecializationResultToProfessionData(professionData, specResult)
+function AuctionHelper:ApplySpecializationResultToProfessionData(professionData, specResult)
 	if not professionData then
 		return
 	end
@@ -1041,7 +1041,7 @@ function ProfessionExporter:ApplySpecializationResultToProfessionData(profession
 end
 
 --- Finalize indexes, optional catalog attach, and live fingerprint stamp.
-function ProfessionExporter:FinalizeProfessionDataCollect(professionData, professionDescriptor, fingerprintInfo)
+function AuctionHelper:FinalizeProfessionDataCollect(professionData, professionDescriptor, fingerprintInfo)
 	self:RebuildProfessionRecipeIndex(professionData)
 	if self.AttachSpecCatalogMetadata and professionDescriptor then
 		self:AttachSpecCatalogMetadata(professionData, professionDescriptor.skillLineID)
@@ -1050,7 +1050,7 @@ function ProfessionExporter:FinalizeProfessionDataCollect(professionData, profes
 	return professionData
 end
 
-function ProfessionExporter:CollectCurrentProfessionData(professionDescriptor)
+function AuctionHelper:CollectCurrentProfessionData(professionDescriptor)
 	self:InitDB()
 	self:BeginProfessionCollectCaches()
 
@@ -1095,7 +1095,7 @@ function ProfessionExporter:CollectCurrentProfessionData(professionDescriptor)
 end
 
 --- Create a shell profession row (no recipes yet) for chunked / incremental live collects.
-function ProfessionExporter:CreateProfessionDataShell(professionDescriptor, opts)
+function AuctionHelper:CreateProfessionDataShell(professionDescriptor, opts)
 	opts = type(opts) == "table" and opts or {}
 	local baseInfo = opts.baseInfo
 	if baseInfo == nil then
@@ -1141,7 +1141,7 @@ function ProfessionExporter:CreateProfessionDataShell(professionDescriptor, opts
 	return professionData
 end
 
-function ProfessionExporter:PatchAggregateInventorySummaryForCharacter(characterKey, characterData)
+function AuctionHelper:PatchAggregateInventorySummaryForCharacter(characterKey, characterData)
 	self:InitDB()
 	local aggregate = self.db and self.db.aggregate
 	if type(aggregate) ~= "table" or type(aggregate.characterKeys) ~= "table" or type(aggregate.inventoryByCharacter) ~= "table" then
@@ -1177,7 +1177,7 @@ function ProfessionExporter:PatchAggregateInventorySummaryForCharacter(character
 	return true
 end
 
-function ProfessionExporter:BuildAggregate()
+function AuctionHelper:BuildAggregate()
 	local aggregate = {
 		updatedAt = time(),
 		characterKeys = {},
@@ -1304,7 +1304,7 @@ function ProfessionExporter:BuildAggregate()
 end
 
 --- Lightweight character record fields for partial exports (no professions / inventory blobs).
-function ProfessionExporter:GetCharacterExportHeader(characterData)
+function AuctionHelper:GetCharacterExportHeader(characterData)
 	if not characterData then
 		return nil
 	end
@@ -1320,7 +1320,7 @@ function ProfessionExporter:GetCharacterExportHeader(characterData)
 end
 
 --- Shallow export slice; does not mutate stored profession rows. "recipes" omits specializationTree and recipeIDs.
-function ProfessionExporter:ProfessionExportSliceProfession(prof, slice)
+function AuctionHelper:ProfessionExportSliceProfession(prof, slice)
 	if not prof or type(prof) ~= "table" then
 		return nil
 	end
@@ -1357,7 +1357,7 @@ function ProfessionExporter:ProfessionExportSliceProfession(prof, slice)
 	return nil
 end
 
-function ProfessionExporter:MapProfessionsExportSlice(professionsMap, slice)
+function AuctionHelper:MapProfessionsExportSlice(professionsMap, slice)
 	local out = {}
 	for sid, prof in pairs(professionsMap or {}) do
 		out[sid] = self:ProfessionExportSliceProfession(prof, slice)
@@ -1365,7 +1365,7 @@ function ProfessionExporter:MapProfessionsExportSlice(professionsMap, slice)
 	return out
 end
 
-function ProfessionExporter:GetCompactCharacterHeader(characterData)
+function AuctionHelper:GetCompactCharacterHeader(characterData)
 	local meta = characterData and characterData.meta or nil
 	return {
 		k = meta and meta.key or nil,
@@ -1381,7 +1381,7 @@ function ProfessionExporter:GetCompactCharacterHeader(characterData)
 	}
 end
 
-function ProfessionExporter:BuildCompactInventorySnapshot(snapshot)
+function AuctionHelper:BuildCompactInventorySnapshot(snapshot)
 	if type(snapshot) ~= "table" then
 		return nil
 	end
@@ -1408,7 +1408,7 @@ function ProfessionExporter:BuildCompactInventorySnapshot(snapshot)
 	}
 end
 
-function ProfessionExporter:BuildCompactRecipeRecord(recipeID, recipeData)
+function AuctionHelper:BuildCompactRecipeRecord(recipeID, recipeData)
 	local info = self:RecipeDataInfo(recipeData) or {}
 	local exportID = self:GetRecipeExportID(recipeData) or tonumber(recipeID) or recipeID
 	local outputs = recipeData and recipeData.outputs or nil
@@ -1448,7 +1448,7 @@ function ProfessionExporter:BuildCompactRecipeRecord(recipeID, recipeData)
 	}
 end
 
-function ProfessionExporter:BuildCompactProfessionRecord(professionData)
+function AuctionHelper:BuildCompactProfessionRecord(professionData)
 	if type(professionData) ~= "table" then
 		return nil
 	end
@@ -1468,7 +1468,7 @@ function ProfessionExporter:BuildCompactProfessionRecord(professionData)
 	}
 end
 
-function ProfessionExporter:BuildCompactProfessionsExport(characterData)
+function AuctionHelper:BuildCompactProfessionsExport(characterData)
 	local professions = {}
 	for _, professionData in pairs(characterData and characterData.professions or {}) do
 		local row = self:BuildCompactProfessionRecord(professionData)
@@ -1482,7 +1482,7 @@ function ProfessionExporter:BuildCompactProfessionsExport(characterData)
 	return professions
 end
 
-function ProfessionExporter:BuildCompactAuctionSnapshotExport()
+function AuctionHelper:BuildCompactAuctionSnapshotExport()
 	if not self.InitAuctionDB then
 		return nil, "Auction data module is not loaded."
 	end
@@ -1505,7 +1505,7 @@ function ProfessionExporter:BuildCompactAuctionSnapshotExport()
 	return out
 end
 
-function ProfessionExporter:BuildCompactAuctionHistoryExport()
+function AuctionHelper:BuildCompactAuctionHistoryExport()
 	if not self.InitAuctionDB then
 		return nil, "Auction data module is not loaded."
 	end
@@ -1532,7 +1532,7 @@ function ProfessionExporter:BuildCompactAuctionHistoryExport()
 	return rows
 end
 
-function ProfessionExporter:BuildCompactCraftingCostsExport()
+function AuctionHelper:BuildCompactCraftingCostsExport()
 	if not self.BuildCraftOpportunityRows then
 		return nil, "Professions data module is not loaded."
 	end
@@ -1711,7 +1711,7 @@ local function exportCharacter(self, ctx)
 	return { meta = characterMeta(self, ctx, "character"), character = ctx.data }
 end
 
-function ProfessionExporter:GetExportData(scope, identifier)
+function AuctionHelper:GetExportData(scope, identifier)
 	self:InitDB()
 	local characterKey = self:GetCharacterKey()
 	scope = scope or "character"
@@ -1727,7 +1727,7 @@ function ProfessionExporter:GetExportData(scope, identifier)
 	return build(self, { scope = scope, characterKey = characterKey, data = characterData, identifier = identifier })
 end
 
-function ProfessionExporter:BuildPlainLuaExportPayload(exportData)
+function AuctionHelper:BuildPlainLuaExportPayload(exportData)
 	local logic = self.ForeverLogic
 	if logic and logic.BuildPlainLuaExportPayload then
 		return logic.BuildPlainLuaExportPayload(exportData)
@@ -1735,7 +1735,7 @@ function ProfessionExporter:BuildPlainLuaExportPayload(exportData)
 	return nil, "ForeverLogic unavailable"
 end
 
-function ProfessionExporter:BuildCompactExportPayload(exportData)
+function AuctionHelper:BuildCompactExportPayload(exportData)
 	if type(exportData) ~= "table" then
 		return nil, "invalid export data"
 	end
@@ -1772,7 +1772,7 @@ function ProfessionExporter:BuildCompactExportPayload(exportData)
 end
 
 --- Persist compressed export package for pickup after /reload.
-function ProfessionExporter:SaveExportToSavedVariables(payload, meta)
+function AuctionHelper:SaveExportToSavedVariables(payload, meta)
 	if type(payload) ~= "string" or payload == "" then
 		return false
 	end
@@ -1801,7 +1801,7 @@ function ProfessionExporter:SaveExportToSavedVariables(payload, meta)
 	return true
 end
 
-function ProfessionExporter:CopyBoxBuildFooterText(opts)
+function AuctionHelper:CopyBoxBuildFooterText(opts)
 	opts = opts or {}
 	if opts.unsavedHint and opts.unsavedHint ~= "" then
 		return opts.unsavedHint
@@ -1812,14 +1812,14 @@ function ProfessionExporter:CopyBoxBuildFooterText(opts)
 	return ""
 end
 
-function ProfessionExporter:BuildCopyBoxPagedWrapperJson(pageIndex, pageCount, payloadFragment)
+function AuctionHelper:BuildCopyBoxPagedWrapperJson(pageIndex, pageCount, payloadFragment)
 	return string.format("AHPAGE:%d/%d\n%s", pageIndex, pageCount, payloadFragment)
 end
 
 --- Build segment list: each { startPos, length } into fullJson; each wrapped page <= maxWrappedBytes.
 --- Uses byte-length estimates in the binary search (no JsonEscape per probe), verifies with one Build per page.
 --- Must run inside a coroutine; yields to spread work across frames.
-function ProfessionExporter:ComputeCopyBoxPagingSegmentsYielding(fullJson, maxWrappedBytes)
+function AuctionHelper:ComputeCopyBoxPagingSegmentsYielding(fullJson, maxWrappedBytes)
 	local placeholder = self.COPYBOX_PAGING_PLACEHOLDER_PAGE_COUNT or 9999999
 	local yieldInnerEvery = self.COPYBOX_PAGING_YIELD_INNER_STEPS or 32
 	local segments = {}
@@ -1873,7 +1873,7 @@ function ProfessionExporter:ComputeCopyBoxPagingSegmentsYielding(fullJson, maxWr
 end
 
 --- Runs ComputeCopyBoxPagingSegmentsYielding via C_Timer (same pattern as RunEncodeJsonAsync).
-function ProfessionExporter:RunComputeCopyBoxPagingAsync(fullJson, maxWrappedBytes, onComplete)
+function AuctionHelper:RunComputeCopyBoxPagingAsync(fullJson, maxWrappedBytes, onComplete)
 	if type(onComplete) ~= "function" then
 		return
 	end
@@ -1916,12 +1916,12 @@ function ProfessionExporter:RunComputeCopyBoxPagingAsync(fullJson, maxWrappedByt
 	end
 end
 
-function ProfessionExporter:EncodeCopyBoxWrappedPage(fullJson, seg, pageIndex, totalPages)
+function AuctionHelper:EncodeCopyBoxWrappedPage(fullJson, seg, pageIndex, totalPages)
 	local frag = string.sub(fullJson, seg[1], seg[1] + seg[2] - 1)
 	return self:BuildCopyBoxPagedWrapperJson(pageIndex, totalPages, frag)
 end
 
-function ProfessionExporter:LayoutCopyFrameScroll(copyFrame, useEnvelopePaging)
+function AuctionHelper:LayoutCopyFrameScroll(copyFrame, useEnvelopePaging)
 	if not copyFrame or not copyFrame.pageHintStr then
 		return
 	end
@@ -1936,7 +1936,7 @@ function ProfessionExporter:LayoutCopyFrameScroll(copyFrame, useEnvelopePaging)
 		useEnvelopePaging and pages > 1 and string.format(" · %d pages", pages) or ""))
 end
 
-function ProfessionExporter:CopyBoxApplyCurrentPage()
+function AuctionHelper:CopyBoxApplyCurrentPage()
 	local state = self:GetState()
 	local cf = state.copyFrame
 	if not cf or not cf._fullJson then
@@ -1989,7 +1989,7 @@ function ProfessionExporter:CopyBoxApplyCurrentPage()
 	cf.editBox:SetFocus()
 end
 
-function ProfessionExporter:CopyBoxGoPage(delta)
+function AuctionHelper:CopyBoxGoPage(delta)
 	local state = self:GetState()
 	local cf = state.copyFrame
 	if not cf or cf._pagingMode ~= "envelope" or not cf._segments or cf._numPages <= 1 then
@@ -2001,7 +2001,7 @@ end
 
 local function themedText(parent, font, colorKey, justify)
 	local text = parent:CreateFontString(nil, "OVERLAY", font)
-	local color = ProfessionExporter:GetTheme()[colorKey or "textPrimary"]
+	local color = AuctionHelper:GetTheme()[colorKey or "textPrimary"]
 	text:SetTextColor(color.r, color.g, color.b)
 	text:SetJustifyH(justify or "LEFT")
 	text:SetWordWrap(false)
@@ -2011,10 +2011,10 @@ end
 local function themedButton(parent, label, onClick, primary)
 	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
 	button:SetText(label)
-	ProfessionExporter:SkinButton(button)
-	button:SetSize(math.ceil(button:GetFontString():GetStringWidth()) + 24, ProfessionExporter:GetTheme().size.control)
+	AuctionHelper:SkinButton(button)
+	button:SetSize(math.ceil(button:GetFontString():GetStringWidth()) + 24, AuctionHelper:GetTheme().size.control)
 	if primary then
-		ProfessionExporter:SetButtonPrimary(button, true)
+		AuctionHelper:SetButtonPrimary(button, true)
 	end
 	button:SetScript("OnClick", onClick)
 	return button
@@ -2022,7 +2022,7 @@ end
 
 -- The export window: header, one-line instructions, the selectable package text, page controls and
 -- a footer saying where else the package was saved. Uses only core theme helpers.
-function ProfessionExporter:CreateCopyFrame()
+function AuctionHelper:CreateCopyFrame()
 	local theme = self:GetTheme()
 	local pad = theme.spacing.md
 	local f = CreateFrame("Frame", addonName .. "CopyFrame", UIParent, "BackdropTemplate")
@@ -2091,12 +2091,12 @@ function ProfessionExporter:CreateCopyFrame()
 	f.pageBar:SetPoint("TOPLEFT")
 	f.pageBar:SetPoint("BOTTOMLEFT")
 	f.pageBar:SetWidth(260)
-	f.btnPrev = themedButton(f.pageBar, "Previous", function() ProfessionExporter:CopyBoxGoPage(-1) end)
+	f.btnPrev = themedButton(f.pageBar, "Previous", function() AuctionHelper:CopyBoxGoPage(-1) end)
 	f.btnPrev:SetPoint("LEFT")
 	f.pageLabel = themedText(f.pageBar, "GameFontHighlightSmall", "textMuted", "CENTER")
 	f.pageLabel:SetPoint("LEFT", f.btnPrev, "RIGHT", 8, 0)
 	f.pageLabel:SetWidth(76)
-	f.btnNext = themedButton(f.pageBar, "Next", function() ProfessionExporter:CopyBoxGoPage(1) end)
+	f.btnNext = themedButton(f.pageBar, "Next", function() AuctionHelper:CopyBoxGoPage(1) end)
 	f.btnNext:SetPoint("LEFT", f.pageLabel, "RIGHT", 8, 0)
 
 	-- The package text sits in a raised, clipped box; the edit box follows the scroll width.
@@ -2128,7 +2128,7 @@ function ProfessionExporter:CreateCopyFrame()
 end
 
 --- opts: fullByteLength, savedToVariables, unsavedHint
-function ProfessionExporter:ShowCopyBox(text, opts)
+function AuctionHelper:ShowCopyBox(text, opts)
 	opts = opts or {}
 	local state = self:GetState()
 	local copyFrame = state.copyFrame
@@ -2182,7 +2182,7 @@ function ProfessionExporter:ShowCopyBox(text, opts)
 	end
 
 	copyFrame:Show()
-	ProfessionExporter:SkinTree(copyFrame)
+	AuctionHelper:SkinTree(copyFrame)
 	self:CopyBoxApplyCurrentPage()
 
 	if useEnvelope then
@@ -2232,7 +2232,7 @@ function ProfessionExporter:ShowCopyBox(text, opts)
 	end
 end
 
-function ProfessionExporter:Export(scope, identifier)
+function AuctionHelper:Export(scope, identifier)
 	local st = self:GetState()
 	if st.exportJsonBusy then
 		self:PrintMessage("Export already in progress.")
@@ -2329,7 +2329,7 @@ function ProfessionExporter:Export(scope, identifier)
 	end
 end
 
-function ProfessionExporter:PrintStatus()
+function AuctionHelper:PrintStatus()
 	self:InitDB()
 	local characterKey = self:GetCharacterKey()
 	local characterData = self.db.characters[characterKey]
@@ -2352,7 +2352,7 @@ function ProfessionExporter:PrintStatus()
 		self:TableCount(characterData.professions)))
 end
 
-function ProfessionExporter:HandleSettingsSlash(rest)
+function AuctionHelper:HandleSettingsSlash(rest)
 	self:InitDB()
 	local sub, arg = rest:match("^(%S+)%s*(.*)$")
 	sub = string.lower(sub or "")
@@ -2397,7 +2397,7 @@ function ProfessionExporter:HandleSettingsSlash(rest)
 	self:PrintMessage("Usage: /auctionhelper settings spectree on|off | recipeoutput on|off | invbatch <n>")
 end
 
-function ProfessionExporter:HandleAuctionSlash(rest)
+function AuctionHelper:HandleAuctionSlash(rest)
 	rest = self:Trim(rest or "")
 	local sub, arg = rest:match("^(%S+)%s*(.*)$")
 	sub = string.lower(sub or "")
@@ -2435,7 +2435,7 @@ end
 
 --- The dump runs asynchronously and prints its own "complete" line when it ends. When it refuses
 --- to start, StartAuctionDump prints why; an empty dump finishes at once and is not "started".
-function ProfessionExporter:RunAuctionDumpSlash(mode)
+function AuctionHelper:RunAuctionDumpSlash(mode)
 	mode = mode ~= "" and mode or "visible"
 	local dump = self:StartAuctionDump(mode) and self:GetState().auctionDump
 	if dump and dump.running == true then
@@ -2573,7 +2573,7 @@ local SLASH_COMMANDS = {
 	export = handleExportSlash,
 }
 
-function ProfessionExporter:HandleSlash(input)
+function AuctionHelper:HandleSlash(input)
 	input = self:Trim(input)
 	local command, rest = input:match("^(%S+)%s*(.-)$")
 	command = string.lower(command or "")

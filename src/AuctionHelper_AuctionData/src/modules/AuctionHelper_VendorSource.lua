@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Reagents that are cheaper at a vendor than at the auction house. Every merchant the player opens
 -- is remembered (items in endless supply, their price, the vendor's name and position), so the cart
@@ -7,7 +7,7 @@ local _, ProfessionExporter = ...
 -- a position, without a price.
 -- This only reads the merchant window; buying happens on the player's own click.
 
-local VendorLogic = ProfessionExporter.VendorLogic
+local VendorLogic = AuctionHelper.VendorLogic
 
 -- { [itemID] = { [npcName] = { price, zone, mapID, x, y, seenAt } } }, account-wide.
 local function sellerStore()
@@ -40,7 +40,7 @@ local function merchantItem(index)
 end
 
 --- Everything the open merchant sells: `{ { index, itemID, price, stack, available, extendedCost } }`.
-function ProfessionExporter:GetMerchantItems()
+function AuctionHelper:GetMerchantItems()
 	local items = {}
 	for index = 1, GetMerchantNumItems and GetMerchantNumItems() or 0 do
 		items[#items + 1] = merchantItem(index)
@@ -106,13 +106,13 @@ local function directorySellers(itemID)
 end
 
 --- What is known about buying `itemID` from a vendor (see VendorLogic.Lookup), or nil.
-function ProfessionExporter:GetVendorSource(itemID)
+function AuctionHelper:GetVendorSource(itemID)
 	itemID = tonumber(itemID)
 	return itemID and VendorLogic.Lookup(itemID, sellerStore()[itemID], directorySellers(itemID)) or nil
 end
 
 --- Vendor advice for a cart row: `{ price, exact, cheaper }` and the vendor source, or nil.
-function ProfessionExporter:GetCartVendorAdvice(row)
+function AuctionHelper:GetCartVendorAdvice(row)
 	local info = row and self:GetVendorSource(row.itemID)
 	if not info then
 		return nil
@@ -142,7 +142,7 @@ end
 
 --- Short vendor note for a shopping row (`{ itemID, estimatedUnitPrice }`), orange when the vendor
 --- is the cheaper place to buy; nil when no vendor sells the item.
-function ProfessionExporter:GetVendorNote(row)
+function AuctionHelper:GetVendorNote(row)
 	local advice = self:GetCartVendorAdvice(row)
 	if not advice then
 		return nil
@@ -154,7 +154,7 @@ function ProfessionExporter:GetVendorNote(row)
 end
 
 --- Second line of a cart row: the vendor note, what the reagent is for and who it is mailed to.
-function ProfessionExporter:AuctionCartRowDetail(row)
+function AuctionHelper:AuctionCartRowDetail(row)
 	local parts = { self:GetVendorNote(row) }
 	if row and hasText(row.sourceText) then
 		parts[#parts + 1] = "For " .. row.sourceText
@@ -167,7 +167,7 @@ end
 
 --- Adds the vendor price and seller to a cart row's tooltip lines. Returns `hint` with the vendor
 --- click added to it.
-function ProfessionExporter:AppendCartVendorLines(lines, row, hint)
+function AuctionHelper:AppendCartVendorLines(lines, row, hint)
 	local advice, info = self:GetCartVendorAdvice(row)
 	if not advice then
 		return hint
@@ -182,7 +182,7 @@ function ProfessionExporter:AppendCartVendorLines(lines, row, hint)
 end
 
 --- "2 items are cheaper at a vendor. " for the rows still to buy, or "".
-function ProfessionExporter:CartVendorHint(rows)
+function AuctionHelper:CartVendorHint(rows)
 	local count = 0
 	for _, row in ipairs(rows or {}) do
 		local advice = self:GetCartVendorAdvice(row)
@@ -251,7 +251,7 @@ local function nearestSeller(info)
 end
 
 --- Points the way to the nearest known vendor that sells `itemID`, and says where it is in chat.
-function ProfessionExporter:ShowVendorWaypoint(itemID)
+function AuctionHelper:ShowVendorWaypoint(itemID)
 	local info = self:GetVendorSource(itemID)
 	local name = self:GetItemDisplayName(itemID)
 	local seller = info and nearestSeller(info)
@@ -294,7 +294,7 @@ end
 --- Queue materials the open merchant sells: `{ { index, itemID, name, need, stock, price, stack, maxStack } }`,
 --- by name. `price` is for one unit; `stock` is what a vendor with limited supply has left (nil when
 --- endless), and `need` never exceeds it.
-function ProfessionExporter:GetMerchantCartOffers()
+function AuctionHelper:GetMerchantCartOffers()
 	local needs = queueNeeds(self)
 	local items = self:GetMerchantItems()
 	local sold = VendorLogic.SellerEntries(items)
@@ -311,7 +311,7 @@ function ProfessionExporter:GetMerchantCartOffers()
 end
 
 --- Buys `amount` of merchant item `offer` (see GetMerchantCartOffers). Returns the units bought.
-function ProfessionExporter:BuyMerchantCartOffer(offer, amount)
+function AuctionHelper:BuyMerchantCartOffer(offer, amount)
 	local purchases, total = VendorLogic.BuyPlan(amount, offer.stack, offer.maxStack)
 	for _, units in ipairs(purchases) do
 		if offer.stack > 1 then
@@ -325,8 +325,8 @@ end
 
 local frame = CreateFrame("Frame")
 frame:SetScript("OnEvent", function()
-	if ProfessionExporter.db then
-		rememberMerchant(ProfessionExporter)
+	if AuctionHelper.db then
+		rememberMerchant(AuctionHelper)
 	end
 end)
 pcall(frame.RegisterEvent, frame, "MERCHANT_SHOW")

@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
 -- Vendor buy window: opens beside the merchant window when this vendor sells reagents the cart still
 -- needs. Each row has the amount to buy (the missing amount by default) and a Buy button; nothing is
@@ -118,7 +118,7 @@ local function fillRow(pe, row, offer)
 end
 
 --- Updates the "Total" line from the amounts in the rows.
-function ProfessionExporter:RefreshVendorBuyTotal()
+function AuctionHelper:RefreshVendorBuyTotal()
 	local f = self.ui and self.ui.vendorBuyWindow
 	if not f then
 		return
@@ -136,7 +136,7 @@ end
 local merchantOpen = false
 
 --- Shows the queue materials this merchant sells, or hides the window when there are none.
-function ProfessionExporter:RefreshVendorBuyWindow()
+function AuctionHelper:RefreshVendorBuyWindow()
 	local offers = merchantOpen and self.GetMerchantCartOffers and self:GetMerchantCartOffers() or {}
 	if #offers == 0 then
 		if self.ui.vendorBuyWindow then
@@ -163,7 +163,7 @@ end
 -- The refresh waits a frame: the merchant window and its item list are ready only after the event.
 local frame = CreateFrame("Frame")
 frame:SetScript("OnEvent", function(_, event)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	if event ~= "BAG_UPDATE_DELAYED" then
 		merchantOpen = event ~= "MERCHANT_CLOSED"
 	end

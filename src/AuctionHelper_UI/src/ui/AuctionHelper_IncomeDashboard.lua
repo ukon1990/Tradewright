@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Income (Overview → Income, E10 F82): where gold comes from and where it goes. Headline numbers,
 -- gold in and out per day, one row per source, and the item types that earn at the auction house.
@@ -29,7 +29,7 @@ local function textColumn(id, label)
 end
 
 local function showTooltip(owner, title, lines)
-	local muted = ProfessionExporter:GetTheme().textMuted
+	local muted = AuctionHelper:GetTheme().textMuted
 	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
 	GameTooltip:AddLine(title, 1, 1, 1)
 	for _, line in ipairs(lines) do
@@ -265,7 +265,7 @@ local function refresh(pe, dash)
 	layout(pe, dash)
 end
 
-function ProfessionExporter:CreateIncomeDashboard(parent)
+function AuctionHelper:CreateIncomeDashboard(parent)
 	local pe = self
 	local dash = CreateFrame("Frame", nil, parent)
 	dash:SetAllPoints()

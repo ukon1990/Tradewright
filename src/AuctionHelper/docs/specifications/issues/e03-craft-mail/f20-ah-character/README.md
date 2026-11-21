@@ -15,7 +15,7 @@ Let the player say which character is the auction house / bank character on each
 - Setting `mail.sellerByRealm[realm] = characterKey`; unset means "no auction house character"
 - Settings tab: "Auction house / bank character" select listing the known characters on the current realm, plus "None"
 - `ForeverLogic.ResolveSellerCharacter(sellerByRealm, realm, knownCharacters)`: returns the chosen key, or nil when unset or when the character is no longer known
-- `ProfessionExporter:GetSellerCharacterKey()` and `IsSellerCharacter()` for the current realm
+- `AuctionHelper:GetSellerCharacterKey()` and `IsSellerCharacter()` for the current realm
 - The mailbox panel shows the role of the current character in its header (seller or crafter)
 
 ## Acceptance criteria

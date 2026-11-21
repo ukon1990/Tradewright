@@ -1,8 +1,8 @@
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
 -- Mail panel: retail always; Forever when send-mail + bag APIs exist.
-if not ProfessionExporter.IS_RETAIL then
-	if not (ProfessionExporter.IS_FOREVER and C_Container and C_Container.GetContainerNumSlots and GetSendMailItem and ClickSendMailItemButton) then
+if not AuctionHelper.IS_RETAIL then
+	if not (AuctionHelper.IS_FOREVER and C_Container and C_Container.GetContainerNumSlots and GetSendMailItem and ClickSendMailItemButton) then
 		return
 	end
 end
@@ -13,7 +13,7 @@ local AUTO_SEND_TIMEOUT = 6
 local MAIL_SUBJECTS = { materials = "AuctionHelper mats", crafts = "AuctionHelper crafts", surplus = "AuctionHelper surplus" }
 local MAIL_BODY = "Sent with AuctionHelper."
 
-function ProfessionExporter:GetMailCharacterLabel(characterKey)
+function AuctionHelper:GetMailCharacterLabel(characterKey)
 	if self.GetDashboardSidebarCharacterLabel then
 		return self:GetDashboardSidebarCharacterLabel(characterKey, self.db and self.db.characters and self.db.characters[characterKey],
 			self:GetCharacterKey())
@@ -48,7 +48,7 @@ local function setMailField(box, text)
 end
 
 local function findBagSlotForItem(itemID)
-	for bag = 0, ProfessionExporter:GetLastBagIndex() do
+	for bag = 0, AuctionHelper:GetLastBagIndex() do
 		local slots = C_Container.GetContainerNumSlots(bag)
 		for slot = 1, slots do
 			local info = C_Container.GetContainerItemInfo(bag, slot)
@@ -92,7 +92,7 @@ local function itemStackSize(itemID)
 	return tonumber(size)
 end
 
-function ProfessionExporter:GetItemStackSize(itemID)
+function AuctionHelper:GetItemStackSize(itemID)
 	return itemStackSize(itemID)
 end
 
@@ -135,7 +135,7 @@ local function buildMailParcels(destinations)
 end
 
 --- How many mails the destinations take (12 attachments each, stacks split at their size).
-function ProfessionExporter:CountMailParcels(destinations)
+function AuctionHelper:CountMailParcels(destinations)
 	return #buildMailParcels(destinations)
 end
 
@@ -144,8 +144,8 @@ local function watchAutoSend(st)
 	local index = st.index
 	C_Timer.After(AUTO_SEND_TIMEOUT, function()
 		if st.running and st.auto and st.index == index then
-			ProfessionExporter:CancelMailSendQueue()
-			ProfessionExporter:PrintMessage("Could not mail the materials automatically. Use Prepare all in the mail panel.")
+			AuctionHelper:CancelMailSendQueue()
+			AuctionHelper:PrintMessage("Could not mail the materials automatically. Use Prepare all in the mail panel.")
 		end
 	end)
 end
@@ -169,7 +169,7 @@ local function fillParcel(pe, parcel, st)
 	end
 end
 
-function ProfessionExporter:EnsureMailSendQueueState()
+function AuctionHelper:EnsureMailSendQueueState()
 	self._mailSendQueue = self._mailSendQueue or {
 		parcels = {},
 		index = 0,
@@ -182,7 +182,7 @@ function ProfessionExporter:EnsureMailSendQueueState()
 end
 
 --- Stops the queue at once. A send the client never answers would otherwise leave it running.
-function ProfessionExporter:CancelMailSendQueue()
+function AuctionHelper:CancelMailSendQueue()
 	local st = self:EnsureMailSendQueueState()
 	st.cancel = true
 	st.running = false
@@ -197,7 +197,7 @@ function ProfessionExporter:CancelMailSendQueue()
 	end
 end
 
-function ProfessionExporter:AdvanceMailSendQueue(success)
+function AuctionHelper:AdvanceMailSendQueue(success)
 	local st = self:EnsureMailSendQueueState()
 	if not st.running then
 		return
@@ -227,11 +227,11 @@ function ProfessionExporter:AdvanceMailSendQueue(success)
 		return
 	end
 	C_Timer.After(0.35, function()
-		ProfessionExporter:ProcessNextMailParcel()
+		AuctionHelper:ProcessNextMailParcel()
 	end)
 end
 
-function ProfessionExporter:ProcessNextMailParcel()
+function AuctionHelper:ProcessNextMailParcel()
 	local st = self:EnsureMailSendQueueState()
 	if st.cancel or not st.running then
 		st.running = false
@@ -257,7 +257,7 @@ function ProfessionExporter:ProcessNextMailParcel()
 	fillParcel(self, parcel, st)
 end
 
-function ProfessionExporter:StartMailSendQueue(destinations, auto)
+function AuctionHelper:StartMailSendQueue(destinations, auto)
 	local parcels = buildMailParcels(destinations)
 	if #parcels == 0 then
 		if not auto then
@@ -279,7 +279,7 @@ end
 
 --- On the auction house / bank character, mails every crafter whose materials are all in the bags.
 --- Runs once per mailbox visit; incomplete sets wait for the Send buttons.
-function ProfessionExporter:AutoSendReadyMaterials()
+function AuctionHelper:AutoSendReadyMaterials()
 	if not (self.IsSellerCharacter and self:IsSellerCharacter()) or self:GetSetting("mail.autoSendMaterials", true) == false
 		or self:EnsureMailSendQueueState().running then
 		return
@@ -307,7 +307,7 @@ local function readyDestinations(plan)
 	return ready
 end
 
-function ProfessionExporter:StartMailSendAll()
+function AuctionHelper:StartMailSendAll()
 	return self:StartMailSendQueue(readyDestinations(self:BuildMailPanelPlan()))
 end
 
@@ -462,7 +462,7 @@ local function refreshProgress(panel, st)
 	return true
 end
 
-function ProfessionExporter:EnsureMailPanel()
+function AuctionHelper:EnsureMailPanel()
 	self.ui = self.ui or {}
 	if self.ui.mailPanel and self.ui.mailPanel:IsObjectType("Frame") then
 		return self.ui.mailPanel
@@ -583,7 +583,7 @@ function ProfessionExporter:EnsureMailPanel()
 	return panel
 end
 
-function ProfessionExporter:RefreshMailPanel()
+function AuctionHelper:RefreshMailPanel()
 	local panel = self:EnsureMailPanel()
 	if not panel then
 		return
@@ -622,7 +622,7 @@ function ProfessionExporter:RefreshMailPanel()
 	self:RefreshMailReviewPanel(plan)
 end
 
-function ProfessionExporter:OnMailFrameShow()
+function AuctionHelper:OnMailFrameShow()
 	if self.EnsureMailPanel then
 		self:EnsureMailPanel()
 	end
@@ -631,12 +631,12 @@ function ProfessionExporter:OnMailFrameShow()
 	end
 	C_Timer.After(AUTO_SEND_DELAY, function()
 		if MailFrame:IsShown() then
-			ProfessionExporter:AutoSendReadyMaterials()
+			AuctionHelper:AutoSendReadyMaterials()
 		end
 	end)
 end
 
-function ProfessionExporter:OnMailFrameHide()
+function AuctionHelper:OnMailFrameHide()
 	local panel = self.ui and self.ui.mailPanel
 	if panel then
 		panel:Hide()
@@ -656,39 +656,39 @@ end
 
 --- A send went through. While mails are prepared, a mail the player sent to someone else is not
 --- the prepared parcel: that parcel is filled in again instead of counted as sent.
-function ProfessionExporter:OnMailSendSuccess()
+function AuctionHelper:OnMailSendSuccess()
 	local st = self:EnsureMailSendQueueState()
 	local parcel = st.running and st.parcels and st.parcels[st.index]
 	if parcel and not st.auto and nameOnly(self._lastMailTo):lower() ~= nameOnly(parcel.mailName):lower() then
-		C_Timer.After(0.35, function() ProfessionExporter:ProcessNextMailParcel() end)
+		C_Timer.After(0.35, function() AuctionHelper:ProcessNextMailParcel() end)
 		return
 	end
 	self:AdvanceMailSendQueue(true)
 end
 
 --- A failed automatic send moves on; a prepared mail stays as it is for the player to fix or cancel.
-function ProfessionExporter:OnMailSendFailed()
+function AuctionHelper:OnMailSendFailed()
 	self:PrintMessage("Mail send failed.")
 	if self:EnsureMailSendQueueState().auto then
 		self:AdvanceMailSendQueue(false)
 	end
 end
 
-function ProfessionExporter:InitMailPanelHooks()
+function AuctionHelper:InitMailPanelHooks()
 	if self._mailPanelHooks then
 		return
 	end
 	self._mailPanelHooks = true
 	hooksecurefunc("SendMail", function(recipient)
-		ProfessionExporter._lastMailTo = recipient
+		AuctionHelper._lastMailTo = recipient
 	end)
 	local mail = _G.MailFrame
 	if mail and mail.HookScript then
 		mail:HookScript("OnShow", function()
-			ProfessionExporter:OnMailFrameShow()
+			AuctionHelper:OnMailFrameShow()
 		end)
 		mail:HookScript("OnHide", function()
-			ProfessionExporter:OnMailFrameHide()
+			AuctionHelper:OnMailFrameHide()
 		end)
 	end
 end

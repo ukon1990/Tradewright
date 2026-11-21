@@ -1,11 +1,11 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Item log: a short list of what entered and left the logged-in character's bags, and why, kept
 -- per character in the inventory database (AuctionHelperInventoryDB.itemLog[characterKey]). It
 -- only watches: each time the bags change, the saved counts before and after are compared and the
 -- difference is labelled by what was open or had just happened. The bags module shows it.
 
-local IncomeLogic = ProfessionExporter.IncomeLogic
+local IncomeLogic = AuctionHelper.IncomeLogic
 local RECENT_SECONDS = 2
 local QUIET_SECONDS = 5
 local MAX_ROWS = 500
@@ -58,7 +58,7 @@ local function context(pe)
 end
 
 --- The logged-in character's log, oldest entry first.
-function ProfessionExporter:GetItemLog(characterKey)
+function AuctionHelper:GetItemLog(characterKey)
 	if not self.inventoryDb then
 		self:InitDB()
 	end
@@ -69,7 +69,7 @@ function ProfessionExporter:GetItemLog(characterKey)
 	return logs[characterKey]
 end
 
-function ProfessionExporter:GetItemLogLimits()
+function AuctionHelper:GetItemLogLimits()
 	return { rows = MAX_ROWS, days = tonumber(self:GetSetting("bags.logDays", 14)) or 14 }
 end
 
@@ -88,7 +88,7 @@ end
 
 -- Runs a frame after the bags changed, once the holdings have been saved.
 local function look()
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	pending = false
 	local warband = pe:GetWarbandHoldings()
 	local now = { bags = pe:GetOwnItemHoldings().bags or {}, warband = warband and warband.bank or {} }
@@ -128,7 +128,7 @@ local function onEvent(_, event, ...)
 		onChatLoot(...)
 	elseif event == "PLAYER_ENTERING_WORLD" then
 		quietUntil = GetTime() + QUIET_SECONDS
-		ProfessionExporter.ItemLogLogic.Trim(ProfessionExporter:GetItemLog(), time(), ProfessionExporter:GetItemLogLimits())
+		AuctionHelper.ItemLogLogic.Trim(AuctionHelper:GetItemLog(), time(), AuctionHelper:GetItemLogLimits())
 		requestLook()
 	else
 		requestLook()

@@ -1,7 +1,7 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 --- Plain-text sections for the in-game Documentation tab (see docs/EXPORT_PACKAGE_FORMAT.md for the package decode reference).
-ProfessionExporter.DOCUMENTATION_SECTIONS = {
+AuctionHelper.DOCUMENTATION_SECTIONS = {
 	{
 		id = "overview",
 		title = "Overview",
@@ -191,6 +191,6 @@ HOW SURE A ROW IS
 	},
 }
 
-function ProfessionExporter:GetDocumentationSections()
+function AuctionHelper:GetDocumentationSections()
 	return self.DOCUMENTATION_SECTIONS
 end

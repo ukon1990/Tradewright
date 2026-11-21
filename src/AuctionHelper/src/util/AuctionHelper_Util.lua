@@ -1,13 +1,13 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
-function ProfessionExporter:Trim(text)
+function AuctionHelper:Trim(text)
 	if not text then
 		return ""
 	end
 	return (text:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
-function ProfessionExporter:SafeCall(func, ...)
+function AuctionHelper:SafeCall(func, ...)
 	if type(func) ~= "function" then
 		return nil
 	end
@@ -18,7 +18,7 @@ function ProfessionExporter:SafeCall(func, ...)
 	return nil
 end
 
-function ProfessionExporter:ShallowArrayCopy(source)
+function AuctionHelper:ShallowArrayCopy(source)
 	local result = {}
 	if type(source) ~= "table" then
 		return result
@@ -29,7 +29,7 @@ function ProfessionExporter:ShallowArrayCopy(source)
 	return result
 end
 
-function ProfessionExporter:NormalizeApiList(...)
+function AuctionHelper:NormalizeApiList(...)
 	local valueCount = select("#", ...)
 	if valueCount == 0 then
 		return {}
@@ -53,7 +53,7 @@ function ProfessionExporter:NormalizeApiList(...)
 	return result
 end
 
-function ProfessionExporter:TableCount(tbl)
+function AuctionHelper:TableCount(tbl)
 	local count = 0
 	if type(tbl) ~= "table" then
 		return count
@@ -64,7 +64,7 @@ function ProfessionExporter:TableCount(tbl)
 	return count
 end
 
-function ProfessionExporter:SortByNameThenId(left, right)
+function AuctionHelper:SortByNameThenId(left, right)
 	local leftName = tostring(left.professionName or left.name or "")
 	local rightName = tostring(right.professionName or right.name or "")
 	if leftName == rightName then
@@ -73,7 +73,7 @@ function ProfessionExporter:SortByNameThenId(left, right)
 	return leftName < rightName
 end
 
-function ProfessionExporter:IsArray(tbl)
+function AuctionHelper:IsArray(tbl)
 	if type(tbl) ~= "table" then
 		return false
 	end
@@ -97,7 +97,7 @@ function ProfessionExporter:IsArray(tbl)
 	return true
 end
 
-function ProfessionExporter:JsonEscape(text)
+function AuctionHelper:JsonEscape(text)
 	text = tostring(text)
 	text = text:gsub("\\", "\\\\")
 	text = text:gsub('"', '\\"')
@@ -110,7 +110,7 @@ function ProfessionExporter:JsonEscape(text)
 end
 
 --- Byte length of JsonEscape(s) without building the string (matches :JsonEscape rules).
-function ProfessionExporter:EstimateJsonEscapedByteLength(s)
+function AuctionHelper:EstimateJsonEscapedByteLength(s)
 	if not s or s == "" then
 		return 0
 	end
@@ -126,7 +126,7 @@ function ProfessionExporter:EstimateJsonEscapedByteLength(s)
 end
 
 --- Byte length of BuildCopyBoxPagedWrapperJson(pageIndex, pageCount, payloadFragment).
-function ProfessionExporter:EstimateCopyBoxWrappedPagingByteLength(pageIndex, pageCount, payloadFragment)
+function AuctionHelper:EstimateCopyBoxWrappedPagingByteLength(pageIndex, pageCount, payloadFragment)
 	local head = string.format("AHPAGE:%d/%d\n", pageIndex, pageCount)
 	return #head + #(payloadFragment or "")
 end
@@ -180,13 +180,13 @@ local function encodeJsonCore(self, value, stepFn)
 	return "{" .. table.concat(parts, ",") .. "}"
 end
 
-function ProfessionExporter:EncodeJson(value)
+function AuctionHelper:EncodeJson(value)
 	return encodeJsonCore(self, value, nil)
 end
 
 --- Same output as EncodeJson; must run inside a coroutine. Yields every JSON_ENCODE_YIELD_STEPS stepFn calls to spread work across frames.
 --- progressTbl: optional { steps = 0 }; incremented on every encoding step for UI progress.
-function ProfessionExporter:EncodeJsonYielding(value, progressTbl)
+function AuctionHelper:EncodeJsonYielding(value, progressTbl)
 	local every = self.JSON_ENCODE_YIELD_STEPS or 1000
 	local n = 0
 	progressTbl = progressTbl or { steps = 0 }
@@ -203,7 +203,7 @@ end
 
 --- Runs EncodeJsonYielding across frames via C_Timer (fallback: tight synchronous coroutine loop).
 --- onProgress: optional function(stepCount) called after each yield; also once with final count when encoding completes.
-function ProfessionExporter:RunEncodeJsonAsync(value, onComplete, onProgress)
+function AuctionHelper:RunEncodeJsonAsync(value, onComplete, onProgress)
 	if type(onComplete) ~= "function" then
 		return
 	end
@@ -257,7 +257,7 @@ function ProfessionExporter:RunEncodeJsonAsync(value, onComplete, onProgress)
 	end
 end
 
-function ProfessionExporter:SanitizeValue(value, depth, seen)
+function AuctionHelper:SanitizeValue(value, depth, seen)
 	depth = depth or 0
 	seen = seen or {}
 
@@ -302,7 +302,7 @@ function ProfessionExporter:SanitizeValue(value, depth, seen)
 	return result
 end
 
-function ProfessionExporter:GetBuildMetadata()
+function AuctionHelper:GetBuildMetadata()
 	local version, build, buildDate, interfaceVersion = GetBuildInfo()
 	return {
 		version = version,
@@ -313,14 +313,14 @@ function ProfessionExporter:GetBuildMetadata()
 	}
 end
 
-function ProfessionExporter:GetCharacterKey()
+function AuctionHelper:GetCharacterKey()
 	local name, realm = UnitFullName("player")
 	realm = realm or GetRealmName() or "UnknownRealm"
 	return string.format("%s-%s", tostring(name or "UnknownPlayer"), tostring(realm))
 end
 
 --- Profession crafting tier (1+) embedded in item hyperlink; matches default tooltip quality diamond.
-function ProfessionExporter:ParseProfessionQualityTierFromItemLink(link)
+function AuctionHelper:ParseProfessionQualityTierFromItemLink(link)
 	if type(link) ~= "string" or link == "" then
 		return nil
 	end
@@ -341,7 +341,7 @@ function ProfessionExporter:ParseProfessionQualityTierFromItemLink(link)
 	return tier
 end
 
-function ProfessionExporter:ItemDescriptorFromID(itemID)
+function AuctionHelper:ItemDescriptorFromID(itemID)
 	if not itemID then
 		return nil
 	end
@@ -384,7 +384,7 @@ function ProfessionExporter:ItemDescriptorFromID(itemID)
 	}
 end
 
-function ProfessionExporter:ResolveItemDescriptor(itemID)
+function AuctionHelper:ResolveItemDescriptor(itemID)
 	if not itemID then
 		return nil
 	end
@@ -403,7 +403,7 @@ end
 
 --- Uses static C_Item.GetItemInfo bind type only (not whether your stack is actually soulbound).
 --- Excludes typical BoP / quest / account / bnet / warband-style bindings when the client exposes them.
-function ProfessionExporter:IsItemLikelyTradeableOnAuctionByStaticInfo(itemID)
+function AuctionHelper:IsItemLikelyTradeableOnAuctionByStaticInfo(itemID)
 	itemID = tonumber(itemID)
 	if not itemID or itemID <= 0 then
 		return false
@@ -455,7 +455,7 @@ end
 
 --- Map C_Item.GetItemInfo expansionID (LE_EXPANSION) to crafts/inventory filter bucket.
 --- Retail: 9 DF, 10 TWW, 11 Midnight. Other values (incl. Classic client sentinel 254) → legacy.
-function ProfessionExporter:ExpansionLeToFilterTag(expansionID)
+function AuctionHelper:ExpansionLeToFilterTag(expansionID)
 	local e = tonumber(expansionID)
 	if not e or e ~= e then
 		return nil
@@ -475,7 +475,7 @@ function ProfessionExporter:ExpansionLeToFilterTag(expansionID)
 	return "legacy"
 end
 
-function ProfessionExporter:GetExpansionFilterOptions()
+function AuctionHelper:GetExpansionFilterOptions()
 	return {
 		{ value = "all", label = "All expansions" },
 		{ value = "midnight", label = "Midnight" },
@@ -485,7 +485,7 @@ function ProfessionExporter:GetExpansionFilterOptions()
 	}
 end
 
-function ProfessionExporter:ResolveCurrencyDescriptor(currencyID)
+function AuctionHelper:ResolveCurrencyDescriptor(currencyID)
 	if not currencyID then
 		return nil
 	end
@@ -502,7 +502,7 @@ function ProfessionExporter:ResolveCurrencyDescriptor(currencyID)
 	return desc
 end
 
-function ProfessionExporter:CurrencyDescriptorFromID(currencyID)
+function AuctionHelper:CurrencyDescriptorFromID(currencyID)
 	if not currencyID then
 		return nil
 	end
@@ -511,7 +511,7 @@ function ProfessionExporter:CurrencyDescriptorFromID(currencyID)
 	return self:SanitizeValue(info)
 end
 
-function ProfessionExporter:FindProfessionByIdentifier(professions, identifier)
+function AuctionHelper:FindProfessionByIdentifier(professions, identifier)
 	if not identifier or identifier == "" then
 		return nil
 	end
@@ -539,7 +539,7 @@ function ProfessionExporter:FindProfessionByIdentifier(professions, identifier)
 end
 
 --- Stored recipe row: schema v4 uses |info|, |slots|, |crafting|; older rows use legacy keys.
-function ProfessionExporter:RecipeDataInfo(recipeData)
+function AuctionHelper:RecipeDataInfo(recipeData)
 	if not recipeData then
 		return nil
 	end
@@ -547,7 +547,7 @@ function ProfessionExporter:RecipeDataInfo(recipeData)
 end
 
 --- Crafting spell ID (C_TradeSkillUI recipeSpellID / recipeInfo.recipeID).
-function ProfessionExporter:GetRecipeSpellID(recipeData)
+function AuctionHelper:GetRecipeSpellID(recipeData)
 	if not recipeData then
 		return nil
 	end
@@ -559,7 +559,7 @@ function ProfessionExporter:GetRecipeSpellID(recipeData)
 end
 
 --- Blizzard Game Data / SkillLineAbility recipe id (exported as recipeID).
-function ProfessionExporter:GetRecipeExportID(recipeData)
+function AuctionHelper:GetRecipeExportID(recipeData)
 	if not recipeData then
 		return nil
 	end
@@ -570,13 +570,13 @@ function ProfessionExporter:GetRecipeExportID(recipeData)
 	return info and tonumber(info.skillLineAbilityID) or self:GetRecipeSpellID(recipeData)
 end
 
-function ProfessionExporter:GetRecipeStorageKey(recipeData)
+function AuctionHelper:GetRecipeStorageKey(recipeData)
 	local exportID = self:GetRecipeExportID(recipeData)
 	return exportID and tostring(exportID) or nil
 end
 
 --- Resolve stored recipe by export id (skillLineAbilityID) or crafting spell id.
-function ProfessionExporter:FindStoredRecipe(professionData, recipeIDOrSpellID)
+function AuctionHelper:FindStoredRecipe(professionData, recipeIDOrSpellID)
 	recipeIDOrSpellID = tonumber(recipeIDOrSpellID)
 	if not professionData or not recipeIDOrSpellID then
 		return nil, nil
@@ -598,7 +598,7 @@ function ProfessionExporter:FindStoredRecipe(professionData, recipeIDOrSpellID)
 	return nil, nil
 end
 
-function ProfessionExporter:RecipeDataSlots(recipeData)
+function AuctionHelper:RecipeDataSlots(recipeData)
 	if not recipeData then
 		return nil
 	end
@@ -606,7 +606,7 @@ function ProfessionExporter:RecipeDataSlots(recipeData)
 end
 
 --- Output summary: primary product item id (schema v4 |itemID|, legacy |outputItemID|).
-function ProfessionExporter:RecipeOutputsPrimaryItemId(outputs)
+function AuctionHelper:RecipeOutputsPrimaryItemId(outputs)
 	if not outputs then
 		return nil
 	end
@@ -614,7 +614,7 @@ function ProfessionExporter:RecipeOutputsPrimaryItemId(outputs)
 end
 
 --- Copper to buy one item from a vendor (Retail C_Item); nil if not sold by vendors.
-function ProfessionExporter:GetItemVendorPurchaseCopper(itemID)
+function AuctionHelper:GetItemVendorPurchaseCopper(itemID)
 	itemID = tonumber(itemID)
 	if not itemID then
 		return nil
@@ -629,7 +629,7 @@ function ProfessionExporter:GetItemVendorPurchaseCopper(itemID)
 end
 
 --- Vendor sell (to NPC) price per item; nil if unknown.
-function ProfessionExporter:GetItemVendorSellCopper(itemID)
+function AuctionHelper:GetItemVendorSellCopper(itemID)
 	itemID = tonumber(itemID)
 	if not itemID then
 		return nil
@@ -646,7 +646,7 @@ end
 
 -- Generic state watcher utility (reusable across UI modules).
 -- Polls snapshotFn periodically and calls onChanged(newValue, oldValue) when value changes.
-function ProfessionExporter:StartStateWatcher(key, intervalSec, snapshotFn, onChanged)
+function AuctionHelper:StartStateWatcher(key, intervalSec, snapshotFn, onChanged)
 	if not key or type(snapshotFn) ~= "function" or type(onChanged) ~= "function" then
 		return nil
 	end
@@ -678,7 +678,7 @@ function ProfessionExporter:StartStateWatcher(key, intervalSec, snapshotFn, onCh
 	return watcher
 end
 
-function ProfessionExporter:StopStateWatcher(key)
+function AuctionHelper:StopStateWatcher(key)
 	local watchers = self._stateWatchers
 	if not watchers then
 		return

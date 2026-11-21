@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Market insights for the gold dashboard: deals, movers and supply per scanned item.
 -- Built in chunks after each new scan so large snapshots never stall a frame.
@@ -7,10 +7,10 @@ local CHUNK = 150
 local DAY = 24 * 3600
 
 local function now()
-	return ProfessionExporter:Now()
+	return AuctionHelper:Now()
 end
 
-function ProfessionExporter:GetGoldDashboardOptions()
+function AuctionHelper:GetGoldDashboardOptions()
 	return {
 		dealThreshold = tonumber(self:GetSetting("gold.dealThreshold", 0.3)) or 0.3,
 		moverThreshold = tonumber(self:GetSetting("gold.moverThreshold", 0.15)) or 0.15,
@@ -149,7 +149,7 @@ end
 
 --- Cached insights, or nil while the first build runs. Starts a rebuild when scan data or settings changed;
 --- `onDone(insights)` fires when that rebuild finishes. Progress is `state.marketInsightsProgress` (0..1).
-function ProfessionExporter:GetMarketInsights(onDone)
+function AuctionHelper:GetMarketInsights(onDone)
 	local state = self:GetState()
 	local opts = self:GetGoldDashboardOptions()
 	local revision = insightsRevision(state, opts)
@@ -201,7 +201,7 @@ function ProfessionExporter:GetMarketInsights(onDone)
 end
 
 --- Item IDs used as reagents by any stored recipe on any character.
-function ProfessionExporter:GetRecipeMaterialSet()
+function AuctionHelper:GetRecipeMaterialSet()
 	local state = self:GetState()
 	local revision = tostring(self.db and self.db.aggregate and self.db.aggregate.updatedAt or 0)
 	if state.recipeMaterialSet and state.recipeMaterialSetRevision == revision then

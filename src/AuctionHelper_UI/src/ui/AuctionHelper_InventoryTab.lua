@@ -1,25 +1,25 @@
-local ProfessionExporter = select(2, ...)
+local AuctionHelper = select(2, ...)
 
 local InventoryTab = {}
-ProfessionExporter.InventoryTab = InventoryTab
+AuctionHelper.InventoryTab = InventoryTab
 
 function InventoryTab:Create(container, uiState)
-	ProfessionExporter:EnsureInventoryPanel(container)
+	AuctionHelper:EnsureInventoryPanel(container)
 	uiState.inventoryPanel:Show()
 	uiState.inventoryPanel:SetAllPoints()
 	return uiState.inventoryPanel
 end
 
 function InventoryTab:ApplyTheme()
-	local ui = ProfessionExporter.ui
+	local ui = AuctionHelper.ui
 	if not ui or not ui.inventoryPanel then
 		return
 	end
 end
 
 function InventoryTab:Refresh()
-	if ProfessionExporter.ui and ProfessionExporter.ui.inventoryPanel then
-		ProfessionExporter.ui.inventoryPanel:Show()
+	if AuctionHelper.ui and AuctionHelper.ui.inventoryPanel then
+		AuctionHelper.ui.inventoryPanel:Show()
 	end
-	ProfessionExporter:RefreshInventoryTab()
+	AuctionHelper:RefreshInventoryTab()
 end

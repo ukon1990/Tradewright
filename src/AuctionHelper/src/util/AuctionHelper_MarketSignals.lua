@@ -1,8 +1,8 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 --- Pure price statistics built from scan history (offline-testable, no WoW API).
 local MarketSignals = {}
-ProfessionExporter.MarketSignals = MarketSignals
+AuctionHelper.MarketSignals = MarketSignals
 
 local DAY = 24 * 3600
 

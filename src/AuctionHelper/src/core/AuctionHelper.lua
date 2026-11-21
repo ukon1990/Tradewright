@@ -2,7 +2,6 @@ local _, addonTable = ...
 
 local AuctionHelper = _G.AuctionHelper or addonTable or {}
 _G.AuctionHelper = AuctionHelper
-_G.ProfessionExporter = AuctionHelper
 
 AuctionHelper.VERSION = "2.0.0"
 AuctionHelper.SCHEMA_VERSION = 12

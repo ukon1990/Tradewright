@@ -1,9 +1,9 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Pure bag helpers (E11): which category an item belongs to, how the slots are grouped and laid
 -- out, and the totals. No WoW API here, so the offline tests can load this file on its own.
 local BagLogic = {}
-ProfessionExporter.BagLogic = BagLogic
+AuctionHelper.BagLogic = BagLogic
 
 -- Display order of the category headings.
 BagLogic.CATEGORIES = {

@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Plain-text detail panel for one Crafts tab row (split out of AuctionHelper_CraftsEngine.lua).
 
@@ -189,7 +189,7 @@ local function appendComparison(self, lines, row)
     end
 end
 
-function ProfessionExporter:BuildCraftDetailText(row)
+function AuctionHelper:BuildCraftDetailText(row)
     if not row then
         return "Select a craft row."
     end

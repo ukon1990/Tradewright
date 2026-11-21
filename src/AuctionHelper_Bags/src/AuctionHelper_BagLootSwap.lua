@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Loot swap (E11 F95): when loot does not fit because the bags are full, and the loot is worth
 -- more than the cheapest stack carried, a prompt offers to delete that stack and take the loot.
@@ -40,7 +40,7 @@ local function lootEntries(pe)
 end
 
 local function onSwap()
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local drop = pe:GetBagDropCandidate()
 	local shown = prompt.drop.item
 	hidePrompt()
@@ -94,7 +94,7 @@ end
 
 -- Offer a swap when loot was refused for lack of room and something carried is worth less.
 local function evaluate()
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	if not sawFull or pendingSlot or not pe:GetSetting("bags.lootSwap", true) then
 		return hidePrompt()
 	end

@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- The bank in the bag window (E12 F101). The game ends the bank session when its bank window
 -- hides, so with the setting on that window stays open and is only made invisible. Opening the
@@ -9,12 +9,12 @@ local OPEN_DELAY_SECONDS = 0.1
 
 local saved -- the game's bank window's own alpha and scale while it is invisible
 
-function ProfessionExporter:IsBagBankEnabled()
+function AuctionHelper:IsBagBankEnabled()
 	return self:IsBagWindowEnabled() and self:GetSetting("bags.bank", true) == true
 end
 
 --- Bring the game's bank window in line with the setting: invisible, or as it was.
-function ProfessionExporter:ApplyBankTakeover()
+function AuctionHelper:ApplyBankTakeover()
 	local frame = BankFrame
 	if not frame then
 		return
@@ -31,7 +31,7 @@ function ProfessionExporter:ApplyBankTakeover()
 end
 
 --- End the bank session, when the bag window stands in for the bank window.
-function ProfessionExporter:CloseBagBank()
+function AuctionHelper:CloseBagBank()
 	if not (self:IsBagBankEnabled() and self:IsBankOpen()) then
 		return
 	end
@@ -71,7 +71,7 @@ end
 
 local events = CreateFrame("Frame")
 events:SetScript("OnEvent", function(_, event)
-	handlers[event](ProfessionExporter)
+	handlers[event](AuctionHelper)
 end)
 for event in pairs(handlers) do
 	events:RegisterEvent(event)

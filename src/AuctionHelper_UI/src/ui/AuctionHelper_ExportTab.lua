@@ -1,7 +1,7 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 local ExportTab = {}
-ProfessionExporter.ExportTab = ExportTab
+AuctionHelper.ExportTab = ExportTab
 
 local GAP = 12
 local LEFT_WIDTH = 420
@@ -50,7 +50,7 @@ function ExportTab:Layout(panel)
 	if not panel then
 		return
 	end
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local leftWidth = math.min(LEFT_WIDTH, math.floor((panel:GetWidth() - GAP) / 2))
 	panel.left:SetWidth(leftWidth)
 	local previous
@@ -68,7 +68,7 @@ function ExportTab:Layout(panel)
 end
 
 function ExportTab:Create(container, uiState)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local panel = CreateFrame("Frame", nil, container)
 	panel:SetAllPoints()
 	uiState.exportPanel = panel
@@ -131,7 +131,7 @@ function ExportTab:ApplyTheme()
 end
 
 function ExportTab:Refresh()
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local panel = pe.ui.exportPanel
 	if not panel then
 		return

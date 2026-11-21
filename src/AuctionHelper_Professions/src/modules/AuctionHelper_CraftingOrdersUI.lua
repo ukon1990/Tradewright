@@ -1,6 +1,6 @@
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
-if not ProfessionExporter.IS_RETAIL then
+if not AuctionHelper.IS_RETAIL then
 	return
 end
 
@@ -9,11 +9,11 @@ local CraftingOrderTypeNpc = Enum.CraftingOrderType and Enum.CraftingOrderType.N
 local _craftingOrdersInitPatched
 
 local function craftingOrdersSettings()
-	ProfessionExporter:InitDB()
-	return ProfessionExporter.db and ProfessionExporter.db.settings and ProfessionExporter.db.settings.craftingOrders
+	AuctionHelper:InitDB()
+	return AuctionHelper.db and AuctionHelper.db.settings and AuctionHelper.db.settings.craftingOrders
 end
 
-function ProfessionExporter:CraftingOrdersPatronKnowledgeDataReady()
+function AuctionHelper:CraftingOrdersPatronKnowledgeDataReady()
 	local t = self.CRAFTING_ORDERS_PATRON_KNOWLEDGE_RECIPE_IDS
 	if type(t) ~= "table" then
 		return false
@@ -21,7 +21,7 @@ function ProfessionExporter:CraftingOrdersPatronKnowledgeDataReady()
 	return next(t) ~= nil
 end
 
-function ProfessionExporter:CraftingOrdersRecipeShouldShow(ordersPage, recipeInfo)
+function AuctionHelper:CraftingOrdersRecipeShouldShow(ordersPage, recipeInfo)
 	if not recipeInfo or type(recipeInfo.recipeID) ~= "number" then
 		return true
 	end
@@ -86,7 +86,7 @@ local function pruneCraftingOrdersRecipeTree(rootNode, shouldRemoveRecipe)
 	walk(rootNode)
 end
 
-function ProfessionExporter:OnCraftingOrdersGenerateDataProvider(ordersPage, dataProvider)
+function AuctionHelper:OnCraftingOrdersGenerateDataProvider(ordersPage, dataProvider)
 	if not dataProvider or type(dataProvider.GetRootNode) ~= "function" then
 		return
 	end
@@ -105,13 +105,13 @@ function ProfessionExporter:OnCraftingOrdersGenerateDataProvider(ordersPage, dat
 	if not root then
 		return
 	end
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	pruneCraftingOrdersRecipeTree(root, function(recipeInfo)
 		return not pe:CraftingOrdersRecipeShouldShow(ordersPage, recipeInfo)
 	end)
 end
 
-function ProfessionExporter:RefreshCraftingOrdersPageRecipeList()
+function AuctionHelper:RefreshCraftingOrdersPageRecipeList()
 	local pf = _G.ProfessionsFrame
 	local op = pf and pf.OrdersPage
 	if not op or type(op.Init) ~= "function" or not op.professionInfo then
@@ -135,7 +135,7 @@ local function ensureCraftingOrdersInitPatch()
 		local oldGen = prof.GenerateCraftingDataProvider
 		prof.GenerateCraftingDataProvider = function(professionID, searching, noStripCategories, collapses)
 			local dp = oldGen(professionID, searching, noStripCategories, collapses)
-			ProfessionExporter:OnCraftingOrdersGenerateDataProvider(self, dp)
+			AuctionHelper:OnCraftingOrdersGenerateDataProvider(self, dp)
 			return dp
 		end
 		local ok, err = pcall(origInit, self, professionInfo)
@@ -152,7 +152,7 @@ local function syncFilterBarFromSettings()
 	if not filterBarFrame then
 		return
 	end
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local hideUnlearned = pe:GetSetting("craftingOrders.hideUnlearned", false) == true
 	local patronOnly = pe:GetSetting("craftingOrders.patronKnowledgeOnly", false) == true
 	if filterBarFrame.cbHideUnlearned then
@@ -170,17 +170,17 @@ local function updatePatronCheckboxState()
 	local pf = _G.ProfessionsFrame
 	local op = pf and pf.OrdersPage
 	local isNpc = op and CraftingOrderTypeNpc and op.orderType == CraftingOrderTypeNpc
-	local hasData = ProfessionExporter:CraftingOrdersPatronKnowledgeDataReady()
+	local hasData = AuctionHelper:CraftingOrdersPatronKnowledgeDataReady()
 	filterBarFrame.cbPatronKnowledge:SetEnabled(isNpc and hasData)
 	local lab = filterBarFrame.cbPatronKnowledgeLabel
 	if lab and lab.SetTextColor then
-		local theme = ProfessionExporter:GetTheme()
+		local theme = AuctionHelper:GetTheme()
 		local color = (not isNpc and theme.textDisabled) or (not hasData and theme.warning) or theme.textPrimary
 		lab:SetTextColor(color.r, color.g, color.b)
 	end
 end
 
-function ProfessionExporter:EnsureCraftingOrdersFilterBar()
+function AuctionHelper:EnsureCraftingOrdersFilterBar()
 	if filterBarFrame then
 		updatePatronCheckboxState()
 		return filterBarFrame
@@ -208,8 +208,8 @@ function ProfessionExporter:EnsureCraftingOrdersFilterBar()
 		t1:SetText("Hide unlearned recipes")
 	end
 	cb1:SetScript("OnClick", function(self)
-		ProfessionExporter:SetSetting("craftingOrders.hideUnlearned", self:GetChecked() == true)
-		ProfessionExporter:RefreshCraftingOrdersPageRecipeList()
+		AuctionHelper:SetSetting("craftingOrders.hideUnlearned", self:GetChecked() == true)
+		AuctionHelper:RefreshCraftingOrdersPageRecipeList()
 	end)
 
 	local cb2 = CreateFrame("CheckButton", addonName .. "COPatronKnowledge", f, "UICheckButtonTemplate")
@@ -217,12 +217,12 @@ function ProfessionExporter:EnsureCraftingOrdersFilterBar()
 	if t2 then
 		t2:SetText("Only recipes that give knowledge")
 	end
-	ProfessionExporter:SkinCheckButton(cb1)
-	ProfessionExporter:SkinCheckButton(cb2)
+	AuctionHelper:SkinCheckButton(cb1)
+	AuctionHelper:SkinCheckButton(cb2)
 	cb2:SetPoint("LEFT", cb1, "RIGHT", (t1 and t1:GetStringWidth() or 140) + 18, 0)
 	cb2:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		local theme = ProfessionExporter:GetTheme()
+		local theme = AuctionHelper:GetTheme()
 		GameTooltip:SetText("Only recipes that give knowledge", 1, 1, 1)
 		GameTooltip:AddLine("Works on the Patron orders tab. Uses the recipe list in the addon's data file; when that list is empty, it does nothing.",
 			theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, true)
@@ -230,8 +230,8 @@ function ProfessionExporter:EnsureCraftingOrdersFilterBar()
 	end)
 	cb2:SetScript("OnLeave", GameTooltip_Hide)
 	cb2:SetScript("OnClick", function(self)
-		ProfessionExporter:SetSetting("craftingOrders.patronKnowledgeOnly", self:GetChecked() == true)
-		ProfessionExporter:RefreshCraftingOrdersPageRecipeList()
+		AuctionHelper:SetSetting("craftingOrders.patronKnowledgeOnly", self:GetChecked() == true)
+		AuctionHelper:RefreshCraftingOrdersPageRecipeList()
 	end)
 
 	f.cbHideUnlearned = cb1
@@ -239,16 +239,16 @@ function ProfessionExporter:EnsureCraftingOrdersFilterBar()
 	f.cbPatronKnowledgeLabel = t2
 	filterBarFrame = f
 
-	ProfessionExporter:SyncCraftingOrdersFilterBarFromSettings()
+	AuctionHelper:SyncCraftingOrdersFilterBarFromSettings()
 	return f
 end
 
-function ProfessionExporter:SyncCraftingOrdersFilterBarFromSettings()
+function AuctionHelper:SyncCraftingOrdersFilterBarFromSettings()
 	syncFilterBarFromSettings()
 	updatePatronCheckboxState()
 end
 
-function ProfessionExporter:InitCraftingOrdersFilters()
+function AuctionHelper:InitCraftingOrdersFilters()
 	ensureCraftingOrdersInitPatch()
 	local mixin = _G.ProfessionsCraftingOrderPageMixin
 	if mixin and type(mixin.SetCraftingOrderType) == "function" and not mixin.__peCraftingOrdersTypeHooked then
@@ -263,12 +263,12 @@ function ProfessionExporter:InitCraftingOrdersFilters()
 		mixin.__peCraftingOrdersOnShowHooked = true
 		hooksecurefunc(mixin, "OnShow", function(self)
 			C_Timer.After(0, function()
-				ProfessionExporter:EnsureCraftingOrdersFilterBar()
-				ProfessionExporter:SyncCraftingOrdersFilterBarFromSettings()
+				AuctionHelper:EnsureCraftingOrdersFilterBar()
+				AuctionHelper:SyncCraftingOrdersFilterBarFromSettings()
 			end)
 		end)
 	end
-	if ProfessionExporter.InitCraftingOrdersMaterialsHooks then
-		ProfessionExporter:InitCraftingOrdersMaterialsHooks()
+	if AuctionHelper.InitCraftingOrdersMaterialsHooks then
+		AuctionHelper:InitCraftingOrdersMaterialsHooks()
 	end
 end

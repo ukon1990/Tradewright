@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 --- Pure helpers for reagents that vendors sell: what they cost there, who sells them, the nearest
 --- seller and how to buy an amount. No WoW API.
@@ -7,7 +7,7 @@ local _, ProfessionExporter = ...
 --- a place. Sellers the player has visited are recorded with their exact price and position, and win
 --- over the list: `sellers = { [npcName] = { price, zone, mapID, x, y, seenAt } }` per item.
 local VendorLogic = {}
-ProfessionExporter.VendorLogic = VendorLogic
+AuctionHelper.VendorLogic = VendorLogic
 
 local TAILOR, SMITH, ENGINEER = "tailoring and leatherworking suppliers", "blacksmithing suppliers", "engineering suppliers"
 local TRADE, ENCHANT, COOK = "trade goods vendors", "enchanting suppliers", "cooking suppliers"

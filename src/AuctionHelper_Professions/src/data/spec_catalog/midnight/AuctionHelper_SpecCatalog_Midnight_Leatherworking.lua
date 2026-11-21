@@ -1,7 +1,7 @@
 -- Profession specialization catalog (datamined stats + recipe mapping). Expansion: Midnight (11).
 -- Bundled with AuctionHelper; no runtime dependency on other addons.
-local _, ProfessionExporter = ...
-ProfessionExporter:RegisterSpecCatalog(11, Enum.Profession.Leatherworking,  {
+local _, AuctionHelper = ...
+AuctionHelper:RegisterSpecCatalog(11, Enum.Profession.Leatherworking,  {
 	recipeMapping = {
 		[471046] = {
 			107918,

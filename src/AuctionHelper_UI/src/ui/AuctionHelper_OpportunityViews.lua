@@ -1,4 +1,4 @@
-local ProfessionExporter = select(2, ...)
+local AuctionHelper = select(2, ...)
 
 -- The lists of the Opportunities tab. Each view supplies: id, label, getRows(pe, onReady) → rows, insights, funnel,
 -- columns(pe), detailRows(pe, row), riskText(pe, row), subtitle(pe, row), tooltipPairs(pe, row),
@@ -483,4 +483,4 @@ local sell = {
 	end,
 }
 
-ProfessionExporter.OpportunityViews = { flips, vendor, gaps, sell }
+AuctionHelper.OpportunityViews = { flips, vendor, gaps, sell }

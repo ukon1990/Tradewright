@@ -1,10 +1,10 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 --- Weekday price pattern learned from an item's own daily history (F53). Pure, offline-testable.
 --- Method: divide each day's price by the median of the 7 days centred on it, take the median ratio per
 --- weekday, and show the result only when the data supports it. No pattern ships with the addon.
 local WeekdayPattern = {}
-ProfessionExporter.WeekdayPattern = WeekdayPattern
+AuctionHelper.WeekdayPattern = WeekdayPattern
 
 local DAY = 24 * 3600
 -- strictness 8: on pure noise about 2% of items show a false pattern with 6 weeks of daily prices, under
@@ -12,7 +12,7 @@ local DAY = 24 * 3600
 local DEFAULTS = { minPerDay = 3, minWeeks = 5, minSpread = 0.03, strictness = 8 }
 
 local function median(values)
-	return ProfessionExporter.MarketSignals.Median(values)
+	return AuctionHelper.MarketSignals.Median(values)
 end
 
 -- Daily prices as `{ at, price }`, oldest first.

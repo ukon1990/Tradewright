@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
 -- Surplus review (mailbox panel → Review… on the surplus row): every item the surplus mail could send,
 -- docked to the right of the mailbox panel. Keep amounts are edited in the row and saved per
@@ -303,14 +303,14 @@ local function ensurePanel(pe)
 	return f
 end
 
-function ProfessionExporter:IsMailReviewPanelShown()
+function AuctionHelper:IsMailReviewPanelShown()
 	local f = self.ui and self.ui.mailReviewPanel
 	return f ~= nil and f:IsShown()
 end
 
 --- Opens or closes the review panel; `show` nil toggles. The choice is saved, so the panel opens
 --- with the mailbox next time. The mailbox panel highlights its surplus row while it is open.
-function ProfessionExporter:ToggleMailReviewPanel(show)
+function AuctionHelper:ToggleMailReviewPanel(show)
 	if not (self.ui and self.ui.mailPanel) then
 		return
 	end
@@ -360,7 +360,7 @@ local function refreshTexts(pe, f, sum, seller)
 end
 
 --- Fills the panel when it is open; the mailbox panel calls this on every refresh with its plan.
-function ProfessionExporter:RefreshMailReviewPanel(plan)
+function AuctionHelper:RefreshMailReviewPanel(plan)
 	local f = self.ui and self.ui.mailReviewPanel
 	if not f or not f:IsShown() then
 		return restorePanel(self, plan)

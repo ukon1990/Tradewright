@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 local MAX_ROWS = 450
 
@@ -23,7 +23,7 @@ local DETAIL_WIDTH = 300
 local TALL_ROW = 36
 
 local function rankMarkup(rankIndex)
-	return ProfessionExporter:GetRankMarkup(rankIndex)
+	return AuctionHelper:GetRankMarkup(rankIndex)
 end
 
 local function colorize(pe, colorKey, text)
@@ -70,7 +70,7 @@ local function bestEvaluation(row)
 	return row and row.bestCharacterKey and row.perChar and row.perChar[row.bestCharacterKey] or nil
 end
 
-function ProfessionExporter:GetCraftsColumnDefinitions()
+function AuctionHelper:GetCraftsColumnDefinitions()
 	local pe = self
 	local function money(id, label, field, width, signed)
 		return {
@@ -119,12 +119,12 @@ function ProfessionExporter:GetCraftsColumnDefinitions()
 	}
 end
 
-function ProfessionExporter:BuildCraftsTableColumns()
+function AuctionHelper:BuildCraftsTableColumns()
 	return self:AddCraftPlanningColumns(self:GetCraftsColumnDefinitions())
 end
 
 --- Among opportunities with this output item, prefer the highest profit (stable tie: first in list order).
-function ProfessionExporter:SelectCraftOpportunityByOutputItemID(itemID)
+function AuctionHelper:SelectCraftOpportunityByOutputItemID(itemID)
 	itemID = tonumber(itemID)
 	if not itemID or itemID <= 0 then
 		return nil
@@ -145,7 +145,7 @@ function ProfessionExporter:SelectCraftOpportunityByOutputItemID(itemID)
 	return pickBest(ui.craftsWorkingRows) or pickBest(ui.craftsUnfilteredRows)
 end
 
-function ProfessionExporter:LayoutCraftsPanel(panel)
+function AuctionHelper:LayoutCraftsPanel(panel)
 	if not panel then
 		return
 	end
@@ -159,7 +159,7 @@ function ProfessionExporter:LayoutCraftsPanel(panel)
 	panel.detailsBody:SetShown(hasRow)
 end
 
-function ProfessionExporter:RenderCraftsDetails(row)
+function AuctionHelper:RenderCraftsDetails(row)
 	local panel = self.ui and self.ui.craftsPanel
 	if not panel then
 		return
@@ -276,7 +276,7 @@ local function copyBoolMap(t)
 	return out
 end
 
-function ProfessionExporter:CreateCraftsQueueView(parent)
+function AuctionHelper:CreateCraftsQueueView(parent)
 	local pe = self
 	local view = CreateFrame("Frame", nil, parent)
 	view.summary = self:CreateParagraph(view)
@@ -373,7 +373,7 @@ function ProfessionExporter:CreateCraftsQueueView(parent)
 	return view
 end
 
-function ProfessionExporter:EnsureCraftsPanel(mainFrame)
+function AuctionHelper:EnsureCraftsPanel(mainFrame)
 	local ui = self.ui
 	if ui.craftsPanel then
 		return
@@ -620,7 +620,7 @@ function ProfessionExporter:EnsureCraftsPanel(mainFrame)
 	ui.craftsSelectedRowKey = self:GetSetting("crafts.selectedRowKey")
 end
 
-function ProfessionExporter:ShowCraftRowTooltip(rowFrame, row)
+function AuctionHelper:ShowCraftRowTooltip(rowFrame, row)
 	if not row or not row.outputItemID then
 		return
 	end
@@ -644,11 +644,11 @@ function ProfessionExporter:ShowCraftRowTooltip(rowFrame, row)
 	self:ShowItemRowTooltip(rowFrame, row.outputItemID, pairs, "Click for details · Shift-click to link")
 end
 
-function ProfessionExporter:ScheduleCraftsSearchRefresh()
+function AuctionHelper:ScheduleCraftsSearchRefresh()
 	self:RefreshCraftsTab()
 end
 
-function ProfessionExporter:BuildCraftsFilterState()
+function AuctionHelper:BuildCraftsFilterState()
 	local ui = self.ui or {}
 	return {
 		text = trim(ui.craftsSearchBox and ui.craftsSearchBox:GetText() or ""),
@@ -660,7 +660,7 @@ function ProfessionExporter:BuildCraftsFilterState()
 	}
 end
 
-function ProfessionExporter:RefreshCraftsTab()
+function AuctionHelper:RefreshCraftsTab()
 	self:InitDB()
 	local ui = self.ui
 	if not ui or not ui.craftsPanel or ui.activeMainTab ~= "crafts" then
@@ -736,7 +736,7 @@ function ProfessionExporter:RefreshCraftsTab()
 	end
 end
 
-function ProfessionExporter:FocusCraftsQueuePanel()
+function AuctionHelper:FocusCraftsQueuePanel()
 	local panel = self.ui and self.ui.craftsPanel
 	if not panel then
 		return
@@ -748,7 +748,7 @@ function ProfessionExporter:FocusCraftsQueuePanel()
 	end
 end
 
-function ProfessionExporter:RefreshCraftsQueuePanel()
+function AuctionHelper:RefreshCraftsQueuePanel()
 	local panel = self.ui and self.ui.craftsPanel
 	if not panel or not panel.queueView then
 		return
@@ -794,7 +794,7 @@ function ProfessionExporter:RefreshCraftsQueuePanel()
 	view.clearButton:SetEnabled(#lines > 0)
 end
 
-function ProfessionExporter:RefreshCraftsTabIfVisible()
+function AuctionHelper:RefreshCraftsTabIfVisible()
 	local ui = self.ui
 	if ui and ui.activeMainTab == "crafts" then
 		self:RefreshCraftsTab()
@@ -804,12 +804,12 @@ function ProfessionExporter:RefreshCraftsTabIfVisible()
 end
 
 -- Name and muted second line for a craft opportunity row, as the Crafts table shows them.
-function ProfessionExporter:GetCraftRowLabels(row)
+function AuctionHelper:GetCraftRowLabels(row)
 	return craftRowName(self, row), craftRowDetail(self, row)
 end
 
 -- Switches to the Crafts tab with `row` selected and its details open.
-function ProfessionExporter:OpenCraftRow(row)
+function AuctionHelper:OpenCraftRow(row)
 	local ui = self.ui
 	ui.craftsSelectedRowKey = row and row.rowKey
 	ui.craftsItemDetailOnlyItemID = nil

@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Pure item-log helpers: what changed in the bags, why, and how the short log is kept. No WoW API
 -- here, so the offline tests can load this file on its own.
@@ -6,7 +6,7 @@ local _, ProfessionExporter = ...
 -- An entry: { t = time, id = itemID, n = count (negative: left the bags), why = reason key,
 --             who = other character, for mail }
 local ItemLogLogic = {}
-ProfessionExporter.ItemLogLogic = ItemLogLogic
+AuctionHelper.ItemLogLogic = ItemLogLogic
 
 local MERGE_SECONDS = 60
 local DAY = 86400

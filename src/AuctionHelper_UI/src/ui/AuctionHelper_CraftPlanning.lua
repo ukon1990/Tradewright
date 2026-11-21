@@ -1,4 +1,4 @@
-local ProfessionExporter = select(2, ...)
+local AuctionHelper = select(2, ...)
 
 -- Crafts tab columns for planning (F61, F62): sells a day, how many to make, and recipe cooldowns.
 
@@ -51,7 +51,7 @@ local function perDayText(pe, perDay)
 end
 
 --- Append "Sells a day", "Make" and "Cooldown" to the Crafts table columns.
-function ProfessionExporter:AddCraftPlanningColumns(columns)
+function AuctionHelper:AddCraftPlanningColumns(columns)
 	local pe = self
 	columns[#columns + 1] = {
 		id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = 66, sortable = true, defaultSort = "desc", optional = true,

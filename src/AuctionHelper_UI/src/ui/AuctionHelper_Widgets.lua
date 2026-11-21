@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 local function copySelection(selection)
 	local out = {}
@@ -13,11 +13,11 @@ local function copySelection(selection)
 	return out
 end
 
-function ProfessionExporter:IsFilterSelectionEmpty(selection)
+function AuctionHelper:IsFilterSelectionEmpty(selection)
 	return type(selection) ~= "table" or next(selection) == nil
 end
 
-function ProfessionExporter:CountFilterSelection(selection)
+function AuctionHelper:CountFilterSelection(selection)
 	local count = 0
 	if type(selection) ~= "table" then
 		return count
@@ -30,7 +30,7 @@ function ProfessionExporter:CountFilterSelection(selection)
 	return count
 end
 
-function ProfessionExporter:GetFilterSelectionSummary(options, selection, allLabel)
+function AuctionHelper:GetFilterSelectionSummary(options, selection, allLabel)
 	if self:IsFilterSelectionEmpty(selection) then
 		return allLabel
 	end
@@ -51,7 +51,7 @@ function ProfessionExporter:GetFilterSelectionSummary(options, selection, allLab
 	return string.format("%d selected", #selectedLabels)
 end
 
-function ProfessionExporter:NormalizeFilterSelection(selection, options)
+function AuctionHelper:NormalizeFilterSelection(selection, options)
 	local valid = {}
 	for _, option in ipairs(options or {}) do
 		if option.value ~= "all" then
@@ -85,7 +85,7 @@ local function createDropdownShell(parent, config)
 		title:SetPoint("TOPRIGHT", 0, 0)
 		title:SetJustifyH("LEFT")
 		title:SetWordWrap(false)
-		local muted = ProfessionExporter:GetTheme().textMuted
+		local muted = AuctionHelper:GetTheme().textMuted
 		title:SetTextColor(muted.r, muted.g, muted.b)
 		title:SetText(config.label)
 		holder.title = title
@@ -95,8 +95,8 @@ local function createDropdownShell(parent, config)
 	button:SetPoint("BOTTOMLEFT", 0, 0)
 	button:SetPoint("BOTTOMRIGHT", 0, 0)
 	button:SetHeight(DROPDOWN_HEIGHT)
-	local theme = ProfessionExporter:GetTheme()
-	ProfessionExporter:AddSurface(button, theme.surface2, theme.borderControl)
+	local theme = AuctionHelper:GetTheme()
+	AuctionHelper:AddSurface(button, theme.surface2, theme.borderControl)
 	button:SetHighlightTexture("Interface\\Buttons\\WHITE8X8")
 	button:GetHighlightTexture():SetVertexColor(theme.gold.r, theme.gold.g, theme.gold.b, 0.09)
 	local text = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -142,7 +142,7 @@ local function resolveOptions(holder)
 	return holder.options or {}
 end
 
-function ProfessionExporter:CreateMultiSelectDropdown(parent, config)
+function AuctionHelper:CreateMultiSelectDropdown(parent, config)
 	config = config or {}
 	local holder, menu = createDropdownShell(parent, config)
 	holder.allLabel = config.allLabel or "All"
@@ -168,7 +168,7 @@ function ProfessionExporter:CreateMultiSelectDropdown(parent, config)
 	end
 
 	function holder:RefreshText()
-		self:SetDisplayText(ProfessionExporter:GetFilterSelectionSummary(resolveOptions(self), getSelection(), self.allLabel))
+		self:SetDisplayText(AuctionHelper:GetFilterSelectionSummary(resolveOptions(self), getSelection(), self.allLabel))
 	end
 	function holder:SetOptions(options)
 		self.currentOptions = options or {}
@@ -184,7 +184,7 @@ function ProfessionExporter:CreateMultiSelectDropdown(parent, config)
 		allInfo.isNotRadio = true
 		allInfo.keepShownOnClick = true
 		allInfo.checked = function()
-			return ProfessionExporter:IsFilterSelectionEmpty(getSelection())
+			return AuctionHelper:IsFilterSelectionEmpty(getSelection())
 		end
 		allInfo.func = function()
 			applySelection({})
@@ -214,7 +214,7 @@ function ProfessionExporter:CreateMultiSelectDropdown(parent, config)
 	return holder
 end
 
-function ProfessionExporter:CreateSingleSelectDropdown(parent, config)
+function AuctionHelper:CreateSingleSelectDropdown(parent, config)
 	config = config or {}
 	local holder, menu = createDropdownShell(parent, config)
 	holder.options = config.options or {}
@@ -269,7 +269,7 @@ function ProfessionExporter:CreateSingleSelectDropdown(parent, config)
 	return holder
 end
 
-function ProfessionExporter:CreateMenuDropdown(parent, config)
+function AuctionHelper:CreateMenuDropdown(parent, config)
 	config = config or {}
 	local holder, menu = createDropdownShell(parent, config)
 	holder.getText = config.getText
@@ -289,21 +289,21 @@ function ProfessionExporter:CreateMenuDropdown(parent, config)
 	return holder
 end
 
-function ProfessionExporter:CreateCard(parent, width, height, tone)
+function AuctionHelper:CreateCard(parent, width, height, tone)
 	local card = CreateFrame("Frame", nil, parent, "BackdropTemplate")
 	card:SetSize(width or 100, height or 100)
 	self:StylePanel(card, tone or "surface2")
 	return card
 end
 
-function ProfessionExporter:CreateSectionTitle(parent, text)
+function AuctionHelper:CreateSectionTitle(parent, text)
 	local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 	label:SetText(text or "")
 	label:SetJustifyH("LEFT")
 	return label
 end
 
-function ProfessionExporter:CreateMutedText(parent, width)
+function AuctionHelper:CreateMutedText(parent, width)
 	local label = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	label:SetWidth(width or 200)
 	label:SetJustifyH("LEFT")
@@ -313,7 +313,7 @@ function ProfessionExporter:CreateMutedText(parent, width)
 	return label
 end
 
-function ProfessionExporter:CreateStatusBadge(parent, text, colorKey)
+function AuctionHelper:CreateStatusBadge(parent, text, colorKey)
 	local badge = CreateFrame("Frame", nil, parent, "BackdropTemplate")
 	badge:SetSize(120, 20)
 	local theme = self:GetTheme()
@@ -333,17 +333,17 @@ local function newText(parent, font, color, justify)
 	local text = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlightSmall")
 	text:SetJustifyH(justify or "LEFT")
 	text:SetWordWrap(false)
-	setColor(text, color or ProfessionExporter:GetTheme().textPrimary)
+	setColor(text, color or AuctionHelper:GetTheme().textPrimary)
 	return text
 end
 
 -- A single-line text that truncates with an ellipsis. Anchor it with two points.
-function ProfessionExporter:CreateText(parent, font, colorKey, justify)
+function AuctionHelper:CreateText(parent, font, colorKey, justify)
 	return newText(parent, font, self:GetTheme()[colorKey or "textPrimary"], justify)
 end
 
 -- A 26px flat button sized to its label (or `opts.width`); `opts.small` is 22px, `opts.primary` gold.
-function ProfessionExporter:CreateButton(parent, label, onClick, opts)
+function AuctionHelper:CreateButton(parent, label, onClick, opts)
 	opts = opts or {}
 	local sizes = self:GetTheme().size
 	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
@@ -361,7 +361,7 @@ function ProfessionExporter:CreateButton(parent, label, onClick, opts)
 	if opts.tooltip then
 		-- HookScript keeps the skin's hover colour handlers.
 		button:HookScript("OnEnter", function(self)
-			local muted = ProfessionExporter:GetTheme().textMuted
+			local muted = AuctionHelper:GetTheme().textMuted
 			GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
 			GameTooltip:SetText(self:GetText() or label or "", 1, 1, 1)
 			GameTooltip:AddLine(opts.tooltip, muted.r, muted.g, muted.b, true)
@@ -373,13 +373,13 @@ function ProfessionExporter:CreateButton(parent, label, onClick, opts)
 end
 
 -- Re-fits a button created by CreateButton after its label changes.
-function ProfessionExporter:SetButtonLabel(button, label, small)
+function AuctionHelper:SetButtonLabel(button, label, small)
 	button:SetText(label or "")
 	button:SetWidth(math.ceil(button:GetFontString():GetStringWidth()) + (small and 16 or 24))
 end
 
 -- Lays frames out left to right from `first`'s current anchor, `gap` apart, vertically centred.
-function ProfessionExporter:ChainRight(frames, gap)
+function AuctionHelper:ChainRight(frames, gap)
 	for index = 2, #frames do
 		frames[index]:ClearAllPoints()
 		frames[index]:SetPoint("LEFT", frames[index - 1], "RIGHT", gap or 8, 0)
@@ -387,7 +387,7 @@ function ProfessionExporter:ChainRight(frames, gap)
 end
 
 -- Right to left: frames[1] is the rightmost and keeps its anchor.
-function ProfessionExporter:ChainLeft(frames, gap)
+function AuctionHelper:ChainLeft(frames, gap)
 	for index = 2, #frames do
 		frames[index]:ClearAllPoints()
 		frames[index]:SetPoint("RIGHT", frames[index - 1], "LEFT", -(gap or 8), 0)
@@ -395,7 +395,7 @@ function ProfessionExporter:ChainLeft(frames, gap)
 end
 
 -- Section heading: gold text followed by a 1px rule to the right edge. 18px tall.
-function ProfessionExporter:CreateHeading(parent, label)
+function AuctionHelper:CreateHeading(parent, label)
 	local theme = self:GetTheme()
 	local heading = CreateFrame("Frame", nil, parent)
 	heading:SetHeight(18)
@@ -414,14 +414,14 @@ function ProfessionExporter:CreateHeading(parent, label)
 end
 
 -- A raised group: surface2 fill with a subtle outline. Content is placed by the caller with 10px padding.
-function ProfessionExporter:CreateInset(parent)
+function AuctionHelper:CreateInset(parent)
 	local inset = CreateFrame("Frame", nil, parent, "BackdropTemplate")
 	self:StylePanel(inset, "surface2")
 	return inset
 end
 
 -- Summary tile: muted label, one large value, one muted note. 58px tall; width from anchors.
-function ProfessionExporter:CreateStat(parent)
+function AuctionHelper:CreateStat(parent)
 	local theme = self:GetTheme()
 	local stat = self:CreateInset(parent)
 	stat:SetHeight(58)
@@ -444,7 +444,7 @@ function ProfessionExporter:CreateStat(parent)
 end
 
 -- Places `frames` side by side across `parent`'s width, `gap` apart, sharing the width equally.
-function ProfessionExporter:LayoutEvenRow(parent, frames, top, gap)
+function AuctionHelper:LayoutEvenRow(parent, frames, top, gap)
 	gap = gap or 12
 	local count = #frames
 	if count == 0 then
@@ -459,7 +459,7 @@ function ProfessionExporter:LayoutEvenRow(parent, frames, top, gap)
 end
 
 -- Muted placeholder text shown while an edit box is empty and not focused. Keeps existing scripts.
-function ProfessionExporter:AddSearchPlaceholder(box, placeholder)
+function AuctionHelper:AddSearchPlaceholder(box, placeholder)
 	self:SkinEditBox(box)
 	if not box.placeholder then
 		box.placeholder = newText(box, "GameFontHighlightSmall", self:GetTheme().textMuted)
@@ -479,7 +479,7 @@ function ProfessionExporter:AddSearchPlaceholder(box, placeholder)
 end
 
 -- An edit box with placeholder text, skinned 26px tall. `onChanged(text)` fires after `delay` seconds.
-function ProfessionExporter:CreateSearchBox(parent, placeholder, onChanged, delay)
+function AuctionHelper:CreateSearchBox(parent, placeholder, onChanged, delay)
 	local box = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
 	box:SetAutoFocus(false)
 	box:SetMaxLetters(64)
@@ -508,7 +508,7 @@ function ProfessionExporter:CreateSearchBox(parent, placeholder, onChanged, dela
 end
 
 -- Restyles a StatusBar: flat gold fill on a dark track with a 1px outline, 14px tall.
-function ProfessionExporter:StyleProgressBar(bar)
+function AuctionHelper:StyleProgressBar(bar)
 	local theme = self:GetTheme()
 	bar:SetHeight(14)
 	bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
@@ -524,7 +524,7 @@ function ProfessionExporter:StyleProgressBar(bar)
 end
 
 -- Label/value pairs, label muted on the left and value on the right, 16px rows. Returns its height.
-function ProfessionExporter:CreateKeyValueList(parent)
+function AuctionHelper:CreateKeyValueList(parent)
 	local theme = self:GetTheme()
 	local list = CreateFrame("Frame", nil, parent)
 	list.rows = {}
@@ -559,7 +559,7 @@ end
 
 -- A selectable one-column list (character list, docs topics) built on the shared table.
 -- items: { { key, label } }; `onSelect(key)`; `getSelected()` returns the selected key.
-function ProfessionExporter:CreateSelectList(parent, onSelect, getSelected)
+function AuctionHelper:CreateSelectList(parent, onSelect, getSelected)
 	local list = self:CreateReusableTable(parent, {
 		headerHeight = 0,
 		autoFitToScroll = true,
@@ -582,7 +582,7 @@ function ProfessionExporter:CreateSelectList(parent, onSelect, getSelected)
 end
 
 -- Lays `buttons` out left to right inside `width`, wrapping to new rows. Returns the total height.
-function ProfessionExporter:FlowButtons(container, buttons, width, gap, top)
+function AuctionHelper:FlowButtons(container, buttons, width, gap, top)
 	gap = gap or 8
 	local x, y, rowHeight = 0, -(top or 0), 0
 	for _, button in ipairs(buttons) do
@@ -601,7 +601,7 @@ function ProfessionExporter:FlowButtons(container, buttons, width, gap, top)
 end
 
 -- Wrapping muted text for explanations. Anchor with two points; read height with GetStringHeight.
-function ProfessionExporter:CreateParagraph(parent, colorKey)
+function AuctionHelper:CreateParagraph(parent, colorKey)
 	local text = self:CreateText(parent, "GameFontHighlightSmall", colorKey or "textMuted")
 	text:SetWordWrap(true)
 	text:SetNonSpaceWrap(true)
@@ -609,7 +609,7 @@ function ProfessionExporter:CreateParagraph(parent, colorKey)
 end
 
 -- Professions of one character as table rows, sorted by name.
-function ProfessionExporter:BuildProfessionRows(charData)
+function AuctionHelper:BuildProfessionRows(charData)
 	local rows = {}
 	for _, profession in pairs(charData and charData.professions or {}) do
 		rows[#rows + 1] = {
@@ -628,7 +628,7 @@ function ProfessionExporter:BuildProfessionRows(charData)
 end
 
 -- Profession, Skill, Recipes and (unless `withoutExport`) All / Recipes / Talents export buttons.
-function ProfessionExporter:CreateProfessionColumns(withoutExport)
+function AuctionHelper:CreateProfessionColumns(withoutExport)
 	local pe = self
 	local columns = {
 		{ id = "name", label = "Profession", width = 120, flex = 1, minWidth = 100,
@@ -663,7 +663,7 @@ end
 local DEFAULT_ITEM_ICON = 134400
 
 -- Quality colour of an item (white when unknown) and its icon.
-function ProfessionExporter:GetItemLook(itemID)
+function AuctionHelper:GetItemLook(itemID)
 	local desc = itemID and self:ResolveItemDescriptor(tonumber(itemID) or itemID) or nil
 	local quality = desc and desc.quality
 	local color = quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
@@ -671,7 +671,7 @@ function ProfessionExporter:GetItemLook(itemID)
 end
 
 -- An 18px item icon outlined in its quality colour. `size` overrides (32 for detail headers).
-function ProfessionExporter:CreateItemIcon(parent, size)
+function AuctionHelper:CreateItemIcon(parent, size)
 	local holder = CreateFrame("Frame", nil, parent)
 	holder:SetSize(size or 18, size or 18)
 	holder.border = holder:CreateTexture(nil, "BORDER")
@@ -681,7 +681,7 @@ function ProfessionExporter:CreateItemIcon(parent, size)
 	holder.icon:SetPoint("BOTTOMRIGHT", -1, 1)
 	holder.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 	function holder:SetItem(itemID, iconOverride)
-		local icon, color = ProfessionExporter:GetItemLook(itemID)
+		local icon, color = AuctionHelper:GetItemLook(itemID)
 		self.icon:SetTexture(iconOverride or icon)
 		self.border:SetColorTexture(color.r, color.g, color.b, 0.9)
 	end
@@ -690,7 +690,7 @@ end
 
 -- Table column: item icon + quality-coloured name, with an optional muted second line
 -- (`getDetail(row)`) when the table uses tall rows. `getItemID`, `getName` read the row.
-function ProfessionExporter:CreateItemColumn(spec)
+function AuctionHelper:CreateItemColumn(spec)
 	local pe = self
 	local column = {
 		id = spec.id or "name",
@@ -740,14 +740,14 @@ function ProfessionExporter:CreateItemColumn(spec)
 end
 
 -- Uppercase status word with a 1px outline in its colour. `colorKey`: success, danger, warning, accent, gold.
-function ProfessionExporter:CreateBadge(parent)
+function AuctionHelper:CreateBadge(parent)
 	local badge = CreateFrame("Frame", nil, parent)
 	badge:SetHeight(16)
 	badge.text = self:CreateText(badge, "GameFontNormalSmall")
 	badge.text:SetPoint("CENTER", 0, 0)
 	badge.surface = self:AddSurface(badge, { r = 0, g = 0, b = 0, a = 0 }, self:GetTheme().textMuted)
 	function badge:SetBadge(text, colorKey)
-		local theme = ProfessionExporter:GetTheme()
+		local theme = AuctionHelper:GetTheme()
 		local color = theme[colorKey or "textMuted"] or theme.textMuted
 		self.text:SetText(string.upper(text or ""))
 		self.text:SetTextColor(color.r, color.g, color.b)
@@ -759,7 +759,7 @@ function ProfessionExporter:CreateBadge(parent)
 end
 
 -- Detail pane header: 32px item icon, name, muted second line, optional close and pop-out buttons.
-function ProfessionExporter:CreateDetailHeader(parent, onClose, onPopOut)
+function AuctionHelper:CreateDetailHeader(parent, onClose, onPopOut)
 	local header = CreateFrame("Frame", nil, parent)
 	header:SetHeight(32)
 	header.icon = self:CreateItemIcon(header, 32)
@@ -782,7 +782,7 @@ function ProfessionExporter:CreateDetailHeader(parent, onClose, onPopOut)
 	header.subtitle:SetPoint("BOTTOMLEFT", header.icon, "BOTTOMRIGHT", 8, 1)
 	header.subtitle:SetPoint("RIGHT", header, "RIGHT", 0, 0)
 	function header:SetItem(itemID, title, subtitle, iconOverride)
-		local _, color = ProfessionExporter:GetItemLook(itemID)
+		local _, color = AuctionHelper:GetItemLook(itemID)
 		self.icon:SetItem(itemID, iconOverride)
 		self.icon:Show()
 		self.title:SetText(title or "")
@@ -793,7 +793,7 @@ function ProfessionExporter:CreateDetailHeader(parent, onClose, onPopOut)
 end
 
 -- Centered "nothing here" message: title plus a muted sentence. Fill the area it covers.
-function ProfessionExporter:CreateEmptyState(parent)
+function AuctionHelper:CreateEmptyState(parent)
 	local empty = CreateFrame("Frame", nil, parent)
 	empty.title = self:CreateText(empty, "GameFontHighlight", "textPrimary", "CENTER")
 	empty.title:SetPoint("BOTTOMLEFT", empty, "LEFT", 16, 4)
@@ -813,7 +813,7 @@ end
 -- instant item API; quality is only known once the client has the item, so it is retried until then.
 local itemFilterInfoCache = {}
 
-function ProfessionExporter:GetItemFilterInfo(itemID)
+function AuctionHelper:GetItemFilterInfo(itemID)
 	itemID = tonumber(itemID)
 	if not itemID then
 		return {}
@@ -842,7 +842,7 @@ function ProfessionExporter:GetItemFilterInfo(itemID)
 end
 
 -- Item quality choices for filter dropdowns, coloured like item names.
-function ProfessionExporter:GetQualityFilterOptions()
+function AuctionHelper:GetQualityFilterOptions()
 	local names = { [0] = "Poor", "Common", "Uncommon", "Rare", "Epic", "Legendary" }
 	local options = {}
 	for quality = 0, 5 do
@@ -857,7 +857,7 @@ function ProfessionExporter:GetQualityFilterOptions()
 end
 
 -- Class or subclass choices from a list of item IDs: { value = label, label = label }, sorted.
-function ProfessionExporter:BuildItemClassOptions(itemIDs, field, classSelection)
+function AuctionHelper:BuildItemClassOptions(itemIDs, field, classSelection)
 	local seen, options = {}, {}
 	local filterByClass = classSelection and not self:IsFilterSelectionEmpty(classSelection)
 	for _, itemID in ipairs(itemIDs or {}) do
@@ -874,7 +874,7 @@ end
 
 -- A checkbox with its label as one frame, sized to fit, so it can sit in a row of controls.
 -- `onChange(checked)` runs on click; read or set the state through group.check.
-function ProfessionExporter:CreateCheckbox(parent, label, onChange)
+function AuctionHelper:CreateCheckbox(parent, label, onChange)
 	local group = CreateFrame("Frame", nil, parent)
 	group:SetHeight(26)
 	local check = CreateFrame("CheckButton", nil, group, "UICheckButtonTemplate")
@@ -902,7 +902,7 @@ function ProfessionExporter:CreateCheckbox(parent, label, onChange)
 end
 
 -- Signed money: "+3g 15s" with a green plus, negative amounts with a red minus, "-" when unknown.
-function ProfessionExporter:FormatSignedMoney(copper)
+function AuctionHelper:FormatSignedMoney(copper)
 	local n = tonumber(copper)
 	if not n then
 		return "-"
@@ -915,7 +915,7 @@ function ProfessionExporter:FormatSignedMoney(copper)
 end
 
 -- "today 14:32" style time for table cells: time only for today, else month and day.
-function ProfessionExporter:FormatShortTime(ts)
+function AuctionHelper:FormatShortTime(ts)
 	ts = tonumber(ts)
 	if not ts or ts <= 0 then
 		return "-"
@@ -927,7 +927,7 @@ function ProfessionExporter:FormatShortTime(ts)
 end
 
 -- Shift-click links the item in chat. Returns true when the click was used.
-function ProfessionExporter:HandleItemRowModifiedClick(itemID)
+function AuctionHelper:HandleItemRowModifiedClick(itemID)
 	if not itemID or not IsModifiedClick or not IsModifiedClick("CHATLINK") then
 		return false
 	end

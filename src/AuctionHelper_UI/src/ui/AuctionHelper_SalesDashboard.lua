@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Sales ledger (Overview → Sales): what the auction house has paid out. Four headline numbers,
 -- gold earned per day, the items that sell best and the latest sales. The numbers come from the
@@ -20,10 +20,10 @@ local function numberColumn(id, label, width, format, optional)
 end
 
 -- Shared with the Income view (AuctionHelper_IncomeDashboard.lua).
-ProfessionExporter.DashboardNumberColumn = numberColumn
+AuctionHelper.DashboardNumberColumn = numberColumn
 
 --- An inset card with a heading at its top left.
-function ProfessionExporter:CreateDashboardCard(parent, title)
+function AuctionHelper:CreateDashboardCard(parent, title)
 	local card = self:CreateInset(parent)
 	card.heading = self:CreateHeading(card, title)
 	card.heading:SetPoint("TOPLEFT", PAD, -PAD)
@@ -33,7 +33,7 @@ end
 
 --- 7 days / 30 days / 90 days / All time at the card's top right, ending its heading. The choice
 --- is one setting shared by the Sales and Income views; `onChange` redraws the view.
-function ProfessionExporter:CreatePeriodButtons(card, onChange)
+function AuctionHelper:CreatePeriodButtons(card, onChange)
 	local buttons, previous = {}, nil
 	for index = #PERIODS, 1, -1 do
 		local days = PERIODS[index][1]
@@ -55,7 +55,7 @@ function ProfessionExporter:CreatePeriodButtons(card, onChange)
 end
 
 --- Highlights the chosen period and returns its days (0 = all time).
-function ProfessionExporter:StylePeriodButtons(buttons)
+function AuctionHelper:StylePeriodButtons(buttons)
 	local days = tonumber(self:GetSetting("sales.periodDays", 30)) or 30
 	for _, button in ipairs(buttons) do
 		self:StyleShellButton(button, button.days == days)
@@ -152,7 +152,7 @@ local function recentRows(pe, events)
 	return rows
 end
 
-function ProfessionExporter:CreateSalesDashboard(parent)
+function AuctionHelper:CreateSalesDashboard(parent)
 	local pe = self
 	local money = function(copper) return pe:FormatCopperShort(copper) end
 	local count = function(n) return pe:FormatNumberGrouped(n) end

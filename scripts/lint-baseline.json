@@ -17,10 +17,10 @@
    "W631": 4
   },
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": {
-   "W631": 2
+   "W631": 1
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": {
-   "W631": 4
+   "W631": 2
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_Scan.lua": {
    "W631": 1
@@ -51,7 +51,7 @@
  },
  "functions": {
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": {
-   "ProfessionExporter:BuildAggregate": {
+   "AuctionHelper:BuildAggregate": {
     "lines": [
      125
     ],
@@ -59,37 +59,37 @@
      32
     ]
    },
-   "ProfessionExporter:BuildCompactAuctionHistoryExport": {
+   "AuctionHelper:BuildCompactAuctionHistoryExport": {
     "ccn": [
      22
     ]
    },
-   "ProfessionExporter:BuildCompactAuctionSnapshotExport": {
+   "AuctionHelper:BuildCompactAuctionSnapshotExport": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:BuildCompactExportPayload": {
+   "AuctionHelper:BuildCompactExportPayload": {
     "ccn": [
      27
     ]
    },
-   "ProfessionExporter:BuildCompactInventorySnapshot": {
+   "AuctionHelper:BuildCompactInventorySnapshot": {
     "ccn": [
      13
     ]
    },
-   "ProfessionExporter:BuildCompactRecipeRecord": {
+   "AuctionHelper:BuildCompactRecipeRecord": {
     "ccn": [
      24
     ]
    },
-   "ProfessionExporter:BuildMaxQualityRequiredReagentInfo": {
+   "AuctionHelper:BuildMaxQualityRequiredReagentInfo": {
     "ccn": [
      15
     ]
    },
-   "ProfessionExporter:CollectClassicRecipeReagentSlots": {
+   "AuctionHelper:CollectClassicRecipeReagentSlots": {
     "lines": [
      96
     ],
@@ -97,7 +97,7 @@
      36
     ]
    },
-   "ProfessionExporter:CollectCurrentProfessionData": {
+   "AuctionHelper:CollectCurrentProfessionData": {
     "lines": [
      43
     ],
@@ -105,17 +105,17 @@
      17
     ]
    },
-   "ProfessionExporter:CollectRecipeCategories": {
+   "AuctionHelper:CollectRecipeCategories": {
     "lines": [
      45
     ]
    },
-   "ProfessionExporter:CollectRecipeData": {
+   "AuctionHelper:CollectRecipeData": {
     "ccn": [
      16
     ]
    },
-   "ProfessionExporter:CollectSpecializationTreeForSkillLine": {
+   "AuctionHelper:CollectSpecializationTreeForSkillLine": {
     "lines": [
      103
     ],
@@ -123,17 +123,17 @@
      64
     ]
    },
-   "ProfessionExporter:CollectSpecializationTreesForProfession": {
+   "AuctionHelper:CollectSpecializationTreesForProfession": {
     "lines": [
      43
     ]
    },
-   "ProfessionExporter:ComputeCopyBoxPagingSegmentsYielding": {
+   "AuctionHelper:ComputeCopyBoxPagingSegmentsYielding": {
     "lines": [
      52
     ]
    },
-   "ProfessionExporter:CopyBoxApplyCurrentPage": {
+   "AuctionHelper:CopyBoxApplyCurrentPage": {
     "lines": [
      52
     ],
@@ -141,12 +141,12 @@
      22
     ]
    },
-   "ProfessionExporter:CreateCopyFrame": {
+   "AuctionHelper:CreateCopyFrame": {
     "lines": [
      104
     ]
    },
-   "ProfessionExporter:CreateProfessionDataShell": {
+   "AuctionHelper:CreateProfessionDataShell": {
     "lines": [
      45
     ],
@@ -154,17 +154,17 @@
      14
     ]
    },
-   "ProfessionExporter:DescribeOperationInfo": {
+   "AuctionHelper:DescribeOperationInfo": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:DescribeRecipeOutput": {
+   "AuctionHelper:DescribeRecipeOutput": {
     "ccn": [
      20
     ]
    },
-   "ProfessionExporter:Export": {
+   "AuctionHelper:Export": {
     "lines": [
      96
     ],
@@ -172,7 +172,7 @@
      60
     ]
    },
-   "ProfessionExporter:FinalizeSpecializationTabGraph": {
+   "AuctionHelper:FinalizeSpecializationTabGraph": {
     "lines": [
      69
     ],
@@ -180,17 +180,17 @@
      18
     ]
    },
-   "ProfessionExporter:GetCompactCharacterHeader": {
+   "AuctionHelper:GetCompactCharacterHeader": {
     "ccn": [
      23
     ]
    },
-   "ProfessionExporter:HandleAuctionSlash": {
+   "AuctionHelper:HandleAuctionSlash": {
     "ccn": [
      21
     ]
    },
-   "ProfessionExporter:HandleSettingsSlash": {
+   "AuctionHelper:HandleSettingsSlash": {
     "lines": [
      44
     ],
@@ -198,27 +198,27 @@
      27
     ]
    },
-   "ProfessionExporter:LayoutCopyFrameScroll": {
+   "AuctionHelper:LayoutCopyFrameScroll": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:PatchAggregateInventorySummaryForCharacter": {
+   "AuctionHelper:PatchAggregateInventorySummaryForCharacter": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:PickPrimarySpecializationSkillLineID": {
+   "AuctionHelper:PickPrimarySpecializationSkillLineID": {
     "ccn": [
      20
     ]
    },
-   "ProfessionExporter:ProfessionExportSliceProfession": {
+   "AuctionHelper:ProfessionExportSliceProfession": {
     "ccn": [
      13
     ]
    },
-   "ProfessionExporter:ResolveProfessionSpecSkillLineIDs": {
+   "AuctionHelper:ResolveProfessionSpecSkillLineIDs": {
     "lines": [
      49
     ],
@@ -226,22 +226,22 @@
      18
     ]
    },
-   "ProfessionExporter:RestoreFilters": {
+   "AuctionHelper:RestoreFilters": {
     "ccn": [
      14
     ]
    },
-   "ProfessionExporter:RunComputeCopyBoxPagingAsync": {
+   "AuctionHelper:RunComputeCopyBoxPagingAsync": {
     "lines": [
      42
     ]
    },
-   "ProfessionExporter:SaveExportToSavedVariables": {
+   "AuctionHelper:SaveExportToSavedVariables": {
     "ccn": [
      20
     ]
    },
-   "ProfessionExporter:ShowCopyBox": {
+   "AuctionHelper:ShowCopyBox": {
     "lines": [
      103
     ],
@@ -249,12 +249,12 @@
      15
     ]
    },
-   "ProfessionExporter:ShowCopyBox/<anon>": {
+   "AuctionHelper:ShowCopyBox/<anon>": {
     "lines": [
      41
     ]
    },
-   "ProfessionExporter:SnapshotFilters": {
+   "AuctionHelper:SnapshotFilters": {
     "ccn": [
      11
     ]
@@ -271,17 +271,17 @@
    }
   },
   "src/AuctionHelper/src/ui/AuctionHelper_Theme.lua": {
-   "ProfessionExporter:AddSurface": {
+   "AuctionHelper:AddSurface": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:SkinCheckButton": {
+   "AuctionHelper:SkinCheckButton": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:SkinTree": {
+   "AuctionHelper:SkinTree": {
     "ccn": [
      15
     ]
@@ -392,17 +392,17 @@
    }
   },
   "src/AuctionHelper/src/util/AuctionHelper_Util.lua": {
-   "ProfessionExporter:EstimateJsonEscapedByteLength": {
+   "AuctionHelper:EstimateJsonEscapedByteLength": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:FindProfessionByIdentifier": {
+   "AuctionHelper:FindProfessionByIdentifier": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:IsItemLikelyTradeableOnAuctionByStaticInfo": {
+   "AuctionHelper:IsItemLikelyTradeableOnAuctionByStaticInfo": {
     "lines": [
      49
     ],
@@ -410,7 +410,7 @@
      27
     ]
    },
-   "ProfessionExporter:ItemDescriptorFromID": {
+   "AuctionHelper:ItemDescriptorFromID": {
     "lines": [
      42
     ],
@@ -418,12 +418,12 @@
      14
     ]
    },
-   "ProfessionExporter:RunEncodeJsonAsync": {
+   "AuctionHelper:RunEncodeJsonAsync": {
     "lines": [
      53
     ]
    },
-   "ProfessionExporter:SanitizeValue": {
+   "AuctionHelper:SanitizeValue": {
     "lines": [
      44
     ],
@@ -441,22 +441,22 @@
    }
   },
   "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": {
-   "ProfessionExporter:ApplyLiveAggregateToNativePrice": {
+   "AuctionHelper:ApplyLiveAggregateToNativePrice": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:BuildAccountTradableInventoryAuctionTargets": {
+   "AuctionHelper:BuildAccountTradableInventoryAuctionTargets": {
     "ccn": [
      14
     ]
    },
-   "ProfessionExporter:BuildAuctionBulkRows": {
+   "AuctionHelper:BuildAuctionBulkRows": {
     "ccn": [
      16
     ]
    },
-   "ProfessionExporter:BuildAuctionCraftCartRows": {
+   "AuctionHelper:BuildAuctionCraftCartRows": {
     "lines": [
      135
     ],
@@ -464,7 +464,7 @@
      53
     ]
    },
-   "ProfessionExporter:BuildAuctionInventoryRows": {
+   "AuctionHelper:BuildAuctionInventoryRows": {
     "lines": [
      76
     ],
@@ -472,17 +472,17 @@
      35
     ]
    },
-   "ProfessionExporter:BuildAuctionPanelColumns": {
+   "AuctionHelper:BuildAuctionPanelColumns": {
     "lines": [
      89
     ]
    },
-   "ProfessionExporter:BuildAuctionPanelColumns/sortValue": {
+   "AuctionHelper:BuildAuctionPanelColumns/sortValue": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:BuildAuctionPanelLayout": {
+   "AuctionHelper:BuildAuctionPanelLayout": {
     "lines": [
      213
     ],
@@ -490,7 +490,7 @@
      11
     ]
    },
-   "ProfessionExporter:BuildAuctionPanelPriceState": {
+   "AuctionHelper:BuildAuctionPanelPriceState": {
     "lines": [
      42
     ],
@@ -498,17 +498,17 @@
      13
     ]
    },
-   "ProfessionExporter:BuildCompactAuctionSnapshotEntry": {
+   "AuctionHelper:BuildCompactAuctionSnapshotEntry": {
     "ccn": [
      20
     ]
    },
-   "ProfessionExporter:BuildOwnedAuctionRows": {
+   "AuctionHelper:BuildOwnedAuctionRows": {
     "ccn": [
      20
     ]
    },
-   "ProfessionExporter:BuildPrioritizedAuctionAutoScanTargets": {
+   "AuctionHelper:BuildPrioritizedAuctionAutoScanTargets": {
     "lines": [
      74
     ],
@@ -516,12 +516,12 @@
      19
     ]
    },
-   "ProfessionExporter:BuildVisibleCraftsTabAuctionTargets": {
+   "AuctionHelper:BuildVisibleCraftsTabAuctionTargets": {
     "ccn": [
      26
     ]
    },
-   "ProfessionExporter:CollectVisibleAuctionDumpRows": {
+   "AuctionHelper:CollectVisibleAuctionDumpRows": {
     "lines": [
      70
     ],
@@ -529,12 +529,12 @@
      16
     ]
    },
-   "ProfessionExporter:ConfirmAuctionBulkCurrent": {
+   "AuctionHelper:ConfirmAuctionBulkCurrent": {
     "ccn": [
      14
     ]
    },
-   "ProfessionExporter:ContinueAuctionBulkPost": {
+   "AuctionHelper:ContinueAuctionBulkPost": {
     "lines": [
      59
     ],
@@ -542,7 +542,7 @@
      19
     ]
    },
-   "ProfessionExporter:ContinueAuctionDump": {
+   "AuctionHelper:ContinueAuctionDump": {
     "lines": [
      60
     ],
@@ -550,7 +550,7 @@
      23
     ]
    },
-   "ProfessionExporter:ContinueQueuedAuctionRefresh": {
+   "AuctionHelper:ContinueQueuedAuctionRefresh": {
     "lines": [
      75
     ],
@@ -558,22 +558,22 @@
      19
     ]
    },
-   "ProfessionExporter:EnsureAuctionReserveWindow": {
+   "AuctionHelper:EnsureAuctionReserveWindow": {
     "lines": [
      63
     ]
    },
-   "ProfessionExporter:FilterAuctionCraftCartRows": {
+   "AuctionHelper:FilterAuctionCraftCartRows": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:FilterAuctionPanelRows": {
+   "AuctionHelper:FilterAuctionPanelRows": {
     "ccn": [
      28
     ]
    },
-   "ProfessionExporter:FinishQueuedAuctionRefreshItem": {
+   "AuctionHelper:FinishQueuedAuctionRefreshItem": {
     "lines": [
      58
     ],
@@ -581,12 +581,12 @@
      32
     ]
    },
-   "ProfessionExporter:GetAuctionDisplayProfessionQualityRank": {
+   "AuctionHelper:GetAuctionDisplayProfessionQualityRank": {
     "ccn": [
      26
     ]
    },
-   "ProfessionExporter:GetAuctionHistoryQuantitySeriesForItem": {
+   "AuctionHelper:GetAuctionHistoryQuantitySeriesForItem": {
     "lines": [
      46
     ],
@@ -594,22 +594,22 @@
      22
     ]
    },
-   "ProfessionExporter:GetAuctionPanelPersonalSaleRate": {
+   "AuctionHelper:GetAuctionPanelPersonalSaleRate": {
     "ccn": [
      18
     ]
    },
-   "ProfessionExporter:GetAuctionPostButton": {
+   "AuctionHelper:GetAuctionPostButton": {
     "ccn": [
      19
     ]
    },
-   "ProfessionExporter:GetAuctionRowProtectionState": {
+   "AuctionHelper:GetAuctionRowProtectionState": {
     "ccn": [
      18
     ]
    },
-   "ProfessionExporter:GetAuctionSellFrameUnitPriceCopper": {
+   "AuctionHelper:GetAuctionSellFrameUnitPriceCopper": {
     "lines": [
      41
     ],
@@ -617,12 +617,12 @@
      25
     ]
    },
-   "ProfessionExporter:GetAuctionSubclassFilterOptions": {
+   "AuctionHelper:GetAuctionSubclassFilterOptions": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:GetItemEconomySummary": {
+   "AuctionHelper:GetItemEconomySummary": {
     "lines": [
      49
     ],
@@ -630,7 +630,7 @@
      34
     ]
    },
-   "ProfessionExporter:GetLiveAuctionSearchAggregate": {
+   "AuctionHelper:GetLiveAuctionSearchAggregate": {
     "lines": [
      100
     ],
@@ -638,32 +638,32 @@
      52
     ]
    },
-   "ProfessionExporter:InitAuctionDB": {
+   "AuctionHelper:InitAuctionDB": {
     "ccn": [
      31
     ]
    },
-   "ProfessionExporter:IsAuctionDumpAhOriginPrice": {
+   "AuctionHelper:IsAuctionDumpAhOriginPrice": {
     "ccn": [
      18
     ]
    },
-   "ProfessionExporter:MakeAuctionHouseItemKey": {
+   "AuctionHelper:MakeAuctionHouseItemKey": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:OnAuctionHouseAuctionCreated": {
+   "AuctionHelper:OnAuctionHouseAuctionCreated": {
     "ccn": [
      14
     ]
    },
-   "ProfessionExporter:OnAuctionHouseClosed": {
+   "AuctionHelper:OnAuctionHouseClosed": {
     "lines": [
      42
     ]
    },
-   "ProfessionExporter:OnAuctionItemListUpdate": {
+   "AuctionHelper:OnAuctionItemListUpdate": {
     "lines": [
      51
     ],
@@ -671,22 +671,22 @@
      20
     ]
    },
-   "ProfessionExporter:OnCommoditySearchResultsUpdated": {
+   "AuctionHelper:OnCommoditySearchResultsUpdated": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:OnFullAuctionDumpTimeout": {
+   "AuctionHelper:OnFullAuctionDumpTimeout": {
     "ccn": [
      13
     ]
    },
-   "ProfessionExporter:OnItemSearchResultsUpdated": {
+   "AuctionHelper:OnItemSearchResultsUpdated": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:OpenAuctionBrowseSearchForItem": {
+   "AuctionHelper:OpenAuctionBrowseSearchForItem": {
     "lines": [
      42
     ],
@@ -694,32 +694,32 @@
      21
     ]
    },
-   "ProfessionExporter:PersistAuctionDumpObservation": {
+   "AuctionHelper:PersistAuctionDumpObservation": {
     "ccn": [
      13
     ]
    },
-   "ProfessionExporter:PersistFullAuctionDumpChunk": {
+   "AuctionHelper:PersistFullAuctionDumpChunk": {
     "ccn": [
      16
     ]
    },
-   "ProfessionExporter:ProcessAuctionBulkPhase": {
+   "AuctionHelper:ProcessAuctionBulkPhase": {
     "ccn": [
      14
     ]
    },
-   "ProfessionExporter:ProcessFullAuctionDumpChunk": {
+   "AuctionHelper:ProcessFullAuctionDumpChunk": {
     "ccn": [
      13
     ]
    },
-   "ProfessionExporter:QueryClassicAuctionDumpPage": {
+   "AuctionHelper:QueryClassicAuctionDumpPage": {
     "ccn": [
      13
     ]
    },
-   "ProfessionExporter:QueueAuctionEconomyScan": {
+   "AuctionHelper:QueueAuctionEconomyScan": {
     "lines": [
      56
     ],
@@ -727,12 +727,12 @@
      24
     ]
    },
-   "ProfessionExporter:QueueAuctionScanTargets": {
+   "AuctionHelper:QueueAuctionScanTargets": {
     "ccn": [
      14
     ]
    },
-   "ProfessionExporter:QueueVisibleCraftsTabAuctionRefresh": {
+   "AuctionHelper:QueueVisibleCraftsTabAuctionRefresh": {
     "lines": [
      41
     ],
@@ -740,22 +740,22 @@
      13
     ]
    },
-   "ProfessionExporter:RecordAuctionObservation": {
+   "AuctionHelper:RecordAuctionObservation": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:RecordLiveAuctionObservationsFromAggregate": {
+   "AuctionHelper:RecordLiveAuctionObservationsFromAggregate": {
     "ccn": [
      13
     ]
    },
-   "ProfessionExporter:RefreshAuctionPanelRules": {
+   "AuctionHelper:RefreshAuctionPanelRules": {
     "ccn": [
      14
     ]
    },
-   "ProfessionExporter:ResolveCurrentAuctionPrice": {
+   "AuctionHelper:ResolveCurrentAuctionPrice": {
     "lines": [
      62
     ],
@@ -763,12 +763,12 @@
      14
     ]
    },
-   "ProfessionExporter:ResolveDumpItemCommodity": {
+   "AuctionHelper:ResolveDumpItemCommodity": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:RunAuctionPanelBulkAction": {
+   "AuctionHelper:RunAuctionPanelBulkAction": {
     "lines": [
      73
     ],
@@ -776,7 +776,7 @@
      12
     ]
    },
-   "ProfessionExporter:RunQueuedAuctionRefresh": {
+   "AuctionHelper:RunQueuedAuctionRefresh": {
     "lines": [
      57
     ],
@@ -784,27 +784,27 @@
      17
     ]
    },
-   "ProfessionExporter:SaveBrowseResultsToScanEntries": {
+   "AuctionHelper:SaveBrowseResultsToScanEntries": {
     "ccn": [
      13
     ]
    },
-   "ProfessionExporter:SearchAuctionCartRow": {
+   "AuctionHelper:SearchAuctionCartRow": {
     "ccn": [
      13
     ]
    },
-   "ProfessionExporter:SendAuctionPanelSearchQuery": {
+   "AuctionHelper:SendAuctionPanelSearchQuery": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:SetAuctionItemRule": {
+   "AuctionHelper:SetAuctionItemRule": {
     "ccn": [
      13
     ]
    },
-   "ProfessionExporter:StartAuctionDump": {
+   "AuctionHelper:StartAuctionDump": {
     "lines": [
      77
     ],
@@ -812,17 +812,17 @@
      12
     ]
    },
-   "ProfessionExporter:StartAuctionRoiEnrichment": {
+   "AuctionHelper:StartAuctionRoiEnrichment": {
     "lines": [
      66
     ]
    },
-   "ProfessionExporter:StartClassicFullAuctionDump": {
+   "AuctionHelper:StartClassicFullAuctionDump": {
     "lines": [
      45
     ]
    },
-   "ProfessionExporter:TrimAuctionHistory": {
+   "AuctionHelper:TrimAuctionHistory": {
     "lines": [
      63
     ],
@@ -830,22 +830,22 @@
      34
     ]
    },
-   "ProfessionExporter:TrimFullDumpMarketHistory": {
+   "AuctionHelper:TrimFullDumpMarketHistory": {
     "ccn": [
      15
     ]
    },
-   "ProfessionExporter:TryBuyAuctionCartRow": {
+   "AuctionHelper:TryBuyAuctionCartRow": {
     "lines": [
      48
     ]
    },
-   "ProfessionExporter:TryPrefillAuctionBuyQuantity": {
+   "AuctionHelper:TryPrefillAuctionBuyQuantity": {
     "ccn": [
      18
     ]
    },
-   "ProfessionExporter:TrySelectPendingAuctionBrowseResult": {
+   "AuctionHelper:TrySelectPendingAuctionBrowseResult": {
     "lines": [
      41
     ],
@@ -853,7 +853,7 @@
      16
     ]
    },
-   "ProfessionExporter:TrySendItemToAuctionSellFrame": {
+   "AuctionHelper:TrySendItemToAuctionSellFrame": {
     "lines": [
      89
     ],
@@ -861,12 +861,12 @@
      38
     ]
    },
-   "ProfessionExporter:UpdateAuctionHistoryFromObservation": {
+   "AuctionHelper:UpdateAuctionHistoryFromObservation": {
     "ccn": [
      21
     ]
    },
-   "ProfessionExporter:UpdateAuctionPanelRowPrice": {
+   "AuctionHelper:UpdateAuctionPanelRowPrice": {
     "ccn": [
      13
     ]
@@ -901,12 +901,12 @@
    }
   },
   "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_MarketInsights.lua": {
-   "ProfessionExporter:GetMarketInsights": {
+   "AuctionHelper:GetMarketInsights": {
     "lines": [
      50
     ]
    },
-   "ProfessionExporter:GetRecipeMaterialSet": {
+   "AuctionHelper:GetRecipeMaterialSet": {
     "ccn": [
      18
     ]
@@ -929,7 +929,7 @@
    }
   },
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": {
-   "ProfessionExporter:AddCraftToQueue": {
+   "AuctionHelper:AddCraftToQueue": {
     "lines": [
      79
     ],
@@ -937,7 +937,7 @@
      22
     ]
    },
-   "ProfessionExporter:BuildCraftQueueSummary": {
+   "AuctionHelper:BuildCraftQueueSummary": {
     "lines": [
      130
     ],
@@ -945,12 +945,12 @@
      35
     ]
    },
-   "ProfessionExporter:BuildReagentMailAllocations": {
+   "AuctionHelper:BuildReagentMailAllocations": {
     "ccn": [
      14
     ]
    },
-   "ProfessionExporter:BuildShoppingMailSendPlan": {
+   "AuctionHelper:BuildShoppingMailSendPlan": {
     "lines": [
      45
     ],
@@ -958,22 +958,22 @@
      19
     ]
    },
-   "ProfessionExporter:FormatMailAllocationsShort": {
+   "AuctionHelper:FormatMailAllocationsShort": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:GetCharacterItemTotal": {
+   "AuctionHelper:GetCharacterItemTotal": {
     "ccn": [
      16
     ]
    },
-   "ProfessionExporter:RemoveCraftQueueLinesByReagentItem": {
+   "AuctionHelper:RemoveCraftQueueLinesByReagentItem": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:UpsertCraftQueueForCraftingOrder": {
+   "AuctionHelper:UpsertCraftQueueForCraftingOrder": {
     "lines": [
      68
     ],
@@ -996,7 +996,7 @@
    }
   },
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_Inventory.lua": {
-   "ProfessionExporter:CollectTrackedItemIdsFromCharacterData": {
+   "AuctionHelper:CollectTrackedItemIdsFromCharacterData": {
     "lines": [
      44
     ],
@@ -1004,7 +1004,7 @@
      14
     ]
    },
-   "ProfessionExporter:GetItemCountByLocation": {
+   "AuctionHelper:GetItemCountByLocation": {
     "lines": [
      52
     ],
@@ -1012,12 +1012,12 @@
      20
     ]
    },
-   "ProfessionExporter:GetOwnedActiveAuctionQuantityForItem": {
+   "AuctionHelper:GetOwnedActiveAuctionQuantityForItem": {
     "ccn": [
      17
     ]
    },
-   "ProfessionExporter:UpdateInventorySnapshot": {
+   "AuctionHelper:UpdateInventorySnapshot": {
     "lines": [
      51
     ],
@@ -1025,7 +1025,7 @@
      12
     ]
    },
-   "ProfessionExporter:_InventorySnapshotProcessChunk": {
+   "AuctionHelper:_InventorySnapshotProcessChunk": {
     "lines": [
      56
     ],
@@ -1040,7 +1040,7 @@
    }
   },
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_InventoryTable.lua": {
-   "ProfessionExporter:BuildInventoryRowFromSnapshot": {
+   "AuctionHelper:BuildInventoryRowFromSnapshot": {
     "ccn": [
      17
     ],
@@ -1048,7 +1048,7 @@
      6
     ]
    },
-   "ProfessionExporter:BuildInventoryRowsAggregatedByItem": {
+   "AuctionHelper:BuildInventoryRowsAggregatedByItem": {
     "lines": [
      64
     ],
@@ -1056,12 +1056,12 @@
      35
     ]
    },
-   "ProfessionExporter:BuildInventoryRowsForCharacter": {
+   "AuctionHelper:BuildInventoryRowsForCharacter": {
     "ccn": [
      14
     ]
    },
-   "ProfessionExporter:BuildItemRoleMap": {
+   "AuctionHelper:BuildItemRoleMap": {
     "lines": [
      53
     ],
@@ -1069,12 +1069,12 @@
      16
     ]
    },
-   "ProfessionExporter:BuildMergedItemRoleMapForSelection": {
+   "AuctionHelper:BuildMergedItemRoleMapForSelection": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:FindBestRecipeForOutputItem": {
+   "AuctionHelper:FindBestRecipeForOutputItem": {
     "lines": [
      48
     ],
@@ -1084,7 +1084,7 @@
    }
   },
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": {
-   "ProfessionExporter:ApplyItemDetailTimeSeriesGraph": {
+   "AuctionHelper:ApplyItemDetailTimeSeriesGraph": {
     "lines": [
      194
     ],
@@ -1092,7 +1092,7 @@
      27
     ]
    },
-   "ProfessionExporter:BuildAccountWalletBalanceSeries": {
+   "AuctionHelper:BuildAccountWalletBalanceSeries": {
     "lines": [
      44
     ],
@@ -1100,12 +1100,12 @@
      17
     ]
    },
-   "ProfessionExporter:BuildInventoryItemTotals": {
+   "AuctionHelper:BuildInventoryItemTotals": {
     "ccn": [
      15
     ]
    },
-   "ProfessionExporter:BuildItemDetailScrollBodyLines": {
+   "AuctionHelper:BuildItemDetailScrollBodyLines": {
     "lines": [
      55
     ],
@@ -1113,17 +1113,17 @@
      24
     ]
    },
-   "ProfessionExporter:BuildItemEconomySnapshot": {
+   "AuctionHelper:BuildItemEconomySnapshot": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:BuildOutputItemQualityRankIndex": {
+   "AuctionHelper:BuildOutputItemQualityRankIndex": {
     "ccn": [
      20
     ]
    },
-   "ProfessionExporter:CompactItemHistoryStorage": {
+   "AuctionHelper:CompactItemHistoryStorage": {
     "lines": [
      61
     ],
@@ -1131,7 +1131,7 @@
      35
     ]
    },
-   "ProfessionExporter:EnrichInventoryRowAnalytics": {
+   "AuctionHelper:EnrichInventoryRowAnalytics": {
     "ccn": [
      19
     ],
@@ -1139,22 +1139,22 @@
      8
     ]
    },
-   "ProfessionExporter:GetCurrentGoldSummaryForOverview": {
+   "AuctionHelper:GetCurrentGoldSummaryForOverview": {
     "lines": [
      43
     ]
    },
-   "ProfessionExporter:GetItemCraftQualityRank": {
+   "AuctionHelper:GetItemCraftQualityRank": {
     "ccn": [
      16
     ]
    },
-   "ProfessionExporter:GetItemDisplayProfessionQualityRank": {
+   "AuctionHelper:GetItemDisplayProfessionQualityRank": {
     "ccn": [
      14
     ]
    },
-   "ProfessionExporter:GetItemRecipeRelationships": {
+   "AuctionHelper:GetItemRecipeRelationships": {
     "lines": [
      65
     ],
@@ -1162,12 +1162,12 @@
      27
     ]
    },
-   "ProfessionExporter:RecordItemHistoryObservation": {
+   "AuctionHelper:RecordItemHistoryObservation": {
     "ccn": [
      23
     ]
    },
-   "ProfessionExporter:RecordItemQuantityObservation": {
+   "AuctionHelper:RecordItemQuantityObservation": {
     "lines": [
      49
     ],
@@ -1178,12 +1178,12 @@
      7
     ]
    },
-   "ProfessionExporter:RecordWalletObservation": {
+   "AuctionHelper:RecordWalletObservation": {
     "ccn": [
      16
     ]
    },
-   "ProfessionExporter:ResolveGraphItemIDForCraftRow": {
+   "AuctionHelper:ResolveGraphItemIDForCraftRow": {
     "lines": [
      60
     ],
@@ -1208,24 +1208,24 @@
    }
   },
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_Ledger.lua": {
-   "ProfessionExporter:InitLedger": {
+   "AuctionHelper:InitLedger": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:LedgerAppendEvent": {
+   "AuctionHelper:LedgerAppendEvent": {
     "ccn": [
      15
     ]
    },
-   "ProfessionExporter:OnMailInboxUpdate": {
+   "AuctionHelper:OnMailInboxUpdate": {
     "ccn": [
      11
     ]
    }
   },
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_MailPlans.lua": {
-   "ProfessionExporter:GetBagItems": {
+   "AuctionHelper:GetBagItems": {
     "ccn": [
      11
     ]
@@ -1237,7 +1237,7 @@
    }
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": {
-   "ProfessionExporter:AddCraftingOrderToWorkQueue": {
+   "AuctionHelper:AddCraftingOrderToWorkQueue": {
     "lines": [
      51
     ],
@@ -1245,7 +1245,7 @@
      17
     ]
    },
-   "ProfessionExporter:BuildCraftingOrderWorkQueueSummary": {
+   "AuctionHelper:BuildCraftingOrderWorkQueueSummary": {
     "lines": [
      69
     ],
@@ -1253,7 +1253,7 @@
      26
     ]
    },
-   "ProfessionExporter:CraftingOrderViewRefreshButtons": {
+   "AuctionHelper:CraftingOrderViewRefreshButtons": {
     "lines": [
      173
     ],
@@ -1261,7 +1261,7 @@
      53
     ]
    },
-   "ProfessionExporter:ExtractCrafterShoppingReagentsFromOrder": {
+   "AuctionHelper:ExtractCrafterShoppingReagentsFromOrder": {
     "lines": [
      72
     ],
@@ -1269,17 +1269,17 @@
      43
     ]
    },
-   "ProfessionExporter:HookLiveCraftingOrderView": {
+   "AuctionHelper:HookLiveCraftingOrderView": {
     "lines": [
      43
     ]
    },
-   "ProfessionExporter:OpenCraftingOrderWorkQueueEntry": {
+   "AuctionHelper:OpenCraftingOrderWorkQueueEntry": {
     "lines": [
      89
     ]
    },
-   "ProfessionExporter:RemoveCraftingOrdersByReagentItem": {
+   "AuctionHelper:RemoveCraftingOrdersByReagentItem": {
     "ccn": [
      11
     ]
@@ -1347,17 +1347,17 @@
    }
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersUI.lua": {
-   "ProfessionExporter:CraftingOrdersRecipeShouldShow": {
+   "AuctionHelper:CraftingOrdersRecipeShouldShow": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:EnsureCraftingOrdersFilterBar": {
+   "AuctionHelper:EnsureCraftingOrdersFilterBar": {
     "lines": [
      62
     ]
    },
-   "ProfessionExporter:OnCraftingOrdersGenerateDataProvider": {
+   "AuctionHelper:OnCraftingOrdersGenerateDataProvider": {
     "ccn": [
      12
     ]
@@ -1374,12 +1374,12 @@
    }
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": {
-   "ProfessionExporter:BuildAccountItemInventoryTotals": {
+   "AuctionHelper:BuildAccountItemInventoryTotals": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:BuildCraftEconomyItemIDs": {
+   "AuctionHelper:BuildCraftEconomyItemIDs": {
     "lines": [
      58
     ],
@@ -1387,7 +1387,7 @@
      30
     ]
    },
-   "ProfessionExporter:BuildCraftOpportunityRows": {
+   "AuctionHelper:BuildCraftOpportunityRows": {
     "lines": [
      45
     ],
@@ -1395,7 +1395,7 @@
      15
     ]
    },
-   "ProfessionExporter:BuildLiveSelectedReagentPlanForOpenRecipe": {
+   "AuctionHelper:BuildLiveSelectedReagentPlanForOpenRecipe": {
     "lines": [
      45
     ],
@@ -1403,7 +1403,7 @@
      22
     ]
    },
-   "ProfessionExporter:BuildProfessionRecipeQueueContext": {
+   "AuctionHelper:BuildProfessionRecipeQueueContext": {
     "lines": [
      100
     ],
@@ -1411,7 +1411,7 @@
      26
     ]
    },
-   "ProfessionExporter:ComputeMatCostForReagentPlan": {
+   "AuctionHelper:ComputeMatCostForReagentPlan": {
     "lines": [
      54
     ],
@@ -1419,7 +1419,7 @@
      22
     ]
    },
-   "ProfessionExporter:CraftEvalProcessNextChunk": {
+   "AuctionHelper:CraftEvalProcessNextChunk": {
     "lines": [
      55
     ],
@@ -1427,7 +1427,7 @@
      13
     ]
    },
-   "ProfessionExporter:EvaluateSelectedProfessionRecipe": {
+   "AuctionHelper:EvaluateSelectedProfessionRecipe": {
     "lines": [
      63
     ],
@@ -1435,7 +1435,7 @@
      12
     ]
    },
-   "ProfessionExporter:FilterCraftRows": {
+   "AuctionHelper:FilterCraftRows": {
     "lines": [
      65
     ],
@@ -1443,17 +1443,17 @@
      43
     ]
    },
-   "ProfessionExporter:GetCraftExpansionTag": {
+   "AuctionHelper:GetCraftExpansionTag": {
     "ccn": [
      26
     ]
    },
-   "ProfessionExporter:GetLiveOrScannedRecipeDataForOpenProfession": {
+   "AuctionHelper:GetLiveOrScannedRecipeDataForOpenProfession": {
     "ccn": [
      19
     ]
    },
-   "ProfessionExporter:GetOpenProfessionRecipeID": {
+   "AuctionHelper:GetOpenProfessionRecipeID": {
     "lines": [
      56
     ],
@@ -1461,7 +1461,7 @@
      33
     ]
    },
-   "ProfessionExporter:GetOpenProfessionScenario": {
+   "AuctionHelper:GetOpenProfessionScenario": {
     "lines": [
      63
     ],
@@ -1469,17 +1469,17 @@
      28
     ]
    },
-   "ProfessionExporter:GetOpenProfessionSchematicForm": {
+   "AuctionHelper:GetOpenProfessionSchematicForm": {
     "ccn": [
      16
     ]
    },
-   "ProfessionExporter:GetProfessionDescriptorForOpenRecipe": {
+   "AuctionHelper:GetProfessionDescriptorForOpenRecipe": {
     "ccn": [
      16
     ]
    },
-   "ProfessionExporter:PickCheapestReagentsPerSlot": {
+   "AuctionHelper:PickCheapestReagentsPerSlot": {
     "lines": [
      52
     ],
@@ -1487,12 +1487,12 @@
      29
     ]
    },
-   "ProfessionExporter:ProfessionRecipeIsVendorSourced": {
+   "AuctionHelper:ProfessionRecipeIsVendorSourced": {
     "ccn": [
      13
     ]
    },
-   "ProfessionExporter:QueueOpenProfessionRecipe": {
+   "AuctionHelper:QueueOpenProfessionRecipe": {
     "lines": [
      42
     ],
@@ -1500,7 +1500,7 @@
      20
     ]
    },
-   "ProfessionExporter:ResolveCraftCategoryLabel": {
+   "AuctionHelper:ResolveCraftCategoryLabel": {
     "ccn": [
      11
     ]
@@ -1576,12 +1576,12 @@
    }
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_Integrations.lua": {
-   "ProfessionExporter:ApplyEconomyToAggregatedInventoryRow": {
+   "AuctionHelper:ApplyEconomyToAggregatedInventoryRow": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:ApplyEconomyToInventoryRow": {
+   "AuctionHelper:ApplyEconomyToInventoryRow": {
     "lines": [
      42
     ],
@@ -1589,12 +1589,12 @@
      17
     ]
    },
-   "ProfessionExporter:EstimateBestMatCostPerUnitAmongSelection": {
+   "AuctionHelper:EstimateBestMatCostPerUnitAmongSelection": {
     "ccn": [
      14
     ]
    },
-   "ProfessionExporter:EstimateMatCostPerUnitForItem": {
+   "AuctionHelper:EstimateMatCostPerUnitForItem": {
     "lines": [
      44
     ],
@@ -1602,17 +1602,17 @@
      11
     ]
    },
-   "ProfessionExporter:EstimateRecipeMatCostCopper": {
+   "AuctionHelper:EstimateRecipeMatCostCopper": {
     "ccn": [
      15
     ]
    },
-   "ProfessionExporter:GetMarketEstimateCopper": {
+   "AuctionHelper:GetMarketEstimateCopper": {
     "ccn": [
      17
     ]
    },
-   "ProfessionExporter:GetPreferredAddonPrice": {
+   "AuctionHelper:GetPreferredAddonPrice": {
     "lines": [
      51
     ],
@@ -1620,7 +1620,7 @@
      25
     ]
    },
-   "ProfessionExporter:GetTSMCustomPriceCopper": {
+   "AuctionHelper:GetTSMCustomPriceCopper": {
     "ccn": [
      11
     ]
@@ -1632,7 +1632,7 @@
    }
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_LiveUpdate.lua": {
-   "ProfessionExporter:ApplyLiveProfessionMergeForSkillLineID": {
+   "AuctionHelper:ApplyLiveProfessionMergeForSkillLineID": {
     "lines": [
      196
     ],
@@ -1640,7 +1640,7 @@
      61
     ]
    },
-   "ProfessionExporter:ApplyLiveProfessionMergeOnWindowClose": {
+   "AuctionHelper:ApplyLiveProfessionMergeOnWindowClose": {
     "lines": [
      60
     ],
@@ -1648,7 +1648,7 @@
      20
     ]
    },
-   "ProfessionExporter:BuildOpenProfessionQuickFingerprint": {
+   "AuctionHelper:BuildOpenProfessionQuickFingerprint": {
     "lines": [
      57
     ],
@@ -1656,24 +1656,24 @@
      39
     ]
    },
-   "ProfessionExporter:ScheduleLiveInventoryRefresh": {
+   "AuctionHelper:ScheduleLiveInventoryRefresh": {
     "lines": [
      50
     ]
    },
-   "ProfessionExporter:StartChunkedRecipeMergeJob": {
+   "AuctionHelper:StartChunkedRecipeMergeJob": {
     "lines": [
      56
     ]
    }
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_Scan.lua": {
-   "ProfessionExporter:FinishScan": {
+   "AuctionHelper:FinishScan": {
     "lines": [
      46
     ]
    },
-   "ProfessionExporter:ScanOpenProfession": {
+   "AuctionHelper:ScanOpenProfession": {
     "lines": [
      49
     ],
@@ -1681,24 +1681,24 @@
      20
     ]
    },
-   "ProfessionExporter:TryScanCurrentProfession": {
+   "AuctionHelper:TryScanCurrentProfession": {
     "lines": [
      63
     ]
    },
-   "ProfessionExporter:TryScanCurrentProfession/<anon>": {
+   "AuctionHelper:TryScanCurrentProfession/<anon>": {
     "lines": [
      42
     ]
    }
   },
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_SpecCatalog.lua": {
-   "ProfessionExporter:AddSpecStatTotals": {
+   "AuctionHelper:AddSpecStatTotals": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:AttachSpecCatalogMetadata": {
+   "AuctionHelper:AttachSpecCatalogMetadata": {
     "lines": [
      95
     ],
@@ -1706,17 +1706,17 @@
      42
     ]
    },
-   "ProfessionExporter:BuildSpecNodeGroupsForRecipe": {
+   "AuctionHelper:BuildSpecNodeGroupsForRecipe": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:BuildSpecNodeRanksFromSpecializationTree": {
+   "AuctionHelper:BuildSpecNodeRanksFromSpecializationTree": {
     "lines": [
      56
     ]
    },
-   "ProfessionExporter:ComputeSpecStatsForBaseNode": {
+   "AuctionHelper:ComputeSpecStatsForBaseNode": {
     "lines": [
      48
     ],
@@ -1731,7 +1731,7 @@
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Chart.lua": {
-   "ProfessionExporter:CreateTimeSeriesGraph": {
+   "AuctionHelper:CreateTimeSeriesGraph": {
     "lines": [
      524
     ],
@@ -1739,7 +1739,7 @@
      17
     ]
    },
-   "ProfessionExporter:CreateTimeSeriesGraph/<anon>": {
+   "AuctionHelper:CreateTimeSeriesGraph/<anon>": {
     "lines": [
      53
     ],
@@ -1777,22 +1777,22 @@
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_CraftsUI.lua": {
-   "ProfessionExporter:CreateCraftsQueueView": {
+   "AuctionHelper:CreateCraftsQueueView": {
     "lines": [
      96
     ]
    },
-   "ProfessionExporter:EnsureCraftsPanel": {
+   "AuctionHelper:EnsureCraftsPanel": {
     "lines": [
      246
     ]
    },
-   "ProfessionExporter:GetCraftsColumnDefinitions": {
+   "AuctionHelper:GetCraftsColumnDefinitions": {
     "lines": [
      48
     ]
    },
-   "ProfessionExporter:RefreshCraftsQueuePanel": {
+   "AuctionHelper:RefreshCraftsQueuePanel": {
     "lines": [
      45
     ],
@@ -1800,7 +1800,7 @@
      25
     ]
    },
-   "ProfessionExporter:RefreshCraftsTab": {
+   "AuctionHelper:RefreshCraftsTab": {
     "lines": [
      75
     ],
@@ -1808,7 +1808,7 @@
      29
     ]
    },
-   "ProfessionExporter:RenderCraftsDetails": {
+   "AuctionHelper:RenderCraftsDetails": {
     "lines": [
      67
     ],
@@ -1816,7 +1816,7 @@
      36
     ]
    },
-   "ProfessionExporter:ShowCraftRowTooltip": {
+   "AuctionHelper:ShowCraftRowTooltip": {
     "ccn": [
      17
     ]
@@ -1862,7 +1862,7 @@
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_GoldDashboard.lua": {
-   "ProfessionExporter:CreateGoldDashboard": {
+   "AuctionHelper:CreateGoldDashboard": {
     "lines": [
      287
     ]
@@ -1892,17 +1892,17 @@
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_InventoryUI.lua": {
-   "ProfessionExporter:BuildInventoryFilterState": {
+   "AuctionHelper:BuildInventoryFilterState": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:CreateItemDetailPane": {
+   "AuctionHelper:CreateItemDetailPane": {
     "lines": [
      128
     ]
    },
-   "ProfessionExporter:EnsureInventoryPanel": {
+   "AuctionHelper:EnsureInventoryPanel": {
     "lines": [
      233
     ],
@@ -1910,7 +1910,7 @@
      17
     ]
    },
-   "ProfessionExporter:FilterInventoryRows": {
+   "AuctionHelper:FilterInventoryRows": {
     "lines": [
      55
     ],
@@ -1918,17 +1918,17 @@
      47
     ]
    },
-   "ProfessionExporter:GetInventoryColumnDefinitions": {
+   "AuctionHelper:GetInventoryColumnDefinitions": {
     "lines": [
      237
     ]
    },
-   "ProfessionExporter:HandleInventoryRowEnter": {
+   "AuctionHelper:HandleInventoryRowEnter": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:RefreshInventoryTab": {
+   "AuctionHelper:RefreshInventoryTab": {
     "lines": [
      83
     ],
@@ -1959,24 +1959,24 @@
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_MailPanel.lua": {
-   "ProfessionExporter:AdvanceMailSendQueue": {
+   "AuctionHelper:AdvanceMailSendQueue": {
     "ccn": [
      18
     ]
    },
-   "ProfessionExporter:EnsureMailPanel": {
+   "AuctionHelper:EnsureMailPanel": {
     "lines": [
      120
     ]
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_MarketUI.lua": {
-   "ProfessionExporter:CollectMarketBrowserRows": {
+   "AuctionHelper:CollectMarketBrowserRows": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:CreateMarketHistoryView": {
+   "AuctionHelper:CreateMarketHistoryView": {
     "lines": [
      70
     ],
@@ -1984,12 +1984,12 @@
      12
     ]
    },
-   "ProfessionExporter:EnsureMarketPanel": {
+   "AuctionHelper:EnsureMarketPanel": {
     "lines": [
      155
     ]
    },
-   "ProfessionExporter:RefreshMarketTab": {
+   "AuctionHelper:RefreshMarketTab": {
     "lines": [
      76
     ],
@@ -2044,22 +2044,22 @@
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_ProfessionCraftPanel.lua": {
-   "ProfessionExporter:EnsureProfessionCraftEconomyPanel": {
+   "AuctionHelper:EnsureProfessionCraftEconomyPanel": {
     "lines": [
      85
     ]
    },
-   "ProfessionExporter:GetProfessionCraftOperationSignature": {
+   "AuctionHelper:GetProfessionCraftOperationSignature": {
     "ccn": [
      16
     ]
    },
-   "ProfessionExporter:InitProfessionCraftEconomyHooks": {
+   "AuctionHelper:InitProfessionCraftEconomyHooks": {
     "lines": [
      56
     ]
    },
-   "ProfessionExporter:OnProfessionRecipeCraftedResult": {
+   "AuctionHelper:OnProfessionRecipeCraftedResult": {
     "lines": [
      84
     ],
@@ -2067,7 +2067,7 @@
      56
     ]
    },
-   "ProfessionExporter:RefreshProfessionCraftEconomyPanel": {
+   "AuctionHelper:RefreshProfessionCraftEconomyPanel": {
     "lines": [
      101
     ],
@@ -2090,7 +2090,7 @@
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_SalesDashboard.lua": {
-   "ProfessionExporter:CreateSalesDashboard": {
+   "AuctionHelper:CreateSalesDashboard": {
     "lines": [
      131
     ]
@@ -2105,7 +2105,7 @@
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": {
-   "ProfessionExporter:CreateReusableTable": {
+   "AuctionHelper:CreateReusableTable": {
     "lines": [
      156
     ],
@@ -2180,81 +2180,81 @@
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_UI.lua": {
-   "ProfessionExporter:GetCharacterNameMarkup": {
+   "AuctionHelper:GetCharacterNameMarkup": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:GetItemDisplayName": {
+   "AuctionHelper:GetItemDisplayName": {
     "ccn": [
      12
     ]
    },
-   "ProfessionExporter:ShowExportProgress": {
+   "AuctionHelper:ShowExportProgress": {
     "lines": [
      64
     ]
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_UIShell.lua": {
-   "ProfessionExporter:CreateDashboardFrame": {
+   "AuctionHelper:CreateDashboardFrame": {
     "lines": [
      168
     ]
    },
-   "ProfessionExporter:EnsureDashboardTabCreated": {
+   "AuctionHelper:EnsureDashboardTabCreated": {
     "ccn": [
      18
     ]
    },
-   "ProfessionExporter:EnsureMinimapButton": {
+   "AuctionHelper:EnsureMinimapButton": {
     "lines": [
      79
     ]
    },
-   "ProfessionExporter:RefreshShellStatus": {
+   "AuctionHelper:RefreshShellStatus": {
     "ccn": [
      21
     ]
    },
-   "ProfessionExporter:RegisterBlizzardSettings": {
+   "AuctionHelper:RegisterBlizzardSettings": {
     "lines": [
      93
     ]
    },
-   "ProfessionExporter:ShowDashboardTab": {
+   "AuctionHelper:ShowDashboardTab": {
     "ccn": [
      15
     ]
    },
-   "ProfessionExporter:UpdateDynamicPanelLayering": {
+   "AuctionHelper:UpdateDynamicPanelLayering": {
     "ccn": [
      11
     ]
    }
   },
   "src/AuctionHelper_UI/src/ui/AuctionHelper_Widgets.lua": {
-   "ProfessionExporter:CreateButton": {
+   "AuctionHelper:CreateButton": {
     "ccn": [
      11
     ]
    },
-   "ProfessionExporter:CreateItemColumn": {
+   "AuctionHelper:CreateItemColumn": {
     "lines": [
      48
     ]
    },
-   "ProfessionExporter:CreateMultiSelectDropdown": {
+   "AuctionHelper:CreateMultiSelectDropdown": {
     "lines": [
      71
     ]
    },
-   "ProfessionExporter:CreateSingleSelectDropdown": {
+   "AuctionHelper:CreateSingleSelectDropdown": {
     "lines": [
      54
     ]
    },
-   "ProfessionExporter:GetItemFilterInfo": {
+   "AuctionHelper:GetItemFilterInfo": {
     "ccn": [
      14
     ]

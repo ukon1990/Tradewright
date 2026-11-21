@@ -59,7 +59,6 @@ Existing debt is frozen in `scripts/lint-baseline.json` (a ratchet). Lint fails 
 | Auction house price seen in game | AH price | native, live, current price |
 | Item identity with bonus ids | item key (`itemKey`) | key fields, scan key |
 
-- The addon object is called `ProfessionExporter` for historical reasons (the addon started as a profession exporter). It is the same table as `AuctionHelper`; there is no separate exporter
 
 ## Comments
 

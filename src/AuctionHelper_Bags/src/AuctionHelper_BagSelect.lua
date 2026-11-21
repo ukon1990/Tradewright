@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Selecting stacks in the bag window (E12 F103, F104). The slots are the game's item buttons and
 -- must keep running the game's own click code, so nothing here touches them: a transparent catcher
@@ -13,21 +13,21 @@ local picked = {} -- the selected stacks as of the last redraw
 local armed = false -- Destroy was chosen: each click on the bar's button deletes one stack
 
 local function auctionPriceOf(itemID)
-	return ProfessionExporter:GetBagItemAuctionPrice(itemID)
+	return AuctionHelper:GetBagItemAuctionPrice(itemID)
 end
 
-function ProfessionExporter:ClearBagSelection()
+function AuctionHelper:ClearBagSelection()
 	selection, armed = {}, false
 	self:RefreshBagWindow()
 end
 
-function ProfessionExporter:IsBagSlotSelected(item)
+function AuctionHelper:IsBagSlotSelected(item)
 	return item.bag ~= nil and selection[self.BagLogic.SlotKey(item.bag, item.slot)] ~= nil
 end
 
 --- Called on every redraw with the stacks shown: forgets the selection when the view changed or
 --- is read-only, drops stacks that are gone, and returns the selected stacks.
-function ProfessionExporter:SyncBagSelection(view, items)
+function AuctionHelper:SyncBagSelection(view, items)
 	local key = view.live and (view.tab .. ":" .. view.mode) or nil
 	if key ~= selectionView then
 		selection, armed, selectionView = {}, false, key
@@ -37,7 +37,7 @@ function ProfessionExporter:SyncBagSelection(view, items)
 end
 
 --- Destroy was chosen for `items`: select them and arm the bar's button. Nothing is deleted yet.
-function ProfessionExporter:ArmBagDestroy(items)
+function AuctionHelper:ArmBagDestroy(items)
 	local queue, total, refused = self.BagLogic.DestroyQueue(items, auctionPriceOf)
 	if #queue == 0 then
 		self:PrintMessage("Nothing to destroy. " .. self.BAG_DESTROY_KEPT_TEXT)
@@ -54,7 +54,7 @@ function ProfessionExporter:ArmBagDestroy(items)
 end
 
 local function destroyNext()
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local item = pe.BagLogic.DestroyQueue(picked, auctionPriceOf)[1]
 	if armed and item then
 		pe:DestroyBagStack(item)
@@ -71,7 +71,7 @@ local function itemUnderMouse(f)
 end
 
 local function onCatcherClick(catcher, mouseButton)
-	local pe, f = ProfessionExporter, catcher.window
+	local pe, f = AuctionHelper, catcher.window
 	local item = itemUnderMouse(f)
 	if mouseButton == "RightButton" then
 		local items = #picked > 0 and picked or { item }
@@ -97,7 +97,7 @@ local function createCatcher(f)
 end
 
 --- Show the catcher over a live view while Ctrl or Alt is held or something is selected.
-function ProfessionExporter:UpdateBagCatcher()
+function AuctionHelper:UpdateBagCatcher()
 	local f = self.ui.bagWindow
 	if not f then
 		return
@@ -108,7 +108,7 @@ end
 
 --- The bar shown while something is selected: the count, Destroy next (once armed), Actions, Clear.
 --- Also creates the catcher of the window `f`.
-function ProfessionExporter:CreateBagSelectBar(f)
+function AuctionHelper:CreateBagSelectBar(f)
 	local pe = self
 	local bar = CreateFrame("Frame", nil, f)
 	bar:SetHeight(self:GetTheme().size.control)
@@ -128,7 +128,7 @@ function ProfessionExporter:CreateBagSelectBar(f)
 end
 
 --- Fill the bar from the selected stacks. Returns whether it is shown.
-function ProfessionExporter:RefreshBagSelectBar(bar)
+function AuctionHelper:RefreshBagSelectBar(bar)
 	local left = armed and #self.BagLogic.DestroyQueue(picked, auctionPriceOf) or 0
 	armed = left > 0
 	bar:SetShown(#picked > 0)
@@ -143,5 +143,5 @@ end
 local events = CreateFrame("Frame")
 events:RegisterEvent("MODIFIER_STATE_CHANGED")
 events:SetScript("OnEvent", function()
-	ProfessionExporter:UpdateBagCatcher()
+	AuctionHelper:UpdateBagCatcher()
 end)

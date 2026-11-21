@@ -1,7 +1,7 @@
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
 local SettingsTab = {}
-ProfessionExporter.SettingsTab = SettingsTab
+AuctionHelper.SettingsTab = SettingsTab
 
 local CATEGORY_WIDTH = 220
 local GAP = 12
@@ -484,7 +484,7 @@ local function createSettingsPane(pe, panel)
 end
 
 function SettingsTab:Create(container, uiState)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local panel = CreateFrame("Frame", nil, container)
 	panel:SetAllPoints()
 	uiState.settingsPanel = panel
@@ -527,7 +527,7 @@ local function refreshCategoryList(pe, panel)
 end
 
 function SettingsTab:Refresh()
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local panel = pe.ui.settingsPanel
 	if not panel then
 		return

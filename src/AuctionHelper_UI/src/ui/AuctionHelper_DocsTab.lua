@@ -1,7 +1,7 @@
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
 local DocsTab = {}
-ProfessionExporter.DocsTab = DocsTab
+AuctionHelper.DocsTab = DocsTab
 
 local GAP = 12
 local TOPIC_WIDTH = 220
@@ -33,7 +33,7 @@ function DocsTab:Layout(panel)
 end
 
 function DocsTab:Create(container, uiState)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local panel = CreateFrame("Frame", nil, container)
 	panel:SetAllPoints()
 	uiState.docsPanel = panel
@@ -82,7 +82,7 @@ function DocsTab:ApplyTheme()
 end
 
 function DocsTab:Refresh()
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local panel = pe.ui.docsPanel
 	if not panel then
 		return

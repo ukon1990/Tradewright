@@ -1,4 +1,4 @@
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
 local MAX_ROWS = 500
 
@@ -39,7 +39,7 @@ end
 -- "12" for a busy item, "0.4" for a slow one.
 local function sellsText(perDay)
 	if perDay >= 10 then
-		return ProfessionExporter:FormatNumberGrouped(math.floor(perDay + 0.5))
+		return AuctionHelper:FormatNumberGrouped(math.floor(perDay + 0.5))
 	end
 	return string.format("%.1f", perDay)
 end
@@ -148,7 +148,7 @@ local function marketFactRows(pe, rowData)
 	}
 end
 
-function ProfessionExporter:BuildMarketTableColumns()
+function AuctionHelper:BuildMarketTableColumns()
 	local pe = self
 	local function money(id, label, field, fallback)
 		return {
@@ -188,7 +188,7 @@ function ProfessionExporter:BuildMarketTableColumns()
 	}
 end
 
-function ProfessionExporter:LayoutMarketPanel(panel)
+function AuctionHelper:LayoutMarketPanel(panel)
 	if not panel then
 		return
 	end
@@ -199,7 +199,7 @@ end
 
 -- One auction listing's history: optional header, key facts, hourly price graph and the recent hours.
 -- Used by the Market tab detail card and the item details window. `opts.noHeader` hides the header.
-function ProfessionExporter:CreateMarketHistoryView(parent, opts)
+function AuctionHelper:CreateMarketHistoryView(parent, opts)
 	opts = opts or {}
 	local pe = self
 	local view = CreateFrame("Frame", nil, parent)
@@ -271,7 +271,7 @@ function ProfessionExporter:CreateMarketHistoryView(parent, opts)
 end
 
 -- The Market browser row for one storage key, or nil when nothing is saved under it.
-function ProfessionExporter:GetMarketRowForStorageKey(storageKey)
+function AuctionHelper:GetMarketRowForStorageKey(storageKey)
 	local auction = self:InitAuctionDB()
 	if not (auction and storageKey) then
 		return nil
@@ -284,10 +284,10 @@ function ProfessionExporter:GetMarketRowForStorageKey(storageKey)
 	return self.ForeverLogic.BuildMarketBrowserRows(
 		commodity and { [storageKey] = commodity } or {},
 		item and { [storageKey] = item } or {},
-		{ resolveName = function(itemID) return ProfessionExporter:GetItemDisplayName(itemID, true) end })[1]
+		{ resolveName = function(itemID) return AuctionHelper:GetItemDisplayName(itemID, true) end })[1]
 end
 
-function ProfessionExporter:EnsureMarketPanel(container)
+function AuctionHelper:EnsureMarketPanel(container)
 	local ui = self.ui
 	if ui.marketPanel then
 		return ui.marketPanel
@@ -299,8 +299,8 @@ function ProfessionExporter:EnsureMarketPanel(container)
 
 	local filters = self:GetMarketFilters()
 	local function changed()
-		ProfessionExporter:SaveMarketFilters()
-		ProfessionExporter:RefreshMarketTab()
+		AuctionHelper:SaveMarketFilters()
+		AuctionHelper:RefreshMarketTab()
 	end
 	local function setFilter(key)
 		return function(selection)
@@ -336,7 +336,7 @@ function ProfessionExporter:EnsureMarketPanel(container)
 	})
 	self:ChainLeft({ panel.qualityDropdown, panel.subclassDropdown, panel.classDropdown }, 8)
 	ui.marketSearchBox = self:CreateSearchBox(panel.toolbar, "Search the last scan", function()
-		ProfessionExporter:RefreshMarketTab()
+		AuctionHelper:RefreshMarketTab()
 	end)
 	ui.marketSearchBox:SetPoint("LEFT", 6, 0)
 	ui.marketSearchBox:SetPoint("RIGHT", panel.classDropdown, "LEFT", -14, 0)
@@ -400,7 +400,7 @@ function ProfessionExporter:EnsureMarketPanel(container)
 		emptyTitle = "No prices yet",
 		emptyHint = "Open the auction house and run a full scan.",
 		isRowSelected = function(rowData)
-			return rowData and rowData.storageKey ~= nil and rowData.storageKey == ProfessionExporter.ui.marketSelectedStorageKey
+			return rowData and rowData.storageKey ~= nil and rowData.storageKey == AuctionHelper.ui.marketSelectedStorageKey
 		end,
 		maxRows = MAX_ROWS,
 		viewportVirtualize = true,
@@ -409,26 +409,26 @@ function ProfessionExporter:EnsureMarketPanel(container)
 		sortKey = sortKey,
 		sortAsc = sortAsc ~= false,
 		onSortChanged = function(key, asc)
-			ProfessionExporter:SetSetting("market.sortColumn", key)
-			ProfessionExporter:SetSetting("market.sortAsc", asc)
+			AuctionHelper:SetSetting("market.sortColumn", key)
+			AuctionHelper:SetSetting("market.sortAsc", asc)
 		end,
 		onRowEnter = function(rowFrame, rowData)
-			ProfessionExporter:ShowItemRowTooltip(rowFrame, rowData and rowData.itemID, {
-				{ "Highest listing", ProfessionExporter:FormatCopperShort(rowData and (rowData.marketHigh or rowData.price)) },
+			AuctionHelper:ShowItemRowTooltip(rowFrame, rowData and rowData.itemID, {
+				{ "Highest listing", AuctionHelper:FormatCopperShort(rowData and (rowData.marketHigh or rowData.price)) },
 			}, "Click for history · Shift-click to link")
 		end,
 		onRowLeave = function()
 			GameTooltip:Hide()
 		end,
 		onRowClick = function(_, rowData, _, tableWidget)
-			if ProfessionExporter:HandleItemRowModifiedClick(rowData and rowData.itemID) then
+			if AuctionHelper:HandleItemRowModifiedClick(rowData and rowData.itemID) then
 				return
 			end
 			ui.marketSelectedStorageKey = rowData and rowData.storageKey
 			ui.marketSelectedRow = rowData
 			tableWidget:SetSelectedRow(rowData)
-			ProfessionExporter:RenderMarketDetails(rowData)
-			ProfessionExporter:LayoutMarketPanel(panel)
+			AuctionHelper:RenderMarketDetails(rowData)
+			AuctionHelper:LayoutMarketPanel(panel)
 		end,
 	})
 	ui.marketTable.frame:SetPoint("TOPLEFT", panel.filterRow, "BOTTOMLEFT", 0, -GAP)
@@ -437,14 +437,14 @@ function ProfessionExporter:EnsureMarketPanel(container)
 	ui.marketTable:SetColumns(self:BuildMarketTableColumns())
 
 	panel:SetScript("OnSizeChanged", function()
-		ProfessionExporter:LayoutMarketPanel(panel)
+		AuctionHelper:LayoutMarketPanel(panel)
 	end)
 	self:LayoutMarketPanel(panel)
 	return panel
 end
 
 -- Market filter state, kept in settings so it survives a reload.
-function ProfessionExporter:GetMarketFilters()
+function AuctionHelper:GetMarketFilters()
 	local ui = self.ui
 	if not ui.marketFilters then
 		local saved = self:GetSetting("market.filters", {}) or {}
@@ -460,11 +460,11 @@ function ProfessionExporter:GetMarketFilters()
 	return ui.marketFilters
 end
 
-function ProfessionExporter:SaveMarketFilters()
+function AuctionHelper:SaveMarketFilters()
 	self:SetSetting("market.filters", self:GetMarketFilters())
 end
 
-function ProfessionExporter:ResetMarketFilters()
+function AuctionHelper:ResetMarketFilters()
 	local panel = self.ui.marketPanel
 	self.ui.marketFilters = { classes = {}, subclasses = {}, qualities = {}, ownedOnly = false }
 	self:SaveMarketFilters()
@@ -478,7 +478,7 @@ function ProfessionExporter:ResetMarketFilters()
 end
 
 -- Item IDs any stored character has in bags, bank or warband bank.
-function ProfessionExporter:GetOwnedItemSet()
+function AuctionHelper:GetOwnedItemSet()
 	local owned = {}
 	for _, row in ipairs(self:BuildInventoryRowsAggregatedByItem(self.db, {}, "") or {}) do
 		if (tonumber(row.total) or 0) > 0 and row.itemID then
@@ -488,7 +488,7 @@ function ProfessionExporter:GetOwnedItemSet()
 	return owned
 end
 
-function ProfessionExporter:CollectMarketBrowserRows()
+function AuctionHelper:CollectMarketBrowserRows()
 	local auction = self:InitAuctionDB()
 	if not auction then
 		return {}
@@ -511,18 +511,18 @@ function ProfessionExporter:CollectMarketBrowserRows()
 		sortKey = sortKey,
 		sortAsc = sortAsc,
 		resolveName = function(itemID)
-			return ProfessionExporter:GetItemDisplayName(itemID, true)
+			return AuctionHelper:GetItemDisplayName(itemID, true)
 		end,
 	})
 end
 
 -- Switches to the Market tab with this listing selected (shown when the current filters include it).
-function ProfessionExporter:OpenMarketItem(storageKey)
+function AuctionHelper:OpenMarketItem(storageKey)
 	self.ui.marketSelectedStorageKey = storageKey
 	self:ShowDashboardTab("market")
 end
 
-function ProfessionExporter:RenderMarketDetails(rowData)
+function AuctionHelper:RenderMarketDetails(rowData)
 	local ui = self.ui
 	local panel = ui and ui.marketPanel
 	if not panel then
@@ -585,7 +585,7 @@ end
 
 -- Item details window: everything the Inventory and Market detail panes show, for one item.
 -- storageKey picks the auction listing; without one, the item's full-scan listing is used.
-function ProfessionExporter:ShowItemDetailsWindow(itemID, storageKey)
+function AuctionHelper:ShowItemDetailsWindow(itemID, storageKey)
 	itemID = tonumber(itemID)
 	if not itemID then
 		return
@@ -605,7 +605,7 @@ function ProfessionExporter:ShowItemDetailsWindow(itemID, storageKey)
 	end
 end
 
-function ProfessionExporter:RefreshMarketTab()
+function AuctionHelper:RefreshMarketTab()
 	self:InitDB()
 	local ui = self.ui
 	if not ui or not ui.marketPanel then
@@ -645,7 +645,7 @@ function ProfessionExporter:RefreshMarketTab()
 		minPrice = filters.minGold and filters.minGold * 10000 or nil,
 		maxPrice = filters.maxGold and filters.maxGold * 10000 or nil,
 	}, function(itemID)
-		return ProfessionExporter:GetItemFilterInfo(itemID)
+		return AuctionHelper:GetItemFilterInfo(itemID)
 	end)
 	ui.marketWorkingRows = rows
 	if ui.marketTable then

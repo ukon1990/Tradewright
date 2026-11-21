@@ -1,8 +1,8 @@
-local addonName, ProfessionExporter = ...
+local addonName, AuctionHelper = ...
 
 local PROFESSION_PANEL_WATCHER_KEY = "professionCraftPanel"
 
-function ProfessionExporter:GetProfessionCraftOperationSignature()
+function AuctionHelper:GetProfessionCraftOperationSignature()
 	if not self.IS_SUPPORTED then
 		return nil
 	end
@@ -27,7 +27,7 @@ function ProfessionExporter:GetProfessionCraftOperationSignature()
 	return table.concat(parts, "|")
 end
 
-function ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(delaySeconds)
+function AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(delaySeconds)
 	if not self.IS_SUPPORTED then
 		return
 	end
@@ -36,15 +36,15 @@ function ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(delaySeco
 	end
 	self._professionCraftRefreshPending = true
 	C_Timer.After(math.max(0, tonumber(delaySeconds) or 0.05), function()
-		ProfessionExporter._professionCraftRefreshPending = false
-		ProfessionExporter:RefreshProfessionCraftEconomyPanel(true)
+		AuctionHelper._professionCraftRefreshPending = false
+		AuctionHelper:RefreshProfessionCraftEconomyPanel(true)
 	end)
 end
 
 -- Selects a recipe in the open profession window. On Forever the crafting page is told directly:
 -- C_TradeSkillUI.OpenRecipe alone returns without selecting anything there.
 local function selectProfessionRecipe(recipeID)
-	local page = not ProfessionExporter.IS_RETAIL and _G.ProfessionsFrame and _G.ProfessionsFrame.CraftingPage
+	local page = not AuctionHelper.IS_RETAIL and _G.ProfessionsFrame and _G.ProfessionsFrame.CraftingPage
 	local info = C_TradeSkillUI.GetRecipeInfo and C_TradeSkillUI.GetRecipeInfo(recipeID)
 	if page and info and type(page.SelectRecipe) == "function" and pcall(page.SelectRecipe, page, info) then
 		return true
@@ -65,7 +65,7 @@ local function openProfessionSkillLine(skillLineID)
 end
 
 --- Shows a recipe in the profession window, switching profession first when it belongs to another.
-function ProfessionExporter:JumpToProfessionRecipe(recipeID, skillLineID)
+function AuctionHelper:JumpToProfessionRecipe(recipeID, skillLineID)
 	recipeID = tonumber(recipeID)
 	if not self.IS_SUPPORTED or not recipeID or not C_TradeSkillUI then
 		return false
@@ -84,7 +84,7 @@ function ProfessionExporter:JumpToProfessionRecipe(recipeID, skillLineID)
 	return true
 end
 
-function ProfessionExporter:OnProfessionRecipeCraftedResult(craftingItemResultData)
+function AuctionHelper:OnProfessionRecipeCraftedResult(craftingItemResultData)
 	local craftedQuantity
 	local resultItemID = nil
 	if type(craftingItemResultData) ~= "table" then
@@ -169,7 +169,7 @@ function ProfessionExporter:OnProfessionRecipeCraftedResult(craftingItemResultDa
 	end
 end
 
-function ProfessionExporter:SetProfessionPanelActiveTab(tabId, persist)
+function AuctionHelper:SetProfessionPanelActiveTab(tabId, persist)
 	tabId = tostring(tabId or "info")
 	if tabId ~= "queue" then
 		tabId = "info"
@@ -198,7 +198,7 @@ function ProfessionExporter:SetProfessionPanelActiveTab(tabId, persist)
 	end
 end
 
-function ProfessionExporter:ApplyProfessionPanelExpanded(expanded)
+function AuctionHelper:ApplyProfessionPanelExpanded(expanded)
 	local panel = self._professionCraftPanel
 	if not panel then
 		return
@@ -209,7 +209,7 @@ function ProfessionExporter:ApplyProfessionPanelExpanded(expanded)
 	self:UpdateProfessionPanelToggleButton(expanded)
 end
 
-function ProfessionExporter:UpdateProfessionPanelToggleButton(expanded)
+function AuctionHelper:UpdateProfessionPanelToggleButton(expanded)
 	local panel = self._professionCraftPanel
 	if not panel then
 		return
@@ -247,7 +247,7 @@ local function anchorProfessionPanelToggleButton(toggle, pf)
 	toggle:SetFrameLevel(baseLevel + 50)
 end
 
-function ProfessionExporter:InitProfessionCraftEconomyHooks()
+function AuctionHelper:InitProfessionCraftEconomyHooks()
 	if self._professionCraftEconomyHooks or not self.IS_SUPPORTED then
 		return
 	end
@@ -257,7 +257,7 @@ function ProfessionExporter:InitProfessionCraftEconomyHooks()
 	end
 	self._professionCraftEconomyHooks = true
 	local function scheduleRefresh()
-		ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
+		AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
 	end
 	local page = pf.CraftingPage
 	if page then
@@ -271,13 +271,13 @@ function ProfessionExporter:InitProfessionCraftEconomyHooks()
 	end
 	pf:HookScript("OnShow", scheduleRefresh)
 	pf:HookScript("OnHide", function()
-		if ProfessionExporter._professionCraftPanel then
-			ProfessionExporter._professionCraftPanel:Hide()
-			if ProfessionExporter._professionCraftPanel.panelToggleBtn then
-				ProfessionExporter._professionCraftPanel.panelToggleBtn:Hide()
+		if AuctionHelper._professionCraftPanel then
+			AuctionHelper._professionCraftPanel:Hide()
+			if AuctionHelper._professionCraftPanel.panelToggleBtn then
+				AuctionHelper._professionCraftPanel.panelToggleBtn:Hide()
 			end
-			if ProfessionExporter._professionCraftPanel.collapseTab then
-				ProfessionExporter._professionCraftPanel.collapseTab:Hide()
+			if AuctionHelper._professionCraftPanel.collapseTab then
+				AuctionHelper._professionCraftPanel.collapseTab:Hide()
 			end
 		end
 	end)
@@ -285,27 +285,27 @@ function ProfessionExporter:InitProfessionCraftEconomyHooks()
 	if EventRegistry and EventRegistry.RegisterCallback then
 		EventRegistry:RegisterCallback("ProfessionsFrame.TabSet", function()
 			scheduleRefresh()
-		end, ProfessionExporter)
+		end, AuctionHelper)
 	end
 
 	-- Watch live operation state so concentration/reagent makeup changes refresh immediately.
 	self:StartStateWatcher(PROFESSION_PANEL_WATCHER_KEY, 0.5, function()
-		local form = ProfessionExporter.GetOpenProfessionSchematicForm and ProfessionExporter:GetOpenProfessionSchematicForm() or nil
+		local form = AuctionHelper.GetOpenProfessionSchematicForm and AuctionHelper:GetOpenProfessionSchematicForm() or nil
 		if not form or (form.IsShown and not form:IsShown()) then
-			local openOrder = ProfessionExporter.GetOpenCraftingOrder and ProfessionExporter:GetOpenCraftingOrder() or nil
+			local openOrder = AuctionHelper.GetOpenCraftingOrder and AuctionHelper:GetOpenCraftingOrder() or nil
 			if openOrder then
-				return ProfessionExporter:GetProfessionCraftOperationSignature()
+				return AuctionHelper:GetProfessionCraftOperationSignature()
 			end
 			return nil
 		end
-		return ProfessionExporter:GetProfessionCraftOperationSignature()
+		return AuctionHelper:GetProfessionCraftOperationSignature()
 	end, function()
-		ProfessionExporter:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
+		AuctionHelper:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
 	end)
 end
 
 --- Dock to the right of ProfessionsFrame (same pattern as AH / Mail side panels).
-function ProfessionExporter:LayoutProfessionCraftEconomyPanel(panel)
+function AuctionHelper:LayoutProfessionCraftEconomyPanel(panel)
 	if not panel then
 		return
 	end
@@ -336,11 +336,11 @@ local PANEL_WIDTH = 400
 local PAD = 12
 
 local function rankMarkup(rankIndex)
-	return ProfessionExporter:GetRankMarkup(rankIndex)
+	return AuctionHelper:GetRankMarkup(rankIndex)
 end
 
 local function queueOpenRecipe(amount)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local order = pe.GetOpenCraftingOrder and pe:GetOpenCraftingOrder() or nil
 	if order and pe.AddCraftingOrderToWorkQueue then
 		pe:PrintMessage(string.format("Queueing crafting order #%s...", tostring(order.orderID or "?")))
@@ -442,7 +442,7 @@ local function createRecipeView(pe, f)
 	return host
 end
 
-function ProfessionExporter:EnsureProfessionCraftEconomyPanel()
+function AuctionHelper:EnsureProfessionCraftEconomyPanel()
 	if self._professionCraftPanel then
 		self:LayoutProfessionCraftEconomyPanel(self._professionCraftPanel)
 		return self._professionCraftPanel
@@ -599,7 +599,7 @@ local function renderProfessionEmpty(panel, message)
 	panel.footerText:SetText("")
 end
 
-function ProfessionExporter:RefreshProfessionCraftEconomyPanel(force)
+function AuctionHelper:RefreshProfessionCraftEconomyPanel(force)
 	if not self.IS_SUPPORTED then
 		return
 	end

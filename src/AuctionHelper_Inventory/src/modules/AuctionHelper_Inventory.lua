@@ -1,7 +1,7 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 --- Collect distinct item IDs referenced by scanned profession data (reagents + outputs).
-function ProfessionExporter:CollectTrackedItemIdsFromCharacterData(characterData)
+function AuctionHelper:CollectTrackedItemIdsFromCharacterData(characterData)
 	local seen = {}
 	local function add(itemID)
 		local id = tonumber(itemID)
@@ -18,14 +18,14 @@ function ProfessionExporter:CollectTrackedItemIdsFromCharacterData(characterData
 		for _, recipeData in pairs(professionData.recipes or {}) do
 			local outputs = recipeData.outputs
 			if outputs then
-				add(ProfessionExporter:RecipeOutputsPrimaryItemId(outputs))
+				add(AuctionHelper:RecipeOutputsPrimaryItemId(outputs))
 				if type(outputs.qualityVariants) == "table" then
 					for _, variant in ipairs(outputs.qualityVariants) do
 						add(variant.itemID)
 					end
 				end
 			end
-			local slots = ProfessionExporter:RecipeDataSlots(recipeData)
+			local slots = AuctionHelper:RecipeDataSlots(recipeData)
 			if type(slots) == "table" then
 				for _, slot in ipairs(slots) do
 					if type(slot.reagents) == "table" then
@@ -47,7 +47,7 @@ function ProfessionExporter:CollectTrackedItemIdsFromCharacterData(characterData
 end
 
 --- Sum of this item's quantity in the player's active (unsold) auctions, if AH data is loaded.
-function ProfessionExporter:GetOwnedActiveAuctionQuantityForItem(itemID)
+function AuctionHelper:GetOwnedActiveAuctionQuantityForItem(itemID)
 	itemID = tonumber(itemID)
 	if not itemID or not C_AuctionHouse or not C_AuctionHouse.GetNumOwnedAuctions or not C_AuctionHouse.GetOwnedAuctionInfo then
 		return 0
@@ -100,7 +100,7 @@ local function countItemInBagsViaContainer(itemID)
 		return 0
 	end
 	local total = 0
-	for bag = 0, ProfessionExporter:GetLastBagIndex() do
+	for bag = 0, AuctionHelper:GetLastBagIndex() do
 		local slots = nil
 		if C_Container and C_Container.GetContainerNumSlots then
 			slots = C_Container.GetContainerNumSlots(bag)
@@ -134,7 +134,7 @@ end
 
 --- Bag / bank / warband split using the same pattern as CraftSim (retail C_Item.GetItemCount).
 --- Forever / older clients may reject the warband flag; fall back to bags+bank only.
-function ProfessionExporter:GetItemCountByLocation(itemID)
+function AuctionHelper:GetItemCountByLocation(itemID)
 	if not itemID then
 		return 0, 0, 0, 0
 	end
@@ -187,7 +187,7 @@ function ProfessionExporter:GetItemCountByLocation(itemID)
 	return total, 0, 0, total
 end
 
-function ProfessionExporter:_UpdateInventorySnapshotImmediate(characterData)
+function AuctionHelper:_UpdateInventorySnapshotImmediate(characterData)
 	local ids = self:CollectTrackedItemIdsFromCharacterData(characterData)
 	local items = {}
 	local totalQuantity = 0
@@ -220,12 +220,12 @@ function ProfessionExporter:_UpdateInventorySnapshotImmediate(characterData)
 		totalQuantity = totalQuantity,
 		items = items,
 	}
-	if ProfessionExporter.OnInventorySnapshotWritten then
-		ProfessionExporter:OnInventorySnapshotWritten(characterData)
+	if AuctionHelper.OnInventorySnapshotWritten then
+		AuctionHelper:OnInventorySnapshotWritten(characterData)
 	end
 end
 
-function ProfessionExporter:_InventorySnapshotProcessChunk()
+function AuctionHelper:_InventorySnapshotProcessChunk()
 	local state = self:GetState()
 	local p = state.invSnapshotPending
 	if not p or p.cancelled then
@@ -264,8 +264,8 @@ function ProfessionExporter:_InventorySnapshotProcessChunk()
 			totalQuantity = p.totalQuantity,
 			items = p.items,
 		}
-		if ProfessionExporter.OnInventorySnapshotWritten then
-			ProfessionExporter:OnInventorySnapshotWritten(p.characterData)
+		if AuctionHelper.OnInventorySnapshotWritten then
+			AuctionHelper:OnInventorySnapshotWritten(p.characterData)
 		end
 		state.invSnapshotPending = nil
 		self:BumpDataRevision()
@@ -284,7 +284,7 @@ end
 
 --- Build and attach inventorySnapshot to characterData (mutates in place).
 --- opts: { forceImmediate = bool, onComplete = function }
-function ProfessionExporter:UpdateInventorySnapshot(characterData, opts)
+function AuctionHelper:UpdateInventorySnapshot(characterData, opts)
 	if not characterData then
 		if opts and opts.onComplete then
 			opts.onComplete()

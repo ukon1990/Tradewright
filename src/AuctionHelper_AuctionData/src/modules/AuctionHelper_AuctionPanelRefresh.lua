@@ -1,9 +1,9 @@
 -- Auction house side panel: per-refresh widget state (tabs, scan/bulk progress, sell table, reagent cart).
 -- Panel construction lives in AuctionHelper_AuctionPanelBuild.lua (EnsureAuctionHousePanel).
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 local function formatDurationShort(seconds)
-	return ProfessionExporter:FormatDurationShort(seconds)
+	return AuctionHelper:FormatDurationShort(seconds)
 end
 
 local function setFontColor(fontString, color)
@@ -398,7 +398,7 @@ end
 
 --- Price check the player asked for. During a scan it goes to the front of the scan list, so it
 --- is answered next (also while the scan is paused) and the scan then continues.
-function ProfessionExporter:QueuePriorityAuctionRefresh(itemIDs)
+function AuctionHelper:QueuePriorityAuctionRefresh(itemIDs)
 	local state = self:GetState()
 	local list = state.auctionRefreshScanList
 	if state.auctionRefreshRunning ~= true or type(list) ~= "table" then
@@ -413,14 +413,14 @@ end
 
 --- True while the scan must not send its next search: it waits for a cancel click, or it is
 --- paused. A paused scan still answers priority checks, except during a bulk post.
-function ProfessionExporter:IsAuctionScanHeld(state)
+function AuctionHelper:IsAuctionScanHeld(state)
 	local holdLeft = (state.auctionScanHoldUntil or 0) - GetTime()
 	if holdLeft > 0 then
 		if not state.auctionScanHoldTimer then
 			state.auctionScanHoldTimer = true
 			C_Timer.After(holdLeft + 0.05, function()
 				state.auctionScanHoldTimer = nil
-				ProfessionExporter:ContinueQueuedAuctionRefresh()
+				AuctionHelper:ContinueQueuedAuctionRefresh()
 			end)
 		end
 		return true
@@ -434,7 +434,7 @@ end
 
 --- Cancel click on the Auctions tab. A running scan keeps the server busy, and the client then
 --- drops the cancel, so the scan waits a moment. A click that came too early works on the next try.
-function ProfessionExporter:CancelUndercutHoldingScan()
+function AuctionHelper:CancelUndercutHoldingScan()
 	self:GetState().auctionScanHoldUntil = GetTime() + CANCEL_SCAN_HOLD_SEC
 	self:CancelNextUndercutAuction()
 end
@@ -532,7 +532,7 @@ local function refreshAuctionCartButtons(panel, rows, selectedRow)
 		panel.btnCartClear:SetEnabled(#rows > 0)
 	end
 	if panel.cartHint then
-		panel.cartHint:SetText(ProfessionExporter:CartVendorHint(rows) .. unpricedCartHint(rows))
+		panel.cartHint:SetText(AuctionHelper:CartVendorHint(rows) .. unpricedCartHint(rows))
 	end
 end
 
@@ -551,7 +551,7 @@ local function refreshAuctionCartTable(pe, panel, cartRows, state)
 	refreshAuctionCartButtons(panel, rows, syncAuctionCartSelection(state, rows))
 end
 
-function ProfessionExporter:RefreshAuctionHousePanel()
+function AuctionHelper:RefreshAuctionHousePanel()
 	local panel = self:EnsureAuctionHousePanel()
 	if not panel then
 		return

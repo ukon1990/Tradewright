@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Time-series chart in the style of Highcharts: faint gridlines on rounded ticks, a 2px line with a
 -- fading area fill, round markers on sparse series, quantity as columns on a right axis, a legend,
@@ -55,7 +55,7 @@ local function expandRange(points, minT, maxT, minV, maxV)
 	return minT, maxT, minV, maxV
 end
 
-function ProfessionExporter:CreateTimeSeriesGraph(parent, opts)
+function AuctionHelper:CreateTimeSeriesGraph(parent, opts)
 	opts = opts or {}
 	local pe = self
 	local theme = self:GetTheme()

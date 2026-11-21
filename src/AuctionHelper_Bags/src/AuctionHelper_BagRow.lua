@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Bag row of the bag window (E11 F93): the backpack, the bags and the reagent bag as cells.
 -- Hovering a bag lights its items; dropping a bag swaps it in; right-click lists replacements.
@@ -15,7 +15,7 @@ local BACKPACK = 0
 local BACKPACK_ICON = "Interface\\Buttons\\Button-Backpack-Up"
 local HINT = "Drop a bag here to swap it in. Right-click to pick one you carry. Drag it off to unequip."
 
-ProfessionExporter.BAG_ROW_HEIGHT = HEADING + GAP + CELL_HEIGHT
+AuctionHelper.BAG_ROW_HEIGHT = HEADING + GAP + CELL_HEIGHT
 
 local pickerMenu
 
@@ -39,7 +39,7 @@ end
 
 -- Right-click menu of a bag cell: the bags carried that fit the slot, and taking the bag off.
 local function showPicker(cell)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	if not cell.inventorySlot then
 		return
 	end
@@ -82,7 +82,7 @@ local function onReceiveDrag(cell)
 end
 
 local function onEnter(cell)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local theme = pe:GetTheme()
 	pe:ApplyBackdrop(cell, theme.surface2, theme.tick)
 	pe:SetBagHover(cell.bag)
@@ -99,7 +99,7 @@ local function onEnter(cell)
 end
 
 local function onLeave(cell)
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	pe:StylePanel(cell, "surface2")
 	pe:SetBagHover(nil)
 	GameTooltip:Hide()
@@ -155,7 +155,7 @@ local function refreshCell(cell, info)
 	cell.count:SetText(info.slots > 0 and string.format("%d / %d", info.slots - info.free, info.slots) or "-")
 end
 
-function ProfessionExporter:CreateBagRow(parent)
+function AuctionHelper:CreateBagRow(parent)
 	local theme = self:GetTheme()
 	local row = CreateFrame("Frame", nil, parent)
 	row:SetHeight(self.BAG_ROW_HEIGHT)
@@ -171,7 +171,7 @@ end
 
 --- Lay the cells out over `width` and fill them from `bags` (ScanBags().bags). The reagent bag is
 --- set apart by a divider.
-function ProfessionExporter:RefreshBagRow(row, bags, width)
+function AuctionHelper:RefreshBagRow(row, bags, width)
 	local hasReagent = bags[#bags] and bags[#bags].isReagent
 	local cellWidth = (width - (#bags - 1) * GAP - (hasReagent and REAGENT_GAP or 0)) / #bags
 	local x = 0

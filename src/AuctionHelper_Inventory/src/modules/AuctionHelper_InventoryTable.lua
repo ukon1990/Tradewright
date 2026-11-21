@@ -1,7 +1,7 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 --- Per itemID: appears as recipe output and/or reagent in scanned professions.
-function ProfessionExporter:BuildItemRoleMap(characterData)
+function AuctionHelper:BuildItemRoleMap(characterData)
 	local roles = {}
 	local function ensure(id)
 		id = tonumber(id)
@@ -55,7 +55,7 @@ function ProfessionExporter:BuildItemRoleMap(characterData)
 	return roles
 end
 
-function ProfessionExporter:GetItemRoleLabelFromRoles(roleEntry)
+function AuctionHelper:GetItemRoleLabelFromRoles(roleEntry)
 	if not roleEntry then
 		return "Tracked"
 	end
@@ -72,11 +72,11 @@ function ProfessionExporter:GetItemRoleLabelFromRoles(roleEntry)
 	return "Tracked"
 end
 
-function ProfessionExporter:GetItemSourceLabelFromRoles(roleEntry)
+function AuctionHelper:GetItemSourceLabelFromRoles(roleEntry)
 	return self:GetItemRoleLabelFromRoles(roleEntry)
 end
 
-function ProfessionExporter:GetItemRoleKeyFromRoles(roleEntry)
+function AuctionHelper:GetItemRoleKeyFromRoles(roleEntry)
 	if not roleEntry then
 		return "tracked"
 	end
@@ -95,7 +95,7 @@ end
 
 --- @param roleMap table|nil from BuildItemRoleMap(characterData); when nil, built once internally (avoid per-item scans)
 --- @param characterDisplay string|nil short label for sidebar
-function ProfessionExporter:BuildInventoryRowFromSnapshot(characterData, characterKey, characterDisplay, invEntry, itemID, roleMap)
+function AuctionHelper:BuildInventoryRowFromSnapshot(characterData, characterKey, characterDisplay, invEntry, itemID, roleMap)
 	local roles = roleMap or self:BuildItemRoleMap(characterData)
 	local roleEntry = roles[itemID]
 	local itemDesc = self:ResolveItemDescriptor(itemID)
@@ -121,7 +121,7 @@ function ProfessionExporter:BuildInventoryRowFromSnapshot(characterData, charact
 end
 
 --- All rows with total > 0 for one character.
-function ProfessionExporter:BuildInventoryRowsForCharacter(db, characterKey)
+function AuctionHelper:BuildInventoryRowsForCharacter(db, characterKey)
 	local charData = db and db.characters and db.characters[characterKey]
 	if not charData then
 		return {}
@@ -145,7 +145,7 @@ function ProfessionExporter:BuildInventoryRowsForCharacter(db, characterKey)
 end
 
 --- Account mode: one row per (character, item) with stock.
-function ProfessionExporter:BuildInventoryRowsForAccount(db)
+function AuctionHelper:BuildInventoryRowsForAccount(db)
 	local rows = {}
 	local keys = self:GetDashboardCharacterKeyList(db)
 	for _, characterKey in ipairs(keys) do
@@ -159,7 +159,7 @@ end
 
 --- Merge profession role flags across characters in the same sense as BuildInventoryItemTotals (empty selection = all).
 --- Also returns perCharacterRoleMaps[characterKey] = full map from BuildItemRoleMap (reuse for mat-cost estimates; one scan per character per refresh).
-function ProfessionExporter:BuildMergedItemRoleMapForSelection(db, characterSelection)
+function AuctionHelper:BuildMergedItemRoleMapForSelection(db, characterSelection)
 	local merged = {}
 	local perCharacterRoleMaps = {}
 	if not db or type(db.characters) ~= "table" then
@@ -189,7 +189,7 @@ end
 --- One row per itemID; bags/bank/warband/total from BuildInventoryItemTotals(characterSelection).
 --- @param characterDisplayLabel string label for the Character column (e.g. filter summary).
 --- @param mergedRolesOptional table|nil if set, skip rebuilding merged roles (must match characterSelection).
-function ProfessionExporter:BuildInventoryRowsAggregatedByItem(db, characterSelection, characterDisplayLabel, mergedRolesOptional)
+function AuctionHelper:BuildInventoryRowsAggregatedByItem(db, characterSelection, characterDisplayLabel, mergedRolesOptional)
 	local rows = {}
 	if not db then
 		return rows
@@ -255,7 +255,7 @@ function ProfessionExporter:BuildInventoryRowsAggregatedByItem(db, characterSele
 end
 
 --- Pick a learned recipe on character that outputs itemID (for mat cost); prefers lowest material estimate when priceFn given.
-function ProfessionExporter:FindBestRecipeForOutputItem(characterData, itemID, estimateMatFn)
+function AuctionHelper:FindBestRecipeForOutputItem(characterData, itemID, estimateMatFn)
 	if not characterData or not itemID then
 		return nil, nil
 	end

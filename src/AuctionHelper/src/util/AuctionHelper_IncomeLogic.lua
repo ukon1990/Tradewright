@@ -1,9 +1,9 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 -- Pure income helpers (E10): which source a change of gold belongs to, and the per-day totals it
 -- is kept in. No WoW API here, so the offline tests can load this file on its own.
 local IncomeLogic = {}
-ProfessionExporter.IncomeLogic = IncomeLogic
+AuctionHelper.IncomeLogic = IncomeLogic
 
 IncomeLogic.SOURCES = { "vendor", "quest", "loot", "auction", "mail", "trade", "other" }
 IncomeLogic.KEEP_DAYS = 400

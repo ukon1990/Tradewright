@@ -1,4 +1,4 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
 local CALLER_ID = "AuctionHelper"
 local MONEY_COLORS = {
@@ -27,20 +27,20 @@ local function groupDigits(numberText)
 	return sign .. out
 end
 
-function ProfessionExporter:IsTSMLoaded()
+function AuctionHelper:IsTSMLoaded()
 	return type(TSM_API) == "table"
 		and type(TSM_API.ToItemString) == "function"
 		and type(TSM_API.GetCustomPriceValue) == "function"
 end
 
-function ProfessionExporter:IsAuctionatorLoaded()
+function AuctionHelper:IsAuctionatorLoaded()
 	return type(Auctionator) == "table"
 		and type(Auctionator.API) == "table"
 		and Auctionator.API.v1
 		and type(Auctionator.API.v1.GetAuctionPriceByItemID) == "function"
 end
 
-function ProfessionExporter:GetTSMItemString(itemID)
+function AuctionHelper:GetTSMItemString(itemID)
 	if not self:IsTSMLoaded() or not itemID then
 		return nil
 	end
@@ -56,7 +56,7 @@ function ProfessionExporter:GetTSMItemString(itemID)
 end
 
 --- @return number|nil copper
-function ProfessionExporter:GetTSMCustomPriceCopper(customPriceStr, itemID)
+function AuctionHelper:GetTSMCustomPriceCopper(customPriceStr, itemID)
 	if not customPriceStr or customPriceStr == "" or not itemID then
 		return nil
 	end
@@ -79,7 +79,7 @@ function ProfessionExporter:GetTSMCustomPriceCopper(customPriceStr, itemID)
 end
 
 --- @return number|nil copper (per item auction scan estimate)
-function ProfessionExporter:GetAuctionatorPriceCopper(itemID)
+function AuctionHelper:GetAuctionatorPriceCopper(itemID)
 	if not itemID or not self:IsAuctionatorLoaded() then
 		return nil
 	end
@@ -94,11 +94,11 @@ function ProfessionExporter:GetAuctionatorPriceCopper(itemID)
 	return n
 end
 
-function ProfessionExporter:GetConfiguredFallbackTSMString()
+function AuctionHelper:GetConfiguredFallbackTSMString()
 	return tostring(self:GetSetting("integrations.economyTSMFallbackString", "DBMinBuyout"))
 end
 
-function ProfessionExporter:GetPreferredAddonPrice(itemID, opts)
+function AuctionHelper:GetPreferredAddonPrice(itemID, opts)
 	opts = type(opts) == "table" and opts or {}
 	itemID = tonumber(itemID)
 	if not itemID then
@@ -150,12 +150,12 @@ function ProfessionExporter:GetPreferredAddonPrice(itemID, opts)
 	return bestPrice, bestSource, bestSeenAt, bestQuantity
 end
 
-function ProfessionExporter:GetFreshAddonCachedPrice(itemID)
+function AuctionHelper:GetFreshAddonCachedPrice(itemID)
 	return self:GetPreferredAddonPrice(itemID, { requireFresh = true })
 end
 
 --- Market column: primary TSM string, configurable fallback TSM string, else Auctionator.
-function ProfessionExporter:GetMarketEstimateCopper(itemID, tsmCustomStr, fallbackTSMStr)
+function AuctionHelper:GetMarketEstimateCopper(itemID, tsmCustomStr, fallbackTSMStr)
 	local st = self.db and self.db.settings or {}
 	if st.economyShowColumns == false then
 		return nil, nil
@@ -186,7 +186,7 @@ function ProfessionExporter:GetMarketEstimateCopper(itemID, tsmCustomStr, fallba
 	return nil, nil
 end
 
-function ProfessionExporter:FormatNumberGrouped(value)
+function AuctionHelper:FormatNumberGrouped(value)
 	if value == nil or value ~= value then
 		return "-"
 	end
@@ -244,16 +244,16 @@ local function formatCoins(self, copper, short)
 	return text
 end
 
-function ProfessionExporter:FormatCopperFull(copper)
+function AuctionHelper:FormatCopperFull(copper)
 	return formatCoins(self, copper, false)
 end
 
-function ProfessionExporter:FormatCopperShort(copper)
+function AuctionHelper:FormatCopperShort(copper)
 	return formatCoins(self, copper, true)
 end
 
 --- Sale rate from TSM custom price (often 0-1).
-function ProfessionExporter:FormatSaleRateDisplay(value)
+function AuctionHelper:FormatSaleRateDisplay(value)
 	if value == nil or value ~= value then
 		return "-"
 	end
@@ -270,7 +270,7 @@ function ProfessionExporter:FormatSaleRateDisplay(value)
 	return self:FormatCopperShort(n)
 end
 
-function ProfessionExporter:EstimateRecipeMatCostCopper(recipeData, getUnitPriceCopper)
+function AuctionHelper:EstimateRecipeMatCostCopper(recipeData, getUnitPriceCopper)
 	if not recipeData or type(getUnitPriceCopper) ~= "function" then
 		return nil
 	end
@@ -304,7 +304,7 @@ function ProfessionExporter:EstimateRecipeMatCostCopper(recipeData, getUnitPrice
 	return total
 end
 
-function ProfessionExporter:GetRecipeOutputQuantityForCost(recipeData)
+function AuctionHelper:GetRecipeOutputQuantityForCost(recipeData)
 	local outs = recipeData and recipeData.outputs
 	if not outs then
 		return 1
@@ -321,7 +321,7 @@ function ProfessionExporter:GetRecipeOutputQuantityForCost(recipeData)
 end
 
 --- Per-unit material cost estimate for a craft output item (copper), using TSM/Auc unit prices for reagents.
-function ProfessionExporter:EstimateMatCostPerUnitForItem(characterData, itemID)
+function AuctionHelper:EstimateMatCostPerUnitForItem(characterData, itemID)
 	if not characterData or not itemID then
 		return nil
 	end
@@ -368,7 +368,7 @@ end
 
 --- Lowest per-unit mat cost among selected characters that can craft itemID (learned output on their scan).
 --- perCharacterRoleMaps optional: characterKey -> BuildItemRoleMap result (avoids O(rows*chars) full rescans per refresh).
-function ProfessionExporter:EstimateBestMatCostPerUnitAmongSelection(db, itemID, characterSelection, perCharacterRoleMaps)
+function AuctionHelper:EstimateBestMatCostPerUnitAmongSelection(db, itemID, characterSelection, perCharacterRoleMaps)
 	if not db or not itemID or type(db.characters) ~= "table" then
 		return nil
 	end
@@ -389,7 +389,7 @@ function ProfessionExporter:EstimateBestMatCostPerUnitAmongSelection(db, itemID,
 end
 
 --- Market/sale rate like ApplyEconomyToInventoryRow; mat cost = best among selected crafters when merged role has output.
-function ProfessionExporter:ApplyEconomyToAggregatedInventoryRow(row, characterSelection, mergedRoleMap, perCharacterRoleMaps)
+function AuctionHelper:ApplyEconomyToAggregatedInventoryRow(row, characterSelection, mergedRoleMap, perCharacterRoleMaps)
 	self:ApplyEconomyToInventoryRow(row, nil, nil)
 	if not row or not row.itemID then
 		return
@@ -409,7 +409,7 @@ end
 
 --- Fills row table with economy fields: marketCopper, marketSource, matCopperPerUnit, marginCopperPerUnit, saleRateDisplay
 --- roleMap optional: from BuildItemRoleMap(characterData) to avoid rebuilding per row.
-function ProfessionExporter:ApplyEconomyToInventoryRow(row, characterData, roleMap)
+function AuctionHelper:ApplyEconomyToInventoryRow(row, characterData, roleMap)
 	if not row then
 		return
 	end

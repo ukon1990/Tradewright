@@ -17,7 +17,7 @@ Profit figures use the fees the game really charges: the deposit the client quot
 
 - Ledger sale events gain `consignmentCopper`, `depositCopper` and `house` (faction or neutral, from where the auction was posted when known, else nil)
 - `ForeverLogic.MeasureAuctionCut(saleEvents, minSales)` → `{cut, sales}`: the median of `consignment / bid` over the latest sales, nil below `minSales` (5)
-- One accessor, `ProfessionExporter:GetAuctionCut(house)`: measured value → the setting → 0.05. Every literal 0.05 for the cut goes through it.
+- One accessor, `AuctionHelper:GetAuctionCut(house)`: measured value → the setting → 0.05. Every literal 0.05 for the cut goes through it.
 - Deposits: when the auction house can quote one, store it per item and duration in `itemDepositPerUnit`; `ForeverLogic.ExpectedDepositLoss(deposit, saleChance)` = `deposit × (1 - p) / p`, with `p` from F44 or 0.5 when unknown
 - Settings group "Fees": "Auction cut" with choices "Measured from my sales: N%", 5%, 10%, 15%; a line saying how many sales the measurement uses
 - Crafts and Opportunities footers name the cut in use ("Auction cut 5%, measured")

@@ -1,6 +1,6 @@
-local _, ProfessionExporter = ...
+local _, AuctionHelper = ...
 
-function ProfessionExporter:GetDebugLogStore()
+function AuctionHelper:GetDebugLogStore()
 	self:InitDB()
 	self.db.debug = self.db.debug or {}
 	local debugDb = self.db.debug
@@ -11,13 +11,13 @@ function ProfessionExporter:GetDebugLogStore()
 	return debugDb
 end
 
-function ProfessionExporter:ClearDebugLog()
+function AuctionHelper:ClearDebugLog()
 	local debugDb = self:GetDebugLogStore()
 	debugDb.lines = {}
 	debugDb.lastClearedAt = time()
 end
 
-function ProfessionExporter:PersistDebugLine(category, title, line)
+function AuctionHelper:PersistDebugLine(category, title, line)
 	if self:GetSetting("debug.persistToSavedVariables", false) ~= true then
 		return
 	end
@@ -36,12 +36,12 @@ function ProfessionExporter:PersistDebugLine(category, title, line)
 end
 
 --- @return boolean
-function ProfessionExporter:IsDebugEnabled()
+function AuctionHelper:IsDebugEnabled()
 	self:InitDB()
 	return self:GetSetting("debug.enabled", false) == true
 end
 
-function ProfessionExporter:SetDebugEnabled(enabled)
+function AuctionHelper:SetDebugEnabled(enabled)
 	self:SetSetting("debug.enabled", enabled and true or false)
 	if self:GetSetting("debug.enabled", false) then
 		self:PersistDebugLine("SETTINGS", "debug logging enabled", "Persistent log storage is enabled.")
@@ -58,7 +58,7 @@ function ProfessionExporter:SetDebugEnabled(enabled)
 end
 
 --- Shallow table preview for chat (avoids megabytes of output).
-function ProfessionExporter:DebugFormatShallowTable(tbl, maxPairs)
+function AuctionHelper:DebugFormatShallowTable(tbl, maxPairs)
 	if type(tbl) ~= "table" then
 		return tostring(tbl)
 	end
@@ -88,7 +88,7 @@ function ProfessionExporter:DebugFormatShallowTable(tbl, maxPairs)
 end
 
 --- Serialize event arguments for one chat-friendly line (tables summarized).
-function ProfessionExporter:DebugSerializeEventArgs(...)
+function AuctionHelper:DebugSerializeEventArgs(...)
 	local n = select("#", ...)
 	if n == 0 then
 		return "(no args)"
@@ -117,7 +117,7 @@ function ProfessionExporter:DebugSerializeEventArgs(...)
 end
 
 --- Reusable verbose logger: timestamp, category, title, then optional detail lines.
-function ProfessionExporter:DebugLog(category, title, detail)
+function AuctionHelper:DebugLog(category, title, detail)
 	if not self:IsDebugEnabled() then
 		return
 	end
@@ -143,7 +143,7 @@ function ProfessionExporter:DebugLog(category, title, detail)
 	end
 end
 
-function ProfessionExporter:DebugLogEvent(event, ...)
+function AuctionHelper:DebugLogEvent(event, ...)
 	if not self:IsDebugEnabled() then
 		return
 	end

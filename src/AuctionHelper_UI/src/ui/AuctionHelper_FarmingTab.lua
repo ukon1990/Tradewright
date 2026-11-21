@@ -1,10 +1,10 @@
-local ProfessionExporter = select(2, ...)
+local AuctionHelper = select(2, ...)
 
 -- Farming tab (E09 F71, F72): saved farms with their gold an hour when run and at today's prices,
 -- and the "What to farm" list from AuctionHelper_FarmTargets.lua.
 
 local FarmingTab = {}
-ProfessionExporter.FarmingTab = FarmingTab
+AuctionHelper.FarmingTab = FarmingTab
 
 local GAP = 12
 local PAD = 10
@@ -244,7 +244,7 @@ local function refreshStatus(pe, panel)
 end
 
 function FarmingTab:Create(container, uiState)
-	uiState.farmingPanel = uiState.farmingPanel or buildPanel(ProfessionExporter, container)
+	uiState.farmingPanel = uiState.farmingPanel or buildPanel(AuctionHelper, container)
 	uiState.farmingPanel:Show()
 	return uiState.farmingPanel
 end
@@ -253,7 +253,7 @@ function FarmingTab:ApplyTheme() -- luacheck: ignore 212
 end
 
 function FarmingTab:Refresh() -- luacheck: ignore 212
-	local pe = ProfessionExporter
+	local pe = AuctionHelper
 	local panel = pe.ui and pe.ui.farmingPanel
 	if not panel then
 		return
