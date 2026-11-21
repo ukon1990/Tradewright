@@ -105,14 +105,17 @@ pe.IS_RETAIL = true
 check("Retail cart buy goes through", pe:TryBuyAuctionCartRow(cartRow) == true)
 check("Retail cart buy starts and confirms", purchaseCalls == 2, purchaseCalls)
 
--- The two item key formats in use today: the auction session key and the stored ForeverLogic key.
+-- Session lookups use the same item key as the saved data, so a plain item and an all-zero key match.
 local zeroFields = { itemLevel = 0, itemSuffix = 0, battlePetSpeciesID = 0 }
-check("Session key, plain item", pe:SerializeAuctionItemKeyFields(2589, nil) == "2589:")
-check("Session key, all-zero fields", pe:SerializeAuctionItemKeyFields(2589, zeroFields) == "2589:0:0:0")
-check("Session key, item level", pe:SerializeAuctionItemKeyFields(19019, { itemLevel = 71 }) == "19019:71:0:0")
-check("Stored key, plain item", pe.ForeverLogic.SerializeItemKey(nil, 2589) == "2589")
-zeroFields.itemID = 2589
-check("Stored key, all-zero fields", pe.ForeverLogic.SerializeItemKey(zeroFields) == "2589")
+pe:MarkAuctionTargetSearched(2589, zeroFields, "test")
+check("All-zero key counts as the plain item searched", pe:HasAuctionTargetBeenSearchedThisSession(2589, nil))
+check("Session key is the saved item key", pe:GetAuctionSearchedTargetsState()["2589"] == true)
+pe:MarkAuctionTargetSearched(19019, { itemLevel = 71 }, "test")
+check("Item level key is kept apart", pe:HasAuctionTargetBeenSearchedThisSession(19019, { itemLevel = 71 })
+	and not pe:HasAuctionTargetBeenSearchedThisSession(19019, nil))
+check("Search event matches its item key", pe:DoesAuctionSearchEventMatchItem(19019, { itemKey = { itemID = 19019, itemLevel = 71 } }, { itemLevel = 71 }))
+check("Search event of another item level does not match",
+	not pe:DoesAuctionSearchEventMatchItem(19019, { itemKey = { itemID = 19019, itemLevel = 60 } }, { itemLevel = 71 }))
 
 -- Queued refresh: each priced item adds to one source counter.
 pe.MarkAuctionTargetSearched = function() end

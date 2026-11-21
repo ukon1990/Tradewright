@@ -69,7 +69,7 @@
 | [f108-comment-sweep](issues/e13-code-health/f108-comment-sweep/README.md) | Comment sweep | done |
 | [f109-shared-helpers](issues/e13-code-health/f109-shared-helpers/README.md) | Shared core helpers for repeated code | done, in-game check pending |
 | [f110-lookup-tables](issues/e13-code-health/f110-lookup-tables/README.md) | Lookup tables instead of if-chains | done, in-game check pending |
-| [f111-item-key-normalizers](issues/e13-code-health/f111-item-key-normalizers/README.md) | One item key and snapshot normalizer | planned |
+| [f111-item-key-normalizers](issues/e13-code-health/f111-item-key-normalizers/README.md) | One item key and snapshot normalizer | done, in-game check pending |
 | [f112-queue-vocabulary](issues/e13-code-health/f112-queue-vocabulary/README.md) | One name for the craft queue | planned |
 | [f113-tests-and-complex-functions](issues/e13-code-health/f113-tests-and-complex-functions/README.md) | Tests for core logic, then break up complex functions | planned |
 | [f114-split-professions-inventory](issues/e13-code-health/f114-split-professions-inventory/README.md) | Split the Professions and Inventory files | planned |

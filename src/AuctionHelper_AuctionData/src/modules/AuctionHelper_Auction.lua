@@ -10,6 +10,7 @@ local FULL_AH_DUMP_REQUEST_POLL_SEC = 1
 local CLASSIC_AH_DUMP_PAGE_SIZE = 50
 local CLASSIC_AH_DUMP_QUERY_RETRY_SEC = 0.5
 local CLASSIC_AH_DUMP_QUERY_MAX_RETRIES = 40
+local FL = AuctionHelper.ForeverLogic
 local KNOWN_AH_SIDE_PANELS = {
 	"AuctionHelper_AuctionDataAuctionPanel",
 }
@@ -38,31 +39,6 @@ local function shallowCopy(source)
 		out[key] = value
 	end
 	return out
-end
-
-local function auctionSnapshotSeenAt(entry)
-	return tonumber(entry and (entry.t or entry.seenAt))
-end
-
-local function auctionSnapshotSource(entry)
-	if type(entry) ~= "table" then
-		return nil
-	end
-	return entry.s or entry.source
-end
-
-local function auctionSnapshotPrice(entry)
-	if type(entry) ~= "table" then
-		return nil
-	end
-	return tonumber(entry.p or entry.marketLow or entry.minBuyout or entry.price)
-end
-
-local function auctionSnapshotSampleSize(entry)
-	if type(entry) ~= "table" then
-		return nil
-	end
-	return tonumber(entry.q or entry.sampleSize)
 end
 
 local function auctionHistoryBucketCount(bucket)
@@ -282,16 +258,6 @@ function AuctionHelper:NormalizeAuctionItemKeyFields(fields)
 	}
 end
 
---- Stable sort / map key for (itemID, optional item key fields).
-function AuctionHelper:SerializeAuctionItemKeyFields(itemID, keyFields)
-	itemID = normalizeItemID(itemID) or 0
-	local f = self:NormalizeAuctionItemKeyFields(keyFields)
-	if not f then
-		return string.format("%d:", itemID)
-	end
-	return string.format("%d:%d:%d:%d", itemID, f.itemLevel, f.itemSuffix, f.battlePetSpeciesID)
-end
-
 function AuctionHelper:DoesAuctionSearchEventMatchItem(scanItemID, eventArg, scanKeyFields)
 	scanItemID = normalizeItemID(scanItemID)
 	if not scanItemID then
@@ -315,7 +281,7 @@ function AuctionHelper:DoesAuctionSearchEventMatchItem(scanItemID, eventArg, sca
 		return true
 	end
 	-- Item keys are tables: compare what they hold, never the tables themselves.
-	return self:SerializeAuctionItemKeyFields(scanItemID, scanKeyFields) == self:SerializeAuctionItemKeyFields(evId, evKey)
+	return FL.SerializeItemKey(scanKeyFields, scanItemID) == FL.SerializeItemKey(evKey, evId)
 end
 
 function AuctionHelper:MakeAuctionHouseItemKey(itemID, keyFields)
@@ -351,7 +317,7 @@ end
 
 function AuctionHelper:HasAuctionTargetBeenSearchedThisSession(itemID, keyFields)
 	local searched = self:GetAuctionSearchedTargetsState()
-	local key = self:SerializeAuctionItemKeyFields(itemID, keyFields)
+	local key = FL.SerializeItemKey(keyFields, normalizeItemID(itemID))
 	return searched[key] == true
 end
 
@@ -362,7 +328,7 @@ function AuctionHelper:MarkAuctionTargetSearched(itemID, keyFields, source, seen
 	end
 	local searched, meta = self:GetAuctionSearchedTargetsState()
 	local ts = tonumber(seenAt) or AuctionHelper:Now()
-	local key = self:SerializeAuctionItemKeyFields(itemID, keyFields)
+	local key = FL.SerializeItemKey(keyFields, itemID)
 	searched[key] = true
 	meta[key] = {
 		itemID = itemID,
@@ -434,12 +400,12 @@ function AuctionHelper:GetLiveAuctionSearchAggregate(itemID, keyFields)
 	-- fields are all zero asks for every variant and narrows nothing.
 	local fields = self:NormalizeAuctionItemKeyFields(keyFields)
 	local expectedKey = fields and (fields.itemLevel > 0 or fields.itemSuffix > 0 or fields.battlePetSpeciesID > 0)
-		and self:SerializeAuctionItemKeyFields(itemID, fields) or nil
+		and FL.SerializeItemKey(fields, itemID) or nil
 	local groups = {}
 	for i = 1, m do
 		local info = C_AuctionHouse.GetItemSearchResultInfo(queryKey, i)
 		if info and info.itemKey then
-			local rowKey = self:SerializeAuctionItemKeyFields(itemID, info.itemKey)
+			local rowKey = FL.SerializeItemKey(info.itemKey, itemID)
 			-- Narrow search: ignore rows that do not match the requested ItemKey.
 			if not expectedKey or rowKey == expectedKey then
 				local g = groups[rowKey]
@@ -1338,62 +1304,42 @@ function AuctionHelper:GetOwnedAuctionDeposit(info, itemID)
 	return perUnit and math.floor(perUnit * info.quantity + 0.5) or nil
 end
 
+--- Long-field view of a saved snapshot row; nil when the row has no price.
 function AuctionHelper:NormalizeAuctionSnapshotEntry(entry)
-	if type(entry) ~= "table" then
+	local fields = FL.NormalizeMarketSnapshotFields(entry)
+	if not fields then
 		return nil
 	end
-	local fields = self.ForeverLogic and self.ForeverLogic.NormalizeMarketSnapshotFields(entry)
-	if fields then
-		return {
-			seenAt = fields.seenAt,
-			source = fields.source and tostring(fields.source) or nil,
-			marketLow = fields.price,
-			minBuyout = fields.price,
-			marketHigh = fields.marketHigh,
-			sampleSize = fields.sampleSize,
-			listingCount = fields.listingCount,
-		}
-	end
-	local price = auctionSnapshotPrice(entry)
-	local seenAt = auctionSnapshotSeenAt(entry)
-	local source = auctionSnapshotSource(entry)
-	local sampleSize = auctionSnapshotSampleSize(entry)
 	return {
-		seenAt = seenAt,
-		source = source and tostring(source) or nil,
-		marketLow = price,
-		minBuyout = price,
-		marketHigh = tonumber(entry.h or entry.marketHigh),
-		sampleSize = sampleSize,
-		listingCount = tonumber(entry.n or entry.listingCount),
+		seenAt = fields.seenAt,
+		source = fields.source and tostring(fields.source) or nil,
+		marketLow = fields.price,
+		minBuyout = fields.price,
+		marketHigh = fields.marketHigh,
+		sampleSize = fields.sampleSize,
+		listingCount = fields.listingCount,
 	}
 end
 
+--- The saved snapshot row (`t/p/s` plus `q/n/h` when above zero) for an observation or an older row.
 function AuctionHelper:BuildCompactAuctionSnapshotEntry(observation)
-	if type(observation) ~= "table" then
-		return nil
-	end
-	local price = tonumber(observation.p or observation.marketLow or observation.minBuyout or observation.price)
-	local seenAt = tonumber(observation.t or observation.seenAt) or AuctionHelper:Now()
-	if not price or price <= 0 then
+	local fields = FL.NormalizeMarketSnapshotFields(observation)
+	if not fields then
 		return nil
 	end
 	local entry = {
-		t = seenAt,
-		p = price,
-		s = tostring(observation.s or observation.source or "unknown"),
+		t = fields.seenAt or AuctionHelper:Now(),
+		p = fields.price,
+		s = tostring(fields.source or "unknown"),
 	}
-	local qty = math.max(0, tonumber(observation.q or observation.sampleSize) or 0)
-	if qty > 0 then
-		entry.q = qty
+	if fields.sampleSize > 0 then
+		entry.q = fields.sampleSize
 	end
-	local listingCount = tonumber(observation.n or observation.listingCount)
-	if listingCount and listingCount > 0 then
-		entry.n = math.floor(listingCount)
+	if fields.listingCount > 0 then
+		entry.n = math.floor(fields.listingCount)
 	end
-	local marketHigh = tonumber(observation.h or observation.marketHigh)
-	if marketHigh and marketHigh > 0 then
-		entry.h = marketHigh
+	if fields.marketHigh and fields.marketHigh > 0 then
+		entry.h = fields.marketHigh
 	end
 	return entry
 end
@@ -3515,7 +3461,7 @@ function AuctionHelper:BuildAuctionStorageKey(itemID, marketScope, itemKey)
 		return string.format("%s:%d", region, itemID)
 	end
 	local connectedRealmID = self:GetAuctionConnectedRealmID()
-	local keyPart = self.ForeverLogic.SerializeItemKey(itemKey, itemID)
+	local keyPart = FL.SerializeItemKey(itemKey, itemID)
 	return string.format("%s:%d:%s", region, connectedRealmID, keyPart)
 end
 
@@ -3647,26 +3593,25 @@ function AuctionHelper:UpdateAuctionHistoryFromObservation(storageKey, entry)
 	if not storageKey or type(entry) ~= "table" then
 		return
 	end
-	local hourBucketTs = math.floor((tonumber(auctionSnapshotSeenAt(entry) or entry.seenAt) or AuctionHelper:Now()) / 3600) * 3600
+	local fields = FL.NormalizeMarketSnapshotFields(entry)
+	local seenAt = fields and fields.seenAt or AuctionHelper:Now()
+	local hourBucketTs = math.floor(seenAt / 3600) * 3600
 	local itemHistory = getBucketTable(auction.history.hourly, storageKey)
 	if not itemHistory then
 		return
 	end
 	local bucketKey = tostring(hourBucketTs)
 	local bucket = itemHistory[bucketKey] or {}
-	local price = auctionSnapshotPrice(entry)
-	local qty = math.max(1, tonumber(entry.sampleSize) or 1)
-	if type(entry) == "table" then
-		qty = math.max(1, auctionSnapshotSampleSize(entry) or 1)
-	end
-	if price and price > 0 then
+	if fields then
+		local price = fields.price
+		local qty = math.max(1, fields.sampleSize)
 		bucket.m = bucket.m and math.min(bucket.m, price) or bucket.min and math.min(bucket.min, price) or price
 		bucket.x = bucket.x and math.max(bucket.x, price) or bucket.max and math.max(bucket.max, price) or price
 		bucket.l = price
 		bucket.n = auctionHistoryBucketCount(bucket) + 1
 		bucket.q = auctionHistoryBucketWeightedQty(bucket) + qty
 		bucket.w = auctionHistoryBucketWeightedSum(bucket) + (price * qty)
-		bucket.t = auctionSnapshotSeenAt(entry) or AuctionHelper:Now()
+		bucket.t = seenAt
 		bucket.min = nil
 		bucket.max = nil
 		bucket.last = nil
@@ -3722,8 +3667,8 @@ function AuctionHelper:TrimAuctionHistory()
 	end
 	local function pruneSnapshotRoot(root)
 		for storageKey, entry in pairs(root or {}) do
-			local seenAt = auctionSnapshotSeenAt(entry)
-			if not seenAt or seenAt < cutoffTs or not auctionSnapshotPrice(entry) then
+			local fields = FL.NormalizeMarketSnapshotFields(entry)
+			if not fields or not fields.seenAt or fields.seenAt < cutoffTs then
 				root[storageKey] = nil
 			else
 				root[storageKey] = self:BuildCompactAuctionSnapshotEntry(entry)
@@ -3864,8 +3809,7 @@ function AuctionHelper:GetItemEconomySummary(itemID, opts)
 
 	local purchaseStats = self:LedgerPurchaseStats(itemID, opts.characterKey)
 	local saleStats = self:LedgerSaleStats(itemID, opts.characterKey)
-	local freshnessMinutes = tonumber(self:GetSetting("auction.priceFreshnessMinutes", 15)) or 15
-	local freshWindowSec = math.max(60, freshnessMinutes * 60)
+	local freshWindowSec = self:GetAuctionPriceFreshnessWindowSeconds()
 	local nowTs = AuctionHelper:Now()
 	local lastAuctionScanAt = self:GetItemLastAuctionScanAt(itemID)
 	local scanFresh = lastAuctionScanAt and (nowTs - lastAuctionScanAt) <= freshWindowSec
@@ -4191,7 +4135,7 @@ function AuctionHelper:RunQueuedAuctionRefresh()
 		if ai ~= bi then
 			return ai < bi
 		end
-		return self:SerializeAuctionItemKeyFields(a.itemID, a.itemKeyFields) < self:SerializeAuctionItemKeyFields(b.itemID, b.itemKeyFields)
+		return FL.SerializeItemKey(a.itemKeyFields, normalizeItemID(a.itemID)) < FL.SerializeItemKey(b.itemKeyFields, normalizeItemID(b.itemID))
 	end)
 	state.auctionScanMode = tostring(state.auctionPendingPriceScanMode or "price")
 	state.auctionPendingPriceScanMode = nil
@@ -4293,7 +4237,7 @@ function AuctionHelper:BuildVisibleCraftsTabAuctionTargets()
 			return
 		end
 		local fields = self:NormalizeAuctionItemKeyFields(itemKeyFields)
-		local key = self:SerializeAuctionItemKeyFields(id, fields)
+		local key = FL.SerializeItemKey(fields, id)
 		if seen[key] then
 			return
 		end
@@ -4325,7 +4269,7 @@ function AuctionHelper:QueueVisibleCraftsTabAuctionRefresh(force)
 	end
 	local signatureParts = {}
 	for _, target in ipairs(targets) do
-		signatureParts[#signatureParts + 1] = self:SerializeAuctionItemKeyFields(target.itemID, target.itemKeyFields)
+		signatureParts[#signatureParts + 1] = FL.SerializeItemKey(target.itemKeyFields, normalizeItemID(target.itemID))
 	end
 	local signature = table.concat(signatureParts, ",")
 	if force ~= true and ui.craftsVisibleAuctionTargetsSignature == signature then
@@ -4369,7 +4313,7 @@ function AuctionHelper:QueueAuctionScanTargets(targets, opts)
 		local id = normalizeItemID(t and t.itemID)
 		if id then
 			local fields = self:NormalizeAuctionItemKeyFields(t.itemKeyFields or t.auctionItemKey)
-			local k = self:SerializeAuctionItemKeyFields(id, fields)
+			local k = FL.SerializeItemKey(fields, id)
 			if opts.skipSessionSearched ~= true or not self:HasAuctionTargetBeenSearchedThisSession(id, fields) then
 				local existing = queued[k]
 				if existing then
@@ -4411,7 +4355,7 @@ function AuctionHelper:BuildPrioritizedAuctionAutoScanTargets(opts)
 			return
 		end
 		local fields = self:NormalizeAuctionItemKeyFields(target.itemKeyFields or target.auctionItemKey)
-		local key = self:SerializeAuctionItemKeyFields(itemID, fields)
+		local key = FL.SerializeItemKey(fields, itemID)
 		if seen[key] then
 			return
 		end

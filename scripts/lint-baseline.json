@@ -27,7 +27,7 @@
  "files": {
   "src/AuctionHelper/src/core/AuctionHelper_Data.lua": 2557,
   "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": 778,
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5530,
+  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_Auction.lua": 5474,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": 779,
   "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": 1198,
   "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": 1241,
@@ -453,11 +453,6 @@
      13
     ]
    },
-   "AuctionHelper:BuildCompactAuctionSnapshotEntry": {
-    "ccn": [
-     20
-    ]
-   },
    "AuctionHelper:BuildOwnedAuctionRows": {
     "ccn": [
      20
@@ -563,10 +558,10 @@
    },
    "AuctionHelper:GetItemEconomySummary": {
     "lines": [
-     49
+     48
     ],
     "ccn": [
-     34
+     33
     ]
    },
    "AuctionHelper:GetLiveAuctionSearchAggregate": {
@@ -802,7 +797,7 @@
    },
    "AuctionHelper:UpdateAuctionHistoryFromObservation": {
     "ccn": [
-     21
+     16
     ]
    },
    "AuctionHelper:UpdateAuctionPanelRowPrice": {
