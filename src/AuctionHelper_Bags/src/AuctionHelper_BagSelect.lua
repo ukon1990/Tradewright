@@ -96,13 +96,15 @@ local function createCatcher(f)
 	return catcher
 end
 
---- Show the catcher over a live view while Ctrl or Alt is held or something is selected.
+--- Show the catcher over a live view while Ctrl or Alt is held or something is selected. It steps
+--- aside while a spell is targeting, so Pick Lock and the like reach the game's own item button.
 function AuctionHelper:UpdateBagCatcher()
 	local f = self.ui.bagWindow
 	if not f then
 		return
 	end
-	local wanted = f:IsShown() and f.view.live and (next(selection) ~= nil or IsControlKeyDown() or IsAltKeyDown())
+	local wanted = f:IsShown() and f.view.live and not SpellIsTargeting()
+		and (next(selection) ~= nil or IsControlKeyDown() or IsAltKeyDown())
 	f.catcher:SetShown(wanted == true)
 end
 
@@ -142,6 +144,7 @@ end
 
 local events = CreateFrame("Frame")
 events:RegisterEvent("MODIFIER_STATE_CHANGED")
+events:RegisterEvent("CURRENT_SPELL_CAST_CHANGED")
 events:SetScript("OnEvent", function()
 	AuctionHelper:UpdateBagCatcher()
 end)

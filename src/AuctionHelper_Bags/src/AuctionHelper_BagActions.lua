@@ -51,6 +51,8 @@ local function stillThere(item)
 end
 
 -- Calls `step(entry)` for one entry per tick, then `done()`. `step` returning false ends the run.
+-- While a spell is targeting, picking up or using an item would cast it on that item, which the
+-- game blocks for addons, so the run waits until targeting ends.
 local function runQueue(queue, step, done)
 	local pe = AuctionHelper
 	if running then
@@ -60,6 +62,10 @@ local function runQueue(queue, step, done)
 	running = true
 	local index = 0
 	local function tick()
+		if SpellIsTargeting() then
+			C_Timer.After(STEP_SECONDS, tick)
+			return
+		end
 		index = index + 1
 		if not queue[index] or step(queue[index]) == false then
 			running = false

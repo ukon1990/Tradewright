@@ -27,8 +27,13 @@ function AuctionHelper:DescribeBagDrop(drop)
 	return string.format("%s%s (%s)", drop.item.name, count, self:FormatCopperShort(drop.value))
 end
 
---- Delete a stack. Only ever called from a click of the player.
+--- Delete a stack. Only ever called from a click of the player. Not while a spell is targeting:
+--- picking the stack up would cast the spell on it, which the game blocks for addons.
 function AuctionHelper:DeleteBagStack(drop)
+	if SpellIsTargeting() then
+		self:PrintMessage("Finish or cancel the spell first, then delete again.")
+		return
+	end
 	ClearCursor()
 	C_Container.PickupContainerItem(drop.item.bag, drop.item.slot)
 	if CursorHasItem() then

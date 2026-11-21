@@ -179,6 +179,7 @@ read_globals = {
 	"ShoppingTooltip1",
 	"ShoppingTooltip2",
 	"ShowUIPanel",
+	"SpellIsTargeting",
 	"TakeInboxMoney",
 	"time",
 	"tinsert",

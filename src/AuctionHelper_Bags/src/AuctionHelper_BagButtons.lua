@@ -85,10 +85,10 @@ local function createLiveSlot(pe, content, bag, slot)
 	if not ok then
 		button = CreateFrame("Button", name, parent, "ContainerFrameItemButtonTemplate")
 	end
+	-- The bag comes from the parent's ID. Never call SetBagID: it stores the bag in a Lua field that
+	-- addon code wrote, and the game's click code passes that tainted value to protected calls,
+	-- which blocks using an item while a spell is targeting (Pick Lock on a lockbox).
 	button:SetID(slot)
-	if button.SetBagID then
-		button:SetBagID(bag)
-	end
 	addLook(pe, button)
 	hideGameGlows(button)
 	button:HookScript("OnEnter", forgetNew)
