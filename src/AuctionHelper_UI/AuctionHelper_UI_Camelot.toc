@@ -31,6 +31,7 @@ src\ui\AuctionHelper_CraftPlanning.lua
 src\ui\AuctionHelper_ProfessionCraftPanel.lua
 src\ui\AuctionHelper_ProfessionCraftAction.lua
 src\ui\AuctionHelper_ProfessionQueueView.lua
+src\ui\AuctionHelper_ProfessionLevelingView.lua
 src\ui\AuctionHelper_MailPanel.lua
 src\ui\AuctionHelper_MailSendQueue.lua
 src\ui\AuctionHelper_MailReviewPanel.lua

@@ -236,6 +236,25 @@ if AL then
 		listingCount = 1 } }) == nil)
 end
 
+-- Buyouts in the classic auction house
+do
+	local WON = "You won an auction for %s"
+	check("Won message: the item name", AL.WonAuctionItemName("You won an auction for Heavy Leather", WON) == "Heavy Leather")
+	check("Won message: another system message", AL.WonAuctionItemName("Your auction of Heavy Leather sold.", WON) == nil)
+	check("Won message: text with pattern characters", AL.WonAuctionItemName("Won (auction): Fine Thread.", "Won (auction): %s.") == "Fine Thread")
+	check("Won message: client without the text", AL.WonAuctionItemName("You won an auction for Heavy Leather", nil) == nil)
+
+	local pending = {
+		{ itemID = 1, name = "Refused", quantity = 5 },
+		{ itemID = 2, name = "Heavy Leather", quantity = 20 },
+		{ itemID = 2, name = "Heavy Leather", quantity = 7 },
+	}
+	local first = AL.TakeConfirmedBuyout(pending, "Heavy Leather")
+	check("Confirmed buyout: the oldest of that item, with its stack size", first and first.quantity == 20)
+	check("Confirmed buyout: an older one still waiting was refused and is dropped", #pending == 1 and pending[1].quantity == 7)
+	check("Confirmed buyout: no bid of that item is waiting", AL.TakeConfirmedBuyout(pending, "Fine Thread") == nil and #pending == 1)
+end
+
 if failed > 0 then
 	print(failed .. " test(s) failed")
 	os.exit(1)

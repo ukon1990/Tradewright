@@ -90,7 +90,9 @@ local function newAddon(isRetail)
 	function pe:PrintMessage() end
 
 	local files = {
+		"/AuctionHelper/src/util/AuctionHelper_MaterialLogic.lua",
 		"/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua",
+		"/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueueSummary.lua",
 		"/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueueOrders.lua",
 		"/AuctionHelper_Professions/src/modules/AuctionHelper_OrderReagents.lua",
 		"/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua",
@@ -374,6 +376,34 @@ do
 	prices = {}
 	check("Summary: buy cost unknown without a price", pe:BuildCraftQueueSummary().totalCurrentCharacterBuyCost == nil)
 
+	-- A queued craft makes a material another queued craft needs.
+	local maker = newAddon(true)
+	bags = { [900] = 3 }
+	prices = { [900] = 50, [901] = 10 }
+	addCraft(maker, 21, 300, 25, { reagentPlan = { { itemID = 900, quantityRequired = 5 } } })
+	addCraft(maker, 22, 900, 23, { reagentPlan = { { itemID = 901, quantityRequired = 5 } } })
+	local made = maker:BuildCraftQueueSummary().reagentTotals[900]
+	check("Summary: what queued crafts make is not bought", made.quantityNeeded == 125 and made.quantityFromQueue == 23 and made.quantityToBuy == 99,
+		tostring(made.quantityToBuy))
+	check("Summary: buy cost follows", made.estimatedBuyCost == 99 * 50)
+	check("Summary: the material craft's own materials are on the list", maker:BuildCraftQueueSummary().reagentTotals[901].quantityToBuy == 115)
+	for _, entry in pairs(maker:GetCraftQueueStorage()) do
+		if entry.outputItemID == 900 then
+			entry.characterKey = "Alt-Realm"
+		end
+	end
+	function maker:GetAuctionCartEffectiveHave(itemID)
+		return (bags[itemID] or 0) + (itemID == 900 and 40 or 0)
+	end
+	check("Summary: an auction purchase not yet in the bags counts as had",
+		maker:BuildCraftQueueSummary().reagentTotals[900].quantityToBuy == 82)
+	maker.GetAuctionCartEffectiveHave = nil
+	check("Summary: a craft queued for another character is not counted on",
+		maker:BuildCraftQueueSummary().reagentTotals[900].quantityToBuy == 122)
+	check("Pure: bags first, then queued crafts, never below zero",
+		select(2, maker.MaterialLogic.ToBuyAfterQueuedCrafts(10, 8, 50)) == 2 and maker.MaterialLogic.ToBuyAfterQueuedCrafts(10, 20, 50) == 0)
+
+	bags = { [900] = 2 }
 	prices = { [900] = 50 }
 	pe:AddCraftingOrderToQueue(sampleOrder(90))
 	local orders = pe:BuildCraftingOrderQueueSummary()

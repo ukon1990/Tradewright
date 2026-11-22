@@ -78,7 +78,17 @@
 | [f117-shared-ui-helpers](issues/e13-code-health/f117-shared-ui-helpers/README.md) | Shared UI helpers | done, in-game check pending |
 | [f118-split-data-util-foreverlogic](issues/e13-code-health/f118-split-data-util-foreverlogic/README.md) | Split Data.lua, Util.lua and ForeverLogic.lua | done, in-game check pending |
 | [f119-rename-namespace](issues/e13-code-health/f119-rename-namespace/README.md) | Rename ProfessionExporter to AuctionHelper | done, in-game check pending |
+| [e14-profession-leveling](issues/e14-profession-leveling/README.md) | Profession leveling: cheapest route in the profession side panel | implemented, in-game check pending |
+| [f120-skill-up-maths](issues/e14-profession-leveling/f120-skill-up-maths/README.md) | Skill-up maths | implemented, in-game check pending |
+| [f121-route-maths](issues/e14-profession-leveling/f121-route-maths/README.md) | Route maths | implemented, in-game check pending |
+| [f122-leveling-data](issues/e14-profession-leveling/f122-leveling-data/README.md) | Leveling data and craft queue integration | implemented, in-game check pending |
+| [f123-leveling-view](issues/e14-profession-leveling/f123-leveling-view/README.md) | Leveling view in the profession side panel | implemented, in-game check pending |
+| [f124-trainer-recipes](issues/e14-profession-leveling/f124-trainer-recipes/README.md) | Trainer recipes | implemented, in-game check pending |
+| [e15-reagent-stash](issues/e15-reagent-stash/README.md) | Stash reagents: bank deposit, take for the queue, reagent mail | implemented, in-game check pending |
+| [f125-deposit-reagents-in-the-bank](issues/e15-reagent-stash/f125-deposit-reagents-in-the-bank/README.md) | Deposit reagents in the bank | implemented, in-game check pending |
+| [f126-take-queue-materials-from-the-bank](issues/e15-reagent-stash/f126-take-queue-materials-from-the-bank/README.md) | Take the craft queue's materials from the bank | implemented, in-game check pending |
+| [f127-reagents-only-surplus-mail](issues/e15-reagent-stash/f127-reagents-only-surplus-mail/README.md) | "Only crafting reagents" in the surplus review | implemented, in-game check pending |
 
-Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E07 follow-ups: F55, then F56 → F57 → F58. E10: F80 first (no dependencies), then F81 and F82. E13: F105, F106, F119, then F107 and F108; F109 and F110 (after F106); F117 (after F109); F111; F112; F113; then the splits F114, F115, F116, F118.
+Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E07 follow-ups: F55, then F56 → F57 → F58. E10: F80 first (no dependencies), then F81 and F82. E13: F105, F106, F119, then F107 and F108; F109 and F110 (after F106); F117 (after F109); F111; F112; F113; then the splits F114, F115, F116, F118. E14: F120 → F121 → F122 → F123, then F124. E15: F125 → F126, F127.
 
-Research behind E06 to E09: [WoW gold making market strategies](../../../../../reports/WoW%20gold%20making%20market%20strategies.md). Designs: [AuctionHelper Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnSs5), section "Proposed, not built yet: finding gold".
+Research behind E06 to E09: [WoW gold making market strategies](../../../../../reports/WoW%20gold%20making%20market%20strategies.md). Designs: [AuctionHelper Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnSs5), section "Proposed, not built yet: finding gold"; E14 in section "Proposed, not built yet: profession leveling (E14)".

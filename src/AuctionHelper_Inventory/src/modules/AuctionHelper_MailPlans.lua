@@ -130,16 +130,8 @@ local function heldQuantities(pe, plan)
 	local function hold(itemID, quantity)
 		held[itemID] = (held[itemID] or 0) + (tonumber(quantity) or 0)
 	end
-	local current = pe:GetCharacterKey()
-	local orders = pe.BuildCraftingOrderQueueSummary and pe:BuildCraftingOrderQueueSummary() or {}
-	for _, lines in ipairs({ pe:BuildCraftQueueSummary().reagentLines or {}, orders.reagentLines or {} }) do
-		for _, line in ipairs(lines) do
-			for _, source in ipairs(line.sources or {}) do
-				if source.characterKey == current then
-					hold(tonumber(line.itemID), source.quantity)
-				end
-			end
-		end
+	for itemID, quantity in pairs(pe:GetOwnQueueNeeds()) do
+		hold(itemID, quantity)
 	end
 	for _, dest in ipairs(plan) do
 		for _, item in ipairs(dest.items) do
@@ -154,6 +146,7 @@ end
 local function surplusDestination(pe, plan, bags, seller)
 	local rows = pe.MailLogic.BuildReviewRows(bags, characterStore(pe, "keepByCharacter"), heldQuantities(pe, plan),
 		pe:GetMailSendOthers(), pe:GetMailSkipped())
+	pe:NarrowSurplusToReagents(rows)
 	for _, row in ipairs(rows) do
 		row.name = row.name or pe:GetItemDisplayName(row.itemID)
 		row.unitPrice = pe:GetMailItemUnitPrice(row.itemID)

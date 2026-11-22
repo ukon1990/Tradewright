@@ -163,4 +163,13 @@ function MaterialLogic.MakeClassicReagentSlot(slotIndex, itemID, quantity)
 	}
 end
 
+--- How much of a material still has to be bought when crafts in the craft queue make some of it:
+--- `toBuy, fromQueue`. What the character already has is used first; `queuedOutput` is what the
+--- queued crafts make of the material in total.
+function MaterialLogic.ToBuyAfterQueuedCrafts(needed, have, queuedOutput)
+	local missing = math.max(0, (needed or 0) - (have or 0))
+	local fromQueue = math.min(missing, queuedOutput or 0)
+	return missing - fromQueue, fromQueue
+end
+
 return MaterialLogic

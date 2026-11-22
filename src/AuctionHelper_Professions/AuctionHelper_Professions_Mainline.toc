@@ -33,6 +33,8 @@ src\modules\AuctionHelper_CraftConcentration.lua
 src\modules\AuctionHelper_CraftEvaluation.lua
 src\modules\AuctionHelper_CraftOpportunities.lua
 src\modules\AuctionHelper_CraftQueries.lua
+src\modules\AuctionHelper_LevelingRoute.lua
+src\modules\AuctionHelper_TrainerRecipes.lua
 src\modules\AuctionHelper_OpenProfessionRecipe.lua
 src\modules\AuctionHelper_CraftDetailText.lua
 src\modules\AuctionHelper_OrderReagents.lua

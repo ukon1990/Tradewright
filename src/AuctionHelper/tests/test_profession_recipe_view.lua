@@ -77,6 +77,7 @@ local function newAddon(isRetail, ctx)
 		LayoutProfessionCraftEconomyPanel = function() end,
 		UpdateProfessionPanelToggleButton = function() end,
 		RefreshProfessionQueueCard = function() end,
+		RefreshProfessionLevelingView = function() end,
 		EvaluateSelectedProfessionRecipe = function() return ctx end,
 		GetRankMarkup = function(_, rank) return rank and ("|R" .. rank) or "" end,
 		GetItemDisplayName = function(_, itemID) return "Item " .. tostring(itemID) end,

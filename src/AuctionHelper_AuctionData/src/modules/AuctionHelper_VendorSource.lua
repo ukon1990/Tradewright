@@ -123,7 +123,6 @@ end
 
 local function priceText(pe, advice)
 	return (advice.exact and "" or "about ") .. pe:FormatCopperShort(math.ceil(advice.price))
-		.. (advice.limited and ", limited stock" or "")
 end
 
 -- "Vendor: about 1s", or "Sold by a vendor" when the price is not known.
@@ -236,25 +235,37 @@ local function worldOf(mapID, x, y)
 	return { continent = continent, x = worldX, y = worldY }
 end
 
-local function nearestSeller(info)
+--- Where the player stands: `{ zone, mapID, x, y }`.
+function AuctionHelper:GetPlayerPlace()
+	return playerPlace()
+end
+
+--- The nearest of `places` (`{ name, zone, mapID, x, y, seenAt }`, vendors or trainers) to the player;
+--- see VendorLogic.Nearest. nil when none has a position.
+function AuctionHelper:NearestPlace(places)
 	local here = playerPlace()
 	here.world = here.mapID and worldOf(here.mapID, here.x, here.y)
-	for _, seller in ipairs(info.sellers) do
-		seller.world = seller.mapID and seller.x and worldOf(seller.mapID, seller.x, seller.y) or nil
+	for _, place in ipairs(places) do
+		place.world = place.mapID and place.x and worldOf(place.mapID, place.x, place.y) or nil
 	end
-	return VendorLogic.Nearest(info.sellers, here)
+	return VendorLogic.Nearest(places, here)
+end
+
+--- Points the way to `place` with the game's waypoint, or TomTom's. Returns whether one was set.
+function AuctionHelper:SetWaypointTo(place, title)
+	return setNativeWaypoint(place) or setTomTomWaypoint(place, title)
 end
 
 --- Points the way to the nearest known vendor that sells `itemID`, and says where it is in chat.
 function AuctionHelper:ShowVendorWaypoint(itemID)
 	local info = self:GetVendorSource(itemID)
 	local name = self:GetItemDisplayName(itemID)
-	local seller = info and nearestSeller(info)
+	local seller = info and self:NearestPlace(info.sellers)
 	if not seller then
 		self:PrintMessage(noSellerMessage(info, name))
 		return false
 	end
-	local marked = setNativeWaypoint(seller) or setTomTomWaypoint(seller, seller.name .. " (" .. name .. ")")
+	local marked = self:SetWaypointTo(seller, seller.name .. " (" .. name .. ")")
 	local zone = hasText(seller.zone) and (" in " .. seller.zone) or ""
 	self:PrintMessage(string.format("%s sells %s%s, at %.1f, %.1f.%s", seller.name, name, zone,
 		seller.x * 100, seller.y * 100, marked and " Waypoint set." or ""))

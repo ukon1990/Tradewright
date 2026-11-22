@@ -88,6 +88,7 @@ local function newAddon(saved, settings)
 		note("BumpDataRevision")
 	end
 	function pe:NotifyDashboardUpdate() end
+	function pe:RefreshRecipeDifficulties() end
 	function pe:SnapshotFilters()
 		self.filterDepth = self.filterDepth + 1
 		return {}

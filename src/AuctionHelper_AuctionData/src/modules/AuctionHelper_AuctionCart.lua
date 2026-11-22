@@ -117,12 +117,17 @@ end
 
 local NO_ITEM_DESCRIPTOR = {}
 
+-- What the queue's own crafts make of a material is not bought.
+local function neededFromOutside(reagent)
+	return (tonumber(reagent.quantityNeeded) or 0) - (tonumber(reagent.quantityFromQueue) or 0)
+end
+
 function AuctionHelper:BuildAuctionCraftCartRow(itemID, reagent)
 	local desc = self:ResolveItemDescriptor(itemID) or NO_ITEM_DESCRIPTOR
 	local priceState = self:BuildAuctionPanelPriceState(itemID)
 	local quantityOnCharacter = tonumber(self:GetAuctionCartEffectiveHave(itemID)) or 0
 	local unitPrice = tonumber(reagent.estimatedUnitPrice)
-	local quantityHave, quantityToBuy, buyCost = AL.CartQuantities(reagent.quantityNeeded, quantityOnCharacter, unitPrice)
+	local quantityHave, quantityToBuy, buyCost = AL.CartQuantities(neededFromOutside(reagent), quantityOnCharacter, unitPrice)
 	local mailAllocations, mailToText
 	if self.BuildReagentMailAllocations then
 		mailAllocations = self:BuildReagentMailAllocations(itemID, reagent.sources)

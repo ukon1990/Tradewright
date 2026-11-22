@@ -8,7 +8,10 @@ local addonName, AuctionHelper = ...
 local PAD = 12
 local WIDTH = 520
 local FILTERS = { { id = "sending", label = "Sending" }, { id = "kept", label = "Kept" }, { id = "all", label = "All" } }
-local REASONS = { held = "For your crafts", kept = "All kept", skipped = "Not this time", othersOff = "No keep amount set" }
+local REASONS = {
+	held = "For your crafts", kept = "All kept", skipped = "Not this time", othersOff = "No keep amount set",
+	notReagent = "Not a reagent",
+}
 local KEEP_HINT = "Type a number; while typing, mouse wheel adds or removes one stack. Shift-click: keep all. Ctrl-click: clear the keep amount."
 
 -- Numbers in rows that send nothing are greyed out.
@@ -195,6 +198,21 @@ local function createHeader(pe, f)
 	rule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
 end
 
+-- "Only crafting reagents" narrows the surplus for this mailbox visit, to stash reagents on the
+-- bank character; the second box picks which reagents and is shared with the bag window's deposit.
+local function createReagentChecks(pe, f)
+	f.reagentsOnly = pe:CreateCheckbox(f, "Only crafting reagents", function(checked)
+		pe:SetMailReagentsOnly(checked)
+		pe:RefreshMailPanel()
+	end)
+	f.reagentsOnly:SetPoint("TOPLEFT", f.sendOthers, "BOTTOMLEFT", 0, 0)
+	f.ownProfessions = pe:CreateCheckbox(f, "only ones my professions use", function(checked)
+		pe:SetStashOnlyOwnProfessions(checked)
+		pe:RefreshMailPanel()
+	end)
+	f.ownProfessions:SetPoint("LEFT", f.reagentsOnly, "RIGHT", 8, 0)
+end
+
 local function createToolbar(pe, f)
 	local top = -(pe:GetTheme().size.header + 1 + PAD)
 	f.filterButtons = {}
@@ -224,6 +242,7 @@ local function createToolbar(pe, f)
 		pe:RefreshMailPanel()
 	end)
 	f.sendOthers:SetPoint("TOPLEFT", f.search, "BOTTOMLEFT", -6, -8)
+	createReagentChecks(pe, f)
 end
 
 -- Clear keeps asks for a second click within a few seconds.
@@ -287,7 +306,7 @@ local function ensurePanel(pe)
 	createToolbar(pe, f)
 	createActions(pe, f)
 	createTable(pe, f)
-	f.table.frame:SetPoint("TOPLEFT", f.sendOthers, "BOTTOMLEFT", 0, -6)
+	f.table.frame:SetPoint("TOPLEFT", f.reagentsOnly, "BOTTOMLEFT", 0, -6)
 	f.table.frame:SetPoint("BOTTOMRIGHT", f.hint, "TOPRIGHT", 0, 8)
 	pe:SkinTree(f)
 	f:Hide()
@@ -340,6 +359,9 @@ local function refreshControls(pe, f, sum)
 		pe:Plural(mails, "mail")), false)
 	f.sendBtn:SetEnabled(sum.send > 0 and not sending)
 	f.sendOthers.check:SetChecked(pe:GetMailSendOthers())
+	f.reagentsOnly.check:SetChecked(pe:GetMailReagentsOnly())
+	f.ownProfessions.check:SetChecked(pe:GetStashOnlyOwnProfessions())
+	f.ownProfessions:SetShown(pe:GetMailReagentsOnly())
 end
 
 -- Title "Surplus to <seller>", items and mails in the header, totals in the table footer.

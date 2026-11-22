@@ -368,6 +368,7 @@ function AuctionHelper:OnMailFrameHide()
 		panel:Hide()
 	end
 	self:ClearMailSkipped()
+	self:SetMailReagentsOnly(false)
 	if panel and self.ui.mailReviewPanel then
 		self.ui.mailReviewPanel:Hide()
 	end

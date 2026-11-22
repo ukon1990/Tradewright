@@ -187,6 +187,7 @@ function AuctionHelper:CommitLiveProfessionMergeResult(key, charData, openSkillL
 	charData.lastLiveProfessionUpdate = time()
 	self:GetState().liveProfessionSkillLineID = openSkillLineID
 	self.db.characters[key] = charData
+	self:RefreshRecipeDifficulties(charData, professionData)
 
 	local refreshInventory = opts.refreshInventory ~= false
 	if refreshInventory then

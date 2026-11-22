@@ -86,11 +86,15 @@ function AuctionHelper:JumpToProfessionRecipe(recipeID, skillLineID)
 	return true
 end
 
+-- The panel's views by their saved name: the panel fields that hold each one's frame and header button.
+local PANEL_VIEWS = {
+	info = { host = "infoHost", button = "tabInfo" },
+	leveling = { host = "levelingHost", button = "tabLeveling" },
+	queue = { host = "queueHost", button = "tabQueue" },
+}
+
 function AuctionHelper:SetProfessionPanelActiveTab(tabId, persist)
-	tabId = tostring(tabId or "info")
-	if tabId ~= "queue" then
-		tabId = "info"
-	end
+	tabId = PANEL_VIEWS[tostring(tabId)] and tostring(tabId) or "info"
 	self.ui = self.ui or {}
 	self.ui.professionPanelActiveTab = tabId
 	if persist ~= false then
@@ -100,18 +104,14 @@ function AuctionHelper:SetProfessionPanelActiveTab(tabId, persist)
 	if not panel then
 		return
 	end
-	local isInfo = tabId == "info"
-	if panel.infoHost then
-		panel.infoHost:SetShown(isInfo)
-	end
-	if panel.queueHost then
-		panel.queueHost:SetShown(not isInfo)
-	end
-	if panel.tabInfo then
-		self:StyleShellButton(panel.tabInfo, isInfo)
-	end
-	if panel.tabQueue then
-		self:StyleShellButton(panel.tabQueue, not isInfo)
+	for viewId, view in pairs(PANEL_VIEWS) do
+		local selected = viewId == tabId
+		if panel[view.host] then
+			panel[view.host]:SetShown(selected)
+		end
+		if panel[view.button] then
+			self:StyleShellButton(panel[view.button], selected)
+		end
 	end
 end
 
@@ -374,17 +374,21 @@ local function createRecipeView(pe, f)
 	return host
 end
 
--- Title bar: the title and the Recipe / Queue switch.
+-- Title bar: the title and the Recipe / Leveling / Queue switch.
 local function createPanelHeader(pe, f)
 	local theme = pe:GetTheme()
 	f.tabQueue = pe:CreateButton(f, "Queue", function()
 		pe:SetProfessionPanelActiveTab("queue", true)
 	end, { small = true })
 	f.tabQueue:SetPoint("RIGHT", f, "TOPRIGHT", -PAD, -(theme.size.header / 2))
+	f.tabLeveling = pe:CreateButton(f, "Leveling", function()
+		pe:SetProfessionPanelActiveTab("leveling", true)
+	end, { small = true })
+	f.tabLeveling:SetPoint("RIGHT", f.tabQueue, "LEFT", 1, 0)
 	f.tabInfo = pe:CreateButton(f, "Recipe", function()
 		pe:SetProfessionPanelActiveTab("info", true)
 	end, { small = true })
-	f.tabInfo:SetPoint("RIGHT", f.tabQueue, "LEFT", 1, 0)
+	f.tabInfo:SetPoint("RIGHT", f.tabLeveling, "LEFT", 1, 0)
 	f.title = pe:CreateText(f, "GameFontNormalLarge", "gold")
 	f.title:SetPoint("LEFT", f, "TOPLEFT", PAD, -(theme.size.header / 2) - 1)
 	f.title:SetPoint("RIGHT", f.tabInfo, "LEFT", -12, 0)
@@ -462,6 +466,7 @@ function AuctionHelper:EnsureProfessionCraftEconomyPanel()
 
 	createRecipeView(self, f)
 	self:CreateProfessionQueueView(f)
+	self:CreateProfessionLevelingView(f)
 	self:SkinTree(f)
 
 	self._professionCraftPanel = f
@@ -576,6 +581,8 @@ local EMPTY_REASON_TEXT = {
 }
 
 function AuctionHelper:RefreshProfessionSideParts(panel)
+	-- Leveling first: a changed route may lower queued crafts, which the Queue view then shows.
+	self:RefreshProfessionLevelingView(panel)
 	self:RefreshProfessionQueueCard(panel)
 	if self.CraftingOrderViewRefreshButtons then
 		self:CraftingOrderViewRefreshButtons()

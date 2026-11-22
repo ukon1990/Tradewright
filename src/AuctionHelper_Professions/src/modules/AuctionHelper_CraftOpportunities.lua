@@ -281,6 +281,7 @@ end
 function AuctionHelper:InvalidateCraftOpportunityCaches()
 	local state = self:GetState()
 	abortCraftEvalAsyncBuild(state)
+	self:InvalidateLevelingRoute()
 	state.craftsEvaluationCacheKey = nil
 	state.craftOpportunityRowsCacheKey = nil
 	state.craftOpportunityCostIndexCacheKey = nil

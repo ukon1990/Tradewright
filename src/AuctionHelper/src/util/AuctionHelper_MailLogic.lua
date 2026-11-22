@@ -100,6 +100,17 @@ function MailLogic.BuildSurplusPlan(bagItems, keep, held, sendOthers, skip)
 	return MailLogic.SurplusItems(MailLogic.BuildReviewRows(bagItems, keep, held, sendOthers, skip))
 end
 
+--- Narrows the surplus to the items `isWanted(itemID)` accepts: every other row sends nothing and
+--- gets `reason`. Rows skipped by hand keep saying so.
+function MailLogic.SendOnly(rows, isWanted, reason)
+	for _, row in ipairs(rows) do
+		if row.reason ~= "skipped" and not isWanted(row.itemID) then
+			row.send, row.reason = 0, reason
+		end
+	end
+	return rows
+end
+
 --- Counts and totals for the review panel: rows sending and not, units to send, rows skipped,
 --- and what the units are worth at each row's `unitPrice` (rows without one add nothing).
 function MailLogic.SummarizeReviewRows(rows)

@@ -368,6 +368,7 @@ function AuctionHelper:RefreshBagWindow()
 	refreshTexts(self, f, view, totals, itemCount)
 	f.rowButton:SetEnabled(view.place == "bags")
 	self:SetButtonPrimary(f.rowButton, showRow)
+	self:RefreshBagStashButton(f)
 	applyLayout(self, f, view, {
 		hasTabs = hasTabs, hasBar = self:RefreshBagSelectBar(f.selectBar), showRow = showRow, contentHeight = contentHeight,
 		bags = scan.bags,

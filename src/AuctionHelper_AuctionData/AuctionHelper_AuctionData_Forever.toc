@@ -22,6 +22,7 @@ src\modules\AuctionHelper_AuctionStore.lua
 src\modules\AuctionHelper_AuctionPricing.lua
 src\modules\AuctionHelper_AuctionItemRules.lua
 src\modules\AuctionHelper_AuctionCart.lua
+src\modules\AuctionHelper_AuctionClassicBuy.lua
 src\modules\AuctionHelper_AuctionCartTab.lua
 src\modules\AuctionHelper_AuctionBuy.lua
 src\modules\AuctionHelper_AuctionOwned.lua

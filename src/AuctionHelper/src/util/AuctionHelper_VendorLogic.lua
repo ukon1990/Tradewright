@@ -58,23 +58,14 @@ end
 local function withName(name, entry)
 	return {
 		name = name, price = entry.price, zone = entry.zone, mapID = entry.mapID, x = entry.x, y = entry.y,
-		seenAt = entry.seenAt, world = entry.world, limited = entry.limited,
+		seenAt = entry.seenAt, world = entry.world,
 	}
 end
 
--- 0 for a seller with endless stock and a known price, 1 for limited stock, 2 for no known price.
-local function supplyRank(seller)
-	if not seller.price then
-		return 2
-	end
-	return seller.limited and 1 or 0
-end
-
--- Endless stock first, then limited stock, then sellers without a price; the cheapest first, then by name.
+-- Sellers with a known price first, the cheapest first, then by name.
 local function cheaperFirst(a, b)
-	local rankA, rankB = supplyRank(a), supplyRank(b)
-	if rankA ~= rankB then
-		return rankA < rankB
+	if (a.price ~= nil) ~= (b.price ~= nil) then
+		return a.price ~= nil
 	end
 	if a.price ~= b.price then
 		return a.price < b.price
@@ -82,44 +73,52 @@ local function cheaperFirst(a, b)
 	return a.name < b.name
 end
 
--- Visited sellers, plus the directory's sellers that were not visited, in buying order.
-local function sellerList(sellers, directory)
+-- Visited sellers that hold the item in endless supply. One that holds only a few (a travelling or
+-- event vendor with four in stock) is no place to send the player for crafting materials.
+local function endlessSellers(sellers)
 	local list = {}
 	for name, entry in pairs(sellers) do
-		list[#list + 1] = withName(name, entry)
+		if not entry.limited then
+			list[#list + 1] = withName(name, entry)
+		end
 	end
+	return list
+end
+
+-- The directory's sellers that were not visited. The directory says who sells an item, not how many.
+local function addUnvisited(list, sellers, directory)
 	for name, entry in pairs(directory) do
 		if not sellers[name] then
 			list[#list + 1] = withName(name, entry)
 		end
 	end
-	table.sort(list, cheaperFirst)
-	return list
 end
 
---- What is known about buying `itemID` from a vendor, or nil when no vendor is known to sell it:
---- `{ price, exact, kind, sellers = { { name, price, zone, mapID, x, y, seenAt, world }, … } }`.
+--- What is known about buying `itemID` from a vendor, or nil when no vendor is known to sell it in
+--- endless supply: `{ price, exact, kind, sellers = { { name, price, zone, mapID, x, y, seenAt, world }, … } }`.
 --- `sellers` are the ones the player has visited (with a price); `directory` are sellers from a
 --- vendor database, in the same shape but without a price, used for those not visited yet.
+--- An item counts as sold by vendors only when it is on the built-in list of supplies or a visited
+--- vendor had it in endless supply. Sellers with limited stock are left out, and so are database
+--- sellers of any other item: the database cannot tell a supplier from a vendor holding a few.
 --- `exact` is true when the price was read from a vendor; `price` is nil when a vendor sells the
---- item but nothing says for how much. `limited` is true when every seller with a known price holds
---- only a few, so the rest may have to come from the auction house.
+--- item but nothing says for how much.
 function VendorLogic.Lookup(itemID, sellers, directory)
 	local known = VendorLogic.KNOWN[tonumber(itemID)]
-	local list = sellerList(sellers or {}, directory or {})
+	sellers = sellers or {}
+	local list = endlessSellers(sellers)
 	if not (known or list[1]) then
 		return nil
 	end
+	addUnvisited(list, sellers, directory or {})
+	table.sort(list, cheaperFirst)
 	local first = list[1] or {}
 	known = known or {}
-	return {
-		price = first.price or known[1], exact = first.price ~= nil, kind = known[2], sellers = list,
-		limited = first.limited == true and known[1] == nil,
-	}
+	return { price = first.price or known[1], exact = first.price ~= nil, kind = known[2], sellers = list }
 end
 
 --- Whether to buy at the vendor. `auctionPrice` is the auction unit price, nil when there is none.
---- Returns `{ price, exact, cheaper, limited }`, or nil when no vendor sells it. A tie goes to the
+--- Returns `{ price, exact, cheaper }`, or nil when no vendor sells it. A tie goes to the
 --- vendor: its stock does not run out. Without a vendor price nothing is called cheaper.
 function VendorLogic.Advice(info, auctionPrice)
 	if not info then
@@ -127,7 +126,7 @@ function VendorLogic.Advice(info, auctionPrice)
 	end
 	auctionPrice = tonumber(auctionPrice)
 	local cheaper = info.price ~= nil and (not auctionPrice or auctionPrice <= 0 or info.price <= auctionPrice)
-	return { price = info.price, exact = info.exact, cheaper = cheaper, limited = info.limited }
+	return { price = info.price, exact = info.exact, cheaper = cheaper }
 end
 
 --- "Jannos Ironwill in Stormwind City and 2 more", or the kind of vendor when none has been visited.

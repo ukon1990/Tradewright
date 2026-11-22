@@ -97,7 +97,7 @@ function AuctionHelper:OpenProfessionQueueRow(row)
 			or { orderID = orderID, spellID = row.recipeID, itemID = row.outputItemID })
 		return
 	end
-	self:JumpToProfessionRecipe(row.recipeID, row.skillLineID)
+	self:JumpToProfessionRecipe(row.recipeSpellID or row.recipeID, row.skillLineID)
 end
 
 local function showQueueRowTooltip(pe, rowFrame, row)
@@ -283,6 +283,26 @@ function AuctionHelper:CreateProfessionQueueView(f)
 	return host
 end
 
+-- The scanned recipe stored under the line's recipe id for its crafter and profession, or nil.
+local function storedRecipeOfLine(pe, entry)
+	local character = pe.db and pe.db.characters and pe.db.characters[entry.characterKey]
+	local profession = character and character.professions and character.professions[tostring(entry.skillLineID)]
+	return profession and profession.recipes and profession.recipes[tostring(entry.recipeID)]
+end
+
+--- The crafting spell of a craft queue line, which is what the profession window opens a recipe by.
+--- A line queued in the profession window already holds the spell as its recipe id; one queued from
+--- the dashboard holds the id the recipe is stored under. Both are plain numbers that can collide
+--- between recipes, so a stored recipe only counts when it makes the line's item.
+function AuctionHelper:GetCraftQueueLineSpellID(entry)
+	local stored = storedRecipeOfLine(self, entry)
+	local storedItemID = stored and stored.outputs and tonumber(stored.outputs.itemID)
+	if storedItemID and storedItemID == tonumber(entry.outputItemID) then
+		return self:GetRecipeSpellID(stored) or tonumber(entry.recipeID)
+	end
+	return tonumber(entry.recipeID)
+end
+
 local function queueRecipeName(pe, entry)
 	local name = entry.recipeName
 	local function missing()
@@ -298,9 +318,30 @@ local function queueRecipeName(pe, entry)
 	return tostring(name or "?")
 end
 
+-- "learn first" for a line the leveling route queued for a recipe that was not learned then. The
+-- game says whether it is learned by now; without an answer (another profession's window is open)
+-- it still counts as not learned.
+local function learnFirstNote(pe, entry)
+	local learn = entry.levelingLearn
+	if not learn then
+		return nil
+	end
+	local getInfo = C_TradeSkillUI and C_TradeSkillUI.GetRecipeInfo
+	local info = getInfo and getInfo(pe:GetCraftQueueLineSpellID(entry))
+	if info and info.learned then
+		entry.levelingLearn = nil
+		return nil
+	end
+	return learn.skill and string.format("learn first: trainer, skill %d", learn.skill) or "learn the recipe first"
+end
+
 -- Whether a queued craft can be started now, from what is in this character's bags at this moment
 -- (the queue's saved snapshot is from when the craft was added). Returns ready and a note for the row.
 local function craftReadiness(pe, entry, quantity)
+	local learnNote = learnFirstNote(pe, entry)
+	if learnNote then
+		return false, learnNote
+	end
 	local characterKey = pe:GetCharacterKey()
 	local craftable = pe.MaterialLogic.CraftableCount(entry.reagentPlan, function(itemID)
 		return pe:GetCharacterItemTotal(characterKey, itemID)
@@ -332,6 +373,7 @@ local function queueRecipeRow(pe, entry, index)
 		queueKey = entry.queueKey,
 		orderID = orderID,
 		recipeID = tonumber(entry.recipeID),
+		recipeSpellID = pe:GetCraftQueueLineSpellID(entry),
 		outputItemID = tonumber(entry.outputItemID),
 		skillLineID = tonumber(entry.skillLineID),
 		recipeLabel = queueRecipeName(pe, entry),
@@ -389,6 +431,12 @@ local function joinNotes(first, second)
 	return first or second
 end
 
+-- "23 from queued crafts" when crafts in the queue make part of what this material's line needs.
+local function queuedCraftsNote(reagent)
+	local fromQueue = tonumber(reagent.quantityFromQueue) or 0
+	return fromQueue > 0 and string.format("%d from queued crafts", fromQueue) or nil
+end
+
 local function shoppingFooter(pe, rows)
 	return (pe.CartVendorHint and pe:CartVendorHint(rows) or "") .. "Click a material to find it at the auction house"
 end
@@ -404,7 +452,7 @@ local function shoppingRow(pe, reagent, missing)
 	return {
 		vendorNote = vendorNote,
 		estimatedUnitPrice = unitPrice,
-		detailText = joinNotes(vendorNote, holdersLine),
+		detailText = joinNotes(joinNotes(vendorNote, holdersLine), queuedCraftsNote(reagent)),
 		_rowIdentity = reagent.itemID,
 		itemID = tonumber(reagent.itemID),
 		name = reagent.name or pe:GetItemDisplayName(reagent.itemID),

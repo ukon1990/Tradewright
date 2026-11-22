@@ -302,3 +302,29 @@ function AuctionLogic.LiveSearchDiffers(saved, price, quantity, listings)
 	end
 	return differs(saved.p, price) or differs(saved.q, quantity) or differs(saved.n, listings)
 end
+
+--- The item name in the game's "You won an auction for %s" system message, or nil when `message` is
+--- something else. `wonFormat` is the client's own text for it, so this works in any language.
+function AuctionLogic.WonAuctionItemName(message, wonFormat)
+	if type(message) ~= "string" or type(wonFormat) ~= "string" then
+		return nil
+	end
+	local escaped = wonFormat:gsub("[%(%)%.%+%-%*%?%[%]%^%$]", "%%%0")
+	local pattern = "^" .. escaped:gsub("%%s", "(.+)") .. "$"
+	return message:match(pattern)
+end
+
+--- The buyout the game has just confirmed for an item of this name, taken out of `pending`
+--- (`{ { itemID, name, quantity } }`, oldest first), or nil. Buyouts are confirmed in the order they
+--- were made, so older ones still waiting were refused and are dropped.
+function AuctionLogic.TakeConfirmedBuyout(pending, itemName)
+	for index, buyout in ipairs(pending) do
+		if buyout.name == itemName then
+			for _ = 1, index do
+				table.remove(pending, 1)
+			end
+			return buyout
+		end
+	end
+	return nil
+end
