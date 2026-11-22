@@ -5,6 +5,8 @@ _G.Tradewright = Tradewright
 
 Tradewright.VERSION = "2.0.0"
 Tradewright.SCHEMA_VERSION = 12
+-- The name players see: window titles, tooltip headers, the chat prefix.
+Tradewright.DISPLAY_NAME = "Tradewright"
 -- Forever shares retail's project ID; detect by interface band via ForeverLogic (loaded next).
 -- Temporary defaults until Tradewright_ForeverLogic.lua runs ApplyClientFlags.
 local interfaceVersion = select(4, GetBuildInfo()) or 0
@@ -33,7 +35,7 @@ function Tradewright:Now()
 end
 
 function Tradewright:PrintMessage(message)
-	DEFAULT_CHAT_FRAME:AddMessage("|cffffd100Tradewright|r: " .. tostring(message))
+	DEFAULT_CHAT_FRAME:AddMessage("|cffffd100" .. self.DISPLAY_NAME .. "|r: " .. tostring(message))
 end
 
 --- The debug log lives in the Professions module, which loads after this one and after Auction

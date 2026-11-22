@@ -131,7 +131,7 @@ local function buildPanelHeader(panel, w)
 	title:SetPoint("TOPLEFT", 10, -10)
 	title:SetPoint("TOPRIGHT", -10, -10)
 	title:SetJustifyH("LEFT")
-	title:SetText("Tradewright")
+	title:SetText(Tradewright.DISPLAY_NAME)
 	panel.title = title
 	buildPanelTabs(panel)
 	local subtitle = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")

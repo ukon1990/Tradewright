@@ -24,6 +24,9 @@ const config = readJson("deploy.config.json");
 const local = readJson("deploy.config.local.json");
 const targets = { ...config.targets, ...local.targets };
 const sourceDir = path.join(ROOT, config.source ?? "src");
+// Folders the pack used to ship under an earlier name. Left in place they would load next to
+// the current ones, so every deploy removes them.
+const retired = config.retired ?? [];
 
 // "*.md" → suffix match, ".*" → any dotfile, anything else → exact name.
 const exclude = config.exclude ?? [];
@@ -73,6 +76,12 @@ for (const name of names) {
       });
     }
     console.log(`  ✓ ${addon}`);
+  }
+  for (const addon of retired) {
+    const old = path.join(addonsDir, addon);
+    if (!fs.existsSync(old)) continue;
+    if (!dryRun) fs.rmSync(old, { recursive: true, force: true });
+    console.log(`  − ${addon} (retired, removed)`);
   }
 }
 

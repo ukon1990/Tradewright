@@ -245,7 +245,7 @@ end
 local function setQueueButtonTooltip(button, text)
 	button:SetScript("OnEnter", function(btn)
 		GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
-		GameTooltip:AddLine("Tradewright", 1, 1, 1)
+		GameTooltip:AddLine(Tradewright.DISPLAY_NAME, 1, 1, 1)
 		GameTooltip:AddLine(text, 1, 0.9, 0.6, true)
 		GameTooltip:Show()
 	end)

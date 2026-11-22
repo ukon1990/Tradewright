@@ -39,7 +39,7 @@ local function showTooltip(button)
 	local theme = Tradewright:GetTheme()
 	local muted = theme.textMuted
 	GameTooltip:SetOwner(button, "ANCHOR_LEFT")
-	GameTooltip:SetText("Tradewright", theme.gold.r, theme.gold.g, theme.gold.b)
+	GameTooltip:SetText(Tradewright.DISPLAY_NAME, theme.gold.r, theme.gold.g, theme.gold.b)
 	for _, pair in ipairs(TOOLTIP_LINES) do
 		GameTooltip:AddDoubleLine(pair[1], pair[2], muted.r, muted.g, muted.b, 1, 1, 1)
 	end

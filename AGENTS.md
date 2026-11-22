@@ -79,6 +79,6 @@ npm run deploy:retail    # retail only
 npm run deploy:dry       # show what would be replaced
 ```
 
-Each deploy deletes and recopies the `Tradewright*` folders in the target `Interface/AddOns`. Target paths are in `deploy.config.json`; per-machine overrides go in untracked `deploy.config.local.json` (`{"targets": {"forever": "..."}}`).
+Each deploy deletes and recopies every addon folder found in `src/` in the target `Interface/AddOns`, and removes the folders listed under `retired` in `deploy.config.json` (the pack's earlier name). Target paths are in `deploy.config.json`; per-machine overrides go in untracked `deploy.config.local.json` (`{"targets": {"forever": "..."}}`).
 
 In-game: enable the five core modules (and `Tradewright_Bags` for the bag window), `/reload` (or restart if TOC changed), `/ah` (or `/tradewright`) opens UI, full AH scan with house open fills prices, profession Scan stores recipes/reagents, Crafts tab shows profit.

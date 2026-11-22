@@ -283,7 +283,7 @@ function Tradewright:CreateDashboardTitleBar(frame)
 	frame.title:SetPoint("RIGHT", frame.subtitle, "LEFT", -12, 0)
 	frame.title:SetJustifyH("LEFT")
 	frame.title:SetWordWrap(false)
-	frame.title:SetText("Tradewright")
+	frame.title:SetText(Tradewright.DISPLAY_NAME)
 end
 
 -- Clicks on the window raise it above Blizzard frames it shares the screen with.

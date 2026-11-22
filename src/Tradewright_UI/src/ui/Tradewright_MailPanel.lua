@@ -266,7 +266,7 @@ end
 -- Collapsed, the panel is replaced by one small button at the mailbox edge.
 function Tradewright:BindMailPanelCollapse(panel, mail)
 	local pe = self
-	local expand = self:CreateButton(mail, "Tradewright", nil, { small = true })
+	local expand = self:CreateButton(mail, Tradewright.DISPLAY_NAME, nil, { small = true })
 	expand:SetPoint("TOPLEFT", mail, "TOPRIGHT", 8, -20)
 	expand:Hide()
 	panel.collapseTab = expand

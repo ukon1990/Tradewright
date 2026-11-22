@@ -36,7 +36,7 @@ Keep Midnight-only hooks on `IS_RETAIL` (crafting orders UI/materials, concentra
 
 | Global | Addon |
 | --- | --- |
-| `TradewrightDB`, `TradewrightMigrationDB`, `TradewrightLastExport` | Core |
+| `TradewrightDB`, `TradewrightLastExport` | Core |
 | `TradewrightAuctionDB` | AuctionData |
 | `TradewrightProfessionsDB` | Professions |
 | `TradewrightInventoryDB` | Inventory |

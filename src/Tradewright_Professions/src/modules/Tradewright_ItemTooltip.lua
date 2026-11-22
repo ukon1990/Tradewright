@@ -6,7 +6,7 @@ local _, Tradewright = ...
 -- Which lines show is decided in TooltipLogic (pure, tested offline); this file gathers the data
 -- and draws the lines. Rows in the addon's own windows skip the block (ShowItemRowTooltip).
 
-local HEADER = "Tradewright"
+local HEADER = Tradewright.DISPLAY_NAME
 local STALE_FLOOR_SECONDS = 6 * 3600
 local RECIPE_USE_TTL_SECONDS = 60
 local TONE_COLOURS = { success = "success", danger = "danger", warning = "warning", info = "accent" }
@@ -247,11 +247,11 @@ local function watchShift(pe)
 end
 
 local function hookTooltip(tooltip)
-	if tooltip and tooltip.HookScript and not tooltip._professionExporterPricingHooked then
+	if tooltip and tooltip.HookScript and not tooltip._tradewrightPricingHooked then
 		tooltip:HookScript("OnTooltipSetItem", function(tip)
 			Tradewright:AppendPricingToTooltipFromData(tip, nil)
 		end)
-		tooltip._professionExporterPricingHooked = true
+		tooltip._tradewrightPricingHooked = true
 	end
 end
 

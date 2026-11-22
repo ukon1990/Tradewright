@@ -1,6 +1,6 @@
 local _, Tradewright = ...
 
--- SavedVariables initialisation, defaults and the one-time import of ProfessionExporter* data.
+-- SavedVariables initialisation and defaults.
 
 local LEGACY_SETTING_PATHS_BY_ROOT = {
 	lastActiveTab = "general.lastActiveTab",
@@ -161,78 +161,8 @@ function Tradewright:BuildMergedRuntimeDB(baseDb, professionsDb, inventoryDb, au
 	}
 end
 
--- Legacy ProfessionExporterDB tables are adopted only while the new storage is still empty.
-local function adoptLegacyTables(target, legacyDb, keys)
-	for _, k in ipairs(keys) do
-		if next(target[k] or {}) == nil and type(legacyDb[k]) == "table" then
-			target[k] = legacyDb[k]
-		end
-	end
-end
-
-local function importLegacyDb(legacyDb, baseDb, professionsDb, inventoryDb, auctionDb)
-	if next(baseDb.settings or {}) == nil and type(legacyDb.settings) == "table" then
-		baseDb.settings = legacyDb.settings
-	end
-	baseDb.meta = baseDb.meta or {}
-	if type(legacyDb.meta) == "table" then
-		for k, v in pairs(legacyDb.meta) do
-			baseDb.meta[k] = v
-		end
-	end
-	adoptLegacyTables(professionsDb, legacyDb, PROFESSIONS_TABLE_KEYS)
-	adoptLegacyTables(inventoryDb, legacyDb, INVENTORY_TABLE_KEYS)
-	if type(legacyDb.auction) == "table" and next(auctionDb.auction or {}) == nil then
-		auctionDb.auction = legacyDb.auction
-	end
-end
-
-local function importLegacyExport(legacyExport)
-	TradewrightLastExport = TradewrightLastExport or {}
-	for k, v in pairs(legacyExport) do
-		TradewrightLastExport[k] = v
-	end
-	if TradewrightLastExport.json and not TradewrightLastExport.payload then
-		TradewrightLastExport.payload = TradewrightLastExport.json
-		TradewrightLastExport.format = TradewrightLastExport.format or "legacy-json"
-	end
-end
-
-local function tableOrNil(value)
-	return type(value) == "table" and value or nil
-end
-
--- One-time import of saved data from the addon's old name (ProfessionExporter). Remove this,
--- the helpers above and ProfessionExporterDB / ProfessionExporterLastExport in the TOCs and
--- .luacheckrc once no player still has pre-Tradewright saved data.
-function Tradewright:RunLegacyMigrationIfNeeded(baseDb, professionsDb, inventoryDb, auctionDb)
-	TradewrightMigrationDB = TradewrightMigrationDB or {}
-	local migration = TradewrightMigrationDB
-	if migration.professionExporterImported == true then
-		return false
-	end
-	local legacyDb = tableOrNil(ProfessionExporterDB)
-	local legacyExport = tableOrNil(ProfessionExporterLastExport)
-	if not legacyDb and not legacyExport then
-		return false
-	end
-	if legacyDb then
-		importLegacyDb(legacyDb, baseDb, professionsDb, inventoryDb, auctionDb)
-	end
-	if legacyExport then
-		importLegacyExport(legacyExport)
-	end
-	migration.professionExporterImported = true
-	migration.importedAt = time()
-	migration.importedSchemaVersion = self.SCHEMA_VERSION
-	ProfessionExporterDB = nil
-	ProfessionExporterLastExport = nil
-	return true
-end
-
 local function ensureSavedVariableRoots()
 	TradewrightDB = TradewrightDB or {}
-	TradewrightMigrationDB = TradewrightMigrationDB or {}
 	TradewrightProfessionsDB = TradewrightProfessionsDB or {}
 	TradewrightInventoryDB = TradewrightInventoryDB or {}
 	TradewrightAuctionDB = TradewrightAuctionDB or {}
@@ -312,8 +242,6 @@ function Tradewright:InitDB()
 	prepareStorageDb(self, professionsDb, PROFESSIONS_TABLE_KEYS)
 	prepareStorageDb(self, inventoryDb, INVENTORY_TABLE_KEYS)
 	prepareStorageDb(self, auctionDb, AUCTION_TABLE_KEYS)
-
-	self:RunLegacyMigrationIfNeeded(baseDb, professionsDb, inventoryDb, auctionDb)
 
 	self.baseDb = baseDb
 	self.professionsDb = professionsDb

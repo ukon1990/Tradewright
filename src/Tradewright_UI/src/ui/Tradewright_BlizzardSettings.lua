@@ -5,7 +5,7 @@ local _, Tradewright = ...
 local function addHeader(frame)
 	local title = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightHuge")
 	title:SetPoint("TOPLEFT", 16, -18)
-	title:SetText("Tradewright")
+	title:SetText(Tradewright.DISPLAY_NAME)
 	local subtitle = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 	subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
 	subtitle:SetWidth(760)
@@ -97,7 +97,7 @@ function Tradewright:RegisterBlizzardSettings()
 		return
 	end
 	local frame = CreateFrame("Frame", nil, nil, "VerticalLayoutFrame")
-	frame.name = "Tradewright"
+	frame.name = Tradewright.DISPLAY_NAME
 	frame.spacing = 8
 	frame:SetSize(820, 520)
 	local anchor = addHeader(frame)
@@ -105,7 +105,7 @@ function Tradewright:RegisterBlizzardSettings()
 		anchor = addSettingCheckbox(anchor, index == 1 and -14 or -8, spec)
 	end
 	addScaleButton(anchor)
-	local category = Settings.RegisterCanvasLayoutCategory(frame, "Tradewright")
+	local category = Settings.RegisterCanvasLayoutCategory(frame, Tradewright.DISPLAY_NAME)
 	self.settingsCategoryId = category:GetID()
 	Settings.RegisterAddOnCategory(category)
 end
