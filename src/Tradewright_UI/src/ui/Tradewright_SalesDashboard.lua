@@ -59,6 +59,16 @@ local function addOrigins(items, sales, labels)
 	end
 end
 
+-- How much of what this character posted sold (AuctionData's ledger; nil when never posted).
+local function addSaleRates(pe, items)
+	if not pe.GetAuctionPanelPersonalSaleRate then
+		return
+	end
+	for _, item in ipairs(items) do
+		item.saleRate = item.itemID and pe:GetAuctionPanelPersonalSaleRate(item.itemID) or nil
+	end
+end
+
 local function itemTooltipPairs(pe, row)
 	local count = function(n) return pe:FormatNumberGrouped(n) end
 	return {
@@ -76,6 +86,7 @@ local function itemsColumns(pe)
 	return {
 		pe:ItemColumn({ minWidth = 120 }),
 		pe:NumberColumn({ id = "sales", label = "Sales", width = 46, format = count }),
+		pe:PercentColumn({ id = "saleRate", label = "Sold", width = 46, optional = true }),
 		pe:NumberColumn({ id = "units", label = "Units", width = 46, format = count, optional = true }),
 		pe:MoneyColumn({ id = "net", label = "Earned", width = 78 }),
 		pe:MoneyColumn({ id = "avgUnit", label = "Each", width = 70, optional = true }),
@@ -246,6 +257,7 @@ function SalesDashboardMixin:Refresh()
 	self.graph:SetQuantitySeries({})
 	self.graph:Refresh()
 	addOrigins(summary.items, summary.recent, pe:GetSaleOrigins())
+	addSaleRates(pe, summary.items)
 	self.items.table:SetRows(summary.items)
 	self.items.table:Refresh()
 	self.recent.table:SetRows(recentRows(pe, summary.recent))

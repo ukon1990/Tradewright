@@ -6,7 +6,7 @@ Measure what a farm really earns and use it to choose the next one. A farm windo
 
 ## Context
 
-- Research and sources: [WoW gold making market strategies](../../../../../../reports/WoW%20gold%20making%20market%20strategies.md), section "Farming rates are unverified; a player's own log is the only evidence".
+- Research and sources: [WoW gold making market strategies](../../../research/gold-making-market-strategies.md), section "Farming rates are unverified; a player's own log is the only evidence".
 - Every gold-per-hour figure the research found is self-reported, and the highest ones come from sites that sell gold or boosting. The game exposes vendor prices and boss loot lists but no drop rates, and node databases hold positions without yields. A player's own log is the only trustworthy source.
 - Existing trackers (LootAppraiser, MoneyLooter) value loot at a listing-based price and so overstate what sells. This epic values an item at its usual price after the cut only when it shows turnover, and at vendor price otherwise.
 - The addon tracks none of this today. The only general money signal is the wallet history fed by `PLAYER_MONEY`.

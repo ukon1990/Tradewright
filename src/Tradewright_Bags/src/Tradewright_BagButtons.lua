@@ -44,6 +44,11 @@ local function addLook(pe, button)
 	button.ahNew:SetPoint("TOPLEFT", 1, -1)
 	button.ahNew:SetColorTexture(theme.gold.r, theme.gold.g, theme.gold.b, 1)
 	button.ahNew:Hide()
+	-- Starts a quest: the game's own yellow "!" over the icon, kept after the quest is accepted.
+	button.ahQuest = button:CreateTexture(nil, "OVERLAY", nil, 2)
+	button.ahQuest:SetAllPoints(button.ahIcon)
+	button.ahQuest:SetTexture(TEXTURE_ITEM_QUEST_BANG or "Interface\\ContainerFrame\\UI-Icon-QuestBang")
+	button.ahQuest:Hide()
 end
 
 -- Hovering a new item is seeing it: the game's own bags forget it the same way.
@@ -186,6 +191,7 @@ function Tradewright:SetBagSlotItem(button, item, look)
 	end
 	button.ahSelect:SetShown(look.selected == true)
 	button.ahNew:SetShown(item.isNew == true)
+	button.ahQuest:SetShown(item.startsQuest == true)
 	button.ahItem = item
 	button.ahBorder:SetColorTexture(color.r, color.g, color.b, 1)
 	button.ahFill:Show()
@@ -205,6 +211,7 @@ function Tradewright:SetBagSlotFree(button, freeCount)
 	button.ahItem = nil
 	button.ahSelect:Hide()
 	button.ahNew:Hide()
+	button.ahQuest:Hide()
 	button.ahBorder:SetColorTexture(theme.borderStrong.r, theme.borderStrong.g, theme.borderStrong.b, 1)
 	button.ahFill:Show()
 	button.ahIcon:Hide()

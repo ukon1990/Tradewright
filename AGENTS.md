@@ -18,7 +18,7 @@
 | Pure helpers | `src/Tradewright/src/util/Tradewright_*Logic.lua` | No WoW API, offline-testable: `ForeverLogic` (client flags, storage keys, export encoding), `AuctionLogic`, `MarketLogic`, `MailLogic`, `IncomeLogic`, `FilterLogic`, `MaterialLogic`, `SkillUpLogic`, `LevelingRouteLogic`, `SourceLogic` (sightings store, shipping and pruning), … |
 | Tests | `src/Tradewright/tests/run_tests.py` | Offline Lua 5.1 (no WoW client) |
 | Lint | `scripts/lint.py`, `.luacheckrc`, `scripts/lint-baseline.json` | luacheck + file/function size + complexity, ratcheted |
-| Specs | `src/Tradewright/docs/specifications/` | Issues / backlog |
+| Specs | `docs/specifications/` | Issues / backlog |
 | Deploy | `scripts/deploy.mjs`, `deploy.config.json` | Copies `src/*` into the game AddOns folders |
 | Saved-data move | `scripts/migrate-saved-data.mjs` | One-time: carries saved data from the old name (AuctionHelper) over to Tradewright |
 | Shipped sightings | `scripts/build-source-data.mjs` (+ `.lua`), `npm run sources:build` | Builds sealed sightings from saved data into `Tradewright_SourceData.lua`; in game first: `/tradewright sources seal`, then log out |
@@ -27,7 +27,8 @@
 
 - `src/` holds only the addon folders; each `src/<Addon>/` is copied verbatim into `Interface/AddOns/<Addon>/`.
 - Repo tooling (agents, skills, scripts, `package.json`) lives at the root and is never deployed.
-- `tests/`, `docs/`, dotfiles and `*.md` inside addon folders are excluded from deploy (see `deploy.config.json`).
+- Documentation lives in `docs/` at the root: specifications, development guide, export format, research.
+- `tests/`, `docs/`, dotfiles and `*.md` inside addon folders are excluded from deploy (see `deploy.config.json`). Licence and notice files (`LICENSE*`, `COPYING*`, `NOTICE*`, `THIRD-PARTY-NOTICES*`) always ship, also as `.md`, unless they sit inside an excluded folder.
 
 ## Dependencies
 
@@ -72,17 +73,17 @@ npm run lint         # lint only (luacheck + size/complexity ratchet)
 npm run lint:baseline  # lock in reduced debt after a cleanup
 ```
 
-Lint requires `luacheck` on PATH (`sudo pacman -S luacheck`, or `luarocks install luacheck`; `LUACHECK=/path` overrides). Full tool setup: [README.md](README.md#setup).
+Lint requires `luacheck` on PATH (`sudo pacman -S luacheck`, or `luarocks install luacheck`; `LUACHECK=/path` overrides). Full tool setup: [docs/development.md](docs/development.md#setup).
 
 ## Deploy
 
 ```bash
-npm run deploy           # all targets
+npm run deploy:local     # all targets
 npm run deploy:forever   # Forever only
 npm run deploy:retail    # retail only
 npm run deploy:dry       # show what would be replaced
 ```
 
-Each deploy deletes and recopies every addon folder found in `src/` in the target `Interface/AddOns`, and removes the folders listed under `retired` in `deploy.config.json` (the pack's earlier name). Target paths are in `deploy.config.json`; per-machine overrides go in untracked `deploy.config.local.json` (`{"targets": {"forever": "..."}}`).
+Each deploy deletes and recopies every addon folder found in `src/` in the target `Interface/AddOns`, and removes the folders listed under `retired` in `deploy.config.json` (the pack's earlier name). Target paths are per machine and live in untracked `deploy.config.local.json` (`{"targets": {"forever": "..."}}`; template in `deploy.config.local.example.json`).
 
 In-game: enable the five core modules (and `Tradewright_Bags` for the bag window), `/reload` (or restart if TOC changed), `/ah` (or `/tradewright`) opens UI, full AH scan with house open fills prices, profession Scan stores recipes/reagents, Crafts tab shows profit.

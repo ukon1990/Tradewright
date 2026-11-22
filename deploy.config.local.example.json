@@ -1,0 +1,6 @@
+{
+  "targets": {
+    "forever": "/path/to/World of Warcraft/_forever_/Interface/AddOns",
+    "retail": "/path/to/World of Warcraft/_retail_/Interface/AddOns"
+  }
+}

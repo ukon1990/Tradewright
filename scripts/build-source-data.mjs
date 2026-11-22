@@ -7,7 +7,7 @@
 // and hands the files to build-source-data.lua, which does the merge with the addon's own rules.
 // On the next login the addon drops from the saved data whatever the shipped file now states.
 //
-//   node scripts/build-source-data.mjs             # every target in deploy.config.json
+//   node scripts/build-source-data.mjs             # every target in deploy.config.local.json
 //   node scripts/build-source-data.mjs forever     # named targets
 //   node scripts/build-source-data.mjs --wtf <dir> # one WTF folder instead of the targets
 

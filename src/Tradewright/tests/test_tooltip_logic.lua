@@ -59,6 +59,8 @@ check("Age: days", TL.AgeText(3 * 86400) == "3 days ago")
 check("Block: no summary", TL.BuildLines(nil, opts()) == nil)
 check("Block: nothing known", TL.BuildLines({ ownedAll = 5, vendor = 10 }, opts()) == nil)
 check("Block: only own sales shows nothing until Shift", TL.BuildLines({ avgSale = 50 }, opts()) == nil)
+check("Block: sale rate with Shift", find(TL.BuildLines({ saleRate = 0.625 }, opts(true)), "You sold").value == "62% of posted")
+check("Block: sale rate hidden without Shift", TL.BuildLines({ saleRate = 0.5 }, opts()) == nil)
 check("Block: own sales with Shift", find(TL.BuildLines({ avgSale = 50 }, opts(true)), "Your average sale").value == "50c")
 
 -- Compact block

@@ -1,5 +1,6 @@
 -- Profession specialization catalog (datamined stats + recipe mapping). Expansion: Midnight (11).
--- Bundled with Tradewright; no runtime dependency on other addons.
+-- Derived from the specialization data of CraftSim (MIT, Copyright (c) 2023 Florian Schneider);
+-- see THIRD-PARTY-NOTICES.md in this addon folder. Bundled so there is no runtime dependency on CraftSim.
 local _, Tradewright = ...
 Tradewright:RegisterSpecCatalog(11, Enum.Profession.Enchanting,  {
 	recipeMapping = {

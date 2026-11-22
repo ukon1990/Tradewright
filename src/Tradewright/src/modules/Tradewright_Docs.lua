@@ -29,7 +29,7 @@ Dashboard: use "All characters (account)" in the sidebar for an account roster a
 
 For a fresh complete current-character package, use "Fresh scan + full dump" on the Export tab or `/tradewright full`. This enables specialization capture, scans every learned profession, then exports recipes plus the full known/unknown specialization definitions, descriptions, and current allocations.
 
-The source repository's docs/EXPORT_PACKAGE_FORMAT.md (not installed with the addon) has the compact scope
+The source repository's docs/export-format.md (not installed with the addon) has the compact scope
 field legends, paging reconstruction and SavedVariables notes.]=],
 	},
 	{

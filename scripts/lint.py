@@ -154,7 +154,7 @@ def run_luacheck() -> list[tuple[str, int, str, str]]:
         sys.exit(
             "lint: luacheck not found. Install it (Arch: sudo pacman -S luacheck; "
             "elsewhere: luarocks install luacheck) or set LUACHECK=/path/to/luacheck. "
-            "See README.md#setup."
+            "See docs/development.md#setup."
         )
     proc = subprocess.run(
         [exe, "src", "--formatter", "plain", "--codes", "-q"], cwd=ROOT, capture_output=True, text=True

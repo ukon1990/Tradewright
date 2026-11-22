@@ -6,8 +6,8 @@
 //   node scripts/deploy.mjs forever retail  # named targets
 //   node scripts/deploy.mjs --dry-run       # show what would happen
 //
-// Targets live in deploy.config.json; an optional, untracked
-// deploy.config.local.json overrides individual target paths.
+// Targets are per machine: they live in the untracked deploy.config.local.json
+// (see deploy.config.local.example.json), merged over deploy.config.json.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -28,18 +28,29 @@ const sourceDir = path.join(ROOT, config.source ?? "src");
 // the current ones, so every deploy removes them.
 const retired = config.retired ?? [];
 
-// "*.md" → suffix match, ".*" → any dotfile, anything else → exact name.
+// "*.md" → suffix match, "LICENSE*" → prefix match, ".*" → any dotfile, anything else → exact name.
+const matches = (pattern, name) => {
+  if (pattern === ".*") return name.startsWith(".");
+  if (pattern.startsWith("*")) return name.endsWith(pattern.slice(1));
+  if (pattern.endsWith("*")) return name.startsWith(pattern.slice(0, -1));
+  return name === pattern;
+};
 const exclude = config.exclude ?? [];
+// Licence and third-party notice files must ship with the addon whatever their extension,
+// so `include` wins over `exclude`. It cannot rescue a file inside an excluded folder.
+const include = config.include ?? [];
 const isExcluded = (name) =>
-  exclude.some((p) =>
-    p === ".*" ? name.startsWith(".") : p.startsWith("*") ? name.endsWith(p.slice(1)) : name === p,
-  );
+  !include.some((p) => matches(p, name)) && exclude.some((p) => matches(p, name));
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
 const wanted = args.filter((a) => !a.startsWith("--"));
 const names = wanted.length ? wanted : Object.keys(targets);
 
+if (!Object.keys(targets).length) {
+  console.error("No deploy targets set. Copy deploy.config.local.example.json to deploy.config.local.json and fill in your AddOns folders.");
+  process.exit(1);
+}
 const unknown = names.filter((n) => !targets[n]);
 if (unknown.length) {
   console.error(`Unknown target(s): ${unknown.join(", ")}. Known: ${Object.keys(targets).join(", ")}`);

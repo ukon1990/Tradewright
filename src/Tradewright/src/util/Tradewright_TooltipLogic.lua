@@ -193,6 +193,20 @@ local function recipeLines(lines, g)
 	end
 end
 
+--- "62% of posted" for a sale rate of 0.62 (sold / posted).
+function TooltipLogic.SaleRateText(rate)
+	return string.format("%.0f%% of posted", rate * 100)
+end
+
+local function ownSalesLines(lines, g, f)
+	if g.saleRate then
+		add(lines, "You sold", TooltipLogic.SaleRateText(g.saleRate))
+	end
+	if g.avgSale and g.avgSale > 0 then
+		add(lines, "Your average sale", f.money(g.avgSale))
+	end
+end
+
 local function detailLines(lines, g, f)
 	craftLines(lines, g, f)
 	ownerLines(lines, g, f)
@@ -205,9 +219,7 @@ local function detailLines(lines, g, f)
 		add(lines, "Vendor pays", f.money(g.vendor))
 	end
 	recipeLines(lines, g)
-	if g.avgSale and g.avgSale > 0 then
-		add(lines, "Your average sale", f.money(g.avgSale))
-	end
+	ownSalesLines(lines, g, f)
 end
 
 local function headerOf(g)
@@ -221,7 +233,7 @@ local function headerOf(g)
 end
 
 local function hasData(g)
-	return g ~= nil and (g.price or g.estimate or g.craftCost or g.avgSale) ~= nil
+	return g ~= nil and (g.price or g.estimate or g.craftCost or g.avgSale or g.saleRate) ~= nil
 end
 
 --- The Tradewright block for an item summary (BuildItemGoldSummary), or nil when there is

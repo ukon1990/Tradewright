@@ -10,7 +10,7 @@
 //
 // Run it with the game closed: the client rewrites these files when it exits.
 //
-//   node scripts/migrate-saved-data.mjs             # every target in deploy.config.json
+//   node scripts/migrate-saved-data.mjs             # every target in deploy.config.local.json
 //   node scripts/migrate-saved-data.mjs forever     # named targets
 //   node scripts/migrate-saved-data.mjs --dry-run   # show what would happen
 //   node scripts/migrate-saved-data.mjs --force     # overwrite Tradewright*.lua that already exist
@@ -105,6 +105,10 @@ export function wtfDirsFromArgs(args) {
   const targets = { ...readJson("deploy.config.json").targets, ...readJson("deploy.config.local.json").targets };
   const wanted = args.filter((a) => !a.startsWith("--"));
   const names = wanted.length ? wanted : Object.keys(targets);
+  if (!Object.keys(targets).length) {
+    console.error("No deploy targets set. Copy deploy.config.local.example.json to deploy.config.local.json, or pass --wtf <dir>.");
+    process.exit(1);
+  }
   const unknown = names.filter((n) => !targets[n]);
   if (unknown.length) {
     console.error(`Unknown target(s): ${unknown.join(", ")}. Known: ${Object.keys(targets).join(", ")}`);

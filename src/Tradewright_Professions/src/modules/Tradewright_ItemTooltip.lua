@@ -2,7 +2,8 @@ local _, Tradewright = ...
 
 -- The Tradewright block on the game's item tooltips: price and how fresh it is, how it compares
 -- with the usual price, how much is listed and what you own. Shift adds craft profit, who holds
--- it, your rule, the vendor price, the recipes it is part of and your own sales.
+-- it, your rule, the vendor price, the recipes it is part of, how much of what you posted sold
+-- and your average sale.
 -- Which lines show is decided in TooltipLogic (pure, tested offline); this file gathers the data
 -- and draws the lines. Rows in the addon's own windows skip the block (ShowItemRowTooltip).
 
@@ -112,6 +113,11 @@ function Tradewright:BuildItemGoldSummary(itemID, detail)
 	fillExtras(self, out, itemID, summary)
 	if detail then
 		out.recipeUse = recipeUse(self, itemID)
+		-- Optional dependency: the sale rate lives in AuctionData and walks the whole ledger,
+		-- so it is only looked up while Shift is held.
+		if self.GetAuctionPanelPersonalSaleRate then
+			out.saleRate = self:GetAuctionPanelPersonalSaleRate(itemID)
+		end
 	end
 	return out
 end
@@ -196,6 +202,20 @@ function Tradewright:AppendPricingToTooltipFromData(tooltip, data)
 	self:AppendPricingToItemTooltip(tooltip, itemID)
 end
 
+-- The general block, which carries the sale rate, is left out on rows, so rows add it themselves.
+local function withSaleRate(pe, pairs, itemID)
+	local rate = itemID and pe.GetAuctionPanelPersonalSaleRate and pe:GetAuctionPanelPersonalSaleRate(itemID)
+	if not rate then
+		return pairs
+	end
+	local out = {}
+	for i, pair in ipairs(pairs or {}) do
+		out[i] = pair
+	end
+	out[#out + 1] = { "You sold", pe.TooltipLogic.SaleRateText(rate) }
+	return out
+end
+
 --- Item tooltip for a row in one of the addon's windows: anchored to the row's right edge, the
 --- game's item tooltip, then the row's own label/value pairs under the addon name and a muted
 --- hint. The general block is left out (blockSkipped), so no fact shows twice.
@@ -211,6 +231,7 @@ function Tradewright:ShowItemRowTooltip(owner, itemID, pairs, hint)
 	if itemID and GameTooltip.SetItemByID then
 		GameTooltip:SetItemByID(itemID)
 	end
+	pairs = withSaleRate(self, pairs, itemID)
 	if pairs and #pairs > 0 then
 		GameTooltip:AddLine(" ")
 		GameTooltip:AddLine(HEADER, gold.r, gold.g, gold.b)

@@ -1,6 +1,6 @@
 ---
 name: wow-addon-issue-work
-description: Implement a Tradewright issue from src/Tradewright/docs/specifications/issues — plan slices, implement, review against focus files, verify with tests and in-game checks.
+description: Implement a Tradewright issue from docs/specifications/issues — plan slices, implement, review against focus files, verify with tests and in-game checks.
 ---
 
 # Issue work (Tradewright)

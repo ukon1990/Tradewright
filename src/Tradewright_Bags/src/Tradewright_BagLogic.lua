@@ -52,6 +52,12 @@ function BagLogic.CategoryOf(item)
 	return key == "gear" and gearKey(item) or key
 end
 
+--- The item name in a link, or nil: the link of an item the game has no data for has an empty name.
+function BagLogic.LinkName(link)
+	local name = link and string.match(link, "%[(.-)%]")
+	return name ~= "" and name or nil
+end
+
 -- Best quality first, then name, then the larger stack; bag and slot keep the order stable.
 local function sortKeys(item)
 	return { -(item.quality or 1), item.name or "", -(item.count or 1), (item.bag or 0) * 1000 + (item.slot or 0) }

@@ -6,7 +6,7 @@ The Crafts tab stops at "this craft is profitable". This epic adds the three thi
 
 ## Context
 
-- Research and sources: [WoW gold making market strategies](../../../../../../reports/WoW%20gold%20making%20market%20strategies.md), section "Crafting margins persist where capacity is capped".
+- Research and sources: [WoW gold making market strategies](../../../research/gold-making-market-strategies.md), section "Crafting margins persist where capacity is capped".
 - `EvaluateCraftScenario` (`Tradewright_CraftsEngine.lua`) computes `profit = saleNet × outQty - matCost` and ROI. A material is priced from: vendor price when the recipe marks it vendor-sourced, the ledger buy average, the TSM `Crafting` string, then the market fallback. Owned materials are handled by `crafts.reagentSourceMode` (`owned_first`, `mixed`).
 - `craftOpportunityCostIndex` already holds the lowest craft cost per output item across characters.
 - Recipes are stored per character, so the addon knows who can craft what. No cooldown data is read anywhere.

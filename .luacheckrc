@@ -142,6 +142,7 @@ read_globals = {
 	"IsMouseButtonDown",
 	"IsShiftKeyDown",
 	"ITEM_QUALITY_COLORS",
+	"TEXTURE_ITEM_QUEST_BANG",
 	"ItemDB",
 	"ItemKeyMixin",
 	"ItemLocation",

@@ -1,6 +1,6 @@
 ---
 name: wow-addon-issue-planning
-description: Plan and split Tradewright work into local markdown issues under src/Tradewright/docs/specifications/issues/. Confirm with the user before writing issue files.
+description: Plan and split Tradewright work into local markdown issues under docs/specifications/issues/. Confirm with the user before writing issue files.
 ---
 
 # Issue planning (Tradewright)
@@ -13,9 +13,9 @@ Adapted from QuestPlanner / Master of Dungeons planning — **workflow**, not an
 
 1. Discover — problem, outcome, Forever vs retail API touch points
 2. Draft — epic / feature / task outline in chat (dry-run)
-3. Overlap — search `src/Tradewright/docs/specifications/` and issue folders
+3. Overlap — search `docs/specifications/` and issue folders
 4. Confirm — user says yes
-5. Write — markdown under `src/Tradewright/docs/specifications/issues/` and update the backlog index
+5. Write — markdown under `docs/specifications/issues/` and update the backlog index
 
 ## Issue shape
 

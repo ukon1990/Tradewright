@@ -236,6 +236,10 @@ check("Tabs: warband bank right after the current character", tabs[2] == "warban
 check("Tabs: no warband tab before it is saved", BL.TabOrder({}, "New-R", 3, "warband")[2] == nil)
 check("Merge: all includes the warband bank", BL.MergeAll(characters, "bank")[1] == 1047 and BL.MergeAll(characters, "bags")[1] == 440)
 
+check("Link name: read from the link", BL.LinkName("|cff0070dd|Hitem:1::|h[Iron Bar]|h|r") == "Iron Bar")
+check("Link name: empty name of an item without data is nil", BL.LinkName("|cff0070dd|Hitem:1::|h[]|h|r") == nil)
+check("Link name: no link is nil", BL.LinkName(nil) == nil)
+
 if failed > 0 then
 	print(string.format("%d failure(s)", failed))
 	os.exit(1)

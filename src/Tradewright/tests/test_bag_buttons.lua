@@ -16,7 +16,7 @@ end
 -- The frame and texture calls BagButtons makes that need no result; any other missing key is nil.
 local NO_OP = {}
 for _, name in ipairs({ "SetAllPoints", "SetPoint", "ClearAllPoints", "SetTexCoord", "SetAlpha",
-	"SetColorTexture", "SetSize", "Hide", "Show", "HookScript" }) do
+	"SetColorTexture", "SetTexture", "SetSize", "Hide", "Show", "HookScript" }) do
 	NO_OP[name] = function() end
 end
 

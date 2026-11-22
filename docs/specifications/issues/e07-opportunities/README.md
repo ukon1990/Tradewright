@@ -6,7 +6,7 @@ One tab that answers "what should I buy or sell right now": flips priced after f
 
 ## Context
 
-- Research and sources: [WoW gold making market strategies](../../../../../../reports/WoW%20gold%20making%20market%20strategies.md), sections "Auction-house trading" and "What an addon can compute from its own data".
+- Research and sources: [WoW gold making market strategies](../../../research/gold-making-market-strategies.md), sections "Auction-house trading" and "What an addon can compute from its own data".
 - Today the Gold view has four small cards (Deals to buy, Best crafts now, Sell what I own, Market movers), each a top-N list with no quantity, no fees on the buy side beyond the fixed cut, and no check that the item sells.
 - The research finds the buy thresholds in circulation ("under 80% of market value") are conventions with no data behind them, that a low price without turnover is the usual way to lose gold, and that resets are the least supported strategy. The tab therefore shows turnover and risk next to every profit figure and keeps the thresholds as settings.
 - Buying, bidding, posting and cancelling need the player's own click in the game client. The tab opens the right auction house page (E04) and never buys.

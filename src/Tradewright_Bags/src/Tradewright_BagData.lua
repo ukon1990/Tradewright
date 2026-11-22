@@ -14,13 +14,25 @@ local function sellPrice(itemID)
 	return getInfo and tonumber((select(11, getInfo(itemID)))) or 0
 end
 
--- Quality and name: from the live slot when it gave them, else from the item cache.
+-- Quality and name last read per item, and with them every item the window has described. Under
+-- load (a full auction scan) the game drops item data for a moment and a slot's link comes back
+-- with an empty name; sorted under that, the item would jump away and back.
+local lastQuality, lastName, described = {}, {}, {}
+
+local function cachedQualityAndName(pe, itemID)
+	local desc = pe:ResolveItemDescriptor(itemID) or {}
+	return desc.quality, desc.name ~= "" and desc.name or nil
+end
+
+-- Quality and name: from the live slot when it gave them, else from the item cache, else as last read.
 local function qualityAndName(pe, itemID, info)
-	local quality, name = info.quality, info.link and string.match(info.link, "%[(.-)%]")
+	local quality, name = info.quality, pe.BagLogic.LinkName(info.link)
 	if not quality or not name then
-		local desc = pe:ResolveItemDescriptor(itemID) or {}
-		quality, name = quality or desc.quality, name or desc.name
+		local cachedQuality, cachedName = cachedQualityAndName(pe, itemID)
+		quality, name = quality or cachedQuality, name or cachedName
 	end
+	quality, name = quality or lastQuality[itemID], name or lastName[itemID]
+	lastQuality[itemID], lastName[itemID], described[itemID] = quality, name, true
 	return quality or 1, name or pe:GetItemDisplayName(itemID)
 end
 
@@ -51,9 +63,18 @@ function Tradewright:DescribeBagItem(itemID, info)
 	}
 end
 
-local function isQuestSlot(bag, slot)
-	local quest = C_Container.GetContainerItemQuestInfo and C_Container.GetContainerItemQuestInfo(bag, slot)
-	return type(quest) == "table" and (quest.isQuestItem == true or quest.questID ~= nil)
+-- Whether the slot holds a quest item, and whether the item starts a quest (accepted or not).
+-- Some clients return the fields as a table, older ones as three values.
+local function questSlotInfo(bag, slot)
+	if not C_Container.GetContainerItemQuestInfo then
+		return false, false
+	end
+	local info, questID = C_Container.GetContainerItemQuestInfo(bag, slot)
+	local isQuestItem = info
+	if type(info) == "table" then
+		isQuestItem, questID = info.isQuestItem, info.questID
+	end
+	return isQuestItem == true or questID ~= nil, questID ~= nil
 end
 
 -- What a redraw marks on live slots: `sets` (split gear by saved equipment set) and `new` (mark
@@ -96,7 +117,7 @@ local function readSlot(pe, bag, slot, marks)
 	})
 	item.bag, item.slot = bag, slot
 	item.locked = info.isLocked == true
-	item.isQuest = isQuestSlot(bag, slot)
+	item.isQuest, item.startsQuest = questSlotInfo(bag, slot)
 	addMarks(item, marks)
 	return item
 end
@@ -184,12 +205,18 @@ local handlers = {
 	PLAYER_MONEY = refreshWindow,
 	ITEM_LOCK_CHANGED = refreshWindow,
 	BAG_UPDATE_COOLDOWN = refreshWindow,
-	GET_ITEM_INFO_RECEIVED = refreshWindow,
 	PLAYERBANKSLOTS_CHANGED = refreshWindow,
 	PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED = refreshWindow,
 	EQUIPMENT_SETS_CHANGED = refreshWindow,
 	BAG_NEW_ITEMS_UPDATED = refreshWindow,
 }
+
+-- An auction scan loads data for every item on the house: only an item of the window redraws it.
+function handlers.GET_ITEM_INFO_RECEIVED(pe, itemID)
+	if described[itemID] then
+		refreshWindow(pe)
+	end
+end
 
 function handlers.PLAYER_LOGIN(pe)
 	adoptOldBagCounts(pe)
@@ -197,8 +224,8 @@ function handlers.PLAYER_LOGIN(pe)
 end
 
 local events = CreateFrame("Frame")
-events:SetScript("OnEvent", function(_, event)
-	handlers[event](Tradewright)
+events:SetScript("OnEvent", function(_, event, ...)
+	handlers[event](Tradewright, ...)
 end)
 for event in pairs(handlers) do
 	-- Not every client has every event.

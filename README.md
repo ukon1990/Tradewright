@@ -1,74 +1,71 @@
 # Tradewright
 
-Auction, profession and inventory helper addons for World of Warcraft: **WoW Forever** (`Interface 16001`) and retail. The pack is five addons under `src/` (core, AuctionData, Professions, Inventory, UI) plus an optional sixth, `Tradewright_Bags`: a bag window grouped by item category, with your other characters as tabs. Turn it off in Settings → Inventory & mail, with `/ah bags`, or by disabling the addon.
+Tradewright is an auction, profession and inventory helper for World of Warcraft: **WoW Forever** (`Interface 16001`) and retail. It combines auction house prices with your profession recipes to show which crafts make a profit.
 
-Rules for contributors and agents: see [AGENTS.md](AGENTS.md).
+## Features
 
-## Setup
+**Auction house**
+- Full scan that stores prices, with a daily price history and a usual price per item.
+- Market tab to search and sort the last scan, with a price chart per item.
+- Opportunities tab: flips, items listed under vendor price, price gaps and what to sell now.
+- Shopping cart for the reagents your queued crafts need.
 
-| Tool | Used for | Arch | Other |
-| --- | --- | --- | --- |
-| Node.js | `npm` scripts, deploy | `sudo pacman -S nodejs npm` | [nodejs.org](https://nodejs.org) |
-| Python 3 | test and lint runners | `sudo pacman -S python` | system package |
-| Lua 5.1 (`lua5.1`) | offline tests | `sudo pacman -S lua51` | Debian/Ubuntu: `sudo apt install lua5.1` |
-| luacheck | lint | `sudo pacman -S luacheck` | Debian/Ubuntu: `sudo apt install lua-check`; anywhere: `luarocks install luacheck` |
+**Professions**
+- Scans your recipes and reagents, and shows cost and profit per craft.
+- Picks the cheapest way to get each material: buy, craft or vendor.
+- Suggests how many to make, and tracks cooldown crafts.
+- Craft queue, and a leveling route for raising a profession skill.
 
-On Arch, all at once:
+**Inventory and gold**
+- Bags and bank across your characters, with quantity history.
+- Ledger and income view: where your gold comes from and what sells.
+- Farm window that logs loot and values it at current prices.
+- Mail tools: send materials to crafters, and crafts and surplus back to your seller.
 
-```bash
-sudo pacman -S --needed nodejs npm python lua51 luacheck
-```
+**Bag window (optional)**
+- Bags and bank grouped by item category, with your other characters as tabs.
+- Select several items at once to move, bank or mail them.
+- Item log of what entered and left your bags.
 
-If luacheck lives somewhere off `PATH`, point to it with `LUACHECK=/path/to/luacheck`.
+Good to know:
 
-## Test and lint
+- Crafting orders, concentration and commodity auto-buy are retail only.
+- Tradewright uses only public game functions and does not automate protected actions.
+- Some newer features are still being checked in game; the [backlog](docs/specifications/05-backlog.md) shows the status of each.
 
-```bash
-npm test
-```
+## Modules
 
-This runs the offline Lua tests and then lint. No WoW client is needed.
+The pack is split into addons under `src/`, so you can enable only the parts you want.
 
-```bash
-npm run lint
-```
+| Addon | What it does |
+| --- | --- |
+| `Tradewright` | The base that every other module needs. Holds settings and saved data. |
+| `Tradewright_AuctionData` | Scans the auction house and remembers the prices. |
+| `Tradewright_Professions` | Scans your recipes and reagents, and works out craft cost and profit. |
+| `Tradewright_Inventory` | Keeps track of your bags and bank, and keeps a ledger. |
+| `Tradewright_UI` | The main window: dashboard, craft panel and mail tools. |
+| `Tradewright_Bags` (optional) | A bag and bank window grouped by item category, with your other characters as tabs. Turn it off in Settings → Inventory & mail, with `/ah bags`, or by disabling the addon. |
 
-Lint only: luacheck, plus limits of 700 lines per file, 40 lines per function, complexity 10 and 5 parameters.
+## Getting started in game
 
-Existing debt is frozen in `scripts/lint-baseline.json`, so lint fails only on new or worse code. After a cleanup that lowers debt, lock it in:
+1. Enable the five core addons, and `Tradewright_Bags` if you want the bag window.
+2. Type `/ah` or `/tradewright` to open the window.
+3. Open the auction house and run a full scan to fill in prices.
+4. Open a profession and press Scan to store your recipes.
+5. Open the Crafts tab to see which crafts are profitable.
 
-```bash
-npm run lint:baseline
-```
+## Optional addons
 
-## Deploy to the game
+Tradewright works on its own. With Questie installed, it can show where vendors you have not visited stand. With TomTom installed, it can use TomTom's arrow when the game's own waypoint is unavailable.
 
-Target AddOns folders are in `deploy.config.json`. Per-machine overrides go in an untracked `deploy.config.local.json`, e.g. `{"targets": {"forever": "/path/to/_forever_/Interface/AddOns"}}`.
+## Documentation
 
-```bash
-npm run deploy:dry
-```
+- [Development](docs/development.md): setup, tests, lint, and copying the addons into the game.
+- [Backlog and issues](docs/specifications/05-backlog.md)
+- [Export package format](docs/export-format.md) and [profession data guide](docs/profession-data.md)
+- [Research: gold making and market strategies](docs/research/gold-making-market-strategies.md)
+- [AGENTS.md](AGENTS.md): rules for contributors and agents.
 
-```bash
-npm run deploy
-```
+## Licence
 
-`deploy:forever` and `deploy:retail` deploy a single target. In game, `/reload` picks up changed files. New `.lua` files or TOC changes need a full client restart. `/ah` (or `/tradewright`) opens the UI.
-
-### Coming from AuctionHelper
-
-The pack used to be called AuctionHelper, and the game keeps saved data per addon folder name. With the game closed, move the data over once, then deploy (which also removes the old `AuctionHelper*` folders):
-
-```bash
-npm run migrate:saved-data -- --dry-run
-```
-
-```bash
-npm run migrate:saved-data
-```
-
-```bash
-npm run deploy
-```
-
-The old `AuctionHelper*.lua` saved-data files are left in place as a backup.
+Tradewright is released under the [MIT License](LICENSE). The Midnight profession specialization data is derived from CraftSim; see [THIRD-PARTY-NOTICES.md](src/Tradewright_Professions/THIRD-PARTY-NOTICES.md).

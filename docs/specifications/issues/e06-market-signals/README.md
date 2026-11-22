@@ -6,7 +6,7 @@ Give every list in the addon better numbers to work from: a usual price that one
 
 ## Context
 
-- Research and sources: [WoW gold making market strategies](../../../../../../reports/WoW%20gold%20making%20market%20strategies.md), section "What an addon can compute from its own data".
+- Research and sources: [WoW gold making market strategies](../../../research/gold-making-market-strategies.md), section "What an addon can compute from its own data".
 - A full scan keeps one entry per item: `{t, p, s, q, n, h}` (seen, lowest unit price, source, quantity, listing count, highest unit price). The scan reads every row, but `AggregateClassicAuctionRow` (`Tradewright_ForeverLogic.lua`) keeps only these aggregates, so depth cannot be worked out afterwards.
 - `history.hourly` holds min, max, last and counts per hour. Its `w / q` is the lowest price again, not an average. `history.daily` is never filled and `CompactAuctionStorageData` clears it.
 - The "usual" price behind Deals and Market movers is the 7-day average of hourly lowest prices (`SummarizeHourlyHistory`, `ClassifyMarketItem`), or TSM `dbmarket` when TSM is installed.

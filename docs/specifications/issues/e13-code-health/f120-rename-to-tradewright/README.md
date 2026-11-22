@@ -16,7 +16,7 @@ The pack is going public. "AuctionHelper" covers one of its six modules and is e
 - Slash commands: `/ah` and `/ahfarm` stay; `/auctionhelper` becomes `/tradewright`
 - `DISPLAY_NAME` in `Tradewright.lua` holds the name players see
 - `scripts/migrate-saved-data.mjs` copies `AuctionHelper*.lua` saved data to `Tradewright*.lua` with the variable names renamed, and renames the pack's entries in each character's `AddOns.txt`
-- `npm run deploy` removes the `retired` folders listed in `deploy.config.json`
+- `npm run deploy:local` removes the `retired` folders listed in `deploy.config.json`
 - The one-time `ProfessionExporter` import (F119) is removed together with its saved variables and test
 
 ## Deliberately unchanged
@@ -39,7 +39,7 @@ With the game closed:
 ```bash
 npm run migrate:saved-data -- --dry-run
 npm run migrate:saved-data
-npm run deploy
+npm run deploy:local
 ```
 
 In-game (full client restart): the addon list shows only Tradewright modules; `/ah` and `/tradewright` open the dashboard; ledger, income, price history, profession scans and other characters' holdings are there; the bag and farm windows reopen where they were; an export still starts with `AHCBOR1` or `AHLUA1`.

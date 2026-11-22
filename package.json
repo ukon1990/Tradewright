@@ -5,7 +5,7 @@
   "description": "Tradewright World of Warcraft addon pack (Forever + retail)",
   "type": "module",
   "scripts": {
-    "deploy": "node scripts/deploy.mjs",
+    "deploy:local": "node scripts/deploy.mjs",
     "deploy:forever": "node scripts/deploy.mjs forever",
     "deploy:retail": "node scripts/deploy.mjs retail",
     "deploy:dry": "node scripts/deploy.mjs --dry-run",
