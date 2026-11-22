@@ -57,6 +57,8 @@ Existing debt is frozen in `scripts/lint-baseline.json` (a ratchet). Lint fails 
 | Queue of crafts to make | craft queue (`CraftQueue`) | work queue, work order queue, shopping queue, "shopping" |
 | Retail crafting orders taken to craft (own store, mirrored into the craft queue as crafting-order lines) | crafting-order queue (`CraftingOrderQueue`) | work queue, work order queue |
 | Reading the whole AH | full scan | dump, replicate, classic_full |
+| Disenchanting, prospecting and milling together (code only; the player sees the action's own name) | salvage (`Salvage`) | destroy, conversion |
+| What one salvaged item gives on average | yield | drop rate, loot table |
 | Auction house price seen in game | AH price | native, live, current price |
 | Item identity with bonus ids | item key (`itemKey`) | key fields, scan key |
 

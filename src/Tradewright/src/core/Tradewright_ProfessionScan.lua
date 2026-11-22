@@ -98,6 +98,65 @@ function Tradewright:CollectClassicRecipeReagentSlots(recipeSpellID)
 	return slots
 end
 
+-- Items one craft of a salvage recipe destroys, used when the game's schematic does not say.
+local DEFAULT_SALVAGE_QUANTITY = 5
+
+--- The reagent slot of a salvage recipe (Prospecting, Milling): every item the game accepts for it,
+--- and how many one craft destroys. nil for any other recipe, or while the game names no items.
+function Tradewright:CollectSalvageSlot(recipeSpellID, recipeInfo, schematic)
+	if not (recipeInfo and recipeInfo.isSalvageRecipe and C_TradeSkillUI.GetSalvagableItemIDs) then
+		return nil
+	end
+	local slot = self.MaterialLogic.MakeSalvageSlot(
+		C_TradeSkillUI.GetSalvagableItemIDs(recipeSpellID), tonumber(schematic and schematic.quantityMax) or DEFAULT_SALVAGE_QUANTITY)
+	if slot and Enum.CraftingReagentType then
+		slot.reagentType = Enum.CraftingReagentType.Basic
+	end
+	return slot
+end
+
+local function hasSalvageSlot(slots)
+	for _, slot in ipairs(slots or {}) do
+		if slot.salvage then
+			return true
+		end
+	end
+	return false
+end
+
+--- Whether a saved recipe is a salvage recipe. One saved before salvage slots were collected gets its
+--- slot here, read from the game, so it needs no new scan.
+function Tradewright:PrepareSalvageRecipe(recipeData)
+	local info = self:RecipeDataInfo(recipeData)
+	if not (info and info.isSalvageRecipe) then
+		return false
+	end
+	if not hasSalvageSlot(self:RecipeDataSlots(recipeData)) then
+		local slot = self:CollectSalvageSlot(self:GetRecipeSpellID(recipeData), info, recipeData.schematic)
+		if slot then
+			recipeData.slots = recipeData.slots or {}
+			table.insert(recipeData.slots, slot)
+		end
+	end
+	return true
+end
+
+-- The recipe's reagent slots: from the game's schematic, plus the salvage slot of a salvage recipe;
+-- from the classic recipe functions when the schematic names none (WoW Forever).
+local function collectRecipeSlots(self, recipeSpellID, recipeInfo, schematic)
+	local slots = {}
+	if schematic and type(schematic.reagentSlotSchematics) == "table" then
+		for slotIndex, reagentSlotSchematic in ipairs(schematic.reagentSlotSchematics) do
+			slots[#slots + 1] = self:DescribeReagentSlot(reagentSlotSchematic, slotIndex)
+		end
+	end
+	slots[#slots + 1] = self:CollectSalvageSlot(recipeSpellID, recipeInfo, schematic)
+	if #slots == 0 then
+		return self:CollectClassicRecipeReagentSlots(recipeSpellID)
+	end
+	return slots
+end
+
 function Tradewright:CollectRecipeData(recipeSpellID)
 	recipeSpellID = tonumber(recipeSpellID)
 	if not recipeSpellID then
@@ -120,15 +179,7 @@ function Tradewright:CollectRecipeData(recipeSpellID)
 		links = {},
 	}
 
-	if schematic and type(schematic.reagentSlotSchematics) == "table" then
-		for slotIndex, reagentSlotSchematic in ipairs(schematic.reagentSlotSchematics) do
-			table.insert(recipeData.slots, self:DescribeReagentSlot(reagentSlotSchematic, slotIndex))
-		end
-	end
-	-- Empty schematic (or missing reagents) → classic Forever / TradeSkill fallback.
-	if #recipeData.slots == 0 then
-		recipeData.slots = self:CollectClassicRecipeReagentSlots(recipeSpellID)
-	end
+	recipeData.slots = collectRecipeSlots(self, recipeSpellID, recipeInfo, schematic)
 
 	return recipeData
 end

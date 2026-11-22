@@ -163,6 +163,34 @@ local function setQuantityWhenOpen(pe, recipeID, amount)
 	end
 end
 
+-- The largest stack of `itemID` in the bags that holds at least `minimum`: `bag, slot, count`, or nil.
+local function largestBagStack(pe, itemID, minimum)
+	local bestBag, bestSlot, bestCount
+	pe:ForEachBagSlot(nil, function(bag, slot, info)
+		local count = info and info.itemID == itemID and tonumber(info.stackCount) or 0
+		if count >= minimum and count > (bestCount or 0) then
+			bestBag, bestSlot, bestCount = bag, slot, count
+		end
+	end)
+	return bestBag, bestSlot, bestCount
+end
+
+-- A salvage recipe (Prospecting, Milling) is crafted on one stack of the item to destroy, here the
+-- largest stack of the item the line was priced with, for as many crafts as that stack allows.
+-- Without such a stack the recipe is opened and the player told what it needs.
+local function craftSalvageRecipe(pe, row, amount)
+	local input = row.salvageInput or {}
+	local itemID, perCraft = tonumber(input.itemID), math.max(1, tonumber(input.quantityRequired) or 1)
+	local bag, slot, count = largestBagStack(pe, itemID, perCraft)
+	if bag and C_TradeSkillUI.CraftSalvage then
+		local crafts = math.min(amount, math.floor(count / perCraft))
+		return pcall(C_TradeSkillUI.CraftSalvage, row.salvageSpellID, crafts, ItemLocation:CreateFromBagAndSlot(bag, slot))
+	end
+	pe:JumpToProfessionRecipe(row.salvageSpellID, row.skillLineID)
+	pe:PrintMessage(string.format(L["%s needs %d %s in one stack in your bags."], row.recipeLabel or "", perCraft, pe:GetItemDisplayName(itemID)))
+	return false
+end
+
 -- A shown, enabled button, or nil.
 local function usableButton(button)
 	return button and button:IsShown() and button:IsEnabled() and button or nil
@@ -312,6 +340,21 @@ function Tradewright:OnProfessionRecipeCraftedResult(craftingItemResultData)
 	finishOpenCraftingOrder(self, craftedItemID)
 end
 
+--- UNIT_SPELLCAST_SUCCEEDED: a salvage recipe gives random items, so its queue line cannot be counted
+--- down by a crafted item. The cast of the recipe itself counts it, one craft per cast.
+function Tradewright:OnUnitSpellcastSucceeded(unit, _, spellID)
+	if unit ~= "player" or not self.GetCraftQueueStorage then
+		return
+	end
+	local characterKey = self:GetCharacterKey()
+	for queueKey, entry in pairs(self:GetCraftQueueStorage()) do
+		if type(entry) == "table" and entry.salvageSpellID == spellID and entry.characterKey == characterKey then
+			self:UpdateCraftQueueQuantity(queueKey, (tonumber(entry.quantity) or 0) - 1)
+			return
+		end
+	end
+end
+
 --- Crafts a queue row inside the click: through the open recipe's Create button, or by recipe id
 --- while another recipe shows, which is then opened with the queued quantity filled in. A crafting
 --- order row instead steps through its order in the orders tab.
@@ -329,6 +372,9 @@ function Tradewright:CraftProfessionQueueRecipe(row)
 		return stepCraftingOrder(self, row, orderID)
 	end
 	local craftAmount = math.max(1, math.floor(tonumber(row.quantity) or 1))
+	if row.salvageSpellID then
+		return craftSalvageRecipe(self, row, craftAmount)
+	end
 	if startOpenRecipeCraft(self, recipeSpellID, craftAmount) then
 		return true
 	end

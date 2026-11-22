@@ -51,4 +51,4 @@ In-game on Forever: full scan on several days → `/ah` → Opportunities → ea
 - Buying or posting automatically, sniping loops, cancel scans
 - Cross-realm or cross-faction arbitrage
 - Bids on auctions about to end (candidate; whether Forever has bids is not confirmed)
-- Disenchant, prospecting and milling value (candidate; published yield tables conflict)
+- Disenchant, prospecting and milling value (now [E18](../e18-salvage-value/README.md))

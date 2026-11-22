@@ -156,6 +156,7 @@ local EVENT_HANDLERS = {
 	UPDATE_TRADESKILL_CAST_STOPPED = onTradeSkillCastStopped,
 	TRADE_SKILL_CLOSE = onTradeSkillClose,
 	TRADE_SKILL_ITEM_CRAFTED_RESULT = "OnProfessionRecipeCraftedResult",
+	UNIT_SPELLCAST_SUCCEEDED = "OnUnitSpellcastSucceeded",
 	PLAYER_INTERACTION_MANAGER_FRAME_SHOW = onInteractionFrameShow,
 	PLAYER_INTERACTION_MANAGER_FRAME_HIDE = onInteractionFrameHide,
 

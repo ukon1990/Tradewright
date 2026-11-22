@@ -212,6 +212,26 @@ function MaterialLogic.MakeClassicReagentSlot(slotIndex, itemID, quantity)
 	}
 end
 
+--- The one reagent slot of a salvage recipe (Prospecting, Milling), which destroys an item of the
+--- player's choice: any one of `itemIDs`, `quantity` of it per craft. Reagent planning then picks the
+--- cheapest, as for any slot that takes one of several items. nil without a usable item.
+function MaterialLogic.MakeSalvageSlot(itemIDs, quantity)
+	local reagents = {}
+	for _, itemID in ipairs(itemIDs or {}) do
+		itemID = tonumber(itemID)
+		if itemID and itemID > 0 then
+			reagents[#reagents + 1] = { reagentIndex = #reagents + 1, itemID = itemID, quantity = quantity }
+		end
+	end
+	if #reagents == 0 then
+		return nil
+	end
+	return {
+		slotIndex = 1, dataSlotIndex = 1, reagentType = 1, quantityRequired = quantity,
+		required = true, optional = false, salvage = true, reagents = reagents,
+	}
+end
+
 --- How much of a material still has to be bought when crafts in the craft queue make some of it:
 --- `toBuy, fromQueue`. What the character already has is used first; `queuedOutput` is what the
 --- queued crafts make of the material in total.

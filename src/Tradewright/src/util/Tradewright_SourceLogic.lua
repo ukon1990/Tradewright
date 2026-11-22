@@ -10,6 +10,7 @@ local _, Tradewright = ...
 ---   ranks   = the same shape as taught, for a trainer's rank training
 ---   recipeItems = { [recipeName] = itemID }                    the item that teaches a recipe
 ---   tallies = { [epoch] = { [sourceKey] = { opened, items = { [itemID] = loots that held it } } } }
+---   yields  = { [epoch] = { [yieldKey] = { casts, inputs, items } } }   see Tradewright_SalvageLogic.lua
 ---   collectorID, epoch                                         see Seal and Prune
 ---
 --- An `npcKey` is the NPC's id. Sightings from before ids were kept sit under "name:<npc name>" and
@@ -27,7 +28,9 @@ Tradewright.SourceLogic = SourceLogic
 SourceLogic.PLACES_PER_MAP = 12
 SourceLogic.PLACE_GRID = 0.02
 
-local STORE_TABLES = { "npcs", "objects", "sold", "taught", "ranks", "recipeItems", "tallies" }
+local STORE_TABLES = { "npcs", "objects", "sold", "taught", "ranks", "recipeItems", "tallies", "yields" }
+-- Counts kept per epoch, which ship by being added up: loot tallies and salvage yields.
+local EPOCH_TABLES = { "tallies", "yields" }
 local TAUGHT_KINDS = { "taught", "ranks" }
 local SOURCE_KIND_BY_PREFIX = { n = "kill", g = "gather", o = "object", f = "fishing" }
 local PREFIX_BY_SOURCE_KIND = { kill = "n", gather = "g", object = "o", fishing = "f" }
@@ -441,7 +444,7 @@ end
 --- Closes the current tally epoch so it can be shipped, and starts the next. Returns the epoch that
 --- was closed, or nil when it held nothing.
 function SourceLogic.Seal(store)
-	if not next(store.tallies[store.epoch] or {}) then
+	if not next(store.tallies[store.epoch] or {}) and not next(store.yields[store.epoch] or {}) then
 		return nil
 	end
 	store.epoch = store.epoch + 1
@@ -501,23 +504,31 @@ end
 -- Shipped tallies sit in one bucket; which epoch a count came from no longer matters there.
 local SHIPPED_EPOCH = 0
 
-local function addTally(bucket, sourceKey, tally)
-	local total = bucket[sourceKey] or { opened = 0, items = {} }
-	bucket[sourceKey] = total
-	total.opened = total.opened + tally.opened
-	for itemID, held in pairs(tally.items) do
-		total.items[itemID] = (total.items[itemID] or 0) + held
+-- Adds one record of counts (a loot tally or a salvage yield) to the bucket's record of the same key:
+-- every number is summed, and so is each item's count.
+local function addCounts(bucket, key, counts)
+	local total = bucket[key] or { items = {} }
+	bucket[key] = total
+	for field, value in pairs(counts) do
+		if type(value) == "number" then
+			total[field] = (total[field] or 0) + value
+		end
+	end
+	for itemID, count in pairs(counts.items) do
+		total.items[itemID] = (total.items[itemID] or 0) + count
 	end
 end
 
 -- Adds the store's closed epochs that are not shipped yet. Returns the last epoch now shipped.
-local function shipTallies(shipped, store, shippedUpTo)
-	local bucket = shipped.tallies[SHIPPED_EPOCH] or {}
-	shipped.tallies[SHIPPED_EPOCH] = bucket
-	for epoch, tallies in pairs(store.tallies) do
-		if epoch > shippedUpTo and epoch < store.epoch then
-			for sourceKey, tally in pairs(tallies) do
-				addTally(bucket, sourceKey, tally)
+local function shipEpochs(shipped, store, shippedUpTo)
+	for _, name in ipairs(EPOCH_TABLES) do
+		local bucket = shipped[name][SHIPPED_EPOCH] or {}
+		shipped[name][SHIPPED_EPOCH] = bucket
+		for epoch, records in pairs(store[name]) do
+			if epoch > shippedUpTo and epoch < store.epoch then
+				for key, counts in pairs(records) do
+					addCounts(bucket, key, counts)
+				end
 			end
 		end
 	end
@@ -537,7 +548,7 @@ function SourceLogic.ShipStore(shipped, store)
 	for recipeName, itemID in pairs(store.recipeItems) do
 		shipped.recipeItems[recipeName] = itemID
 	end
-	shipped.collected[store.collectorID] = shipTallies(shipped, store, shipped.collected[store.collectorID] or 0)
+	shipped.collected[store.collectorID] = shipEpochs(shipped, store, shipped.collected[store.collectorID] or 0)
 	return shipped
 end
 
@@ -625,14 +636,16 @@ local function pruneTaught(store, shipped, kind)
 end
 
 -- Drops this collector's epochs that the shipped data already holds, and never reuses their numbers.
-local function pruneTallies(store, shipped)
+local function pruneEpochs(store, shipped)
 	local shippedUpTo = shipped.collected and shipped.collected[store.collectorID]
 	if not shippedUpTo then
 		return
 	end
-	for epoch in pairs(store.tallies) do
-		if epoch <= shippedUpTo then
-			store.tallies[epoch] = nil
+	for _, name in ipairs(EPOCH_TABLES) do
+		for epoch in pairs(store[name]) do
+			if epoch <= shippedUpTo then
+				store[name][epoch] = nil
+			end
 		end
 	end
 	store.epoch = math.max(store.epoch, shippedUpTo + 1)
@@ -652,7 +665,7 @@ function SourceLogic.Prune(store, shipped)
 	end
 	pruneNpcs(store, shipped)
 	pruneObjects(store, shipped)
-	pruneTallies(store, shipped)
+	pruneEpochs(store, shipped)
 end
 
 return SourceLogic

@@ -34,15 +34,31 @@ local function resolveCraftEvalQuality(self, evaluation)
 	evaluation.qualityIndex = math.max(1, math.min(evaluation.maxQ, tonumber(evaluation.opts.targetQualityIndex) or evaluation.defaultScenarioQ))
 end
 
-local function resolveCraftEvalOutputItem(self, evaluation)
-	local outputItemID = select(1, outputItemForQuality(evaluation.recipeData, evaluation.qualityIndex))
-	if not outputItemID then
-		outputItemID = resolveCraftOutputItemID(self, evaluation.recipeID, evaluation.recipeData, {
-			forceEnchantingVellum = evaluation.opts.forceEnchantingVellum == true,
-			professionData = evaluation.professionData,
-		})
+-- The item the recipe makes at the evaluated quality, or nil. A salvage recipe makes no one item.
+local function craftedItemID(self, evaluation)
+	if evaluation.isSalvage then
+		return nil
 	end
-	if not outputItemID and evaluation.opts.allowMissingOutput then
+	local itemID = select(1, outputItemForQuality(evaluation.recipeData, evaluation.qualityIndex))
+	return itemID or resolveCraftOutputItemID(self, evaluation.recipeID, evaluation.recipeData, {
+		forceEnchantingVellum = evaluation.opts.forceEnchantingVellum == true,
+		professionData = evaluation.professionData,
+	})
+end
+
+-- What the views draw for the craft: the crafted item's descriptor, or for a salvage recipe just the
+-- recipe's own icon.
+local function craftEvalOutputDescriptor(self, evaluation)
+	if evaluation.isSalvage then
+		local info = self:RecipeDataInfo(evaluation.recipeData)
+		return { icon = info and info.icon }
+	end
+	return self:ResolveItemDescriptor(evaluation.outputItemID)
+end
+
+local function resolveCraftEvalOutputItem(self, evaluation)
+	local outputItemID = craftedItemID(self, evaluation)
+	if not outputItemID and (evaluation.opts.allowMissingOutput or evaluation.isSalvage) then
 		-- Shopping/queue still needs a stable key; recipe spell id is unique per line.
 		outputItemID = tonumber(self:GetRecipeSpellID(evaluation.recipeData)) or tonumber(evaluation.recipeID)
 	end
@@ -152,6 +168,11 @@ local function applyCraftEvalLedgerSale(self, evaluation, saleGross, saleSrc)
 end
 
 local function resolveCraftEvalSale(self, evaluation)
+	-- What a salvage recipe gives is random; it has no sale price, and its stand-in item id must not
+	-- be looked up as an item.
+	if evaluation.isSalvage then
+		return
+	end
 	local saleGross, saleSrc = self:GetMarketEstimateCopper(evaluation.outputItemID)
 	if evaluation.vendorRecipe then
 		local vs = self:GetItemVendorSellCopper(evaluation.outputItemID)
@@ -208,8 +229,8 @@ local function buildCraftEvalResult(self, evaluation)
 		characterKey = characterKey, recipeID = exportRecipeID, recipeSpellID = recipeSpellID,
 		recipeName = recipeDisplayName(recipeData),
 		professionName = professionData.professionName, skillLineID = professionData.skillLineID,
-		expansionTag = self:GetCraftExpansionTag(professionData, recipeData, evaluation.outputItemID),
-		learned = evaluation.learned, qualityIndex = evaluation.qualityIndex, baseQualityIndex = evaluation.baseQ,
+		expansionTag = self:GetCraftExpansionTag(professionData, recipeData, craftedItemID(self, evaluation)),
+		learned = evaluation.learned, isSalvage = evaluation.isSalvage, qualityIndex = evaluation.qualityIndex, baseQualityIndex = evaluation.baseQ,
 		scenarioBaseQualityIndex = evaluation.defaultScenarioQ, qualityReachable = evaluation.qualityReachable ~= false,
 		outputItemID = evaluation.outputItemID, outputQty = evaluation.outQty, outputIcon = evaluation.outputDesc and evaluation.outputDesc.icon,
 		matCost = evaluation.matPerCraft, outOfPocketMatCost = evaluation.outOfPocketMatCost, fullMatCost = evaluation.fullMatCost,
@@ -232,12 +253,13 @@ function Tradewright:EvaluateCraftScenario(characterKey, professionData, recipeI
 		characterKey = characterKey, professionData = professionData, recipeID = recipeID, recipeData = recipeData,
 		opts = opts, scenario = opts.scenario or "default", sourceMode = opts.sourceMode or "owned_first",
 	}
+	evaluation.isSalvage = self:PrepareSalvageRecipe(recipeData)
 	resolveCraftEvalQuality(self, evaluation)
 	if not resolveCraftEvalOutputItem(self, evaluation) then
 		return nil
 	end
 	evaluation.vendorRecipe = self:ProfessionRecipeIsVendorSourced(recipeID, recipeData)
-	evaluation.outputDesc = self:ResolveItemDescriptor(evaluation.outputItemID)
+	evaluation.outputDesc = craftEvalOutputDescriptor(self, evaluation)
 	bindCraftEvalPricing(self, evaluation)
 	if not resolveCraftEvalPlan(self, evaluation) then
 		return nil

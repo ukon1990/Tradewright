@@ -223,7 +223,8 @@ local function candidateReagents(evaluation)
 end
 
 -- Cost and give-back of one craft, read from the crafts engine. A recipe it cannot price (a missing
--- material price, or no crafted item to value, as with enchants) gets no `materialCost`.
+-- material price, or no crafted item to value, as with enchants) gets no `materialCost`. A salvage
+-- recipe is priced with the cheapest item it can destroy.
 local function priceCandidate(self, candidate, build, workItem)
 	local evaluation = self:EvaluateCraftScenario(
 		build.characterKey, build.professionData, tonumber(workItem.recipeKey) or workItem.recipeKey, workItem.recipeData, MARKET_PRICING)
@@ -233,10 +234,13 @@ local function priceCandidate(self, candidate, build, workItem)
 	candidate.evaluation = evaluation
 	candidate.name = evaluation.recipeName or candidate.name
 	candidate.materialCost = evaluation.fullMatCost
-	candidate.vendorGiveBack, candidate.auctionGiveBack = giveBackPerCraft(self, evaluation)
-	candidate.outputItemID = tonumber(evaluation.outputItemID)
-	candidate.outputQuantity = math.max(1, tonumber(evaluation.outputQty) or 1)
 	candidate.reagents = candidateReagents(evaluation)
+	-- A salvage recipe (Prospecting, Milling) makes no one item: nothing to sell or to reuse.
+	if not evaluation.isSalvage then
+		candidate.vendorGiveBack, candidate.auctionGiveBack = giveBackPerCraft(self, evaluation)
+		candidate.outputItemID = tonumber(evaluation.outputItemID)
+		candidate.outputQuantity = math.max(1, tonumber(evaluation.outputQty) or 1)
+	end
 end
 
 local function buildCandidate(self, build, workItem)

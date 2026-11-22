@@ -113,7 +113,8 @@ end
 
 -- Adds what a queued craft of the current character makes to `queuedOutput[itemID]`.
 local function addEntryOutput(queuedOutput, entry, currentCharacterKey)
-	local itemID = tonumber(entry.outputItemID)
+	-- A salvage line makes no one item; its output id is the recipe's spell standing in.
+	local itemID = not entry.salvageSpellID and tonumber(entry.outputItemID)
 	if itemID and entry.characterKey == currentCharacterKey then
 		local made = (tonumber(entry.quantity) or 0) * math.max(1, tonumber(entry.outputQty) or 1)
 		queuedOutput[itemID] = (queuedOutput[itemID] or 0) + made

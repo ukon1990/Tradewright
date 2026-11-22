@@ -143,6 +143,28 @@ local function orderStore(pe)
 	return pe:GetCraftingOrderQueueStorage()
 end
 
+-- A salvage recipe (Prospecting, Milling): random results, so the cast counts the line down
+
+do
+	local PROSPECTING, ORE, GEM = 31252, 2770, 818
+	local pe = newAddon(true)
+	local key = pe:AddCraftToQueue({ recipeID = PROSPECTING, characterKey = "Me-Realm", eval = {
+		recipeID = PROSPECTING, recipeSpellID = PROSPECTING, outputItemID = PROSPECTING, isSalvage = true,
+		reagentPlan = { { itemID = ORE, quantityRequired = 5, priceUnit = 30 } },
+	} }, 4)
+	crafted(pe, GEM, 2)
+	check("Salvage: the items it gives do not count the line down", quantityOf(pe, key) == 4)
+	pe:OnUnitSpellcastSucceeded("party1", "cast", PROSPECTING)
+	check("Salvage: someone else's cast does not count", quantityOf(pe, key) == 4)
+	pe:OnUnitSpellcastSucceeded("player", "cast", PROSPECTING)
+	check("Salvage: the player's cast of the recipe counts one craft", quantityOf(pe, key) == 3)
+	local reagent = pe:BuildCraftQueueSummary().reagentTotals[ORE]
+	check("Salvage: the cart lists the item to destroy for every queued craft", reagent and reagent.quantityNeeded == 15)
+	local plain = addCraft(pe, 11, 100, 2)
+	pe:OnUnitSpellcastSucceeded("player", "cast", 11)
+	check("Salvage: a line that makes an item is not counted by a cast", quantityOf(pe, plain) == 2)
+end
+
 -- Add
 
 do

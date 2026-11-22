@@ -63,9 +63,18 @@ local function learnSourceText(pe, candidate)
 	return L["source unknown"]
 end
 
+-- "with Leystone Ore" for a prospecting or milling step: the item it is priced with, the cheapest
+-- the recipe can destroy. nil for other steps.
+local function salvageInputNote(pe, candidate)
+	local evaluation = candidate.evaluation
+	local input = evaluation and evaluation.isSalvage and evaluation.reagentPlan[1]
+	return input and string.format(L["with %s"], pe:GetItemDisplayName(input.itemID)) or nil
+end
+
 local function craftStepDetail(pe, step, queued, isNextStep)
 	-- "~" for an expected count; the detail line has little room at this panel width.
 	local parts = { string.format(craftCountIsExact(step) and L["%d crafts"] or L["~%d crafts"], step.crafts) }
+	parts[#parts + 1] = salvageInputNote(pe, step.candidate)
 	if isNextStep then
 		parts[#parts + 1] = L["next step"]
 	end

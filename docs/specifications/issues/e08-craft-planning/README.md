@@ -41,6 +41,6 @@ In-game on Forever: scan professions on two characters, full auction scan → Cr
 
 ## Out of scope
 
-- Disenchant, prospecting, milling and conversion values (candidate F63: the published yield tables conflict, so they would have to be learned from the player's own results)
+- Disenchant, prospecting, milling and conversion values (now [E18](../e18-salvage-value/README.md), without other conversions)
 - Retail proc maths (multicraft, resourcefulness)
 - Profession leveling plans (now [E14](../e14-profession-leveling/README.md))

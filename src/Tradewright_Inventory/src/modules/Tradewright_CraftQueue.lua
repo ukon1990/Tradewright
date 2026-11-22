@@ -224,6 +224,36 @@ local function copyReagentPlan(plan)
 	return out
 end
 
+-- Set on a line for a salvage recipe (Prospecting, Milling): the recipe's spell, whose cast counts
+-- the line down, as such a recipe makes no item to count. nil for any other recipe.
+local function salvageSpellOf(eval)
+	return eval.isSalvage and tonumber(eval.recipeSpellID) or nil
+end
+
+-- What the evaluation said when the craft was queued; the queue views show it until the line is
+-- evaluated again.
+local function evaluationSnapshot(eval, crafterLabel, confidence)
+	return {
+		saleNet = eval.saleNet,
+		saleGross = eval.saleGross,
+		matCost = eval.matCost,
+		profit = eval.profit,
+		coverage = eval.coverage,
+		recommendedCrafterLabel = crafterLabel,
+		confidence = confidence,
+		canCraftNow = eval.canCraftNow == true,
+		qualityReachable = eval.qualityReachable == true,
+		qualityIndex = tonumber(eval.qualityIndex),
+		baseQualityIndex = tonumber(eval.baseQualityIndex),
+		scenarioBaseQualityIndex = tonumber(eval.scenarioBaseQualityIndex),
+		concentrationCost = tonumber(eval.concentrationCost),
+		concentrationNeeded = tonumber(eval.concentrationNeeded),
+		requiredTargetReagent = eval.requiredTargetReagent == true,
+		requiredTargetReagentItemID = tonumber(eval.requiredTargetReagentItemID),
+		requiredTargetReagentAuto = eval.requiredTargetReagentAuto == true,
+	}
+end
+
 local function buildEntryFromEval(ctx, quantity)
 	local eval = ctx.eval
 	if not eval then
@@ -269,26 +299,9 @@ local function buildEntryFromEval(ctx, quantity)
 		baseQualityIndex = tonumber(eval.baseQualityIndex),
 		scenarioBaseQualityIndex = tonumber(eval.scenarioBaseQualityIndex),
 		outputIcon = eval.outputIcon,
+		salvageSpellID = salvageSpellOf(eval),
 		reagentPlan = copyReagentPlan(eval.reagentPlan),
-		snapshot = {
-			saleNet = eval.saleNet,
-			saleGross = eval.saleGross,
-			matCost = eval.matCost,
-			profit = eval.profit,
-			coverage = eval.coverage,
-			recommendedCrafterLabel = crafterLabel,
-			confidence = confidence,
-			canCraftNow = eval.canCraftNow == true,
-			qualityReachable = eval.qualityReachable == true,
-			qualityIndex = tonumber(eval.qualityIndex),
-			baseQualityIndex = tonumber(eval.baseQualityIndex),
-			scenarioBaseQualityIndex = tonumber(eval.scenarioBaseQualityIndex),
-			concentrationCost = tonumber(eval.concentrationCost),
-			concentrationNeeded = tonumber(eval.concentrationNeeded),
-			requiredTargetReagent = eval.requiredTargetReagent == true,
-			requiredTargetReagentItemID = tonumber(eval.requiredTargetReagentItemID),
-			requiredTargetReagentAuto = eval.requiredTargetReagentAuto == true,
-		},
+		snapshot = evaluationSnapshot(eval, crafterLabel, confidence),
 		addedAt = time(),
 	}
 end

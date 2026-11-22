@@ -69,9 +69,15 @@ local function newAddon(recipes, skill)
 		if not recipeData.materialCost then
 			return { matMissingPrice = true }
 		end
+		if recipeData.salvageItemID then
+			-- As the crafts engine answers for Prospecting or Milling: a cost, no crafted item.
+			return { fullMatCost = recipeData.materialCost, isSalvage = true, outputItemID = recipeData.recipeSpellID,
+				outputQty = 5, recipeName = recipeData.info.name, reagentPlan = { { itemID = recipeData.salvageItemID, quantityRequired = 5, priceUnit = 20 } } }
+		end
 		return { fullMatCost = recipeData.materialCost, outputQty = 2, outputItemID = 1, saleNet = 70, recipeName = recipeData.info.name }
 	end
 	function pe:FormatCopperShort(copper) return tostring(copper) .. "c" end
+	function pe:GetItemDisplayName(itemID) return "Item " .. itemID end
 	function pe:GetLevelingQueuedQuantity(_, recipeID) return self.queued[recipeID] or 0 end
 	for _, path in ipairs({
 		root .. "/src/util/Tradewright_SkillUpLogic.lua",
@@ -152,6 +158,22 @@ do
 	pe.db.characters[CHARACTER].professions[tostring(SKILL_LINE)].skillLevel = 101
 	local afterSkillUp = routeFor(pe)
 	check("A skill-up gives a new route from the new skill", afterSkillUp ~= shown and afterSkillUp.fromSkill == 101)
+end
+
+-- A salvage recipe (Prospecting, Milling)
+do
+	local ORE = 123918
+	local prospecting = recipe("Prospecting", 200, true, 100)
+	prospecting.salvageItemID = ORE
+	local route = routeFor(newAddon({ ["11"] = prospecting }, 100))
+	local step = route and route.steps[1]
+	check("It is routed with the cost of the item it destroys", step and step.candidate.materialCost == 100)
+	check("It makes no item: nothing is sold back or reused, so the step costs its reagents",
+		step.candidate.outputItemID == nil and step.candidate.vendorGiveBack == nil and step.net == step.materials)
+	local pe = newAddon({ ["11"] = prospecting }, 100)
+	local shown = routeFor(pe)
+	check("The row names the item it is priced with",
+		pe:LevelingStepRow(shown, shown.steps[1], 1, true).detailText:find("with Item " .. ORE, 1, true) ~= nil)
 end
 
 -- The profession's highest skill

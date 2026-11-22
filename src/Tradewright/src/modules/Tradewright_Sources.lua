@@ -7,8 +7,11 @@ local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return
 -- Nothing here acts for the player; it only writes down what a window showed.
 
 local SourceLogic = Tradewright.SourceLogic
+local SalvageLogic = Tradewright.SalvageLogic
 
 local shippedStore = SourceLogic.EnsureStore(Tradewright.SOURCE_DATA)
+-- Yields looked up on the web, for this game client; counted outcomes replace them as they grow.
+local researchedYields = Tradewright.SALVAGE_DATA[Tradewright.IS_RETAIL and "retail" or "forever"]
 
 -- Tells this player's loot counts apart from other collectors' once data is shipped.
 local function newCollectorID()
@@ -25,6 +28,12 @@ end
 
 local function stores()
 	return { shippedStore, savedStore() }
+end
+
+--- What one `input` gives on average when disenchanted, prospected or milled, from the player's own
+--- outcomes, shipped ones and researched tables: see SalvageLogic.Yield for the answer and `input`.
+function Tradewright:GetSalvageYield(action, input)
+	return SalvageLogic.Yield({ own = savedStore(), shipped = shippedStore, researched = researchedYields }, action, input)
 end
 
 local function playerFaction()
