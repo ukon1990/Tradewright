@@ -19,7 +19,15 @@ local CHARACTER, SKILL_LINE = "Tester", 165
 -- Timers run at once, so a route is ready on the second request.
 rawset(_G, "C_Timer", { After = function(_, callback) callback() end })
 local liveRecipeInfo = {}
-rawset(_G, "C_TradeSkillUI", { GetRecipeInfo = function(spellID) return liveRecipeInfo[spellID] end })
+-- The expansion the profession window shows (retail), and which recipes belong to which expansion.
+local shownExpansion, recipeExpansion = nil, {}
+rawset(_G, "C_TradeSkillUI", {
+	GetRecipeInfo = function(spellID) return liveRecipeInfo[spellID] end,
+	GetChildProfessionInfo = function() return shownExpansion end,
+	IsRecipeInSkillLine = function(spellID, skillLineID) return recipeExpansion[spellID] == skillLineID end,
+})
+-- No time passes, so every recipe is priced in the first frame.
+rawset(_G, "debugprofilestop", function() return 0 end)
 rawset(_G, "CreateFrame", function()
 	return { RegisterEvent = function() end, SetScript = function() end }
 end)
@@ -174,6 +182,47 @@ do
 	pe.gameRankCap = 300
 	pe:GetOpenProfessionLevelingRoute()
 	check("A new rank alone, without a skill change, redoes the route", pe:GetOpenProfessionLevelingRoute().rankCap == 300)
+end
+
+-- Retail: the route levels the expansion the profession window shows
+do
+	local DRAENOR, LEGION = 2540, 2541
+	local pe = newAddon({ ["11"] = recipe("Draenor ring", 90, true, 100), ["12"] = recipe("Legion ring", 80, true, 100) }, 1)
+	pe.IS_RETAIL = true
+	pe.state.liveProfessionSkillLineID = SKILL_LINE
+	recipeExpansion[900], recipeExpansion[800] = DRAENOR, LEGION
+	liveRecipeInfo[900] = { maxTrivialLevel = 90, learned = true, relativeDifficulty = 0 }
+	liveRecipeInfo[800] = { maxTrivialLevel = 80, learned = true, relativeDifficulty = 0 }
+	shownExpansion = { professionID = LEGION, professionName = "Legion Leatherworking", skillLevel = 20, maxSkillLevel = 100 }
+	pe:GetOpenProfessionLevelingRoute()
+	local legion = pe:GetOpenProfessionLevelingRoute()
+	check("The route starts at the shown expansion's skill and carries its name",
+		legion.fromSkill == 20 and legion.rankCap == 100 and legion.professionName == "Legion Leatherworking"
+		and legion.expansionSkillLineID == LEGION and legion.skillLineID == SKILL_LINE)
+	check("Only that expansion's recipes are in the route", #legion.steps == 1 and legion.steps[1].name == "Legion ring")
+	local observations = pe.db.characters[CHARACTER].difficultyObservations[tostring(SKILL_LINE)]
+	check("Colours are recorded for that expansion's recipes only, at its skill",
+		observations["12"] ~= nil and observations["11"] == nil)
+
+	rawset(_G, "C_Timer", { After = function() end })
+	shownExpansion = { professionID = DRAENOR, professionName = "Draenor Leatherworking", skillLevel = 50, maxSkillLevel = 100 }
+	local whilePricing, reason = pe:GetOpenProfessionLevelingRoute()
+	check("Another expansion picked: its route is worked out, the old one is not shown meanwhile",
+		whilePricing == nil and reason == "not_ready")
+	check("Without a route yet the panel still gets the expansion's name and skill",
+		pe:GetOpenProfessionLevelingScope().name == "Draenor Leatherworking" and pe:GetOpenProfessionLevelingScope().fromSkill == 50)
+	rawset(_G, "C_Timer", { After = function(_, callback) callback() end })
+	-- The pricing started above was dropped with its timer; start it again.
+	pe:InvalidateLevelingRoute()
+	pe:GetOpenProfessionLevelingRoute()
+	local draenor = pe:GetOpenProfessionLevelingRoute()
+	check("... and then shows that expansion's recipes from its skill",
+		draenor.fromSkill == 50 and #draenor.steps == 1 and draenor.steps[1].name == "Draenor ring")
+
+	shownExpansion.skillLevel = 100
+	local _, finishedReason = pe:GetOpenProfessionLevelingRoute()
+	check("An expansion at its cap: finished, whatever the other expansions have left", finishedReason == "finished")
+	shownExpansion = nil
 end
 
 -- Stored colours after a skill-up

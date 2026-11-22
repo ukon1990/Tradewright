@@ -480,10 +480,10 @@ function Tradewright:CreateProfessionLevelingView(panel)
 	return host
 end
 
-local function renderProgressOfRoute(host, route, professionData)
-	local rankCap = tonumber(professionData.maxSkillLevel)
+local function renderProgressOfRoute(host, route)
+	local rankCap = route.rankCap
 	local crossesRankCap = rankCap and route.toSkill > rankCap
-	host.professionText:SetText(string.format("%s  %d", professionData.professionName or "", route.fromSkill))
+	host.professionText:SetText(string.format("%s  %d", route.professionName or "", route.fromSkill))
 	host.endSkillText:SetText(tostring(route.toSkill))
 	host.rankCapBadge:SetBadge(crossesRankCap and string.format(L["Rank cap %d"], rankCap) or nil, "warning")
 	host.skillBar:SetMinMaxValues(0, math.max(1, route.toSkill))
@@ -491,8 +491,8 @@ local function renderProgressOfRoute(host, route, professionData)
 end
 
 -- Without a route the line still names the profession and its skill; the bar stays empty.
-local function renderProgressWithoutRoute(host, professionData)
-	host.professionText:SetText(string.format("%s  %d", professionData.professionName or "", tonumber(professionData.skillLevel) or 0))
+local function renderProgressWithoutRoute(host, scope)
+	host.professionText:SetText(string.format("%s  %d", scope and scope.name or "", scope and scope.fromSkill or 0))
 	host.endSkillText:SetText("")
 	host.rankCapBadge:SetBadge(nil)
 	host.skillBar:SetMinMaxValues(0, 1)
@@ -551,19 +551,18 @@ local function renderRoute(pe, host, route, reason)
 	routeTable:SetFooterText(routeFooterTexts(pe, route))
 end
 
--- The box starts at the current rank's cap; what the player typed is kept.
+-- The box starts at the current rank's cap. What the player typed is kept until the window shows
+-- another profession or expansion, whose skill range is another.
 local function renderQueueRange(host, route)
 	host.queueRangeButton:SetEnabled(route ~= nil)
-	if route and host.queueToSkillBox:GetText() == "" then
+	if not route then
+		return
+	end
+	local leveled = route.expansionSkillLineID or route.skillLineID
+	if host.queueRangeFor ~= leveled or host.queueToSkillBox:GetText() == "" then
+		host.queueRangeFor = leveled
 		host.queueToSkillBox:SetText(tostring(math.min(route.rankCap or route.toSkill, route.toSkill)))
 	end
-end
-
--- The stored data of the profession whose window is open, or an empty table.
-local function openProfessionData(pe)
-	local characterData = pe.db.characters and pe.db.characters[pe:GetCharacterKey()] or {}
-	local skillLineID = pe:GetState().liveProfessionSkillLineID
-	return characterData.professions and characterData.professions[tostring(skillLineID)] or {}
 end
 
 --- Redraws the Leveling view. While it is hidden the route is still kept up when the craft queue
@@ -581,9 +580,9 @@ function Tradewright:RefreshProfessionLevelingView(panel)
 	end
 	local route, reason = self:GetOpenProfessionLevelingRoute()
 	if route then
-		renderProgressOfRoute(host, route, openProfessionData(self))
+		renderProgressOfRoute(host, route)
 	else
-		renderProgressWithoutRoute(host, openProfessionData(self))
+		renderProgressWithoutRoute(host, self:GetOpenProfessionLevelingScope())
 	end
 	renderStats(self, host, route)
 	host.giveBackDropdown:RefreshText()

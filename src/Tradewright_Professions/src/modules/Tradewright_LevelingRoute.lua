@@ -7,7 +7,9 @@ local _, Tradewright = ...
 local SkillUpLogic = Tradewright.SkillUpLogic
 local LevelingRouteLogic = Tradewright.LevelingRouteLogic
 
-local CANDIDATE_CHUNK_SIZE = 60
+-- Milliseconds of one frame spent pricing recipes. Pricing a recipe costs far more on retail than
+-- on WoW Forever, so the work is cut by time, not by a number of recipes.
+local PRICING_BUDGET_MS = 5
 
 -- The game does not say at which skill a recipe can be learned. Until a trainer has been seen to
 -- teach it, assume it can be learned this far below its grey level.
@@ -31,6 +33,41 @@ end
 
 local function skillLineKey(skillLineID)
 	return tostring(skillLineID)
+end
+
+-- On retail a profession is split by expansion: each has its own skill, cap and recipes, and the
+-- profession window shows one at a time. The expansion shown, as
+-- `{ skillLineID, name, skillLevel, maxSkillLevel }`, or nil where professions are not split (WoW Forever).
+local function openExpansion(self, professionData)
+	local info = self.IS_RETAIL and C_TradeSkillUI.GetChildProfessionInfo and C_TradeSkillUI.GetChildProfessionInfo()
+	local skillLineID = info and tonumber(info.professionID)
+	if not skillLineID or skillLineID == 0 or skillLineID == tonumber(professionData.skillLineID) then
+		return nil
+	end
+	return {
+		skillLineID = skillLineID, name = info.professionName,
+		skillLevel = tonumber(info.skillLevel), maxSkillLevel = tonumber(info.maxSkillLevel),
+	}
+end
+
+-- What a route levels: the whole profession, or one expansion of it. `{ name, fromSkill, rankCap,
+-- maxSkill, expansionSkillLineID }`; an expansion has no ranks, so its cap is also its highest skill.
+local function levelingScope(self, professionData, expansion)
+	if expansion then
+		return {
+			name = expansion.name, fromSkill = expansion.skillLevel, rankCap = expansion.maxSkillLevel,
+			maxSkill = expansion.maxSkillLevel, expansionSkillLineID = expansion.skillLineID,
+		}
+	end
+	return {
+		name = professionData.professionName, fromSkill = tonumber(professionData.skillLevel),
+		rankCap = tonumber(professionData.maxSkillLevel), maxSkill = professionMaxSkill(self, professionData),
+	}
+end
+
+local function recipeInScope(self, scope, recipeData)
+	return not scope.expansionSkillLineID
+		or C_TradeSkillUI.IsRecipeInSkillLine(self:GetRecipeSpellID(recipeData), scope.expansionSkillLineID) == true
 end
 
 -- Colours the game has shown per recipe, kept beside the professions because a full scan replaces
@@ -73,20 +110,37 @@ local function readRecipeFromGame(self, read, recipeKey, recipeData)
 	return learnedChanged
 end
 
+-- The scope whose recipes are due a read from the game, or nil: read already at this skill for the
+-- same expansion (unless `force`), or the skill or (on retail) the shown expansion is not known.
+local function scopeDueForRead(self, professionData, force)
+	local expansion = openExpansion(self, professionData)
+	local scope = levelingScope(self, professionData, expansion)
+	if not scope.fromSkill or (self.IS_RETAIL and not expansion) then
+		return nil
+	end
+	local alreadyRead = professionData.difficultyReadAtSkill == scope.fromSkill
+		and professionData.difficultyReadForExpansion == scope.expansionSkillLineID
+	return (force or not alreadyRead) and scope or nil
+end
+
 --- Re-reads every recipe's colour and learned state for the open profession when its skill has
 --- changed since the last read, or always with `force` (after training, which changes no skill).
+--- On retail only the recipes of the expansion the window shows are read: a colour means something
+--- only beside the skill of its own expansion.
 --- A recipe that was learned or unlearned makes the route work itself out again.
 function Tradewright:RefreshRecipeDifficulties(characterData, professionData, force)
-	local skill = tonumber(professionData.skillLevel)
-	if not skill or not C_TradeSkillUI.GetRecipeInfo or (professionData.difficultyReadAtSkill == skill and not force) then
+	local scope = C_TradeSkillUI.GetRecipeInfo and scopeDueForRead(self, professionData, force)
+	if not scope then
 		return
 	end
-	local read = { skill = skill, observations = difficultyObservations(characterData, professionData.skillLineID) }
+	local read = { skill = scope.fromSkill, observations = difficultyObservations(characterData, professionData.skillLineID) }
 	local learnedChanged = false
 	for recipeKey, recipeData in pairs(professionData.recipes or {}) do
-		learnedChanged = readRecipeFromGame(self, read, recipeKey, recipeData) or learnedChanged
+		if recipeInScope(self, scope, recipeData) then
+			learnedChanged = readRecipeFromGame(self, read, recipeKey, recipeData) or learnedChanged
+		end
 	end
-	professionData.difficultyReadAtSkill = skill
+	professionData.difficultyReadAtSkill, professionData.difficultyReadForExpansion = scope.fromSkill, scope.expansionSkillLineID
 	if learnedChanged then
 		self:InvalidateLevelingRoute()
 	end
@@ -116,24 +170,24 @@ function Tradewright:RereadRecipesAfterLearning()
 	end
 end
 
--- What the priced recipes depend on: the skill, the recipe list and prices. Bag contents are left
--- out on purpose (recipes are priced at market value), so a craft that gives no skill point changes
--- nothing here and the route is not worked out again.
-local function candidatesKey(self, characterKey, professionData)
+-- What the priced recipes depend on: what is leveled, the skill, the recipe list and prices. Bag
+-- contents are left out on purpose (recipes are priced at market value), so a craft that gives no
+-- skill point changes nothing here and the route is not worked out again.
+local function candidatesKey(self, characterKey, professionData, scope)
 	return table.concat({
-		characterKey, skillLineKey(professionData.skillLineID), tostring(professionData.skillLevel),
-		tostring(professionData.maxSkillLevel), tostring(professionData.recipeCount),
+		characterKey, skillLineKey(professionData.skillLineID), tostring(scope.expansionSkillLineID),
+		tostring(scope.fromSkill), tostring(scope.rankCap), tostring(professionData.recipeCount),
 		tostring(professionData.liveFingerprint), tostring(levelingState(self).revision),
 	}, "|")
 end
 
--- Recipes that can still give skill: `{ recipeKey, recipeData, greyLevel }`, and whether any recipe
--- carries a grey level at all.
-local function recipesWithSkillLeft(self, professionData)
-	local skill = tonumber(professionData.skillLevel) or 0
+-- Recipes of the scope that can still give skill: `{ recipeKey, recipeData, greyLevel }`, and
+-- whether any of the scope's recipes carries a grey level at all.
+local function recipesWithSkillLeft(self, professionData, scope)
+	local skill = scope.fromSkill or 0
 	local work, anyGreyLevel = {}, false
 	for recipeKey, recipeData in pairs(professionData.recipes or {}) do
-		local info = self:RecipeDataInfo(recipeData)
+		local info = recipeInScope(self, scope, recipeData) and self:RecipeDataInfo(recipeData)
 		local greyLevel = info and tonumber(info.maxTrivialLevel)
 		if greyLevel then
 			anyGreyLevel = true
@@ -217,11 +271,11 @@ local function processCandidateChunk(self, build)
 	if levelingState(self).build ~= build then
 		return
 	end
-	local lastIndex = math.min(build.nextIndex + CANDIDATE_CHUNK_SIZE - 1, #build.work)
-	for index = build.nextIndex, lastIndex do
-		build.candidates[#build.candidates + 1] = buildCandidate(self, build, build.work[index])
-	end
-	build.nextIndex = lastIndex + 1
+	local startedAt = debugprofilestop()
+	repeat
+		build.candidates[#build.candidates + 1] = buildCandidate(self, build, build.work[build.nextIndex])
+		build.nextIndex = build.nextIndex + 1
+	until build.nextIndex > #build.work or debugprofilestop() - startedAt >= PRICING_BUDGET_MS
 	if build.nextIndex > #build.work then
 		return finishBuild(self, build)
 	end
@@ -230,17 +284,17 @@ local function processCandidateChunk(self, build)
 	end)
 end
 
--- The priced recipes for this profession, started in the background when the inputs have changed.
-local function currentBuild(self, characterKey, characterData, professionData)
+-- The priced recipes of the scope, started in the background when the inputs have changed.
+local function currentBuild(self, characterKey, characterData, professionData, scope)
 	local leveling = levelingState(self)
-	local key = candidatesKey(self, characterKey, professionData)
+	local key = candidatesKey(self, characterKey, professionData, scope)
 	-- A full scan replaces the profession's table, so the same key on another table is new data.
 	if leveling.build and leveling.build.key == key and leveling.build.professionData == professionData then
 		return leveling.build
 	end
-	local work, anyGreyLevel = recipesWithSkillLeft(self, professionData)
+	local work, anyGreyLevel = recipesWithSkillLeft(self, professionData, scope)
 	local build = {
-		key = key, characterKey = characterKey, professionData = professionData, work = work, nextIndex = 1,
+		key = key, characterKey = characterKey, professionData = professionData, scope = scope, work = work, nextIndex = 1,
 		anyGreyLevel = anyGreyLevel, candidates = {}, routes = {},
 		observations = difficultyObservations(characterData, professionData.skillLineID),
 	}
@@ -280,14 +334,14 @@ local function routeFromBuild(self, build)
 	local settings = self:GetLevelingSettings()
 	local routeKey = settings.giveBackMode .. "|" .. settings.recipeScope
 	if not build.routes[routeKey] then
-		local professionData = build.professionData
+		local professionData, scope = build.professionData, build.scope
 		local route = LevelingRouteLogic.BuildRoute({
-			fromSkill = tonumber(professionData.skillLevel) or 0, rankCap = tonumber(professionData.maxSkillLevel),
-			maxSkill = professionMaxSkill(self, professionData),
+			fromSkill = scope.fromSkill or 0, rankCap = scope.rankCap, maxSkill = scope.maxSkill,
 			giveBackMode = settings.giveBackMode, recipeScope = settings.recipeScope, candidates = build.candidates,
 		})
-		route.professionName, route.skillLineID, route.characterKey = professionData.professionName, professionData.skillLineID, build.characterKey
-		route.giveBackMode, route.rankCap = settings.giveBackMode, tonumber(professionData.maxSkillLevel)
+		route.professionName, route.skillLineID, route.characterKey = scope.name, professionData.skillLineID, build.characterKey
+		route.expansionSkillLineID = scope.expansionSkillLineID
+		route.giveBackMode, route.rankCap = settings.giveBackMode, scope.rankCap
 		route.nextRank = self.GetNextRankTraining and self:GetNextRankTraining(professionData.skillLineID, route.rankCap) or nil
 		build.routes[routeKey] = route
 		levelingState(self).shownRoute = route
@@ -298,33 +352,37 @@ local function routeFromBuild(self, build)
 	return build.routes[routeKey]
 end
 
--- The last route handed out, when it was for this character's profession.
-local function previousRoute(self, characterKey, skillLineID)
+-- The last route handed out, when it leveled the same thing for this character.
+local function previousRoute(self, characterKey, professionData, scope)
 	local previous = levelingState(self).shownRoute
-	if previous and previous.characterKey == characterKey and previous.skillLineID == skillLineID then
+	if previous and previous.characterKey == characterKey and previous.skillLineID == professionData.skillLineID
+		and previous.expansionSkillLineID == scope.expansionSkillLineID then
 		return previous
 	end
 	return nil
 end
 
 --- The leveling route for one character's profession, from its last scan and current prices.
---- Returns `route` (see `LevelingRouteLogic.BuildRoute`, plus `professionName`, `skillLineID`,
---- `characterKey`, `giveBackMode`, `rankCap`, and `nextRank` when a trainer has been seen offering the
---- training that lifts the rank cap), or `nil, reason, progress`:
+--- With `expansion` (see `openExpansion`) the route levels that expansion of the profession only.
+--- Returns `route` (see `LevelingRouteLogic.BuildRoute`, plus `professionName` (the expansion's name
+--- when it levels one), `skillLineID`, `expansionSkillLineID`, `characterKey`, `giveBackMode`,
+--- `rankCap`, and `nextRank` when a trainer has been seen offering the training that lifts the rank
+--- cap), or `nil, reason, progress`:
 --- "no_data" (not scanned), "not_ready" (still pricing; `progress = { done, total }`), "unsupported"
 --- (the game reports no grey levels), "no_prices", "finished" (nothing can give skill any more).
 --- While recipes are priced again after a skill-up or new prices, the previous route of the same
---- profession is returned, so a window showing it does not empty and refill.
-function Tradewright:GetLevelingRoute(characterKey, skillLineID)
+--- profession and expansion is returned, so a window showing it does not empty and refill.
+function Tradewright:GetLevelingRoute(characterKey, skillLineID, expansion)
 	self:InitDB()
 	local characterData = self.db.characters and self.db.characters[characterKey]
 	local professionData = characterData and characterData.professions and characterData.professions[skillLineKey(skillLineID)]
 	if not professionData or not next(professionData.recipes or {}) then
 		return nil, "no_data"
 	end
-	local build = currentBuild(self, characterKey, characterData, professionData)
+	local scope = levelingScope(self, professionData, expansion)
+	local build = currentBuild(self, characterKey, characterData, professionData, scope)
 	if not build.done then
-		local previous = previousRoute(self, characterKey, professionData.skillLineID)
+		local previous = previousRoute(self, characterKey, professionData, scope)
 		if previous then
 			return previous
 		end
@@ -352,7 +410,8 @@ local function syncSkillFromGame(self, professionData)
 	end
 end
 
---- The route for the profession whose window is open, for the logged-in character.
+--- The route for the profession whose window is open, for the logged-in character. On retail it
+--- levels the expansion the window shows.
 function Tradewright:GetOpenProfessionLevelingRoute()
 	self:InitDB()
 	local characterData, professionData = openProfession(self)
@@ -362,5 +421,12 @@ function Tradewright:GetOpenProfessionLevelingRoute()
 	syncSkillFromGame(self, professionData)
 	-- Picks up a skill change, or a recipe learned while the window was closed.
 	self:RefreshRecipeDifficulties(characterData, professionData)
-	return self:GetLevelingRoute(self:GetCharacterKey(), professionData.skillLineID)
+	return self:GetLevelingRoute(self:GetCharacterKey(), professionData.skillLineID, openExpansion(self, professionData))
+end
+
+--- What the open profession window levels, to show while there is no route: `{ name, fromSkill }`
+--- (see `levelingScope`), or nil when the profession is not stored.
+function Tradewright:GetOpenProfessionLevelingScope()
+	local _, professionData = openProfession(self)
+	return professionData and levelingScope(self, professionData, openExpansion(self, professionData)) or nil
 end

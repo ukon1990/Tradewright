@@ -222,6 +222,10 @@ function Tradewright:InitProfessionCraftEconomyHooks()
 		EventRegistry:RegisterCallback("ProfessionsFrame.TabSet", function()
 			scheduleRefresh()
 		end, Tradewright)
+		-- Retail: another expansion of the profession was picked in the window's dropdown.
+		EventRegistry:RegisterCallback("Professions.ProfessionSelected", function()
+			scheduleRefresh()
+		end, Tradewright)
 	end
 	-- Watch live operation state so concentration/reagent makeup changes refresh immediately.
 	self:StartStateWatcher(PROFESSION_PANEL_WATCHER_KEY, 0.5, watchedOperationSignature, scheduleRefresh)

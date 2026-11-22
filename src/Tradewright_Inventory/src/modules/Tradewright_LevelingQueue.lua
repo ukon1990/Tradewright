@@ -12,9 +12,12 @@ local function levelingCrafts(entry)
 	return math.min(tonumber(entry.levelingQuantity) or 0, tonumber(entry.quantity) or 0)
 end
 
+-- A line of this route. On retail a route levels one expansion of the profession, and the line
+-- remembers which (`levelingExpansionSkillLineID`): another expansion's route must not lower it.
 local function isRouteLine(entry, route)
 	return type(entry) == "table" and entry.levelingQuantity
 		and entry.characterKey == route.characterKey and tonumber(entry.skillLineID) == tonumber(route.skillLineID)
+		and entry.levelingExpansionSkillLineID == route.expansionSkillLineID
 end
 
 --- Whether any craft in the craft queue came from a leveling route.
@@ -56,6 +59,7 @@ local function queueRouteCrafts(pe, route, step, wanted)
 		return 0
 	end
 	entry.levelingQuantity = alreadyQueued + toAdd
+	entry.levelingExpansionSkillLineID = route.expansionSkillLineID
 	if not step.learned then
 		entry.levelingLearn = { skill = step.candidate.source == "trainer" and step.candidate.learnSkill or nil }
 	end
