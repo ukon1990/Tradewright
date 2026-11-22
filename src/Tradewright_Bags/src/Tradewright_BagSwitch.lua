@@ -106,7 +106,7 @@ function Tradewright:SetBagWindowEnabled(enabled)
 	self:SetSetting("bags.enabled", enabled and true or false)
 	self:ApplyBagTakeover()
 	self:PrintMessage(enabled and "Tradewright bags are on."
-		or "Tradewright bags are off: the game's bags open instead. /ah bags turns them back on.")
+		or "Tradewright bags are off: the game's bags open instead. /tw bags turns them back on.")
 	if self.SettingsTab then
 		self.SettingsTab:Refresh()
 	end
@@ -121,7 +121,7 @@ function Tradewright:OnBagWindowClosed()
 	end
 end
 
--- `/ah bags [on|off]`: Tradewright_Data.lua is at its size limit, so the command is added here.
+-- `/tw bags [on|off]`: Tradewright_Data.lua is at its size limit, so the command is added here.
 local baseHandleSlash = Tradewright.HandleSlash
 function Tradewright:HandleSlash(input)
 	local command, rest = string.match(string.lower(self:Trim(input)), "^(%S+)%s*(.-)$")

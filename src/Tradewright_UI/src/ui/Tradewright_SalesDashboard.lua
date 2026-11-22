@@ -154,7 +154,7 @@ local function recentRows(pe, events, kindChoice)
 		rows[index] = {
 			_rowIdentity = tostring(index),
 			itemID = event.itemID,
-			name = quantity > 1 and string.format("%s x%d", name, quantity) or name,
+			name = quantity > 1 and string.format("%s × %d", name, quantity) or name,
 			kind = event.kind,
 			ts = tonumber(event.ts) or 0,
 			amount = kindChoice.amount(event),
@@ -302,7 +302,7 @@ function SalesDashboardMixin:RefreshTotals(summary)
 		string.format("%s a day · %s paid in auction cut", money(totals.net / summary.spanDays), money(totals.gross - totals.net)),
 		totals.net > 0 and "success" or nil)
 	self.stats.sales:SetValues("Sales", pe:FormatNumberGrouped(totals.sales),
-		string.format("%s items of %s kinds", pe:FormatNumberGrouped(totals.units), pe:FormatNumberGrouped(#summary.items)))
+		string.format("%s items, %s different", pe:FormatNumberGrouped(totals.units), pe:FormatNumberGrouped(#summary.items)))
 end
 
 function SalesDashboardMixin:RefreshTopItems(items)

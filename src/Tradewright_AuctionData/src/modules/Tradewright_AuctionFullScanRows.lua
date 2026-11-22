@@ -165,7 +165,7 @@ end
 
 function Tradewright:StartClassicFullAuctionDump(existingToken)
 	if not self:CanUseClassicAuctionDump() then
-		self:PrintMessage("Full scan is unavailable in this client/API context.")
+		self:PrintMessage("A full scan is not possible here.")
 		return false
 	end
 	if not self:IsAuctionHouseFrameOpen() then
@@ -203,7 +203,7 @@ function Tradewright:StartClassicFullAuctionDump(existingToken)
 		pageSize = CLASSIC_AH_DUMP_PAGE_SIZE,
 		queryRetries = 0,
 	}
-	self:PrintMessage("Starting classic full scan (paged QueryAuctionItems).")
+	self:PrintMessage("Full scan started. Keep the auction house open until it ends.")
 	self:RefreshAuctionHousePanel()
 	self:QueryClassicAuctionDumpPage(token, 0)
 	return true
@@ -238,7 +238,7 @@ function Tradewright:QueryClassicAuctionDumpPage(token, page, retries)
 	dump.queryRetries = 0
 	local ok = pcall(QueryAuctionItems, "", nil, nil, dump.page, false, nil, false, false)
 	if not ok then
-		self:FailFullAuctionDump("Classic QueryAuctionItems failed.")
+		self:FailFullAuctionDump("The auction house did not answer. Try the full scan again.")
 		return
 	end
 	self:RefreshAuctionHousePanel()

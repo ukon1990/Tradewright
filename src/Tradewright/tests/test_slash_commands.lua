@@ -1,5 +1,5 @@
 -- Run with: lua5.1 tests/test_slash_commands.lua (from Tradewright root)
--- Every /ah subcommand reaches its handler. Handlers are replaced by spies on the addon object.
+-- Every /tw subcommand reaches its handler. Handlers are replaced by spies on the addon object.
 local root = arg and arg[0] and arg[0]:match("^(.*)[/\\]tests[/\\]") or "."
 local repo = root .. "/.."
 
@@ -90,36 +90,36 @@ local TOP_LEVEL = {
 for _, case in ipairs(TOP_LEVEL) do
 	reset()
 	pe:HandleSlash("  " .. case[1] .. " ")
-	check("/ah " .. case[1] .. " -> " .. case[2], called(case[2]))
+	check("/tw " .. case[1] .. " -> " .. case[2], called(case[2]))
 end
 reset()
 pe:HandleSlash("help")
-check("/ah help prints the help lines", printed("^Commands:"))
+check("/tw help prints the help lines", printed("^/tw opens the window"))
 reset()
 pe:HandleSlash("nonsense")
-check("/ah nonsense prints unknown command", printed("^Unknown command"))
+check("/tw nonsense prints unknown command", printed("^Unknown command"))
 
 -- Export is off until switched on
 for _, command in ipairs({ "export", "export account", "full", "dumpfull" }) do
 	reset()
 	pe:HandleSlash(command)
-	check("/ah " .. command .. " is refused while export is off", #calls == 0 and printed("^Export is switched off"))
+	check("/tw " .. command .. " is refused while export is off", #calls == 0 and printed("^Export is switched off"))
 end
 reset()
 pe:HandleSlash("help")
-check("/ah help hides export while it is off", not printed("^Export"))
+check("/tw help hides export while it is off", not printed("^Export"))
 reset()
 pe:HandleSlash("dev export maybe")
-check("/ah dev export <bad> prints usage", printed("^Usage: /tradewright dev export") and not pe:IsExportEnabled())
+check("/tw dev export <bad> prints usage", printed("^Usage: /tw dev export") and not pe:IsExportEnabled())
 pe:HandleSlash("dev export on")
-check("/ah dev export on switches export on", pe:IsExportEnabled())
+check("/tw dev export on switches export on", pe:IsExportEnabled())
 reset()
 pe:HandleSlash("help")
-check("/ah help lists export while it is on", printed("^Export:"))
+check("/tw help lists export while it is on", printed("^Export:"))
 for _, command in ipairs({ "full", "dumpfull" }) do
 	reset()
 	pe:HandleSlash(command)
-	check("/ah " .. command .. " -> StartFullCharacterDump while export is on", called("StartFullCharacterDump"))
+	check("/tw " .. command .. " -> StartFullCharacterDump while export is on", called("StartFullCharacterDump"))
 end
 
 -- Export
@@ -130,18 +130,18 @@ local EXPORTS = {
 for _, case in ipairs(EXPORTS) do
 	reset()
 	pe:HandleSlash(case[1])
-	check("/ah " .. case[1] .. " exports " .. case[2], called("Export", case[2]))
+	check("/tw " .. case[1] .. " exports " .. case[2], called("Export", case[2]))
 end
 reset()
 pe:HandleSlash("export profession_recipes  Tailoring ")
-check("/ah export profession_recipes <name> passes the trimmed name",
+check("/tw export profession_recipes <name> passes the trimmed name",
 	calls[1] and calls[1].args[1] == "profession_recipes" and calls[1].args[2] == "Tailoring")
 reset()
 pe:HandleSlash("export profession 197")
-check("/ah export profession <id>", calls[1] and calls[1].args[1] == "profession" and calls[1].args[2] == "197")
+check("/tw export profession <id>", calls[1] and calls[1].args[1] == "profession" and calls[1].args[2] == "197")
 reset()
 pe:HandleSlash("export bogus")
-check("/ah export bogus prints usage", printed("^Usage: /tradewright export") and #calls == 0)
+check("/tw export bogus prints usage", printed("^Usage: /tw export") and #calls == 0)
 
 -- Debug
 local DEBUG = { { "debug on", true }, { "debug 1", true }, { "debug off", false }, { "debug false", false },
@@ -149,11 +149,11 @@ local DEBUG = { { "debug on", true }, { "debug 1", true }, { "debug off", false 
 for _, case in ipairs(DEBUG) do
 	reset()
 	pe:HandleSlash(case[1])
-	check("/ah " .. case[1] .. " sets debug " .. tostring(case[2]), called("SetDebugEnabled", case[2]))
+	check("/tw " .. case[1] .. " sets debug " .. tostring(case[2]), called("SetDebugEnabled", case[2]))
 end
 reset()
 pe:HandleSlash("debug clear")
-check("/ah debug clear clears the log", called("ClearDebugLog") and printed("cleared"))
+check("/tw debug clear clears the log", called("ClearDebugLog") and printed("cleared"))
 
 -- Settings
 local SETTINGS = {
@@ -168,59 +168,59 @@ for _, case in ipairs(SETTINGS) do
 	reset()
 	settings = {}
 	pe:HandleSlash("settings " .. case[1])
-	check("/ah settings " .. case[1], settings[case[2]] == case[3] and printed(case[4]), messages[1])
+	check("/tw settings " .. case[1], settings[case[2]] == case[3] and printed(case[4]), messages[1])
 end
 local SETTINGS_USAGE = {
-	{ "spectree maybe", "^Usage: /tradewright settings spectree on|off$" },
-	{ "recipeoutput", "^Usage: /tradewright settings recipeoutput on|off$" },
-	{ "invbatch -1", "^Usage: /tradewright settings invbatch <n>" },
-	{ "invbatch x", "^Usage: /tradewright settings invbatch <n>" },
-	{ "", "^Usage: /tradewright settings spectree on|off | recipeoutput" },
-	{ "bogus on", "^Usage: /tradewright settings spectree on|off | recipeoutput" },
+	{ "spectree maybe", "^Usage: /tw settings spectree on|off$" },
+	{ "recipeoutput", "^Usage: /tw settings recipeoutput on|off$" },
+	{ "invbatch -1", "^Usage: /tw settings invbatch <n>" },
+	{ "invbatch x", "^Usage: /tw settings invbatch <n>" },
+	{ "", "^Usage: /tw settings spectree on|off | recipeoutput" },
+	{ "bogus on", "^Usage: /tw settings spectree on|off | recipeoutput" },
 }
 for _, case in ipairs(SETTINGS_USAGE) do
 	reset()
 	settings = {}
 	pe:HandleSlash("settings " .. case[1])
-	check("/ah settings " .. case[1] .. " prints usage", printed(case[2]) and #messages == 1 and next(settings) == nil,
+	check("/tw settings " .. case[1] .. " prints usage", printed(case[2]) and #messages == 1 and next(settings) == nil,
 		messages[1])
 end
 
 -- Auction
 reset()
 pe:HandleSlash("auction")
-check("/ah auction prints status", printed("^Auction module: enabled%. Inventory rows: 3%."))
+check("/tw auction prints status", printed("^Auction data is on%. 3 items in the sell list%."))
 reset()
 pe:HandleSlash("ah status")
-check("/ah ah status prints status", printed("^Auction module: enabled"))
+check("/tw ah status prints status", printed("^Auction data is on"))
 reset()
 pe:HandleSlash("auction disable")
-check("/ah auction disable", settings["auction.enabled"] == false and printed("^Auction module disabled%."))
+check("/tw auction disable", settings["auction.enabled"] == false and printed("^Auction data switched off%."))
 reset()
 pe:HandleSlash("auction enable")
-check("/ah auction enable", settings["auction.enabled"] == true and printed("^Auction module enabled%."))
+check("/tw auction enable", settings["auction.enabled"] == true and printed("^Auction data switched on%."))
 reset()
 pe:HandleSlash("auction refresh craft")
-check("/ah auction refresh craft queues crafts", called("QueueCraftEconomyAuctionRefresh") and printed("^Queued craft refresh"))
+check("/tw auction refresh craft queues crafts", called("QueueCraftEconomyAuctionRefresh") and printed("^Checking craft prices"))
 reset()
 pe:HandleSlash("auction refresh")
-check("/ah auction refresh queues visible items", called("QueueVisibleAuctionRefresh") and printed("^Queued visible"))
+check("/tw auction refresh queues visible items", called("QueueVisibleAuctionRefresh") and printed("^Checking the shown prices"))
 reset()
 pe:HandleSlash("auction dump full")
-check("/ah auction dump full starts a full dump", called("StartAuctionDump", "full"))
+check("/tw auction dump full starts a full dump", called("StartAuctionDump", "full"))
 reset()
 pe:HandleSlash("auction dump")
-check("/ah auction dump defaults to visible", called("StartAuctionDump", "visible"))
+check("/tw auction dump defaults to visible", called("StartAuctionDump", "visible"))
 reset()
 pe:HandleSlash("auction bogus")
-check("/ah auction bogus prints usage", printed("^Usage: /tradewright auction") and #calls == 0)
+check("/tw auction bogus prints usage", printed("^Usage: /tw auction") and #calls == 0)
 
 -- Without the auction module loaded, refresh and dump fall through to the usage line.
 pe.QueueCraftEconomyAuctionRefresh, pe.QueueVisibleAuctionRefresh, pe.StartAuctionDump = nil, nil, nil
 for _, command in ipairs({ "auction refresh crafts", "auction refresh", "auction dump" }) do
 	reset()
 	pe:HandleSlash(command)
-	check("/ah " .. command .. " without the module prints usage", printed("^Usage: /tradewright auction") and #messages == 1)
+	check("/tw " .. command .. " without the module prints usage", printed("^Usage: /tw auction") and #messages == 1)
 end
 
 if failed > 0 then

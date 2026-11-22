@@ -272,7 +272,7 @@ local function professionScanStat(pe, professionCount)
 		local current = state.currentProfession and state.currentProfession.professionName or "starting"
 		return "Scanning", string.format("%s, %d left", tostring(current), #(state.queue or {})), "warning"
 	end
-	return "Ready", string.format("%d %s stored", professionCount, pe:Plural(professionCount, "profession")), "success"
+	return "Ready", string.format("%d %s saved", professionCount, pe:Plural(professionCount, "profession")), "success"
 end
 
 function OverviewTab:RefreshStats(panel, selectedKey, selectedData, keys)
@@ -280,10 +280,10 @@ function OverviewTab:RefreshStats(panel, selectedKey, selectedData, keys)
 	local agg = pe.db.aggregate or {}
 	local accountGold = pe:GetCurrentGoldSummaryForOverview(ACCT_KEY)
 	local inv = sumInventory(pe, selectedKey, selectedData)
-	panel.stats.characters:SetValues("Characters scanned", tostring(#keys), "Last rebuilt " .. pe:FormatScanTimestamp(agg.updatedAt))
+	panel.stats.characters:SetValues("Characters", tostring(#keys), "Updated " .. pe:FormatScanTimestamp(agg.updatedAt))
 	panel.stats.gold:SetValues("Gold, all characters", accountGold and accountGold > 0 and pe:FormatCopperShort(accountGold) or "-",
 		goldStatDetail(pe, selectedKey, selectedData, #keys))
-	panel.stats.itemTypes:SetValues("Item types tracked", pe:FormatNumberGrouped(inv.tracked),
+	panel.stats.itemTypes:SetValues("Different items", pe:FormatNumberGrouped(inv.tracked),
 		string.format("%s in stock, %s items", pe:FormatNumberGrouped(inv.inStock), pe:FormatNumberGrouped(inv.quantity)))
 	panel.stats.professionScan:SetValues("Profession scan", professionScanStat(pe, countProfessions(pe, selectedKey, selectedData)))
 end
@@ -318,7 +318,7 @@ end
 
 function OverviewTab:RefreshAccountDetail(panel, keys)
 	panel.detailTitle:SetText("All characters")
-	panel.detailMeta:SetText(string.format("%d characters stored", #keys))
+	panel.detailMeta:SetText(string.format("%d characters saved", #keys))
 	panel.listHeading:SetText("Recent scans")
 	panel.listTable:SetColumns(panel.historyColumns)
 	panel.listTable:SetEmptyText("No scans yet", "Open a profession window and press Scan professions.")
@@ -339,7 +339,7 @@ function OverviewTab:RefreshCharacterDetail(panel, selectedKey, selectedData, cu
 
 	local isCurrent = selectedKey == currentKey
 	panel.listTable:SetColumns(panel.professionColumns)
-	panel.listTable:SetEmptyText("No professions stored", isCurrent and "Open a profession window and press Scan professions."
+	panel.listTable:SetEmptyText("No professions saved", isCurrent and "Open a profession window and press Scan professions."
 		or "Log in on this character to scan and refresh it.")
 	panel.listTable:SetRows(pe:BuildProfessionRows(charData))
 	panel.listTable:Refresh()

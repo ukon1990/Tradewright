@@ -13,16 +13,16 @@ local function perDayText(pe, perDay)
 	return string.format("%.1f", perDay)
 end
 
--- "Sells a day", with a "?" when the estimate rests on few scan pairs or on own sales alone.
+-- "Sales a day", with a "?" when the estimate rests on few scan pairs or on own sales alone.
 local function sellsColumn(pe, width)
 	return {
-		id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = width, sortable = true, defaultSort = "desc",
+		id = "sellsPerDay", label = "Sales a day", justifyH = "RIGHT", width = width, sortable = true, defaultSort = "desc",
 		sortValue = function(row) return row.sellsPerDay or 0 end,
 		getText = function(row) return perDayText(pe, row.sellsPerDay) .. (pe.FlipLogic.SellsUnsure(row) and " ?" or "") end,
 	}
 end
 
--- Where a row's sells a day comes from.
+-- Where a row's sales a day comes from.
 local function sellsSourceText(pe, row)
 	local pairsText = string.format("%s scan pairs", pe:FormatNumberGrouped(row.sellsPairs or 0))
 	if row.sellsSource == "own" then
@@ -35,7 +35,7 @@ end
 
 -- The two side-pane lines about sales.
 local function sellsLines(pe, row)
-	return { "Sells a day, estimated", perDayText(pe, row.sellsPerDay) },
+	return { "Sales a day, estimated", perDayText(pe, row.sellsPerDay) },
 		{ "Estimated from", sellsSourceText(pe, row), pe.FlipLogic.SellsUnsure(row) and "warning" or nil }
 end
 
@@ -123,13 +123,13 @@ end
 
 -- Second line of a flip row: how far under usual, and the caveat that matters most.
 local function flipDetail(pe, row)
-	local detail = pe:FormatPercent(row.discount) .. " under usual"
+	local detail = pe:FormatPercent(row.discount) .. " below usual"
 	if row.fewSales then
 		return detail .. " · few sales seen"
 	elseif row.slow then
 		return detail .. " · sells slowly"
 	elseif row.listedUnder then
-		return string.format("%s · %s listed under %s", detail, pe:FormatNumberGrouped(row.listedUnder), pe:FormatCopperShort(row.limitPrice))
+		return string.format("%s · %s listed below %s", detail, pe:FormatNumberGrouped(row.listedUnder), pe:FormatCopperShort(row.limitPrice))
 	end
 	return detail
 end
@@ -156,10 +156,10 @@ local function flipDetailRows(pe, row)
 		{ "Cheapest now", pe:FormatCopperFull(row.price) },
 		{ string.format("Usual price, %d days", row.usualDays or 0), pe:FormatCopperFull(row.usual) },
 		{ string.format("Sale after %s cut", pe:FormatPercent(1 - row.saleNet / row.usual)), pe:FormatCopperFull(row.saleNet) },
-		{ "Deposit lost on unsold postings, each", row.depositLoss > 0 and pe:FormatCopperFull(row.depositLoss) or "not known" },
+		{ "Deposit lost on unsold postings, each", row.depositLoss > 0 and pe:FormatCopperFull(row.depositLoss) or "unknown" },
 		{ "Profit each", pe:FormatSignedMoney(row.profitEach), "success" },
 		{ "Return", pe:FormatPercent(row.roi) },
-		{ "Listed under " .. pe:FormatCopperShort(row.limitPrice), row.listedUnder and pe:FormatNumberGrouped(row.listedUnder) or "-" },
+		{ "Listed below " .. pe:FormatCopperShort(row.limitPrice), row.listedUnder and pe:FormatNumberGrouped(row.listedUnder) or "-" },
 		sells, source,
 		{ string.format("Buy %s and spend", pe:FormatNumberGrouped(units)), pe:FormatCopperFull(row.cost) },
 		{ "Profit if all sell at the usual price", pe:FormatSignedMoney(row.profit), "success" },
@@ -193,7 +193,7 @@ local flips = {
 	detailRows = flipDetailRows,
 	riskText = withDataWarnings(flipRiskText),
 	setStats = flipStats,
-	subtitle = function(pe, row) return pe:FormatPercent(row.discount) .. " under its usual price" end,
+	subtitle = function(pe, row) return pe:FormatPercent(row.discount) .. " below its usual price" end,
 	tooltipPairs = function(pe, row) return { { "Profit each after the cut", pe:FormatSignedMoney(row and row.profitEach) } } end,
 	footer = function(pe, rows, insights)
 		return string.format("%d flips from %s items", #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
@@ -205,9 +205,9 @@ local flips = {
 
 local function vendorDetail(pe, row)
 	if not row.qtyKnown then
-		return "Under vendor price · quantity at this price unknown"
+		return "Below vendor price · quantity at this price unknown"
 	end
-	return string.format("%s listed under vendor price", pe:FormatNumberGrouped(row.qty))
+	return string.format("%s listed below vendor price", pe:FormatNumberGrouped(row.qty))
 end
 
 local function vendorColumns(pe)
@@ -220,7 +220,7 @@ local function vendorColumns(pe)
 			sortValue = function(row) return row.qty or 0 end,
 			getText = function(row) return row.qtyKnown and pe:FormatNumberGrouped(row.qty) or "-" end,
 		},
-		signedColumn(pe, "Gain", "gain"),
+		signedColumn(pe, "Profit", "gain"),
 	}
 end
 
@@ -229,10 +229,10 @@ local function vendorDetailRows(pe, row)
 		{ "Cheapest listing", pe:FormatCopperFull(row.price) },
 		{ "A vendor pays", pe:FormatCopperFull(row.vendorSell) },
 		{ "", "" },
-		{ "Units under vendor price", row.qtyKnown and pe:FormatNumberGrouped(row.qty) or "at least 1" },
+		{ "Units below vendor price", row.qtyKnown and pe:FormatNumberGrouped(row.qty) or "at least 1" },
 		{ "Cost to buy them", pe:FormatCopperFull(row.cost) },
 		{ "Vendor pays in total", pe:FormatCopperFull(row.qty * row.vendorSell) },
-		{ "Gain", pe:FormatSignedMoney(row.gain), "success" },
+		{ "Profit", pe:FormatSignedMoney(row.gain), "success" },
 		{ "", "" },
 		{ "Bag slots needed", "depends on stack size" },
 		{ "Auction cut", "none, sold to a vendor" },
@@ -249,26 +249,26 @@ end
 
 local function vendorStats(pe, stats, rows, insights)
 	local gainTile, goldNeededTile, itemsTile, lastScanTile = unpack(stats)
-	gainTile:SetValues(string.format("Gain, all %d", #rows), pe:FormatSignedMoney(sumOf(rows, "gain")), "Sold to a vendor, no auction cut", "success")
+	gainTile:SetValues(string.format("Profit, all %d", #rows), pe:FormatSignedMoney(sumOf(rows, "gain")), "Sold to a vendor, no auction cut", "success")
 	goldNeededTile:SetValues("Gold needed", pe:FormatCopperShort(sumOf(rows, "cost")), "You have " .. pe:FormatCopperShort(GetMoney()))
-	itemsTile:SetValues("Items", tostring(#rows), "Listed under their vendor price")
+	itemsTile:SetValues("Items", tostring(#rows), "Listed below their vendor price")
 	lastScanTile:SetValues("Last scan", lastScanText(pe, insights), "Listings may have changed since")
 end
 
 local vendor = {
 	id = "vendor", label = "Sure things",
-	emptyTitle = "Nothing under vendor price",
+	emptyTitle = "Nothing below vendor price",
 	emptyHint = "No item in the last scan is listed for less than a vendor pays.",
 	getRows = function(pe, onReady) return pe:GetVendorRows(onReady) end,
 	columns = vendorColumns,
 	detailRows = vendorDetailRows,
 	riskText = vendorRiskText,
 	setStats = vendorStats,
-	subtitle = function(pe, row) return "Listed under the " .. pe:FormatCopperShort(row.vendorSell) .. " a vendor pays" end,
+	subtitle = function(pe, row) return "Listed below the " .. pe:FormatCopperShort(row.vendorSell) .. " a vendor pays" end,
 	tooltipPairs = function(pe, row) return { { "A vendor pays", pe:FormatCopperFull(row and row.vendorSell) } } end,
 	footer = function(pe, rows, insights)
 		return string.format("%d items from %s scanned", #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
-			"Gain = vendor price less what you pay"
+			"Profit = vendor price minus what you pay"
 	end,
 }
 
@@ -291,7 +291,7 @@ local function gapColumns(pe)
 		pe:MoneyColumn({ id = "price", label = "Cheapest", width = 70 }),
 		pe:MoneyColumn({ id = "nextPrice", label = "Next price", width = 70 }),
 		pe:MoneyColumn({ id = "cost", label = "To clear", width = 74 }),
-		signedColumn(pe, "Gain if it holds", "gain"),
+		signedColumn(pe, "Profit if it holds", "gain"),
 		sellsColumn(pe, 66),
 	}
 end
@@ -302,7 +302,7 @@ local function gapDetailRows(pe, row)
 	local rows = {
 		{ string.format("Cost to clear, %s", pe:FormatNumberGrouped(row.buyQty)), pe:FormatCopperFull(row.cost) },
 		{ "Relist at", pe:FormatCopperFull(row.nextPrice) },
-		{ "Gain if all sell", pe:FormatSignedMoney(row.gain), "success" },
+		{ "Profit if all sell", pe:FormatSignedMoney(row.gain), "success" },
 		sells, source,
 		{ "Already waiting at that price", pe:FormatNumberGrouped(row.waitingAtNext) },
 		{ "", "" },
@@ -327,7 +327,7 @@ end
 local function gapStats(pe, stats, rows, insights)
 	local gainTile, goldNeededTile, riskTile, lastScanTile = unpack(stats)
 	local gain, note, settled = settledSum(pe, rows, "gain", "After the auction cut")
-	gainTile:SetValues(string.format("Gain if all %d hold", settled), pe:FormatSignedMoney(gain), note, "warning")
+	gainTile:SetValues(string.format("Profit if all %d hold", settled), pe:FormatSignedMoney(gain), note, "warning")
 	goldNeededTile:SetValues("Gold needed", pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), "You have " .. pe:FormatCopperShort(GetMoney()))
 	riskTile:SetValues("Risky", "Read first", "Pays only if nobody lists under you", "warning")
 	lastScanTile:SetValues("Last scan", lastScanText(pe, insights), "Listings may have changed since")
@@ -336,7 +336,7 @@ end
 local gaps = {
 	id = "gaps", label = "Price gaps",
 	emptyTitle = "No price gaps",
-	emptyHint = "No item in the last full scan has a few cheap listings under a much higher price.",
+	emptyHint = "No item in the last full scan has a few cheap listings below a much higher price.",
 	getRows = function(pe, onReady) return pe:GetGapRows(onReady) end,
 	columns = gapColumns,
 	detailRows = gapDetailRows,
@@ -346,13 +346,13 @@ local gaps = {
 	tooltipPairs = function(pe, row) return { { "Cost to clear", pe:FormatCopperFull(row and row.cost) } } end,
 	footer = function(pe, rows, insights)
 		return string.format("%d price gaps from %s items", #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
-			"Risky: gain counts the " .. pe:DescribeAuctionCut() .. " cut, not undercuts"
+			"Risky: profit counts the " .. pe:DescribeAuctionCut() .. " cut, not undercuts"
 	end,
 }
 
 -- ---------- Sell now: owned items priced above usual that sell ----------
 
--- One candidate per owned item with a scanned price, a usual price and a sells-a-day estimate.
+-- One candidate per owned item with a scanned price, a usual price and a sales-a-day estimate.
 local function sellCandidates(pe, insights)
 	local items, owned, scanned = {}, 0, 0
 	for _, inv in ipairs(pe:BuildInventoryRowsAggregatedByItem(pe.db, {}, "") or {}) do

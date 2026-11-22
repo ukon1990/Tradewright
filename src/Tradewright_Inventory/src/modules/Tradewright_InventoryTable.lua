@@ -57,7 +57,7 @@ end
 
 function Tradewright:GetItemRoleLabelFromRoles(roleEntry)
 	if not roleEntry then
-		return "Tracked"
+		return "Other"
 	end
 	local o, r = roleEntry.output, roleEntry.reagent
 	if o and r then
@@ -69,7 +69,7 @@ function Tradewright:GetItemRoleLabelFromRoles(roleEntry)
 	if r then
 		return "Crafting reagent"
 	end
-	return "Tracked"
+	return "Other"
 end
 
 function Tradewright:GetItemRoleKeyFromRoles(roleEntry)

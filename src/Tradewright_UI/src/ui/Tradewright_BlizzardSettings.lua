@@ -46,8 +46,8 @@ end
 local CHECKBOXES = {
 	{ label = "Show minimap button", setting = "general.showMinimapButton", default = true,
 		onChange = function() Tradewright:EnsureMinimapButton() end },
-	{ label = "Capture specialization tree", setting = "capture.captureSpecializationTree", default = true },
-	{ label = "Include detailed recipe output data", setting = "capture.includeRecipeOutputItemData", default = false },
+	{ label = "Also scan specialization trees (for export)", setting = "capture.captureSpecializationTree", default = true },
+	{ label = "Also save detailed recipe results (for export)", setting = "capture.includeRecipeOutputItemData", default = false },
 }
 
 local function windowScaleText()

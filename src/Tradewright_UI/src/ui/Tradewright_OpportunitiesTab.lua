@@ -28,7 +28,7 @@ local function createAddToCartButton(pe, panel, card)
 		local row = panel.selected
 		if row and pe.AddAuctionCartItem then
 			pe:AddAuctionCartItem(row.itemID, row.buyQty or 1, row.price, currentView(pe).label)
-			card.openHint:SetText(string.format("Added %s to the auction house cart.", pe:FormatNumberGrouped(row.buyQty or 1)))
+			card.openHint:SetText(string.format("Added %s to the cart.", pe:FormatNumberGrouped(row.buyQty or 1)))
 		end
 	end)
 	button:SetPoint("BOTTOMLEFT", card.open, "TOPLEFT", 0, 4)

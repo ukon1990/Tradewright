@@ -22,11 +22,11 @@ end
 local function roleText(pe)
 	local seller = pe.GetSellerCharacterKey and pe:GetSellerCharacterKey()
 	if not seller then
-		return "No auction house / bank character is set for this realm. Choose one in Settings."
+		return "No bank character is set. Choose one in Settings, Mail."
 	elseif seller == pe:GetCharacterKey() then
-		return "This is your auction house / bank character. Materials your queued crafts need go from here to the crafters."
+		return "This is your bank character. Reagents your queued crafts need go from here to the crafters."
 	end
-	return "Everything sellable here can go to your auction house / bank character, " .. pe:GetMailCharacterLabel(seller) .. "."
+	return "Everything sellable here can go to your bank character, " .. pe:GetMailCharacterLabel(seller) .. "."
 end
 
 
@@ -110,7 +110,7 @@ end
 local function destItemsText(pe, items)
 	local parts = {}
 	for j = 1, math.min(3, #items) do
-		parts[#parts + 1] = string.format("%s x%s", items[j].name or "?", pe:FormatNumberGrouped(items[j].quantity or 0))
+		parts[#parts + 1] = string.format("%s × %s", items[j].name or "?", pe:FormatNumberGrouped(items[j].quantity or 0))
 	end
 	if #items > 3 then
 		parts[#parts + 1] = string.format("and %d more", #items - 3)
@@ -126,7 +126,7 @@ local function fillMailRow(pe, row, dest)
 	row.name:SetText(destTitle(pe, dest))
 	row.items:SetText(surplus and surplusText(pe, dest.summary) or destItemsText(pe, dest.items or {}))
 	local open = surplus and pe:IsMailReviewPanelShown()
-	pe:SetButtonLabel(row.send, open and "Hide review" or (surplus and "Review…" or "Prepare"), true)
+	pe:SetButtonLabel(row.send, open and "Hide review" or (surplus and "Review…" or "Attach"), true)
 	row.send:SetEnabled(surplus or not pe:EnsureMailSendQueueState().running)
 	row.send:SetScript("OnClick", function()
 		if surplus then
@@ -146,7 +146,7 @@ local function footerText(pe, plan)
 		items = items + dest.totalQuantity
 	end
 	if #ready > 0 then
-		return string.format("%d %s · %s items to prepare", #ready, pe:Plural(#ready, "mail row"), pe:FormatNumberGrouped(items))
+		return string.format("%d %s · %s items to attach", #ready, pe:Plural(#ready, "mail"), pe:FormatNumberGrouped(items))
 	end
 	return #plan > 0 and "Use Review… to choose what surplus goes" or "No mail pending"
 end
@@ -224,7 +224,7 @@ function Tradewright:CreateMailPanelFooter(panel)
 	actions:SetHeight(26)
 	panel.cancelBtn = self:CreateButton(actions, "Cancel", function() pe:CancelMailSendQueue() end)
 	panel.cancelBtn:SetPoint("RIGHT")
-	panel.sendAllBtn = self:CreateButton(actions, "Prepare all", function() pe:StartMailSendAll() end, { primary = true })
+	panel.sendAllBtn = self:CreateButton(actions, "Attach all", function() pe:StartMailSendAll() end, { primary = true })
 	panel.sendAllBtn:SetPoint("LEFT")
 	panel.sendAllBtn:SetPoint("RIGHT", panel.cancelBtn, "LEFT", -8, 0)
 	panel.progressRow = CreateFrame("Frame", nil, panel)

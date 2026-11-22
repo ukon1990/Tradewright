@@ -419,7 +419,7 @@ function Tradewright:GetExportData(scope, identifier)
 	end
 	local characterData = self.db.characters[characterKey]
 	if not characterData then
-		return nil, "No scan data stored for this character yet. Run /tradewright scan first."
+		return nil, "No scan data saved for this character yet. Run /tw scan first."
 	end
 	local build = CHARACTER_EXPORTS[scope] or exportCharacter
 	return build(self, { scope = scope, characterKey = characterKey, data = characterData, identifier = identifier })

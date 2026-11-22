@@ -13,12 +13,12 @@ local SECTION_GAP = 10
 local GIVE_BACK_OPTIONS = {
 	{ value = "vendor", label = "Sell to vendor" },
 	{ value = "auction", label = "Sell at auction" },
-	{ value = "none", label = "Count as nothing" },
+	{ value = "none", label = "Worth nothing" },
 }
 local RECIPE_SCOPE_OPTIONS = {
 	{ value = "trainer", label = "Trainer recipes first" },
 	{ value = "all", label = "All recipes" },
-	{ value = "known", label = "Only known" },
+	{ value = "known", label = "Known recipes only" },
 }
 local GIVE_BACK_STAT_LABEL = { vendor = "Sold to vendor", auction = "Sold at auction", none = "Crafted items" }
 
@@ -27,7 +27,7 @@ local EMPTY_TEXT = {
 	no_data = { "Profession not scanned yet", "Press Scan on the Recipe view, then come back." },
 	unsupported = { "Not available here", "This game version does not report when recipes stop giving skill." },
 	no_prices = { "No prices for a route yet",
-		"No recipe that can still give skill has a price for all its materials. Run a full scan at the auction house." },
+		"No recipe that can still give skill has a price for all its reagents. Run a full scan at the auction house." },
 	finished = { "Nothing left to level", "None of this profession's recipes can give a skill point any more." },
 }
 
@@ -44,9 +44,9 @@ local function craftCountIsExact(step)
 	return not step.estimated and SkillUpLogic.SkillUpChance(step.candidate.bounds, step.toSkill - 1) >= 1
 end
 
--- "a creature not named yet" stands in until the creature is met with its name showing.
+-- "an unknown creature" stands in until the creature is met with its name showing.
 local function dropSourceName(dropSource)
-	return dropSource.name or "a creature not named yet"
+	return dropSource.name or "an unknown creature"
 end
 
 -- The skill needed to learn a recipe is only known once a trainer has been seen teaching it; the
@@ -248,7 +248,7 @@ local function addMaterialLines(pe, candidate)
 			addFactLine(pe, label, "-")
 		end
 	end
-	addMoneyLine(pe, "Materials per craft", candidate.materialCost)
+	addMoneyLine(pe, "Reagents per craft", candidate.materialCost)
 end
 
 -- Under a recipe not learned: where it comes from, and whether Learn can show the way now.
@@ -327,7 +327,7 @@ local function showStepTooltip(pe, rowFrame, row)
 		addMoneyLine(pe, "Sells to a vendor for", candidate.vendorGiveBack)
 	end
 	if (step.reusedQuantity or 0) > 0 then
-		addMoneyLine(pe, string.format("%d used as a material by later steps, saving", step.reusedQuantity), step.reuseValue)
+		addMoneyLine(pe, string.format("%d used as a reagent by later steps, saving", step.reusedQuantity), step.reuseValue)
 	end
 	addFactLine(pe, string.format("Skill-up chance at %d", step.fromSkill),
 		percentText(SkillUpLogic.SkillUpChance(candidate.bounds, step.fromSkill), step.estimated))
@@ -375,7 +375,7 @@ local function createControls(pe, host, above)
 	controls:SetPoint("TOPRIGHT", above, "BOTTOMRIGHT", 0, -SECTION_GAP)
 	controls:SetHeight(26)
 	host.giveBackDropdown = pe:CreateSingleSelectDropdown(controls, {
-		width = 150, options = GIVE_BACK_OPTIONS, tooltip = "What the items you craft while leveling count for.",
+		width = 150, options = GIVE_BACK_OPTIONS, tooltip = "What the items you craft while leveling are worth.",
 		getValue = function() return pe:GetLevelingSettings().giveBackMode end,
 		setValue = function(value) pe:SetSetting("professions.leveling.giveBack", value) end,
 		onChanged = function() refreshPanel(pe) end,
@@ -505,7 +505,7 @@ local function renderStats(pe, host, route)
 		return totals and pe:FormatCopperShort(copper) or "-"
 	end
 	local giveBackText = mode == "none" and "not counted" or money(totals and totals.giveBack)
-	host.stats.materials:SetValues("Materials", money(totals and totals.materials))
+	host.stats.materials:SetValues("Reagents", money(totals and totals.materials))
 	host.stats.giveBack:SetValues(GIVE_BACK_STAT_LABEL[mode] or GIVE_BACK_STAT_LABEL.none, giveBackText)
 	host.stats.net:SetValues("Net cost", money(totals and totals.net), nil, "gold")
 	pe:LayoutEvenRow(host.statsRow, host.stats, 0, 8)

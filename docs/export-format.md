@@ -3,7 +3,7 @@
 Tradewright exports are not JSON.
 
 Export is a developer tool and is switched off for players. Turn it on in game with
-`/tradewright dev export on` (off again with `off`). While it is on, the dashboard shows the Export
+`/tradewright dev export on` (off again with `off`). While it is on, the Tradewright window shows the Export
 tab and these commands work:
 
 - `/tradewright export <scope>` — one of the scopes below

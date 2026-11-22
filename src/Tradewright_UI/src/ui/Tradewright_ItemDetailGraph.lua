@@ -35,20 +35,20 @@ function Tradewright:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, config)
 	local secondarySeries = {}
 	local quantitySeries = {}
 	local yFormatter
-	local emptyExtra = "No observations in this range."
+	local emptyExtra = "No data in this range."
 	local tooltipBuilder
 	local function qtyTooltip(tip, pt)
 		tip:AddLine(graphTimestampForSeries(pt.at), 1, 1, 1)
 		local m = pt.meta or {}
 		if m.ahHistory then
 			tip:AddLine(
-				string.format("AH sample quantity: %s", Tradewright:FormatNumberGrouped(tonumber(pt.value) or 0)),
+				string.format("Listed when scanned: %s", Tradewright:FormatNumberGrouped(tonumber(pt.value) or 0)),
 				0.85,
 				0.92,
 				1
 			)
 			if (m.sampleCount or 0) > 0 then
-				tip:AddLine(string.format("Price observations in hour: %d", m.sampleCount), 0.72, 0.8, 0.88)
+				tip:AddLine(string.format("Prices seen this hour: %d", m.sampleCount), 0.72, 0.8, 0.88)
 			end
 		else
 			tip:AddLine(string.format("Total quantity: %s", Tradewright:FormatNumberGrouped(tonumber(pt.value) or 0)), 0.85, 0.92, 1)
@@ -72,10 +72,10 @@ function Tradewright:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, config)
 		tip:AddLine("|cffffcc00Crafting cost|r  " .. Tradewright:FormatCopperFull(pt.value), 0.85, 0.92, 1)
 		local m = pt.meta or {}
 		if m.flat then
-			tip:AddLine("Current estimate (flat)", 0.72, 0.8, 0.88)
+			tip:AddLine("Estimate, no history yet", 0.72, 0.8, 0.88)
 		end
 		if m.count and m.count > 0 then
-			tip:AddLine(string.format("Samples in hour: %d", m.count), 0.72, 0.8, 0.88)
+			tip:AddLine(string.format("Prices seen this hour: %d", m.count), 0.72, 0.8, 0.88)
 		end
 		if m.min and m.max then
 			tip:AddLine(
@@ -98,7 +98,7 @@ function Tradewright:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, config)
 			tip:AddLine(string.format("Source: %s", tostring(m.source)), 0.72, 0.8, 0.88)
 		end
 		if m.count and m.count > 0 then
-			tip:AddLine(string.format("Samples in hour: %d", m.count), 0.72, 0.8, 0.88)
+			tip:AddLine(string.format("Prices seen this hour: %d", m.count), 0.72, 0.8, 0.88)
 		end
 		if m.min and m.max then
 			tip:AddLine(

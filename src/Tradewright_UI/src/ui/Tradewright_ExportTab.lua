@@ -78,13 +78,13 @@ local function createExportGroups(pe, panel)
 			tooltip = "Rescans every learned profession first, then exports recipes, specialization data and talent choices." } },
 		{ "Character", function() pe:Export("character") end },
 		{ "Inventory", function() pe:Export("inventory") end },
-		{ "Meta", function() pe:Export("character_meta") end },
+		{ "Character info", function() pe:Export("character_meta") end },
 	}, "Scan and export everything rescans every learned profession first.")
 	panel.accountGroup = createGroup(pe, panel.left, "Account", {
 		{ "Export account", function() pe:Export("account") end },
 		{ "Account summary", function() pe:Export("account_summary") end },
 	})
-	panel.accountGroup.body:SetText("Every stored character. The summary is smaller and easier to read.")
+	panel.accountGroup.body:SetText("Every saved character. The summary is smaller and easier to read.")
 	panel.compactGroup = createGroup(pe, panel.left, "Compact packages", {
 		{ "Inventory", function() pe:Export("inventory_compact") end },
 		{ "Professions", function() pe:Export("professions_compact") end },
@@ -124,7 +124,7 @@ function ExportTab:Create(container, uiState)
 	panel.intro = pe:CreateParagraph(panel)
 	panel.intro:SetPoint("TOPLEFT")
 	panel.intro:SetPoint("TOPRIGHT")
-	panel.intro:SetText("Each button opens the export window with a compressed package to copy. The same package is saved to SavedVariables on /reload.")
+	panel.intro:SetText("Each button opens the export window with a compressed package to copy. The same package is written to the addon's saved data on /reload.")
 	createExportGroups(pe, panel)
 	createProfessionTable(pe, panel)
 
@@ -142,7 +142,7 @@ end
 local function characterSummary(pe, key, charData)
 	local meta = charData and charData.meta or {}
 	local professionCount = pe:TableCount(charData and charData.professions or {})
-	return string.format("%s, %d %s stored.",
+	return string.format("%s, %d %s saved.",
 		meta.name and meta.realm and (meta.name .. " · " .. meta.realm) or tostring(key),
 		professionCount, pe:Plural(professionCount, "profession"))
 end

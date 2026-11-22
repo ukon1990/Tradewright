@@ -40,7 +40,7 @@ end
 
 --- Queues `count` crafts of a craft row and, for every material its plan prices as crafted, the
 --- crafts that make that material, for the character whose recipe is cheapest. One level deep: the
---- materials of those crafts are bought, as the queue's "To buy" shows.
+--- materials of those crafts are bought, as the queue's "Cart" shows.
 function Tradewright:AddCraftWithMaterialCraftsToQueue(row, count)
 	local added, reason = self:AddCraftToQueue(row, count)
 	if not added then

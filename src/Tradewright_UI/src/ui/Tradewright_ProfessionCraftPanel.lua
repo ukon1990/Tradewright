@@ -265,7 +265,7 @@ local function queueOpenRecipe(amount)
 	local pe = Tradewright
 	local order = pe.GetOpenCraftingOrder and pe:GetOpenCraftingOrder() or nil
 	if order and pe.AddCraftingOrderToQueue then
-		pe:PrintMessage(string.format("Queueing crafting order #%s...", tostring(order.orderID or "?")))
+		pe:PrintMessage(string.format("Adding crafting order #%s to the queue…", tostring(order.orderID or "?")))
 		pe:AddCraftingOrderToQueue(order)
 	elseif pe.QueueOpenProfessionRecipe then
 		pe:QueueOpenProfessionRecipe(amount)
@@ -293,7 +293,7 @@ local function createRecipeSummary(pe, host)
 	host.facts = pe:CreateKeyValueList(host.body)
 	host.facts:SetPoint("TOPLEFT", host.statsRow, "BOTTOMLEFT", 0, -10)
 	host.facts:SetPoint("TOPRIGHT", host.statsRow, "BOTTOMRIGHT", 0, -10)
-	host.materialsHeading = pe:CreateHeading(host.body, "Materials per craft")
+	host.materialsHeading = pe:CreateHeading(host.body, "Reagents per craft")
 	host.materialsHeading:SetPoint("TOPLEFT", host.facts, "BOTTOMLEFT", 0, -10)
 	host.materialsHeading:SetPoint("TOPRIGHT", host.facts, "BOTTOMRIGHT", 0, -10)
 end
@@ -328,8 +328,8 @@ local function createRecipeMaterials(pe, host)
 	host.materials = pe:CreateReusableTable(host.body, {
 		autoFitToScroll = true,
 		footer = true,
-		emptyTitle = "No materials",
-		emptyHint = "This recipe has no stored reagents.",
+		emptyTitle = "No reagents",
+		emptyHint = "This recipe has no saved reagents.",
 	})
 	host.materials.frame:SetPoint("TOPLEFT", host.materialsHeading, "BOTTOMLEFT", 0, -6)
 	host.materials.frame:SetPoint("BOTTOMRIGHT", host.actions, "TOPRIGHT", 0, 10)
@@ -338,7 +338,7 @@ local function createRecipeMaterials(pe, host)
 			getItemID = function(slot) return slot.itemID end,
 			getName = function(slot) return pe:GetItemDisplayName(slot.itemID) end }),
 		{ id = "need", label = "Need", width = 40, justifyH = "RIGHT", getText = function(slot) return tostring(slot.need) end },
-		{ id = "have", label = "Have", width = 46, justifyH = "RIGHT",
+		{ id = "have", label = "Have", width = 46, justifyH = "RIGHT", tooltipTitle = "Have", tooltipText = "On all your characters.",
 			getText = function(slot)
 				if slot.have < slot.need then
 					return pe:Colorize(pe:FormatNumberGrouped(slot.have), "danger")
@@ -500,7 +500,7 @@ local function recipeFacts(pe, ev)
 	local cut = pe:GetAuctionCut() * 100
 	local facts = {
 		{ "Return", ev.roi and string.format("%.0f%%", ev.roi) or "-" },
-		{ "Materials you already own", string.format("%.0f%%", (ev.coverage or 0) * 100) },
+		{ "Reagents you already own", string.format("%.0f%%", (ev.coverage or 0) * 100) },
 		{ "Still to buy", moneyOrDash(pe, ev.outOfPocketMatCost, pe.FormatCopperFull) },
 		{ string.format("Sale before the %.3g%% auction cut", cut), moneyOrDash(pe, ev.saleGross, pe.FormatCopperFull) },
 	}
@@ -530,7 +530,7 @@ end
 
 local function renderRecipeStats(pe, host, ev)
 	host.stats.saleAfterCut:SetValues("Sale after cut", moneyOrDash(pe, ev.saleNet, pe.FormatCopperShort))
-	host.stats.materials:SetValues("Materials", moneyOrDash(pe, ev.matCost, pe.FormatCopperShort))
+	host.stats.materials:SetValues("Reagents", moneyOrDash(pe, ev.matCost, pe.FormatCopperShort))
 	host.stats.profit:SetValues("Profit", pe:FormatSignedMoney(ev.profit), nil, (tonumber(ev.profit) or 0) < 0 and "danger" or "success")
 	pe:LayoutEvenRow(host.statsRow, host.stats, 0, 8)
 end
@@ -548,7 +548,7 @@ local function renderProfessionRecipe(pe, panel, ctx)
 	host.facts:SetRows(recipeFacts(pe, ev))
 	host.materials:SetRows(recipeMaterialRows(pe, ev.reagentPlan))
 	host.materials:Refresh()
-	host.materials:SetFooterText("Have counts every character", ev.matCost and pe:FormatCopperShort(ev.matCost) or nil)
+	host.materials:SetFooterText("Have counts all your characters", ev.matCost and pe:FormatCopperShort(ev.matCost) or nil)
 	panel.footerText:SetText(string.format("%s scanned %s", tostring(ev.professionName or "Profession"), pe:FormatScanTimestamp(ev.scanAt)))
 end
 
@@ -561,10 +561,10 @@ local function renderProfessionEmpty(panel, message)
 end
 
 local REFRESH_THROTTLE_SEC = 0.10
-local SELECT_RECIPE_TEXT = "Select a recipe to see its profit and materials."
+local SELECT_RECIPE_TEXT = "Select a recipe to see its profit and reagents."
 -- What the empty panel says for each reason EvaluateSelectedProfessionRecipe gives.
 local EMPTY_REASON_TEXT = {
-	no_data = "This recipe is not stored yet. Press Scan, or wait for the recipe list to finish loading.",
+	no_data = "This recipe is not saved yet. Press Scan, or wait for the recipe list to finish loading.",
 	no_recipe = SELECT_RECIPE_TEXT,
 	not_ready = "The profession window is still loading.",
 	no_eval = "Profit for this recipe could not be worked out yet. Select it again or press Scan.",

@@ -43,9 +43,9 @@ local AH_ROW_GAP = 8
 
 -- One scan control replaces four buttons: pick what to scan, then press Scan.
 local AUCTION_SCAN_CHOICES = {
-	{ value = "both", label = "Craft and account prices" },
-	{ value = "crafts", label = "Craft prices" },
-	{ value = "account", label = "Account items" },
+	{ value = "both", label = "My crafts and items" },
+	{ value = "crafts", label = "My crafts" },
+	{ value = "account", label = "My items" },
 	{ value = "shown", label = "Save shown prices" },
 }
 
@@ -145,16 +145,16 @@ function Tradewright:BuildAuctionPanelLayout(panel)
 	placeIn(panel.sellRow1, panel.btnDumpFull, "RIGHT", panel.sellRow1, "RIGHT")
 	local refresh = panel.sellControls[1]
 	placeIn(panel.sellRow1, refresh, "RIGHT", panel.btnDumpFull, "LEFT", -AH_ROW_GAP)
-	panel.btnScanChoice = self:CreateButton(panel.sellRow1, "Scan", function()
+	panel.btnScanChoice = self:CreateButton(panel.sellRow1, "Check prices", function()
 		pe:RunAuctionPanelScanChoice()
-	end, { tooltip = "Run the scan picked on the left. Keep the auction house open until it ends." })
+	end, { tooltip = "Looks up the prices picked on the left. Keep the auction house open until it ends." })
 	panel.btnScanChoice:SetPoint("RIGHT", refresh, "LEFT", -AH_ROW_GAP, 0)
 	panel.scanChoice = self:CreateSingleSelectDropdown(panel.sellRow1, {
 		width = 160,
 		getOptions = function() return AUCTION_SCAN_CHOICES end,
 		getValue = function() return pe:GetSetting("auction.panelScanChoice", "both") end,
 		setValue = function(value) pe:SetSetting("auction.panelScanChoice", value) end,
-		tooltip = "What to scan",
+		tooltip = "Which prices to check",
 	})
 	panel.scanChoice:SetPoint("LEFT", panel.sellRow1, "LEFT", 0, 0)
 	panel.scanChoice:SetPoint("RIGHT", panel.btnScanChoice, "LEFT", -AH_ROW_GAP, 0)

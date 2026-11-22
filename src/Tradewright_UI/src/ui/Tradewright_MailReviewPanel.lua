@@ -31,7 +31,7 @@ local function showRowTooltip(pe, owner, row)
 		{ "In bags", n(row.bags) },
 		{ "Held for your queued crafts", n(row.held) },
 		{ "Keep on this character", row.keep and n(row.keep) or "-" },
-		{ "Sends to the auction house character", n(row.send) },
+		{ "Sends to the bank character", n(row.send) },
 	}, KEEP_HINT)
 end
 
@@ -249,7 +249,7 @@ end
 local function confirmClearKeeps(pe, button)
 	if button.armed then
 		button.armed = nil
-		pe:SetButtonLabel(button, "Clear keeps", false)
+		pe:SetButtonLabel(button, "Clear keep amounts", false)
 		pe:ClearMailKeepAmounts()
 		pe:RefreshMailPanel()
 		return
@@ -259,22 +259,22 @@ local function confirmClearKeeps(pe, button)
 	C_Timer.After(4, function()
 		if button.armed then
 			button.armed = nil
-			pe:SetButtonLabel(button, "Clear keeps", false)
+			pe:SetButtonLabel(button, "Clear keep amounts", false)
 		end
 	end)
 end
 
 local function createActions(pe, f)
-	f.sendBtn = pe:CreateButton(f, "Prepare", function()
+	f.sendBtn = pe:CreateButton(f, "Attach", function()
 		if f.dest then
 			pe:StartMailSendQueue({ f.dest })
 		end
 	end, { primary = true })
 	f.sendBtn:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PAD, PAD)
-	local clear = pe:CreateButton(f, "Clear keeps")
+	local clear = pe:CreateButton(f, "Clear keep amounts")
 	clear:SetScript("OnClick", function(button) confirmClearKeeps(pe, button) end)
 	clear:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", PAD, PAD)
-	local keepAll = pe:CreateButton(f, "Keep current bags", function()
+	local keepAll = pe:CreateButton(f, "Keep what I have now", function()
 		pe:KeepCurrentMailBags()
 		pe:RefreshMailPanel()
 	end, { tooltip = "Keep everything the bags hold now, so nothing goes until you have more." })
@@ -283,7 +283,7 @@ local function createActions(pe, f)
 	f.hint:SetPoint("BOTTOMLEFT", clear, "TOPLEFT", 0, 8)
 	f.hint:SetPoint("RIGHT", f, "RIGHT", -PAD, 0)
 	f.hint:SetWordWrap(false)
-	f.hint:SetText("Keep is saved for this character. Untick skips an item for this visit only.")
+	f.hint:SetText("Keep is saved for this character. Unticked items are skipped this visit only.")
 end
 
 local function ensurePanel(pe)
@@ -355,7 +355,7 @@ local function refreshControls(pe, f, sum)
 	end
 	local sending = pe:EnsureMailSendQueueState().running
 	local mails = f.dest and pe:CountMailParcels({ f.dest }) or 0
-	pe:SetButtonLabel(f.sendBtn, string.format("Prepare %s items · %d %s", pe:FormatNumberGrouped(sum.send), mails,
+	pe:SetButtonLabel(f.sendBtn, string.format("Attach %s items · %d %s", pe:FormatNumberGrouped(sum.send), mails,
 		pe:Plural(mails, "mail")), false)
 	f.sendBtn:SetEnabled(sum.send > 0 and not sending)
 	f.sendOthers.check:SetChecked(pe:GetMailSendOthers())
@@ -367,7 +367,7 @@ end
 -- Title "Surplus to <seller>", items and mails in the header, totals in the table footer.
 local function refreshTexts(pe, f, sum, seller)
 	f.title:SetText("Surplus to " .. pe:GetMailCharacterLabel(seller))
-	f.meta:SetText(string.format("%d kinds of items", sum.all))
+	f.meta:SetText(string.format("%d different items", sum.all))
 	local skipped = sum.skipped > 0 and string.format(" · %d skipped this time", sum.skipped) or ""
 	f.table:SetFooterText(string.format("%s to send%s", pe:FormatNumberGrouped(sum.send), skipped),
 		sum.worth > 0 and ("about " .. pe:FormatCopperShort(sum.worth)) or "")

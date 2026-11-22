@@ -145,7 +145,7 @@ function ItemDetailPaneMixin:ShowRecipes(crafting)
 	for index = 1, math.min(MAX_RECIPE_ROWS, #used) do
 		local entry = used[index]
 		usedRows[index] = {
-			string.format("%s x%d", tostring(entry.recipeName), tonumber(entry.quantityRequired) or 0),
+			string.format("%s × %d", tostring(entry.recipeName), tonumber(entry.quantityRequired) or 0),
 			tostring(entry.characterLabel),
 		}
 	end

@@ -1,11 +1,11 @@
 local _, Tradewright = ...
 
--- Who mails what to whom: the auction house / bank character ("seller") of each realm, and the
+-- Who mails what to whom: the bank character ("seller") of each realm, and the
 -- plans the mailbox panel sends. The decisions are pure functions, mostly in MailLogic (the seller
 -- choice and the return-to-seller plan are in ForeverLogic).
 
 -- WoW Forever has no realms: the second part of its character keys is a surname, so all of its
--- characters are one group and share one auction house / bank character.
+-- characters are one group and share one bank character.
 local FOREVER_GROUP = "Forever"
 
 local function realmOf(pe, characterKey)
@@ -42,7 +42,7 @@ function Tradewright:SetMailRecipients(destinations)
 	return destinations
 end
 
---- The auction house / bank character of the current realm (all of Forever), or nil when none is set.
+--- The bank character of the current realm (all of Forever), or nil when none is set.
 --- A Forever choice saved per surname before is carried over to the one Forever group.
 function Tradewright:GetSellerCharacterKey()
 	local known = {}

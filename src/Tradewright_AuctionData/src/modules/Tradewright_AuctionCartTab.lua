@@ -33,7 +33,7 @@ end
 local function buyCheapestCartSelection(panel)
 	local selected = selectedOrFirstCartItemID(panel)
 	if not selected then
-		Tradewright:PrintMessage("Select a shopping-cart row first.")
+		Tradewright:PrintMessage("Select a cart row first.")
 		return
 	end
 	local rows = Tradewright:FilterAuctionCraftCartRows(select(1, Tradewright:BuildAuctionCraftCartRows()))
@@ -48,7 +48,7 @@ end
 local function removeSelectedCartSources()
 	local selected = Tradewright:GetState().auctionCartSelectedItemID
 	if not selected then
-		Tradewright:PrintMessage("Select a shopping-cart row first.")
+		Tradewright:PrintMessage("Select a cart row first.")
 		return
 	end
 	local pe = Tradewright
@@ -56,11 +56,11 @@ local function removeSelectedCartSources()
 	local removedOrders = pe.RemoveCraftingOrdersByReagentItem and pe:RemoveCraftingOrdersByReagentItem(selected) or 0
 	if (removedCrafts + removedOrders) > 0 then
 		pe:PrintMessage(string.format(
-			"Removed %d craft queue entries and %d crafting orders for item #%s.",
+			"Removed %d queued crafts and %d crafting orders that needed item #%s.",
 			removedCrafts, removedOrders, tostring(selected)
 		))
 	else
-		pe:PrintMessage("No shopping-cart sources were removed for the selected item.")
+		pe:PrintMessage("Nothing in the queue needs the selected item.")
 	end
 	pe:GetState().auctionCartSelectedItemID = nil
 	pe:RefreshAuctionHousePanel()
@@ -74,7 +74,7 @@ local function clearCartSources()
 		Tradewright:ClearCraftingOrderQueue()
 	end
 	Tradewright:GetState().auctionCartSelectedItemID = nil
-	Tradewright:PrintMessage("Cleared shopping-cart sources.")
+	Tradewright:PrintMessage("Cart and craft queue cleared.")
 	Tradewright:RefreshAuctionHousePanel()
 end
 
@@ -109,19 +109,19 @@ local function buildCartButtons(panel)
 	panel.btnCartSearch = cartButton(panel, { 58, 20 }, "Find selected", { "LEFT", panel.cartSearchBox, "RIGHT", 4, 0 }, function()
 		searchSelectedCartRow(panel)
 	end)
-	attachSimpleTooltip(panel.btnCartSearch, "Search selected", "Runs an AH search for the selected shopping-cart row and refreshes the live price.")
-	panel.btnCartRefresh = cartButton(panel, { 64, 20 }, "Price all", { "LEFT", panel.btnCartSearch, "RIGHT", 4, 0 }, priceAllCartRows)
-	attachSimpleTooltip(panel.btnCartRefresh, "Scan all cart rows", "Queues AH searches for all shopping-cart rows that still need to be bought.")
+	attachSimpleTooltip(panel.btnCartSearch, "Find selected", "Searches the auction house for the selected cart row and updates its price.")
+	panel.btnCartRefresh = cartButton(panel, { 64, 20 }, "Check all", { "LEFT", panel.btnCartSearch, "RIGHT", 4, 0 }, priceAllCartRows)
+	attachSimpleTooltip(panel.btnCartRefresh, "Check all", "Looks up the price of every cart row that still has something to buy.")
 	panel.btnCartBuy = cartButton(panel, { 86, 20 }, "Buy cheapest", { "TOPLEFT", panel.cartSearchBox, "BOTTOMLEFT", 0, -6 }, function()
 		buyCheapestCartSelection(panel)
 	end)
 	attachSimpleTooltip(panel.btnCartBuy, "Buy cheapest",
-		"Attempts a first-pass commodity purchase for the selected shopping-cart row using the current cheapest live result.")
+		"Buys the selected row at the cheapest price found.")
 	panel.btnCartRemove = cartButton(panel, { 70, 20 }, "Remove selected", { "LEFT", panel.btnCartBuy, "RIGHT", 4, 0 }, removeSelectedCartSources)
-	attachSimpleTooltip(panel.btnCartRemove, "Remove selected item",
-		"Removes queued crafts and queued crafting orders that contribute to the selected shopping-cart item.")
+	attachSimpleTooltip(panel.btnCartRemove, "Remove selected",
+		"Removes the crafts that need the selected item from the queue.")
 	panel.btnCartClear = cartButton(panel, { 56, 20 }, "Clear cart", { "LEFT", panel.btnCartRemove, "RIGHT", 4, 0 }, clearCartSources)
-	attachSimpleTooltip(panel.btnCartClear, "Clear shopping cart", "Clears queued crafts and queued crafting orders that feed the shopping cart.")
+	attachSimpleTooltip(panel.btnCartClear, "Clear cart", "Empties the craft queue, and the cart with it.")
 end
 
 local function appendCartMailLines(pe, lines, mailAllocations)

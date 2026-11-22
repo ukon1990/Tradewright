@@ -277,7 +277,7 @@ do
 	check("Sales: empty ledger", IncomeLogic.SummarizeSales({}, now, 30).totals.sales == 0)
 end
 
--- Auction house / bank character per realm
+-- Bank character per realm
 do
 	local sellers = { Stormrage = "Banker-Stormrage", Draenor = "", Azralon = "Gone-Azralon" }
 	local known = { ["Banker-Stormrage"] = true, ["Smith-Stormrage"] = true, ["Alt-Draenor"] = true }

@@ -1,7 +1,7 @@
 ## Interface: 120000, 120001
 ## AllowLoadGameType: standard
 ## Title: Tradewright UI
-## Notes: Main interface for Tradewright modules
+## Notes: The Tradewright window, the profession panel and the mail panel
 ## Author: Ukon1990
 ## Version: 2.0.0
 ## IconTexture: Interface\AddOns\Tradewright\media\logo

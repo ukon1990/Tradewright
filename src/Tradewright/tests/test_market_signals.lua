@@ -105,7 +105,7 @@ local sellsDaily = {
 	[day1 + 9 * DAY] = { p = 10, s = 10, g = 12, c = 1 },
 }
 local sells = MS.SellsPerDay(sellsDaily, now, 14)
-check("Sells a day scales the covered hours to 24", sells and sells.perDay == 40 and sells.confidence == "few" and sells.pairs == 2)
+check("Sales a day scales the covered hours to 24", sells and sells.perDay == 40 and sells.confidence == "few" and sells.pairs == 2)
 sellsDaily[day1 + 7 * DAY] = { p = 10, s = 0, g = 24, c = 3 }
 local confident = MS.SellsPerDay(sellsDaily, now, 14)
 check("Five scan pairs give good confidence", confident and confident.confidence == "good" and confident.perDay == 20)
@@ -164,7 +164,7 @@ local free = { minProfit = 0 }
 check("Discount just under the threshold is dropped", Flip.BuildFlipRow({ itemID = 3, price = 76, usual = 100, sellsPerDay = 9 }, free) == nil)
 check("Discount at the threshold is kept", Flip.BuildFlipRow({ itemID = 3, price = 75, usual = 100, sellsPerDay = 9 }, free) ~= nil)
 check("Profit floor drops small flips", Flip.BuildFlipRow({ itemID = 4, price = 50, usual = 100, sellsPerDay = 9 }, { minProfit = 1000 }) == nil)
-check("Unknown sells a day is not listed", Flip.BuildFlipRow({ itemID = 5, price = 50, usual = 100 }, { minProfit = 0 }) == nil)
+check("Unknown sales a day is not listed", Flip.BuildFlipRow({ itemID = 5, price = 50, usual = 100 }, { minProfit = 0 }) == nil)
 check("Slow sellers are dropped by the turnover floor", Flip.BuildFlipRow({ itemID = 6, price = 50, usual = 100, sellsPerDay = 0.2 }, { minProfit = 0 }) == nil)
 local noSteps = Flip.BuildFlipRow({ itemID = 7, price = 50, usual = 100, sellsPerDay = 9 }, { minProfit = 0 })
 check("Without price steps the quantity is unknown", noSteps and noSteps.buyQty == nil and noSteps.cost == 50 and noSteps.profit == 45)
@@ -342,7 +342,7 @@ check("Crafted materials: none without a plan", #ML.MaterialCraftsNeeded(nil, 3,
 -- How many to make
 check("Sells 8 a day, 2 owned, 1 day: make 6", ML.RestockQuantity({ sellsPerDay = 8, owned = 2, profit = 100 }) == 6)
 check("Sells 35 a day, 60 owned: make 0", ML.RestockQuantity({ sellsPerDay = 35, owned = 60, profit = 100 }) == 0)
-check("Unknown sells a day: nil", ML.RestockQuantity({ owned = 2, profit = 100 }) == nil)
+check("Unknown sales a day: nil", ML.RestockQuantity({ owned = 2, profit = 100 }) == nil)
 check("A loss-making craft: make 0", ML.RestockQuantity({ sellsPerDay = 8, owned = 0, profit = -5 }) == 0)
 check("Three days triples the target", ML.RestockQuantity({ sellsPerDay = 8, owned = 2, profit = 100, days = 3 }) == 22)
 check("Sales round to whole items", ML.RestockQuantity({ sellsPerDay = 2.6, owned = 0, profit = 100 }) == 3)
@@ -378,7 +378,7 @@ check("A run that has not started counts 0", Farm.ActiveSeconds({}, 500) == 0)
 local value, kind = Farm.ItemValue({ vendor = 10, usual = 100, sellsPerDay = 40 }, { cut = 0.05 })
 check("An item that sells counts at its usual price after the cut", value == 95 and kind == "auction")
 value, kind = Farm.ItemValue({ vendor = 10, usual = 100 }, { cut = 0.05 })
-check("An item with no sells-a-day estimate counts at vendor price", value == 10 and kind == "vendor")
+check("An item with no sales-a-day estimate counts at vendor price", value == 10 and kind == "vendor")
 value, kind = Farm.ItemValue({ vendor = 10, usual = 100, sellsPerDay = 0.2 }, { cut = 0.05 })
 check("An item that rarely sells counts at vendor price", value == 10 and kind == "vendor")
 value, kind = Farm.ItemValue({ vendor = 200, usual = 100, sellsPerDay = 40 }, { cut = 0.05 })
@@ -443,11 +443,11 @@ local targetItems = {
 	{ itemID = 4, usual = 100 },
 }
 local targets = Farm.BuildFarmTargets(targetItems, lootIndex, { cut = 0.05 })
-check("Traded a day is usual price times sells a day", targets[1].itemID == 1 and targets[1].tradedPerDay == 4800 * 400)
+check("Traded a day is usual price times sales a day", targets[1].itemID == 1 and targets[1].tradedPerDay == 4800 * 400)
 check("Targets are ranked by gold traded a day", #targets == 3 and targets[2].itemID == 3 and targets[3].itemID == 2)
 check("A farmed item names its farm and your rate", targets[1].source == "Felwood herb loop" and targets[1].yoursPerHour == 38 * 4800 * 0.95)
 check("An item never looted in a farm has no source or rate", targets[3].source == nil and targets[3].yoursPerHour == nil)
-check("An item without a sells-a-day estimate is not listed", targets[4] == nil)
+check("An item without a sales-a-day estimate is not listed", targets[4] == nil)
 check("Days of supply", targets[1].daysOfSupply == 8 and targets[2].daysOfSupply == 0.5)
 local farmedOnly = Farm.BuildFarmTargets(targetItems, lootIndex, { onlyFarmed = true })
 check("Only farmed before", #farmedOnly == 2 and farmedOnly[1].itemID == 1 and farmedOnly[2].itemID == 3)
@@ -520,7 +520,7 @@ check("Load rolls up each finished day", rolled and rolled[today - DAY] and roll
 check("Today is not rolled up yet", rolled and rolled[today] == nil)
 check("Rolled days carry the sold estimate", rolled and rolled[today - DAY].g == 24 and rolled[today - DAY].s == 0 and rolled[today - 6 * DAY].g == nil)
 local glueSells = pe:GetSellsPerDay("k")
-check("Sells a day comes from finished days", glueSells and glueSells.perDay == 0 and glueSells.pairs == 5)
+check("Sales a day comes from finished days", glueSells and glueSells.perDay == 0 and glueSells.pairs == 5)
 check("Rollup remembers how far it got", auction.history.dailyThrough == today)
 check("Days past retention are dropped", auction.history.daily["old"] == nil)
 rolled[today - DAY].p = 999

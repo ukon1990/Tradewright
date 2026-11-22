@@ -58,7 +58,7 @@ check("no rows picks nothing", pe:PickCraftsSelectedRow({}) == nil)
 
 -- Row detail warning
 local _, detail = pe:GetCraftRowLabels({ professionName = "Alchemy" })
-check("missing mats price warns", detail == "Alchemy · <warning>no material price", detail)
+check("missing mats price warns", detail == "Alchemy · <warning>no reagent price", detail)
 _, detail = pe:GetCraftRowLabels({ professionName = "Alchemy", matCost = 1, qualityReachable = false, concentrationCost = 5 })
 check("concentration warning", detail == "Alchemy · <warning>needs concentration", detail)
 _, detail = pe:GetCraftRowLabels({ professionName = "Alchemy", matCost = 1, qualityReachable = false })

@@ -1,7 +1,7 @@
 local addonName, Tradewright = ...
 
 -- Farm window: a small movable window that shows the run in progress. It appears when a run
--- starts and hides when the run stops; `/ahfarm` toggles it.
+-- starts and hides when the run stops; `/twfarm` toggles it.
 
 local PAD = 10
 local WIDTH = 250
@@ -189,7 +189,7 @@ function Tradewright:RefreshFarmWindow()
 		f.name:SetText("No farm running")
 		f.rate:SetText("-")
 		f.clock:SetText("")
-		f.facts:SetRows({ { "Start one with", "/ahfarm start" } })
+		f.facts:SetRows({ { "Start one with", "/twfarm start" } })
 		f.pause:SetEnabled(false)
 		f.stop:SetEnabled(false)
 		return

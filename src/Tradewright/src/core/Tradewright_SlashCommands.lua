@@ -91,12 +91,12 @@ function Tradewright:PrintStatus()
 
 	if state.scanInProgress then
 		local currentName = state.currentProfession and state.currentProfession.professionName or "pending"
-		self:PrintMessage(string.format("Scan in progress. Current profession: %s. Remaining queue: %d.", currentName, #state.queue))
+		self:PrintMessage(string.format("Scanning %s. %d professions left.", currentName, #state.queue))
 		return
 	end
 
 	if not characterData then
-		self:PrintMessage("No stored scan for this character yet.")
+		self:PrintMessage("No saved scan for this character yet.")
 		return
 	end
 
@@ -113,7 +113,7 @@ local function onOffSetting(key, default, usageName, label)
 	return function(self, arg)
 		local value = ON_OFF_ARGS[arg]
 		if value == nil then
-			self:PrintMessage(string.format("Usage: /tradewright settings %s on|off", usageName))
+			self:PrintMessage(string.format("Usage: /tw settings %s on|off", usageName))
 			return
 		end
 		self:SetSetting(key, value)
@@ -127,7 +127,7 @@ local setRecipeOutputCapture = onOffSetting("capture.includeRecipeOutputItemData
 local function setInventoryBatchSize(self, arg)
 	local size = tonumber(arg)
 	if not size or size < 0 then
-		self:PrintMessage("Usage: /tradewright settings invbatch <n>  (0 = one frame; 50–100 spreads GetItemCount work)")
+		self:PrintMessage("Usage: /tw settings invbatch <n>  (0 = one frame; 50–100 spreads GetItemCount work)")
 		return
 	end
 	self:SetSetting("capture.inventorySnapshotBatchSize", math.floor(size))
@@ -149,20 +149,20 @@ function Tradewright:HandleSettingsSlash(rest)
 		handler(self, self:Trim(arg or ""))
 		return
 	end
-	self:PrintMessage("Usage: /tradewright settings spectree on|off | recipeoutput on|off | invbatch <n>")
+	self:PrintMessage("Usage: /tw settings spectree on|off | recipeoutput on|off | invbatch <n>")
 end
 
 -- The auction subcommand handlers return true when they ran; false falls through to the usage line.
 local function printAuctionStatus(self)
 	local enabled = self:GetSetting("auction.enabled", true)
 	local rows = self.BuildAuctionInventoryRows and self:BuildAuctionInventoryRows() or {}
-	self:PrintMessage(string.format("Auction module: %s. Inventory rows: %d.", enabled and "enabled" or "disabled", #rows))
+	self:PrintMessage(string.format("Auction data is %s. %d items in the sell list.", enabled and "on" or "off", #rows))
 	return true
 end
 
 local function setAuctionModuleEnabled(self, enabled)
 	self:SetSetting("auction.enabled", enabled)
-	self:PrintMessage(enabled and "Auction module enabled." or "Auction module disabled.")
+	self:PrintMessage(enabled and "Auction data switched on." or "Auction data switched off.")
 	return true
 end
 
@@ -170,12 +170,12 @@ local function refreshAuctionPrices(self, target)
 	target = string.lower(target)
 	if (target == "crafts" or target == "craft") and self.QueueCraftEconomyAuctionRefresh then
 		self:QueueCraftEconomyAuctionRefresh({})
-		self:PrintMessage("Queued craft refresh.")
+		self:PrintMessage("Checking craft prices.")
 		return true
 	end
 	if self.BuildAuctionVisibleItemIDs and self.QueueVisibleAuctionRefresh then
 		self:QueueVisibleAuctionRefresh(self:BuildAuctionVisibleItemIDs())
-		self:PrintMessage("Queued visible auction refresh.")
+		self:PrintMessage("Checking the shown prices.")
 		return true
 	end
 	return false
@@ -204,7 +204,7 @@ function Tradewright:HandleAuctionSlash(rest)
 	if handler and handler(self, self:Trim(arg or "")) then
 		return
 	end
-	self:PrintMessage("Usage: /tradewright auction [status|enable|disable|refresh [crafts]|dump [visible|full]]")
+	self:PrintMessage("Usage: /tw auction [status|enable|disable|refresh [crafts]|dump [visible|full]]")
 end
 
 --- The dump runs asynchronously and prints its own "complete" line when it ends. When it refuses
@@ -213,26 +213,26 @@ function Tradewright:RunAuctionDumpSlash(mode)
 	mode = mode ~= "" and mode or "visible"
 	local dump = self:StartAuctionDump(mode) and self:GetState().auctionDump
 	if dump and dump.running == true then
-		self:PrintMessage(string.format("Auction dump started (mode: %s).", mode))
+		self:PrintMessage(mode == "full" and "Full scan started." or "Saving the shown prices.")
 	end
 end
 
 local SLASH_HELP_LINES = {
-	"Commands: /tradewright (window) | /tradewright docs | /tradewright scan | /tradewright status"
-		.. " | /tradewright debug [on|off|toggle] | /tradewright settings …"
-		.. " | /tradewright auction … | /tradewright sources [seal]  (short: /ah)",
-	"Settings: spectree on|off | recipeoutput on|off | invbatch <n> (0 = sync snapshot). Auction: status|enable|disable|refresh [crafts]|dump.",
+	"/tw opens the window (/tradewright works too) | /tw scan: scan your professions | /tw status: the last scan"
+		.. " | /tw bags on|off: Tradewright bags | /twfarm start|pause|stop: run a farm | /tw docs: open Help",
+	"Advanced: /tw debug [on|off|toggle] | /tw settings spectree on|off | recipeoutput on|off | invbatch <n>"
+		.. " | /tw auction status|enable|disable|refresh [crafts]|dump [visible|full] | /tw sources [seal]",
 }
 
 -- Shown in help only while export is switched on; the format itself is described in docs/export-format.md.
 local EXPORT_HELP_LINES = {
-	"Export: /tradewright export … | /tradewright full (fresh scan, then full character export) | /tradewright dev export off",
+	"Export: /tw export … | /tw full (fresh scan, then full character export) | /tw dev export off",
 	"Export scopes: character | account | account_summary | professions | professions_recipes | professions_talents"
 		.. " | professions_compact | inventory | inventory_compact | auction_snapshot | auction_history | crafting_costs"
 		.. " | spec_catalog | meta | profession <id|name> | profession_recipes <id|name> | profession_talents <id|name>",
 }
 
-local EXPORT_USAGE = "Usage: /tradewright export [character|account|account_summary|professions|professions_recipes"
+local EXPORT_USAGE = "Usage: /tw export [character|account|account_summary|professions|professions_recipes"
 	.. "|professions_talents|professions_compact|inventory|inventory_compact|auction_snapshot|auction_history|crafting_costs"
 	.. "|spec_catalog|meta|profession <id|name>|profession_recipes <id|name>|profession_talents <id|name>]"
 
@@ -280,13 +280,13 @@ end
 
 function Tradewright:SetExportEnabled(enabled)
 	self:SetSetting("developer.export", enabled)
-	self:PrintMessage(enabled and "Export switched on: Export tab and /tradewright export." or "Export switched off.")
+	self:PrintMessage(enabled and "Export switched on: Export tab and /tw export." or "Export switched off.")
 	if self.ApplyDashboardTabVisibility then
 		self:ApplyDashboardTabVisibility()
 	end
 end
 
-local EXPORT_OFF_HINT = "Export is switched off. Turn it on with /tradewright dev export on."
+local EXPORT_OFF_HINT = "Export is switched off. Turn it on with /tw dev export on."
 
 -- Runs `handler` only while export is switched on.
 local function whenExportEnabled(handler)
@@ -304,7 +304,7 @@ local function handleDeveloperSlash(self, rest)
 	local feature, arg = self:Trim(rest or ""):match("^(%S+)%s*(.*)$")
 	local value = ON_OFF_ARGS[string.lower(arg or "")]
 	if string.lower(feature or "") ~= "export" or value == nil then
-		self:PrintMessage(string.format("Usage: /tradewright dev export on|off  (now %s)", self:IsExportEnabled() and "on" or "off"))
+		self:PrintMessage(string.format("Usage: /tw dev export on|off  (now %s)", self:IsExportEnabled() and "on" or "off"))
 		return
 	end
 	self:SetExportEnabled(value)
@@ -324,7 +324,7 @@ local function clearDebugLog(self)
 end
 
 local function printDebugLogPath(self)
-	self:PrintMessage("Persistent debug log is stored in TradewrightDB.settings.debug.lines and written to"
+	self:PrintMessage("Persistent debug log is saved in TradewrightDB.settings.debug.lines and written to"
 		.. " WTF\\Account\\...\\SavedVariables\\Tradewright.lua on /reload or logout.")
 end
 
@@ -404,5 +404,5 @@ function Tradewright:HandleSlash(input)
 		handler(self, rest)
 		return
 	end
-	self:PrintMessage("Unknown command. Use /tradewright help.")
+	self:PrintMessage("Unknown command. /tw help lists the commands.")
 end

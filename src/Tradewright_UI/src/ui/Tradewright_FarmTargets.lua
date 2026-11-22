@@ -19,7 +19,7 @@ local HELP = "Trade goods ranked by the gold that changes hands in them each day
 	.. "Your saved farms fill the last two columns: where you looted the item and what that earns an hour."
 	.. " Tradewright ships no drop data or routes."
 
--- A candidate for one scanned trade good: full when it has a usual price and sells a day, an early estimate
+-- A candidate for one scanned trade good: full when it has a usual price and sales a day, an early estimate
 -- (latest price, sales if known) when `early` is on, otherwise nil.
 local function targetCandidate(pe, itemID, row, early)
 	local usual = pe:GetUsualPrice(row.storageKey)
@@ -93,10 +93,10 @@ local function targetDetail(pe, row)
 	return supply .. (row.usedByRecipes and " · used by your recipes" or "")
 end
 
--- "Sells a day" and "Traded a day"; early estimates may lack both.
+-- "Sales a day" and "Traded a day"; early estimates may lack both.
 local function salesColumns(pe)
 	local sells = {
-		id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
+		id = "sellsPerDay", label = "Sales a day", justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
 		sortValue = function(row) return row.sellsPerDay or -1 end,
 		getText = function(row) return row.sellsPerDay and perDayText(pe, row.sellsPerDay) or "?" end,
 	}
@@ -157,7 +157,7 @@ local function materialCount(rows)
 	for _, row in ipairs(rows) do
 		early = early + (row.early and 1 or 0)
 	end
-	return early > 0 and string.format("%d materials · %d early", #rows, early) or string.format("%d materials", #rows)
+	return early > 0 and string.format("%d trade goods · %d early", #rows, early) or string.format("%d trade goods", #rows)
 end
 
 --- The "What to farm" view: a note, two filter buttons and the table. Call `:Refresh()` when shown.

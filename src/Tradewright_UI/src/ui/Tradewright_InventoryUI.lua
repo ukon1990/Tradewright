@@ -37,7 +37,7 @@ function Tradewright:GetInventoryRoleFilterOptions()
 		{ value = "crafted", label = "Crafted" },
 		{ value = "crafting_reagent", label = "Crafting reagent" },
 		{ value = "crafted_reagent", label = "Crafted + reagent" },
-		{ value = "tracked", label = "Tracked" },
+		{ value = "tracked", label = "Other" },
 	}
 end
 

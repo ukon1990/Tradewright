@@ -472,7 +472,7 @@ end
 function Tradewright:GetShellStoredText()
 	local characters = self.db and self.db.characters or {}
 	local stored = self:TableCount(characters)
-	local text = string.format("%d %s stored", stored, self:Plural(stored, "character"))
+	local text = string.format("%d %s saved", stored, self:Plural(stored, "character"))
 	-- Profession scan time only matters when this character has a profession to scan.
 	if #self:GetPlayerProfessions() == 0 then
 		return text

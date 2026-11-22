@@ -159,7 +159,7 @@ function Tradewright:DashboardRefreshInventory()
 				string.format("characterKey=%s", key),
 				string.format("itemTypesTracked=%s", tostring(data.inventorySnapshot and data.inventorySnapshot.itemTypesTracked)),
 			})
-			self:PrintMessage(string.format("Updated profession-relevant inventory snapshot for %s.", key))
+			self:PrintMessage(string.format("Inventory read for %s.", key))
 			self:NotifyDashboardUpdate(true)
 		end,
 	})

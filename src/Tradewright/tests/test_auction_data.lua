@@ -60,7 +60,7 @@ end
 -- Shared clock
 check("Now uses server time", pe:Now() == 1700000000)
 
--- /ah auction dump
+-- /tw auction dump
 pe.RefreshAuctionHousePanel = function() end
 pe.FormatNumberGrouped = function(_, value) return tostring(value) end
 pe.PrimeAuctionPanelRows = function() end
@@ -71,10 +71,10 @@ local dumpRows = { { itemID = 2589, currentPrice = 100 } }
 pe.CollectVisibleAuctionDumpRows = function() return dumpRows end
 
 pe:HandleAuctionSlash("dump")
-check("Dump prints started", printed("^Auction dump started"), messages[1])
-check("Dump is not complete before it ran", not printed("complete"))
+check("Dump prints started", printed("^Saving the shown prices"), messages[1])
+check("Dump is not complete before it ran", not printed("saved"))
 runTimers()
-check("Dump prints complete after it ran", printed("^Dump complete: 1 items"), messages[#messages])
+check("Dump prints complete after it ran", printed("^Shown prices saved: 1"), messages[#messages])
 
 messages = {}
 pe:GetState().auctionDump.running = true
@@ -86,12 +86,12 @@ pe:GetState().auctionDump.running = false
 messages = {}
 dumpRows = {}
 pe:HandleAuctionSlash("dump")
-check("Empty dump completes without a started line", printed("^Dump complete: 0") and not printed("started"))
+check("Empty dump completes without a started line", printed("^No shown prices to save") and not printed("^Saving"))
 
 messages = {}
 pe.QueueCraftEconomyAuctionRefresh = function() end
 pe:HandleAuctionSlash("refresh crafts")
-check("Refresh crafts confirms", printed("^Queued craft refresh%."))
+check("Refresh crafts confirms", printed("^Checking craft prices%."))
 
 -- Commodity purchase from the shopping cart
 local purchaseCalls = 0

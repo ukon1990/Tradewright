@@ -94,7 +94,7 @@ function TableMixin:CreatePager(footerHeight)
 	pager.label = pager:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	pager.label:SetPoint("RIGHT", pager.next, "LEFT", -8, 0)
 	pager.label:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
-	pager.prev = Tradewright:CreateButton(pager, "Prev", function() self:SetPage(self.page - 1) end, { small = true })
+	pager.prev = Tradewright:CreateButton(pager, "Previous", function() self:SetPage(self.page - 1) end, { small = true })
 	pager.prev:SetPoint("RIGHT", pager.label, "LEFT", -8, 0)
 	for _, button in ipairs({ pager.prev, pager.next }) do
 		button:SetHeight(footerHeight - 6)

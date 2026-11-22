@@ -228,6 +228,7 @@ function Tradewright:BuildAuctionCartColumns()
 		}
 	end
 	local have = count("quantityHave", "Have", "quantityOnCharacter")
+	have.tooltipTitle, have.tooltipText = "Have", "On this character."
 	have.getText = function(row) return pe:FormatNumberGrouped(row and (row.quantityOnCharacter or row.quantityHave) or 0) end
 	return {
 		self:CreateItemColumn({

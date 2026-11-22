@@ -13,7 +13,7 @@ function Tradewright:GetCraftMaterialColumns()
 			getItemID = function(slot) return slot.itemID end,
 			getName = function(slot) return pe:GetItemDisplayName(slot.itemID) end }),
 		{ id = "need", label = "Need", width = 38, justifyH = "RIGHT", getText = function(slot) return tostring(slot.need) end },
-		{ id = "have", label = "Have", width = 40, justifyH = "RIGHT",
+		{ id = "have", label = "Have", width = 40, justifyH = "RIGHT", tooltipTitle = "Have", tooltipText = "On all your characters.",
 			getText = function(slot)
 				if slot.have == nil then
 					return "-"
@@ -66,7 +66,7 @@ function Tradewright:CreateCraftsDetailsView(panel)
 	panel.detailsView:SetPoint("BOTTOMRIGHT", panel.detailCard, "BOTTOMRIGHT", -PAD, PAD)
 	panel.detailsEmpty = self:CreateEmptyState(panel.detailsView)
 	panel.detailsEmpty:SetAllPoints()
-	panel.detailsEmpty:SetMessage("Select a craft", "Click a row to see its materials and profit.")
+	panel.detailsEmpty:SetMessage("Select a craft", "Click a row to see its reagents and profit.")
 	panel.detailsBody = CreateFrame("Frame", nil, panel.detailsView)
 	panel.detailsBody:SetAllPoints()
 	panel.detailHeader = self:CreateDetailHeader(panel.detailsBody)
@@ -75,14 +75,14 @@ function Tradewright:CreateCraftsDetailsView(panel)
 	panel.detailFacts = self:CreateKeyValueList(panel.detailsBody)
 	panel.detailFacts:SetPoint("TOPLEFT", panel.detailHeader, "BOTTOMLEFT", 0, -10)
 	panel.detailFacts:SetPoint("TOPRIGHT", panel.detailHeader, "BOTTOMRIGHT", 0, -10)
-	panel.materialsHeading = self:CreateHeading(panel.detailsBody, "Materials per craft")
+	panel.materialsHeading = self:CreateHeading(panel.detailsBody, "Reagents per craft")
 	panel.materialsHeading:SetPoint("TOPLEFT", panel.detailFacts, "BOTTOMLEFT", 0, -10)
 	panel.materialsHeading:SetPoint("TOPRIGHT", panel.detailFacts, "BOTTOMRIGHT", 0, -10)
 	self:CreateCraftsDetailActions(panel)
 	panel.materialsTable = self:CreateReusableTable(panel.detailsBody, {
 		autoFitToScroll = true,
-		emptyTitle = "No materials",
-		emptyHint = "This recipe has no stored reagents.",
+		emptyTitle = "No reagents",
+		emptyHint = "This recipe has no saved reagents.",
 	})
 	panel.materialsTable.frame:SetPoint("TOPLEFT", panel.materialsHeading, "BOTTOMLEFT", 0, -6)
 	panel.materialsTable.frame:SetPoint("BOTTOMRIGHT", panel.detailActions, "TOPRIGHT", 0, 10)
@@ -144,10 +144,10 @@ end
 function Tradewright:CraftDetailFacts(row, evaluation)
 	return {
 		{ string.format("Sale after %.3g%% cut", self:GetAuctionCut() * 100), moneyOrDash(self, row.saleNet) },
-		{ "Materials at market price", moneyOrDash(self, row.matCost) },
+		{ "Reagents at market price", moneyOrDash(self, row.matCost) },
 		{ "Profit per craft", self:FormatSignedMoney(row.profit) },
 		{ "Return", percentOrDash(row.roi) },
-		{ "Materials you already own", percentOrDash(evaluation.coverage and evaluation.coverage * 100) },
+		{ "Reagents you already own", percentOrDash(evaluation.coverage and evaluation.coverage * 100) },
 		{ "Still to buy", moneyOrDash(self, row.outOfPocketMatCost) },
 	}
 end
@@ -211,7 +211,7 @@ function Tradewright:AddReagentTooltipLines(lines, plan)
 	for index = 1, math.min(MAX_TOOLTIP_REAGENTS, #plan) do
 		local slot = plan[index]
 		lines[#lines + 1] = {
-			string.format("  %s x%s", self:GetItemDisplayName(slot.itemID), self:FormatNumberGrouped(slot.quantityRequired or 0)),
+			string.format("  %s × %s", self:GetItemDisplayName(slot.itemID), self:FormatNumberGrouped(slot.quantityRequired or 0)),
 			slot.lineCost and self:FormatCopperShort(slot.lineCost) or "-",
 		}
 	end
@@ -226,7 +226,7 @@ function Tradewright:ShowCraftRowTooltip(rowFrame, row)
 		{ "Recipe", row.recipeName or "-" },
 		{ "Best crafter", row.bestCharacterKey and self:GetCrafterName(row.bestCharacterKey) or "-" },
 		{ "Sale, net", moneyOrDash(self, row.saleNet) },
-		{ "Materials", moneyOrDash(self, row.matCost) },
+		{ "Reagents", moneyOrDash(self, row.matCost) },
 		{ "Profit", self:FormatSignedMoney(row.profit) },
 	}
 	self:AddReagentTooltipLines(lines, evaluation.reagentPlan or {})

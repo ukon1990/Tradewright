@@ -14,7 +14,7 @@ local SOURCE_LABELS = {
 	vendor = "Vendor", quest = "Quests", loot = "Looted coin", auction = "Auction house",
 	mail = "Mail", trade = "Trade", other = "Other",
 }
-local ORIGINS = { { "crafted", "Crafted" }, { "resold", "Resold" }, { "farmed", "Farmed" }, { "unknown", "Not known" } }
+local ORIGINS = { { "crafted", "Crafted" }, { "resold", "Resold" }, { "farmed", "Farmed" }, { "unknown", "Unknown" } }
 
 local function textColumn(id, label)
 	return {

@@ -520,7 +520,7 @@ local function unpricedCartHint(rows)
 	if unpriced == 0 then
 		return ""
 	end
-	return string.format("%d %s no price yet. Press Price all.", unpriced, Tradewright:Plural(unpriced, "item has", "items have"))
+	return string.format("%d %s no price yet. Press Check all.", unpriced, Tradewright:Plural(unpriced, "item has", "items have"))
 end
 
 local function refreshAuctionCartButtons(panel, rows, selectedRow)

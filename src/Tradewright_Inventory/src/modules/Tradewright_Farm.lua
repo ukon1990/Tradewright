@@ -117,7 +117,7 @@ local function pauseWhenIdle(pe)
 	end
 end
 
---- Price facts for the farm value rule: vendor price, usual price and sells a day of an item.
+--- Price facts for the farm value rule: vendor price, usual price and sales a day of an item.
 function Tradewright:GetFarmItemPrice(itemID)
 	local usual, sells
 	if self.GetItemPriceSignals then
@@ -296,5 +296,5 @@ local function farmSlash(input)
 	end
 end
 
-SLASH_AHFARM1 = "/ahfarm"
-SlashCmdList["AHFARM"] = farmSlash
+SLASH_TWFARM1 = "/twfarm"
+SlashCmdList["TWFARM"] = farmSlash

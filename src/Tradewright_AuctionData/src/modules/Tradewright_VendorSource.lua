@@ -157,7 +157,7 @@ function Tradewright:AppendCartSourceLines(lines, row, hint)
 	if not clickHint and dropPlaceKnown then
 		clickHint = "Right-click to show the way to where it was looted"
 	elseif not clickHint and advice then
-		clickHint = "Visit a vendor that sells it once to get directions"
+		clickHint = "Directions appear once you have visited a vendor that sells it"
 	end
 	return clickHint and (hint .. "\n" .. clickHint) or hint
 end

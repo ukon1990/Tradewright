@@ -81,17 +81,13 @@ function Tradewright:FinishAuctionBulkJob()
 	if not bulk then
 		return
 	end
-	local modeLabel = bulk.mode == "post_profitable" and "profitable" or "all"
 	bulk.running = false
 	bulk.phase = nil
 	bulk.currentItemID = nil
 	bulk.status = "Completed"
 	bulk.paused = false
 	self:PrintMessage(string.format(
-		"Auction bulk post (%s) complete: selected %d/%d, posted %d, skipped dumped %d, failed %d.",
-		modeLabel,
-		tonumber(bulk.selected) or 0,
-		tonumber(bulk.total) or 0,
+		"Posting done: %d posted, %d skipped for an unusually low price, %d failed.",
 		tonumber(bulk.posted) or 0,
 		tonumber(bulk.skippedDumped) or 0,
 		tonumber(bulk.failed) or 0
@@ -244,7 +240,7 @@ function Tradewright:ContinueAuctionBulkPost()
 	if row.isDumpedLow == true then
 		bulk.skippedDumped = (tonumber(bulk.skippedDumped) or 0) + 1
 		bulk.done = math.min(tonumber(bulk.total) or 0, tonumber(bulk.index) or 1)
-		bulk.status = string.format("Skipped dumped: %s", self:GetItemDisplayName(row.itemID))
+		bulk.status = string.format("Skipped, unusually low price: %s", self:GetItemDisplayName(row.itemID))
 		bulk.index = (tonumber(bulk.index) or 1) + 1
 		bulk.phase = "selecting"
 		bulk.currentItemID = nil
@@ -400,7 +396,7 @@ function Tradewright:RunAuctionPanelBulkAction(mode)
 	end
 	if state.auctionRefreshRunning == true then
 		if self:PauseAuctionScanForBulkPost() then
-			self:PrintMessage("Paused auction scan to start bulk posting.")
+			self:PrintMessage("Price check paused while you post.")
 		end
 	end
 	local rows = self:BuildAuctionBulkRows(mode)
@@ -449,7 +445,7 @@ function Tradewright:RunAuctionPanelBulkAction(mode)
 	end
 	if state.auctionSearchContext then
 		state.auctionBulk.awaitingScan = true
-		state.auctionBulk.status = "Waiting for scan step to finish..."
+		state.auctionBulk.status = "Finishing the current price check…"
 		self:RefreshAuctionHousePanel()
 		C_Timer.After(BULK_WAIT_FOR_SEARCH_SEC, waitAndStart)
 		return

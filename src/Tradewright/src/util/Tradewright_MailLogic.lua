@@ -167,7 +167,7 @@ function MailLogic.ListReviewRows(rows, filter, search, classOf)
 	return out
 end
 
---- The auction house / bank character chosen for `realm`, or nil when none is chosen or the
+--- The bank character chosen for `realm`, or nil when none is chosen or the
 --- chosen character is no longer known. sellerByRealm[realm] = characterKey ("" means none).
 function MailLogic.ResolveSellerCharacter(sellerByRealm, realm, knownCharacters)
 	local key = type(sellerByRealm) == "table" and realm and sellerByRealm[realm] or nil

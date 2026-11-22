@@ -1,6 +1,6 @@
 local Tradewright = select(2, ...)
 
--- Crafts tab columns for planning: sells a day, how many to make, and recipe cooldowns.
+-- Crafts tab columns for planning: sales a day, how many to make, and recipe cooldowns.
 
 -- A cooldown recipe can be made once when ready and not at all while waiting.
 local COOLDOWN_CAP = { ready = 1, waiting = 0 }
@@ -14,7 +14,7 @@ local function cooldownText(pe, cooldown)
 	return ""
 end
 
--- Sells a day, restock quantity and cooldown for one craft row, recomputed at most every 10 seconds.
+-- Sales a day, restock quantity and cooldown for one craft row, recomputed at most every 10 seconds.
 local function planFor(pe, row)
 	local itemID = tonumber(row.outputItemID)
 	if not itemID then
@@ -50,12 +50,12 @@ local function perDayText(pe, perDay)
 	return string.format("%.1f", perDay)
 end
 
---- Append "Sells a day", "Make" and "Cooldown" to the Crafts table columns.
+--- Append "Sales a day", "Make" and "Cooldown" to the Crafts table columns.
 function Tradewright:AddCraftPlanningColumns(columns)
 	local pe = self
 	columns[#columns + 1] = {
-		id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = 66, sortable = true, defaultSort = "desc", optional = true,
-		tooltipTitle = "Sells a day, estimated",
+		id = "sellsPerDay", label = "Sales a day", justifyH = "RIGHT", width = 66, sortable = true, defaultSort = "desc", optional = true,
+		tooltipTitle = "Sales a day, estimated",
 		tooltipText = "From how the listed quantity changes between your scans. It runs high: cancelled and expired auctions count too.",
 		sortValue = function(row) return planFor(pe, row).sellsPerDay or -1 end,
 		getText = function(row)

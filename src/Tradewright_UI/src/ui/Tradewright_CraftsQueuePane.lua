@@ -109,10 +109,10 @@ function Tradewright:CreateCraftsQueueView(parent)
 	})
 	view.craftTable.frame:SetPoint("TOPRIGHT", view.craftHeading, "BOTTOMRIGHT", 0, -6)
 	view.craftTable:SetColumns(self:GetCraftQueueColumns())
-	view.buyHeading, view.buyTable = self:AddCraftQueueSection(view, view.craftTable.frame, 10, "To buy", {
+	view.buyHeading, view.buyTable = self:AddCraftQueueSection(view, view.craftTable.frame, 10, "Cart", {
 		footer = true,
 		emptyTitle = "Nothing to buy",
-		emptyHint = "This character has every material the queue needs.",
+		emptyHint = "This character has every reagent the queue needs.",
 	})
 	view.buyTable:SetColumns(self:GetCraftQueueBuyColumns())
 	self:CreateCraftQueueFooter(view)
@@ -162,7 +162,7 @@ end
 
 function Tradewright:RefreshCraftQueueBuyTable(view, summary)
 	local buy, mail = linesToBuy(summary)
-	view.buyHeading:SetText("To buy on " .. self:GetCrafterName(self:GetCharacterKey()))
+	view.buyHeading:SetText("Cart for " .. self:GetCrafterName(self:GetCharacterKey()))
 	view.buyTable:SetRows(buy)
 	view.buyTable:Refresh()
 	local buyCost = summary.totalCurrentCharacterBuyCost

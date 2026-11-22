@@ -40,7 +40,7 @@ local function onPlayerLogin(self)
 			Tradewright:RecordWalletObservation(Tradewright:GetCharacterKey(), GetMoney(), time())
 		end)
 	end
-	SLASH_TRADEWRIGHT1 = "/ah"
+	SLASH_TRADEWRIGHT1 = "/tw"
 	SLASH_TRADEWRIGHT2 = "/tradewright"
 	SlashCmdList.TRADEWRIGHT = function(input)
 		Tradewright:HandleSlash(input)
@@ -53,8 +53,7 @@ local function onPlayerLogin(self)
 	callOptional(self, "InitCraftingOrdersFilters")
 	callOptional(self, "InitDynamicLayeringHooks")
 	callOptional(self, "InitMailPanelHooks")
-	self:PrintMessage("Loaded. /ah (or /tradewright) opens the main window. Exports are compact Tradewright packages"
-		.. " and can be written to TradewrightLastExport on /reload.")
+	self:PrintMessage("Loaded. /tw opens the window, /tw help lists the commands.")
 end
 
 local PROFESSION_PANEL_REFRESH_DELAY = 0.05

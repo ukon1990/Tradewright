@@ -192,7 +192,7 @@ end
 function Tradewright:QueueAuctionEconomyScan(opts)
 	opts = type(opts) == "table" and opts or {}
 	if self:GetSetting("auction.enabled", true) == false then
-		self:PrintMessage("Auction module is disabled.")
+		self:PrintMessage("Auction data is switched off.")
 		return
 	end
 	local ah = _G.AuctionHouseFrame
@@ -205,7 +205,7 @@ function Tradewright:QueueAuctionEconomyScan(opts)
 	end
 	local state = self:GetState()
 	if state.auctionRefreshRunning then
-		self:PrintMessage("Auction price scan already running; wait for it to finish before starting another.")
+		self:PrintMessage("A price check is already running. Wait for it to finish.")
 		return
 	end
 	local wantCrafts = opts.crafts == true
@@ -222,11 +222,11 @@ function Tradewright:QueueAuctionEconomyScan(opts)
 	})
 	if #merged == 0 then
 		if wantCrafts and not wantInv then
-			self:PrintMessage("No remaining craft targets to scan in this AH session. Run /ah scan first if needed.")
+			self:PrintMessage("Every craft price is already checked this visit. If recipes are missing, scan your professions first.")
 		elseif wantInv and not wantCrafts then
-			self:PrintMessage("No remaining tradable account inventory items to scan in this AH session. Run /ah scan on your characters if needed.")
+			self:PrintMessage("Every price of your items is already checked this visit.")
 		else
-			self:PrintMessage("Nothing left to scan in this AH session for the requested craft/account targets.")
+			self:PrintMessage("Every price is already checked this visit.")
 		end
 		return
 	end
@@ -241,8 +241,7 @@ function Tradewright:QueueAuctionEconomyScan(opts)
 	state.auctionRefreshQueue = {}
 	state.auctionRefreshQueueOrderCounter = 0
 	self:QueueAuctionScanTargets(merged, { skipSessionSearched = true })
-	local label = wantCrafts and wantInv and "craft + account inventory" or wantInv and "account inventory" or "craft economy"
-	self:PrintMessage(string.format("Queued %s AH scan (%d lookups). Keep the AH open until it finishes.", label, #merged))
+	self:PrintMessage(string.format("Checking %d prices. Keep the auction house open until it ends.", #merged))
 	self:RefreshAuctionHousePanel()
 end
 

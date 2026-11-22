@@ -138,7 +138,7 @@ local function buildPanelHeader(panel, w)
 	subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
 	subtitle:SetPoint("TOPRIGHT", -10, -4)
 	subtitle:SetJustifyH("LEFT")
-	subtitle:SetText("Current character sellables")
+	subtitle:SetText("Items you can sell")
 	panel.subtitle = subtitle
 	local stats = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	stats:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -8)
@@ -161,7 +161,7 @@ end
 
 -- First sell-tab row: refresh shown prices plus the three economy scan buttons.
 local function buildSellScanButtons(panel, w)
-	w.btnRefresh = panelButton(panel, { 86, 20 }, "Refresh shown", { "TOPLEFT", w.stats, "BOTTOMLEFT", 0, -6 }, refreshShownPrices)
+	w.btnRefresh = panelButton(panel, { 86, 20 }, "Check shown", { "TOPLEFT", w.stats, "BOTTOMLEFT", 0, -6 }, refreshShownPrices)
 	w.btnScanCraftPrices = panelButton(panel, { 60, 20 }, "Crafts", rightOf(w.btnRefresh), function()
 		Tradewright:QueueAuctionEconomyScan({ crafts = true })
 	end)
@@ -198,7 +198,7 @@ local function buildSellDumpButtons(panel, w)
 		Tradewright:StartAuctionDump("full")
 		Tradewright:RefreshAuctionHousePanel()
 	end)
-	attachSimpleTooltip(w.btnDumpFull, "Full scan", "Reads every auction in the house and adds an hour to each item's price history.")
+	attachSimpleTooltip(w.btnDumpFull, "Full scan", "Reads every auction and saves this hour's price for each item.")
 	panel.btnDumpFull = w.btnDumpFull
 end
 
@@ -210,7 +210,7 @@ local function buildSellPostButtons(panel, w)
 	attachSimpleTooltip(
 		w.btnPostProfitable,
 		"Post profitable",
-		"Queues every shown item that sells for more than it costs, skipping prices that look dumped. Click Post next once per auction."
+		"Queues every shown item that sells for more than it costs, skipping unusually low prices. Click Post next once per auction."
 	)
 	panel.btnPostProfitable = w.btnPostProfitable
 	w.btnPostAll = panelButton(panel, { 68, 20 }, "Post all", rightOf(w.btnPostProfitable), function()
@@ -219,13 +219,13 @@ local function buildSellPostButtons(panel, w)
 	attachSimpleTooltip(
 		w.btnPostAll,
 		"Post all",
-		"Queues every shown item, including low margins and prices that look dumped. Click Post next once per auction."
+		"Queues every shown item, also ones with little profit or an unusually low price. Click Post next once per auction."
 	)
 	panel.btnPostAll = w.btnPostAll
 	w.btnPauseBulk = panelButton(panel, { 58, 20 }, "Pause", rightOf(w.btnPostAll), function()
 		Tradewright:ToggleAuctionBulkPause()
 	end)
-	attachSimpleTooltip(w.btnPauseBulk, "Pause / Resume", "Pauses or resumes the current bulk post worker without clearing its queue position.")
+	attachSimpleTooltip(w.btnPauseBulk, "Pause", "Pauses posting. Press again to go on where you stopped.")
 	w.btnPauseBulk:Hide()
 	panel.btnPauseBulk = w.btnPauseBulk
 end
@@ -277,10 +277,10 @@ end
 local function sellRowTooltipLines(pe, rowData)
 	local lines = {}
 	if not (rowData.nativePrice and rowData.nativePrice > 0) then
-		lines[#lines + 1] = { "Live price", "not scanned this visit" }
+		lines[#lines + 1] = { "AH price", "not checked this visit" }
 	end
 	if rowData.fallbackPrice and rowData.fallbackPrice > 0 then
-		lines[#lines + 1] = { "Fallback price", pe:FormatCopperFull(rowData.fallbackPrice) .. " · " .. tostring(rowData.fallbackPriceSource or "other addon") }
+		lines[#lines + 1] = { "Price from " .. tostring(rowData.fallbackPriceSource or "another addon"), pe:FormatCopperFull(rowData.fallbackPrice) }
 	end
 	lines[#lines + 1] = { "Return", pe:FormatPercent(rowData.potentialROI) }
 	if rowData.isIgnoredByRule then
@@ -299,7 +299,7 @@ local function showSellRowTooltip(rowFrame, rowData)
 	local lines = sellRowTooltipLines(pe, rowData)
 	local hint = "Click to put it in the sell slot · Shift-click to link"
 	if rowData.isDumpedLow then
-		hint = "The price looks dumped unusually low. " .. hint
+		hint = "The price is unusually low. " .. hint
 	end
 	pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, hint)
 end
@@ -321,7 +321,7 @@ local function onSellRowClick(_, rowData, _, tableWidget)
 	if ok then
 		Tradewright:GetState().auctionLastSellSelectionItemID = id
 		Tradewright:RefreshAuctionPanelRules()
-		Tradewright:PrintMessage(string.format("Selected %s for AH sell.", Tradewright:GetItemDisplayName(id)))
+		Tradewright:PrintMessage(string.format("%s is in the sell slot.", Tradewright:GetItemDisplayName(id)))
 	else
 		Tradewright:RefreshAuctionPanelRules()
 		Tradewright:PrintMessage(string.format(
@@ -388,8 +388,8 @@ local function buildProgressWidgets(self, panel)
 	end)
 	attachSimpleTooltip(
 		panel.btnPauseScan,
-		"Pause / Resume Scan",
-		"Pauses or resumes the queued auction price scan without clearing its progress."
+		"Pause",
+		"Pauses the price check. Press again to go on where you stopped."
 	)
 	panel.btnPauseScan:Hide()
 	panel.progressTiming = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")

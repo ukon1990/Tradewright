@@ -108,7 +108,7 @@ function Tradewright:FailFullAuctionDump(reason)
 	end
 	-- Prefer classic paging when replicate fails/times out and classic APIs exist.
 	if dump.classic ~= true and self:CanUseClassicAuctionDump() then
-		self:PrintMessage("Full scan unavailable (" .. tostring(reason or "unknown") .. "); trying classic AH scan.")
+		self:PrintMessage("Full scan unavailable (" .. tostring(reason or "unknown") .. "); reading the auction house page by page instead.")
 		local token = tonumber(dump.token)
 		dump.running = false
 		if self:StartClassicFullAuctionDump(token) then
@@ -135,7 +135,7 @@ function Tradewright:FinishFullAuctionDump()
 	dump.status = "complete"
 	dump.finishedAt = Tradewright:Now()
 	self:SetLastFullAuctionScanAt(dump.finishedAt)
-	self:PrintMessage(string.format("Full scan complete: %s items aggregated.", self:FormatNumberGrouped(tonumber(dump.persistTotal) or 0)))
+	self:PrintMessage(string.format("Full scan done: %s items priced.", self:FormatNumberGrouped(tonumber(dump.persistTotal) or 0)))
 	self:RefreshAuctionHousePanel()
 	if self.RefreshMarketTab then
 		self:RefreshMarketTab()
@@ -309,7 +309,7 @@ local function finishDumpRows(pe, dump)
 	dump.index = nil
 	pe:PrimeAuctionPanelRows()
 	pe:RefreshAuctionHousePanel()
-	pe:PrintMessage(string.format("Dump complete: %s items persisted.", pe:FormatNumberGrouped(tonumber(dump.persistedCount) or tonumber(dump.total) or 0)))
+	pe:PrintMessage(string.format("Shown prices saved: %s.", pe:FormatNumberGrouped(tonumber(dump.persistedCount) or tonumber(dump.total) or 0)))
 end
 
 function Tradewright:ContinueAuctionDump(token)
@@ -365,7 +365,7 @@ function Tradewright:StartAuctionDump(mode)
 	local state = self:GetState()
 	local activeDump = state.auctionDump
 	if activeDump and activeDump.running == true then
-		self:PrintMessage("An auction dump is already running.")
+		self:PrintMessage("A scan is already running.")
 		return false
 	end
 	if mode == "full" then
@@ -428,7 +428,7 @@ function Tradewright:StartAuctionDump(mode)
 		state.auctionDump.running = false
 		state.auctionDump.finishedAt = Tradewright:Now()
 		self:RefreshAuctionHousePanel()
-		self:PrintMessage("Dump complete: 0 items persisted.")
+		self:PrintMessage("No shown prices to save.")
 		return true
 	end
 	self:RefreshAuctionHousePanel()

@@ -29,7 +29,7 @@ end
 -- Why a craft row's profit cannot be trusted, or nil.
 local function craftRowWarning(row)
 	if not row.matCost then
-		return "no material price"
+		return "no reagent price"
 	end
 	if row.qualityReachable == false then
 		return (row.concentrationNeeded or row.concentrationCost) and "needs concentration" or "rank out of reach"
@@ -72,8 +72,8 @@ function Tradewright:GetBestCraftEvaluation(row)
 end
 
 local ROI_COLUMN = {
-	id = "roi", label = "ROI", justifyH = "RIGHT", width = 48, sortable = true, defaultSort = "desc", optional = true,
-	tooltipTitle = "Return", tooltipText = "Profit divided by material cost.",
+	id = "roi", label = "Return", justifyH = "RIGHT", width = 54, sortable = true, defaultSort = "desc", optional = true,
+	tooltipTitle = "Return", tooltipText = "Profit divided by reagent cost.",
 	sortValue = function(row) return row.roi or -1e15 end,
 	getText = function(row) return row.roi and string.format("%.0f%%", row.roi) or "-" end,
 }
@@ -81,7 +81,7 @@ local ROI_COLUMN = {
 local function materialsOwnedColumn(pe)
 	return {
 		id = "coverage", label = "Owned", justifyH = "RIGHT", width = 50, sortable = true, defaultSort = "desc", optional = true,
-		tooltipTitle = "Materials owned", tooltipText = "Share of the best crafter's materials that your characters already own.",
+		tooltipTitle = "Reagents owned", tooltipText = "Share of the best crafter's reagents that your characters already own.",
 		sortValue = function(row)
 			local evaluation = pe:GetBestCraftEvaluation(row)
 			return evaluation and (evaluation.coverage or 0) or 0
@@ -119,7 +119,7 @@ function Tradewright:GetCraftsColumnDefinitions()
 			sortValue = function(row) return row.outputName or "" end,
 		}),
 		money("sale", "Sale, net", "saleNet", 80),
-		money("mats", "Materials", "matCost", 80),
+		money("mats", "Reagents", "matCost", 80),
 		money("profit", "Profit", "profit", 86, true),
 		ROI_COLUMN,
 		materialsOwnedColumn(pe),

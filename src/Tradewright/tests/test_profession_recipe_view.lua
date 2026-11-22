@@ -152,7 +152,7 @@ do
 	check("Materials: one row per plan slot", #rows == 2 and rows[1]._rowIdentity == 1 and rows[2]._rowIdentity == 2)
 	check("Materials: need, have, cost", rows[1].itemID == 10 and rows[1].need == 3 and rows[1].have == 4 and rows[1].cost == 120)
 	check("Materials: missing counts are zero, no cost", rows[2].need == 2 and rows[2].have == 0 and rows[2].cost == nil)
-	check("Materials: footer total", host.materials.footer == "Have counts every character" and host.materials.footerValue == "c400")
+	check("Materials: footer total", host.materials.footer == "Have counts all your characters" and host.materials.footerValue == "c400")
 	check("Footer: scan time", panel.footerText.text == "Blacksmithing scanned at42")
 	check("Panel: body shown, add enabled", host.body.shown and host.empty.shown == false and panel.addButton.enabled == true)
 end

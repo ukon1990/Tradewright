@@ -11,12 +11,12 @@ local MAX_TOOLTIP_SOURCES = 3
 -- What to call a source. Nodes and chests have no name in the loot window, so the zone stands in.
 local function sourceName(pe, source)
 	if source.kind == "fishing" then
-		return pe:GetMapName(source.id) or "waters not named yet"
+		return pe:GetMapName(source.id) or "unknown waters"
 	elseif source.kind == "object" then
 		local zone = source.places[1] and pe:GetMapName(source.places[1][1])
 		return zone and ("a node or chest in " .. zone) or "a node or chest"
 	end
-	return source.name or "a creature not named yet"
+	return source.name or "an unknown creature"
 end
 
 --- Adds where `itemID` has been looted to tooltip lines, the likeliest sources first:

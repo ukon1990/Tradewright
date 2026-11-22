@@ -24,7 +24,7 @@ local function resolveBaseline(pe, storageKey, summary)
 	local usual = pe:GetUsualPrice(storageKey)
 	local base = { price = summary.avg7d, low = summary.low7d, high = summary.high7d, refSource = "7-day avg" }
 	if usual then
-		base = { price = usual.usual, low = usual.low, high = usual.high, days = usual.days, refSource = "daily middle" }
+		base = { price = usual.usual, low = usual.low, high = usual.high, days = usual.days, refSource = "usual price" }
 	end
 	base.ref = base.price
 	if not base.ref then

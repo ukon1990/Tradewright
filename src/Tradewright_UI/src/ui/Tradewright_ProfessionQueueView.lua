@@ -162,7 +162,7 @@ end
 
 local function reagentColumns(pe)
 	return {
-		pe:CreateItemColumn({ label = "Material", sortable = true, minWidth = 100,
+		pe:CreateItemColumn({ label = "Reagent", sortable = true, minWidth = 100,
 			getItemID = function(row) return row.itemID end,
 			getName = function(row) return row.name .. rankMarkup(row.qualityIndex) end,
 			getDetail = function(row) return row.detailText end }),
@@ -182,8 +182,8 @@ local function createOrderNav(pe, f, host)
 	orderNav:SetHeight(48)
 	orderNav:Hide()
 	f.orderNav = orderNav
-	f.peAddToQueueBtn = pe:CreateButton(orderNav, "Add to shopping", nil,
-		{ tooltip = "Adds this order's crafter-supplied reagents to the cart without starting the order." })
+	f.peAddToQueueBtn = pe:CreateButton(orderNav, "Add to queue", nil,
+		{ tooltip = "Adds this order to the craft queue without starting it. Only the reagents you must supply go in the cart." })
 	f.peAddToQueueBtn:SetPoint("TOPLEFT")
 	f.peAddToQueueBtn:Hide()
 	f.peRemoveFromQueueBtn = pe:CreateButton(orderNav, "Remove")
@@ -205,7 +205,7 @@ local function createActions(pe, f, host)
 	actions:SetPoint("BOTTOMLEFT")
 	actions:SetPoint("BOTTOMRIGHT")
 	actions:SetHeight(26)
-	local open = pe:CreateButton(actions, "Open in dashboard", function() pe:OpenCraftsTabWithQueueFocus() end)
+	local open = pe:CreateButton(actions, "Open in Tradewright", function() pe:OpenCraftsTabWithQueueFocus() end)
 	open:SetPoint("LEFT")
 	f.clearQueueButton = pe:CreateButton(actions, "Clear queue", function() pe:ClearCraftQueue() end)
 	f.clearQueueButton:SetPoint("RIGHT")
@@ -235,7 +235,7 @@ end
 -- The table fills the space down to the action row. It is anchored to that row directly, the same
 -- way the Recipe view's materials table is.
 local function createReagentTable(pe, f, card, actions)
-	f.reagentTitle = pe:CreateHeading(card, "Shopping list")
+	f.reagentTitle = pe:CreateHeading(card, "Cart")
 	f.reagentTitle:SetPoint("TOPLEFT", f.recipeTable.frame, "BOTTOMLEFT", 0, -10)
 	f.reagentTitle:SetPoint("TOPRIGHT", f.recipeTable.frame, "BOTTOMRIGHT", 0, -10)
 	f.reagentTable = pe:CreateReusableTable(card, {
@@ -245,7 +245,7 @@ local function createReagentTable(pe, f, card, actions)
 		sortKey = "totalCost",
 		sortAsc = false,
 		emptyTitle = "Nothing missing",
-		emptyHint = "This character has every material the queue needs.",
+		emptyHint = "This character has every reagent the queue needs.",
 		onRowEnter = function(rowFrame, row) showReagentTooltip(pe, rowFrame, row) end,
 		onRowLeave = function() GameTooltip:Hide() end,
 		onRowClick = function(_, row, button)
@@ -353,7 +353,7 @@ local function craftReadiness(pe, entry, quantity)
 	if craftable >= quantity then
 		return true, "ready"
 	end
-	return craftable > 0, craftable > 0 and string.format("materials for %d of %d", craftable, quantity) or nil
+	return craftable > 0, craftable > 0 and string.format("reagents for %d of %d", craftable, quantity) or nil
 end
 
 local function queueRecipeRow(pe, entry, index)
@@ -408,7 +408,7 @@ local function holdersText(pe, holders)
 	if #holders > MAX_HOLDERS_SHOWN then
 		parts[#parts + 1] = "+" .. (#holders - MAX_HOLDERS_SHOWN)
 	end
-	return #parts > 0 and ("On alts: " .. table.concat(parts, ", ")) or nil
+	return #parts > 0 and ("On other characters: " .. table.concat(parts, ", ")) or nil
 end
 
 -- Cost of buying `buy` units: 0 when nothing is bought, nil when the price is unknown.
@@ -438,7 +438,7 @@ local function queuedCraftsNote(reagent)
 end
 
 local function shoppingFooter(pe, rows)
-	return (pe.CartVendorHint and pe:CartVendorHint(rows) or "") .. "Click a material to find it at the auction house"
+	return (pe.CartVendorHint and pe:CartVendorHint(rows) or "") .. "Click a reagent to find it at the auction house"
 end
 
 -- One shopping-list row for a material this character misses.
@@ -504,10 +504,10 @@ local function overviewText(pe, summary, recipeRows, totals)
 	for _, row in ipairs(recipeRows) do
 		crafts = crafts + row.quantity
 	end
-	local text = string.format("%d crafts of %d recipes · potential profit %s · %d materials to buy",
+	local text = string.format("%d crafts of %d recipes · potential profit %s · %d reagents to buy",
 		crafts, #recipeRows, summary.totalProfit and pe:FormatSignedMoney(summary.totalProfit) or "unknown", totals.toBuy)
 	if totals.onAlts > 0 then
-		text = text .. string.format(" · %d on alts", totals.onAlts)
+		text = text .. string.format(" · %d on other characters", totals.onAlts)
 	end
 	return text
 end

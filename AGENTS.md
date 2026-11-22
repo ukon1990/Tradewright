@@ -12,7 +12,7 @@
 | Auction | `src/Tradewright_AuctionData/` | Snapshot / full scan / AH panel |
 | Professions | `src/Tradewright_Professions/` | Scan, crafts engine (orders stay retail-only) |
 | Inventory | `src/Tradewright_Inventory/` | Bags/bank snapshot, ledger |
-| UI | `src/Tradewright_UI/` | Dashboard, craft panel, mail |
+| UI | `src/Tradewright_UI/` | Tradewright window, craft panel, mail |
 | Bags (optional) | `src/Tradewright_Bags/` | Bag and bank window grouped by category, other characters as tabs, multi-select; own on/off switches |
 | Sightings | `src/Tradewright/src/modules/Tradewright_Sources.lua`, `Tradewright_LootSightings.lua`, `src/Tradewright/src/data/Tradewright_SourceData.lua` | Own record of vendors, trainers and loot sources (`TradewrightSourcesDB`), read together with the shipped data file |
 | Pure helpers | `src/Tradewright/src/util/Tradewright_*Logic.lua` | No WoW API, offline-testable: `ForeverLogic` (client flags, storage keys, export encoding), `AuctionLogic`, `MarketLogic`, `MailLogic`, `IncomeLogic`, `FilterLogic`, `MaterialLogic`, `SkillUpLogic`, `LevelingRouteLogic`, `SourceLogic` (sightings store, shipping and pruning), … |
@@ -86,4 +86,4 @@ npm run deploy:dry       # show what would be replaced
 
 Each deploy deletes and recopies every addon folder found in `src/` in the target `Interface/AddOns`, and removes the folders listed under `retired` in `deploy.config.json` (the pack's earlier name). Target paths are per machine and live in untracked `deploy.config.local.json` (`{"targets": {"forever": "..."}}`; template in `deploy.config.local.example.json`).
 
-In-game: enable the five core modules (and `Tradewright_Bags` for the bag window), `/reload` (or restart if TOC changed), `/ah` (or `/tradewright`) opens UI, full AH scan with house open fills prices, profession Scan stores recipes/reagents, Crafts tab shows profit.
+In-game: enable the five core modules (and `Tradewright_Bags` for the bag window), `/reload` (or restart if TOC changed), `/tw` (or `/tradewright`) opens UI, full AH scan with house open fills prices, profession Scan stores recipes/reagents, Crafts tab shows profit.

@@ -65,11 +65,8 @@ function Tradewright:FormatAuctionScanAge(ts)
 	if sec < 120 then
 		return "just now"
 	end
-	if sec < 3600 then
-		return string.format("%dm ago", math.floor(sec / 60))
-	end
 	if sec < 86400 then
-		return string.format("%.1fh ago", sec / 3600)
+		return Tradewright.TooltipLogic.AgeText(sec)
 	end
 	if date then
 		return date("%Y-%m-%d %H:%M", ts)

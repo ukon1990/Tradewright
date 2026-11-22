@@ -11,7 +11,7 @@ end
 
 local ATTACHMENTS_MAX = ATTACHMENTS_MAX_SEND or 12
 local AUTO_SEND_TIMEOUT = 6
-local MAIL_SUBJECTS = { materials = "Tradewright mats", crafts = "Tradewright crafts", surplus = "Tradewright surplus" }
+local MAIL_SUBJECTS = { materials = "Tradewright reagents", crafts = "Tradewright crafts", surplus = "Tradewright surplus" }
 local MAIL_BODY = "Sent with Tradewright."
 
 local function clearMailAttachments()
@@ -124,7 +124,7 @@ local function watchAutoSend(queueState)
 	C_Timer.After(AUTO_SEND_TIMEOUT, function()
 		if queueState.running and queueState.auto and queueState.index == index then
 			Tradewright:CancelMailSendQueue()
-			Tradewright:PrintMessage("Could not mail the materials automatically. Use Prepare all in the mail panel.")
+			Tradewright:PrintMessage("Could not mail the reagents automatically. Use Attach all in the mail panel.")
 		end
 	end)
 end
@@ -187,7 +187,7 @@ function Tradewright:FinishMailSendQueue(queueState)
 		self:RefreshMailPanel()
 	end
 	if queueState.sent and queueState.sent > 0 then
-		self:PrintMessage(string.format("Tradewright mailed %d parcel(s).", queueState.sent))
+		self:PrintMessage(string.format("Tradewright sent %d mails.", queueState.sent))
 	end
 	if self.ScheduleLiveInventoryRefresh then
 		self:ScheduleLiveInventoryRefresh()
@@ -234,7 +234,7 @@ function Tradewright:ProcessNextMailParcel()
 		self:RefreshMailPanel()
 	end
 	if not MailFrame or not MailFrame:IsShown() then
-		self:PrintMessage("Open the mailbox to send materials.")
+		self:PrintMessage("Open the mailbox to send reagents.")
 		queueState.running = false
 		queueState.cancel = true
 		return
@@ -249,7 +249,7 @@ function Tradewright:StartMailSendQueue(destinations, auto)
 	local parcels = buildMailParcels(destinations)
 	if #parcels == 0 then
 		if not auto then
-			self:PrintMessage("No materials to mail from your bags.")
+			self:PrintMessage("No reagents to mail from your bags.")
 		end
 		return false
 	end
@@ -265,7 +265,7 @@ function Tradewright:StartMailSendQueue(destinations, auto)
 	return true
 end
 
---- On the auction house / bank character, mails every crafter whose materials are all in the bags.
+--- On the bank character, mails every crafter whose materials are all in the bags.
 --- Runs once per mailbox visit; incomplete sets wait for the Send buttons.
 function Tradewright:AutoSendReadyMaterials()
 	if not (self.IsSellerCharacter and self:IsSellerCharacter()) or self:GetSetting("mail.autoSendMaterials", true) == false
@@ -280,7 +280,7 @@ function Tradewright:AutoSendReadyMaterials()
 		end
 	end
 	if self:StartMailSendQueue(ready, true) then
-		self:PrintMessage("Mailing collected materials to " .. table.concat(names, ", ") .. ".")
+		self:PrintMessage("Mailing reagents to " .. table.concat(names, ", ") .. ".")
 	end
 end
 

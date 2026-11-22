@@ -256,7 +256,7 @@ end
 -- Fields about the data behind a row, copied from its candidate.
 local CARRIED = { "early", "usualDays", "usualLow", "usualHigh", "sellsSource", "sellsPairs", "sellsConfidence" }
 
---- Set the sells-a-day fields of a candidate from `MarketSignals.SellsPerDay`'s result.
+--- Set the sales-a-day fields of a candidate from `MarketSignals.SellsPerDay`'s result.
 function FlipLogic.SetSells(item, sells)
 	item.sellsPerDay, item.sellsSource, item.sellsPairs, item.sellsConfidence = sells.perDay, sells.source, sells.pairs, sells.confidence
 	return item
@@ -305,7 +305,7 @@ function FlipLogic.FirstEmptyStep(funnel)
 	return nil
 end
 
---- True when a row's sells a day rests on little: few scan pairs or the player's own sales alone.
+--- True when a row's sales a day rests on little: few scan pairs or the player's own sales alone.
 function FlipLogic.SellsUnsure(row)
 	return row.sellsSource == "own" or row.sellsConfidence == "few"
 end

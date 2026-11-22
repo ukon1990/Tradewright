@@ -103,7 +103,7 @@ function Tradewright:BuildAuctionPanelColumns()
 		},
 		{
 			id = "currentPrice", label = "Price", justifyH = "RIGHT", width = 84, sortable = true, defaultSort = "desc",
-			tooltipTitle = "Price", tooltipText = "Live lowest buyout. Grey when it comes from an older scan or another addon.",
+			tooltipTitle = "Price", tooltipText = "Lowest buyout at the auction house. Grey when it comes from an earlier visit or another addon.",
 			sortValue = function(row) return tonumber(row and row.currentPrice) or -1 end,
 			getText = function(row)
 				if not row or not row.currentPrice then
@@ -117,26 +117,26 @@ function Tradewright:BuildAuctionPanelColumns()
 			end,
 		},
 		{
-			id = "lastAuctionScan", label = "Scan", justifyH = "RIGHT", width = 60, sortable = true, defaultSort = "desc", optional = true,
-			tooltipTitle = "Last scanned",
+			id = "lastAuctionScan", label = "Checked", justifyH = "RIGHT", width = 72, sortable = true, defaultSort = "desc", optional = true,
+			tooltipTitle = "Checked", tooltipText = "When this price was last looked up at the auction house.",
 			sortValue = function(row) return tonumber(row and row.lastAuctionScanAtTs) or 0 end,
 			getText = function(row) return row and row.auctionScanAgeDisplay or "never" end,
 		},
 		{
-			id = "potentialROI", label = "ROI", justifyH = "RIGHT", width = 46, sortable = true, defaultSort = "desc",
-			tooltipTitle = "Return", tooltipText = "Profit over material cost for crafted items.",
+			id = "potentialROI", label = "Return", justifyH = "RIGHT", width = 54, sortable = true, defaultSort = "desc",
+			tooltipTitle = "Return", tooltipText = "Profit divided by reagent cost, for crafted items.",
 			sortValue = function(row) return tonumber(row and row.potentialROI) or -9999 end,
 			getText = function(row) return formatPercent(row and row.potentialROI) end,
 		},
 		{
-			id = "personalSaleRate", label = "Sold", justifyH = "RIGHT", width = 44, sortable = true, defaultSort = "desc", optional = true,
-			tooltipTitle = "Your sale rate", tooltipText = "Share of your own past listings of this item that sold.",
+			id = "personalSaleRate", label = "Sold %", justifyH = "RIGHT", width = 50, sortable = true, defaultSort = "desc", optional = true,
+			tooltipTitle = "Sold %", tooltipText = "Share of your own past listings of this item that sold.",
 			sortValue = function(row) return tonumber(row and row.personalSaleRateValue) or -1 end,
 			getText = function(row) return row and row.personalSaleRateDisplay or "-" end,
 		},
 		{
-			id = "dumpAlert", label = "Flag", width = 64, sortable = true, defaultSort = "desc",
-			tooltipTitle = "Flag", tooltipText = "Keep and Ignore rules, and prices that look dumped.",
+			id = "dumpAlert", label = "Note", width = 64, sortable = true, defaultSort = "desc",
+			tooltipTitle = "Note", tooltipText = "Keep and Ignore rules, and prices that are unusually low.",
 			sortValue = function(row)
 				return (row and row.isDumpedLow and 4 or 0) + (row and row.isIgnoredByRule and 2 or 0) + ((tonumber(row and row.reserveQty) or 0) > 0 and 1 or 0)
 			end,

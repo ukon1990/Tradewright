@@ -3,14 +3,14 @@ local _, Tradewright = ...
 -- Crafts tab toolbar: the search and filter row, and the row of pricing options under it.
 
 local PROFIT_CHOICES = {
-	{ value = "all", label = "Any profit" }, { value = "profitable", label = "Profitable" }, { value = "negative", label = "Losing money" },
+	{ value = "all", label = "All crafts" }, { value = "profitable", label = "Profitable" }, { value = "negative", label = "Losing money" },
 	{ value = "missing_price", label = "Missing price" }, { value = "uncraftable", label = "Can't craft now" },
 	{ value = "cooldown", label = "Cooldowns" },
 }
 local SOURCE_CHOICES = {
-	{ value = "owned_first", label = "Owned first" }, { value = "market_only", label = "Market only" }, { value = "mixed", label = "Mixed" },
+	{ value = "owned_first", label = "Use what I own" }, { value = "market_only", label = "Buy everything" }, { value = "mixed", label = "Mixed" },
 }
-local BASIS_CHOICES = { { value = "auto", label = "Auto" }, { value = "market", label = "Market" }, { value = "ledger", label = "Ledger" } }
+local BASIS_CHOICES = { { value = "auto", label = "Auto" }, { value = "market", label = "Auction house" }, { value = "ledger", label = "My own sales" } }
 local SCENARIO_CHOICES = { { value = "default", label = "No concentration" }, { value = "concentration", label = "With concentration" } }
 
 local function refreshCrafts(pe)
@@ -123,7 +123,7 @@ function Tradewright:CreateCraftsPriceDropdowns(panel)
 	local pe, ui = self, self.ui
 	panel.sourceDropdown = self:CreateSettingDropdown(panel, {
 		setting = "crafts.reagentSourceMode", default = "owned_first", width = 110, choices = SOURCE_CHOICES,
-		onChanged = refreshCrafts(self), tooltip = "Which materials count as already paid for",
+		onChanged = refreshCrafts(self), tooltip = "Use what I own: reagents you hold cost nothing. Buy everything: all are priced at the auction house.",
 	})
 	panel.basisDropdown = self:CreateSettingDropdown(panel, {
 		setting = "crafts.costBasis", default = "auto", width = 92, choices = BASIS_CHOICES,
@@ -131,22 +131,22 @@ function Tradewright:CreateCraftsPriceDropdowns(panel)
 			pe:SetSetting("crafts.saleBasis", value == "market" and "market" or value == "ledger" and "ledger" or "auto")
 			pe:RefreshCraftsTab()
 		end,
-		tooltip = "Where sale and cost prices come from",
+		tooltip = "Auction house: prices from your scans. My own sales: what you sold and bought for. Auto: your own where known.",
 	})
 	panel.craftsRangeDropdown = self:CreateSettingDropdown(panel, {
 		setting = "inventory.metricRange", default = "30d", width = 92, choices = self:GetInventoryMetricRangeOptions(),
 		onChanged = function() pe:RenderCraftsDetails(ui.craftsSelectedRowData) end, tooltip = "Time range for price history",
 	})
 	local groups = {
-		labelled(self, panel.options, "Materials", panel.sourceDropdown),
-		labelled(self, panel.options, "Price basis", panel.basisDropdown),
+		labelled(self, panel.options, "Reagents", panel.sourceDropdown),
+		labelled(self, panel.options, "Prices from", panel.basisDropdown),
 		labelled(self, panel.options, "History", panel.craftsRangeDropdown),
 	}
 	if self.IS_RETAIL then
 		panel.scenarioDropdown = self:CreateSettingDropdown(panel, {
 			setting = "crafts.scenario", default = "default", width = 140, choices = SCENARIO_CHOICES, onChanged = refreshCrafts(self),
 		})
-		groups[#groups + 1] = labelled(self, panel.options, "Scenario", panel.scenarioDropdown)
+		groups[#groups + 1] = labelled(self, panel.options, "Concentration", panel.scenarioDropdown)
 	end
 	return groups
 end

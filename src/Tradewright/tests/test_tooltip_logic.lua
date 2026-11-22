@@ -77,7 +77,7 @@ check("Compact: header shows the age", compact.header.right == "3 h ago" and com
 check("Compact: price with trend", compact.lines[1].label == "Price" and compact.lines[1].value == "12000c  +14% usual"
 	and compact.lines[1].tone == "success", compact.lines[1].value)
 check("Compact: usual with range", compact.lines[2].label == "Usual" and compact.lines[2].value == "10500c  (9000c – 13000c)")
-check("Compact: listed with sells a day", compact.lines[3].value == "4210 · ~800 sold/day", compact.lines[3].value)
+check("Compact: listed with sales a day", compact.lines[3].value == "4210 · ~800 sold/day", compact.lines[3].value)
 check("Compact: owned, worth and listed", compact.lines[4].value == "280 · worth 3360000c · 40 listed", compact.lines[4].value)
 check("Compact: no craft or vendor line", not find(compact, "Craft cost") and not find(compact, "Vendor pays"))
 

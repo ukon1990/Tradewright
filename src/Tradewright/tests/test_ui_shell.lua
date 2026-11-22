@@ -48,12 +48,12 @@ check("activity: no auction module", pe:GetShellActivityText() == "")
 pe.GetLastFullAuctionScanAt = getLast
 
 -- Stored text
-check("stored: no professions, no scan note", pe:GetShellStoredText() == "0 characters stored", pe:GetShellStoredText())
+check("stored: no professions, no scan note", pe:GetShellStoredText() == "0 characters saved", pe:GetShellStoredText())
 professions = { "Alchemy" }
 pe.db.characters.Me = {}
-check("stored: not scanned yet", pe:GetShellStoredText() == "1 character stored · Professions not scanned yet", pe:GetShellStoredText())
+check("stored: not scanned yet", pe:GetShellStoredText() == "1 character saved · Professions not scanned yet", pe:GetShellStoredText())
 pe.db.characters.Me.scanFinishedAt = 99
-check("stored: scan time", pe:GetShellStoredText() == "1 character stored · Professions scanned t99", pe:GetShellStoredText())
+check("stored: scan time", pe:GetShellStoredText() == "1 character saved · Professions scanned t99", pe:GetShellStoredText())
 
 -- Layering
 local visible = {}

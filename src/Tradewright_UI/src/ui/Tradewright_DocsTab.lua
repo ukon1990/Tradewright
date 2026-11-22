@@ -105,8 +105,8 @@ function DocsTab:Refresh()
 	panel.topicList:SetItems(topicItems(sections))
 
 	local selected = sections[panel.selectedIndex]
-	panel.bodyTitle:SetText(selected and selected.title or "Docs")
-	panel.body:SetText(selected and formatBody(pe, selected.body) or "No documentation available.")
+	panel.bodyTitle:SetText(selected and selected.title or "Help")
+	panel.body:SetText(selected and formatBody(pe, selected.body) or "No help topics.")
 	panel.bodyScroll:SetVerticalScroll(0)
 	self:Layout(panel)
 end

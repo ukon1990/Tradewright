@@ -1,7 +1,7 @@
 ## Interface: 120000, 120001
 ## AllowLoadGameType: standard
 ## Title: Tradewright Inventory
-## Notes: Inventory, warehousing, and historical value storage for Tradewright
+## Notes: What your characters own, the craft queue, gold and farm tracking
 ## Author: Ukon1990
 ## Version: 2.0.0
 ## IconTexture: Interface\AddOns\Tradewright\media\logo

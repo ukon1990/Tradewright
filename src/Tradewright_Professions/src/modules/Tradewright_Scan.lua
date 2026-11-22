@@ -50,13 +50,13 @@ end
 function Tradewright:StartFullCharacterDump()
 	local state = self:GetState()
 	if state.scanInProgress then
-		self:PrintMessage("A scan is already in progress. Wait for it to finish, then run the full dump again.")
+		self:PrintMessage("A scan is already in progress. Wait for it to finish, then run the full export again.")
 		return
 	end
 
 	self:SetSetting("capture.captureSpecializationTree", true)
 	state.exportFullAfterScan = true
-	self:PrintMessage("Full dump requested: scanning recipes and complete specialization data before export.")
+	self:PrintMessage("Scanning every profession before the full export.")
 	if self:StartScan() ~= true then
 		state.exportFullAfterScan = nil
 	end
@@ -78,7 +78,7 @@ function Tradewright:ProcessNextProfession()
 	state.pendingScan = false
 	state.filterSnapshot = self:SnapshotFilters()
 
-	self:PrintMessage(string.format("Opening %s (%d remaining)...", tostring(nextProfession.professionName), #state.queue))
+	self:PrintMessage(string.format("Opening %s (%d remaining)…", tostring(nextProfession.professionName), #state.queue))
 	self:DebugLog("SCAN", "ProcessNextProfession", {
 		string.format("opening=%s skillLineID=%s remainingQueue=%d", tostring(nextProfession.professionName), tostring(nextProfession.skillLineID), #state.queue),
 	})

@@ -133,7 +133,7 @@ local function ownedRowTooltipLines(pe, panel, rowData)
 	local lines = {}
 	if not rowData.sold then
 		local cutLabel = string.format("After %.3g%% cut", (panel.ownedCut or pe.DEFAULT_AUCTION_CUT) * 100)
-		lines[1] = { "Lowest scanned", rowData.marketPrice and pe:FormatCopperFull(rowData.marketPrice) or "not scanned this visit" }
+		lines[1] = { "Lowest price", rowData.marketPrice and pe:FormatCopperFull(rowData.marketPrice) or "not checked this visit" }
 		lines[2] = { "Scanned", pe:FormatAuctionScanAge(pe:GetItemLastAuctionScanAt(rowData.itemID)) }
 		lines[3] = { cutLabel, pe:FormatCopperFull(rowData.net) }
 		if rowData.undercut then
@@ -197,7 +197,7 @@ function Tradewright:BuildOwnedAuctionColumns()
 		pe:MoneyColumn({ id = "value", label = "Total", width = 78 }),
 		{
 			id = "status", label = "Status", width = 104, sortable = true, defaultSort = "desc",
-			tooltipTitle = "Status", tooltipText = "Sold, or how your price compares with the lowest one scanned this visit.",
+			tooltipTitle = "Status", tooltipText = "Sold, or how your price compares with the lowest one checked this visit.",
 			-- Descending: most undercut first, then lowest, unchecked, sold.
 			sortValue = function(row)
 				return row.sold and -1 or (row.undercut and 1 + row.undercutPct) or (row.undercut == false and 0.5) or 0

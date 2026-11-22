@@ -51,7 +51,7 @@ npm run deploy:dry
 npm run deploy:local
 ```
 
-`deploy:local` copies the addons into every AddOns folder you configured; `deploy:forever` and `deploy:retail` copy to a single one. In game, `/reload` picks up changed files. New `.lua` files or TOC changes need a full client restart. `/ah` (or `/tradewright`) opens the UI.
+`deploy:local` copies the addons into every AddOns folder you configured; `deploy:forever` and `deploy:retail` copy to a single one. In game, `/reload` picks up changed files. New `.lua` files or TOC changes need a full client restart. `/tw` (or `/tradewright`) opens the UI.
 
 ## Coming from AuctionHelper
 

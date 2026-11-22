@@ -202,8 +202,8 @@ function Tradewright:EnsureCraftingOrderViewActionButtons()
 	end)
 end
 
-local RECIPE_QUEUE_TIP = "Adds this recipe to Tradewright shopping. Reagents (including Enchanting Vellum for enchants) are included in the cart."
-local ORDER_QUEUE_TIP = "Adds this crafting order to Tradewright shopping without starting the order. Only crafter-supplied reagents are included."
+local RECIPE_QUEUE_TIP = "Adds this recipe to the craft queue. Its reagents, Enchanting Vellum included, go in the cart."
+local ORDER_QUEUE_TIP = "Adds this crafting order to the craft queue without starting it. Only the reagents you must supply go in the cart."
 
 local function setOrderNavShown(panel, showOrderNav, showRecipeNav)
 	if not panel.orderNav then
@@ -298,7 +298,7 @@ local function wireOrderQueueButtons(panel, order)
 		local live = getLiveCraftingOrderView()
 		local o = (live and live.order) or order
 		if o then
-			Tradewright:PrintMessage(string.format("Queueing crafting order #%s...", tostring(o.orderID or "?")))
+			Tradewright:PrintMessage(string.format("Adding crafting order #%s to the queue…", tostring(o.orderID or "?")))
 			Tradewright:AddCraftingOrderToQueue(o)
 			Tradewright:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), o)
 		else

@@ -13,13 +13,7 @@ local function ageText(ts)
 	if not ts then
 		return "never seen"
 	end
-	local age = math.max(0, time() - ts)
-	if age < 3600 then
-		return string.format("seen %dm ago", math.floor(age / 60))
-	elseif age < 48 * 3600 then
-		return string.format("seen %dh ago", math.floor(age / 3600))
-	end
-	return string.format("seen %dd ago", math.floor(age / 86400))
+	return "seen " .. Tradewright.TooltipLogic.AgeText(time() - ts)
 end
 
 local function itemColumn(pe, getDetail)
@@ -104,7 +98,7 @@ local function createDealsCard(pe, dash)
 			itemColumn(pe, function(row)
 				local parts = { "vs " .. (row.refSource or "usual"), ageText(row.seenAt) }
 				if dash.materials and dash.materials[row.itemID] then
-					parts[#parts + 1] = pe:Colorize("your material", "gold")
+					parts[#parts + 1] = pe:Colorize("your reagent", "gold")
 				end
 				return table.concat(parts, " · ")
 			end),
@@ -120,7 +114,7 @@ local function createDealsCard(pe, dash)
 			onClick = rowClickHandler(pe, true),
 			tooltipPairs = function(row)
 				return {
-					{ "Usual price (" .. (row.refSource or "?") .. ")", pe:FormatCopperFull(row.ref) },
+					{ row.refSource == "7-day avg" and "7-day average" or "Usual price", pe:FormatCopperFull(row.ref) },
 					{ "Resale profit after cut", pe:FormatSignedMoney(row.gain) },
 					{ "Listed", string.format("%s in %s auctions", pe:FormatNumberGrouped(row.quantity), pe:FormatNumberGrouped(row.listed)) },
 				}
@@ -147,13 +141,13 @@ local function createCraftsCard(pe, dash)
 			{ id = "profit", label = "Profit", justifyH = "RIGHT", width = 80,
 				getText = function(row) return pe:FormatSignedMoney(row.profit) end },
 			-- roi is already a percent (not a fraction), so it skips PercentColumn.
-			{ id = "roi", label = "ROI", justifyH = "RIGHT", width = 48, optional = true,
+			{ id = "roi", label = "Return", justifyH = "RIGHT", width = 54, optional = true,
 				getText = function(row) return row.roi and string.format("%.0f%%", row.roi) or "-" end },
 		},
 		table = {
 			rowHeight = ROW,
 			emptyTitle = "No profitable crafts",
-			emptyHint = "Scan your professions and the auction house to compare material cost with sale price.",
+			emptyHint = "Scan your professions and the auction house to compare reagent cost with sale price.",
 			onRowEnter = function(rowFrame, row)
 				if row then
 					pe:ShowCraftRowTooltip(rowFrame, row)
@@ -390,7 +384,7 @@ function GoldDashboardMixin:RefreshSell(insights)
 	local pe = self.pe
 	local rows, stockValue, anyHistory = pricedStockRows(pe, insights)
 	local priced = #rows
-	-- Best: what "Sell now" lists (above usual and known to sell). Before sells-a-day estimates exist:
+	-- Best: what "Sell now" lists (above usual and known to sell). Before sales-a-day estimates exist:
 	-- items above their usual price, and with no history at all, what is worth the most.
 	local sellNow = sellNowCardRows(pe)
 	if #sellNow > 0 then
@@ -401,7 +395,7 @@ function GoldDashboardMixin:RefreshSell(insights)
 	self.sell.table:SetRows(pe.MarketLogic.TopN(rows, TOP_ROWS, "value"))
 	self.sell.table:Refresh()
 	self.stats.stockValue:SetValues("Stock value", insights and pe:FormatCopperShort(stockValue) or "…",
-		string.format("%s item types priced", pe:FormatNumberGrouped(priced)))
+		string.format("%s different items priced", pe:FormatNumberGrouped(priced)))
 end
 
 -- Account gold and its 7-day change.

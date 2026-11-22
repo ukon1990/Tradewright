@@ -54,11 +54,33 @@ Existing debt is frozen in `scripts/lint-baseline.json` (a ratchet). Lint fails 
 
 | Concept | Use | Not |
 | --- | --- | --- |
-| Queue of crafts to make | craft queue (`CraftQueue`) | work queue, work order queue, shopping queue (the UI label "shopping list" may stay) |
+| Queue of crafts to make | craft queue (`CraftQueue`) | work queue, work order queue, shopping queue, "shopping" |
 | Retail crafting orders taken to craft (own store, mirrored into the craft queue as crafting-order lines) | crafting-order queue (`CraftingOrderQueue`) | work queue, work order queue |
 | Reading the whole AH | full scan | dump, replicate, classic_full |
 | Auction house price seen in game | AH price | native, live, current price |
 | Item identity with bonus ids | item key (`itemKey`) | key fields, scan key |
+
+Words in text the player sees (labels, tooltips, chat, Help). Code identifiers may differ (`matCost`, `seller`, `StartAuctionDump`):
+
+| Concept | Show | Not |
+| --- | --- | --- |
+| What a craft uses | reagents | materials, mats |
+| Reagents the queue still needs to buy | cart | shopping cart, shopping list, To buy |
+| Estimated sales | Sales a day | Sells a day, sale rate |
+| Character that sells and holds reagents | bank character | auction house / bank character, seller |
+| Looking up some prices at the AH | check prices | scan, refresh, price all ("scan" is a full scan or a profession scan) |
+| A price pushed far down | unusually low | dumped |
+| Profit divided by reagent cost | Return | ROI |
+| The player's characters | all characters, other characters | account, alts |
+| Removing an item for good | destroy | delete |
+| Data the addon keeps | saved | stored, persisted, aggregated |
+| Count of distinct items | different items | item types, kinds ("Item type" is the class column) |
+| The main window | Tradewright window | dashboard, main window |
+| Money made on a deal | Profit | Gain |
+| Price comparison | below usual, below vendor price | under |
+| Mail button that fills a mail | Attach | Prepare |
+
+A column tooltip title repeats the column label.
 
 
 ## Comments

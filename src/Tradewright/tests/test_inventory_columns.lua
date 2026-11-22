@@ -69,10 +69,10 @@ check("Visible: saved choice wins", shown("loc") and not shown("qty"))
 pe:SetInventoryColumnVisible("loc", false)
 check("Visible: back to default clears the choice", settings["inventory.hiddenColumns"].loc == nil)
 
--- Sells a day
-check("Sells a day: dash without the Auction Data module", byId.sellsPerDay.getText({ itemID = 1 }) == "-")
+-- Sales a day
+check("Sales a day: dash without the Auction Data module", byId.sellsPerDay.getText({ itemID = 1 }) == "-")
 pe.GetItemPriceSignals = function(_, itemID) return nil, itemID == 1 and { perDay = 2.44 } or nil end
-check("Sells a day: estimate shown, unknown item stays a dash",
+check("Sales a day: estimate shown, unknown item stays a dash",
 	byId.sellsPerDay.getText({ itemID = 1 }) == "2.4" and byId.sellsPerDay.getText({ itemID = 2 }) == "-")
 
 -- Order and table columns

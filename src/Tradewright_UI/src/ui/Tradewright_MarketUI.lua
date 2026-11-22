@@ -55,7 +55,7 @@ end
 
 local function sellsColumn(pe)
 	return {
-		id = "sellsPerDay", label = "Sells a day", justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
+		id = "sellsPerDay", label = "Sales a day", justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
 		sortValue = function(row) return sellsPerDay(pe, row) or 0 end,
 		getText = function(row)
 			local perDay = sellsPerDay(pe, row)
@@ -116,7 +116,7 @@ local function weekdayText(pe, rowData)
 	local function part(weekday)
 		return string.format("%s %+d%%", WEEKDAYS[weekday], math.floor(pattern.byDay[weekday] * 100 + 0.5))
 	end
-	return string.format("Cheapest %s, dearest %s (%d weeks)", part(pattern.cheapest), part(pattern.dearest), pattern.weeks)
+	return string.format("Cheapest %s, priciest %s (%d weeks)", part(pattern.cheapest), part(pattern.dearest), pattern.weeks)
 end
 
 -- Key facts of one Market row for the item view.
@@ -126,7 +126,7 @@ local function marketFactRows(pe, rowData)
 		{ "Highest", pe:FormatCopperFull(rowData.marketHigh or rowData.price) },
 		{ "Usual price", usualPriceText(pe, rowData) },
 		{ "Usual range", usualRangeText(pe, rowData) },
-		{ "Sells a day, estimated", sellsFactText(pe, rowData) },
+		{ "Sales a day, estimated", sellsFactText(pe, rowData) },
 		{ "Listed supply lasts", supplyFactText(pe, rowData) },
 		{ "By weekday", weekdayText(pe, rowData) },
 		{ "Cheapest steps", priceStepsText(pe, rowData) },
@@ -211,7 +211,7 @@ local function createHistoryTable(pe, view)
 	view.historyTable = pe:CreateReusableTable(view, {
 		autoFitToScroll = true,
 		emptyTitle = "No history",
-		emptyHint = "Each full scan adds an hour.",
+		emptyHint = "Each full scan saves one hour of prices.",
 	})
 	view.historyTable.frame:SetPoint("TOPLEFT", view.graph, "BOTTOMLEFT", 0, -8)
 	view.historyTable.frame:SetPoint("BOTTOMRIGHT", view, "BOTTOMRIGHT", 0, 0)

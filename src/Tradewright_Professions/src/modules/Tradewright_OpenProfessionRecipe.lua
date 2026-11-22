@@ -437,13 +437,13 @@ function Tradewright:QueueOpenProfessionRecipe(quantity, opts)
 	local ctx, reason = self:BuildProfessionRecipeQueueContext(recipeID, opts)
 	if not ctx then
 		if not opts.quiet then
-			local msg = "Could not add recipe to shopping."
+			local msg = "Could not add the recipe to the queue."
 			if reason == "no_recipe" then
-				msg = "No recipe selected to add to shopping."
+				msg = "Select a recipe first."
 			elseif reason == "no_data" then
-				msg = "No stored data for this recipe — run a profession scan first."
+				msg = "No saved data for this recipe — run a profession scan first."
 			elseif reason == "no_eval" then
-				msg = "Could not resolve materials for this recipe yet."
+				msg = "The reagents of this recipe are not known yet. Try again in a moment."
 			elseif reason == "not_ready" then
 				msg = "Profession UI not ready yet."
 			end
@@ -458,14 +458,14 @@ function Tradewright:QueueOpenProfessionRecipe(quantity, opts)
 	local key, err = self:AddCraftToQueue(ctx, quantity)
 	if not key then
 		if not opts.quiet then
-			self:PrintMessage("Could not add recipe to shopping queue.")
+			self:PrintMessage("Could not add the recipe to the queue.")
 		end
 		return nil, err or "add_failed"
 	end
 
 	if not opts.quiet then
 		local name = ctx.recipeName or ctx.eval and ctx.eval.recipeName or ("#" .. tostring(ctx.recipeID))
-		self:PrintMessage(string.format("Queued %s x%d for shopping.", tostring(name), quantity))
+		self:PrintMessage(string.format("Added %s × %d to the queue.", tostring(name), quantity))
 	end
 	if self.ScheduleRefreshProfessionCraftEconomyPanel then
 		self:ScheduleRefreshProfessionCraftEconomyPanel(0.05)

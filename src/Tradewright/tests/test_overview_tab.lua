@@ -40,12 +40,12 @@ pe.db.characters = {
 gold[ACCT], gold.Me = 500, 300
 OverviewTab:RefreshStats(panel, ACCT, pe.db.aggregate, { "Me", "Alt" })
 local scan = panel.stats.professionScan.values
-check("account counts every profession", scan[2] == "Ready" and scan[3] == "3 professions stored" and scan[4] == "success", scan[3])
+check("account counts every profession", scan[2] == "Ready" and scan[3] == "3 professions saved" and scan[4] == "success", scan[3])
 check("account gold detail spans characters", panel.stats.gold.values[3] == "Across 2 characters", panel.stats.gold.values[3])
 check("account gold value", panel.stats.gold.values[2] == "500c")
 OverviewTab:RefreshStats(panel, "Me", pe.db.characters.Me, { "Me", "Alt" })
 check("character gold detail", panel.stats.gold.values[3] == "Me has 300c", panel.stats.gold.values[3])
-check("character profession count", panel.stats.professionScan.values[3] == "2 professions stored")
+check("character profession count", panel.stats.professionScan.values[3] == "2 professions saved")
 OverviewTab:RefreshStats(panel, "Alt", pe.db.characters.Alt, { "Me", "Alt" })
 check("character without gold falls back", panel.stats.gold.values[3] == "Across 2 characters")
 state.scanInProgress, state.queue = true, { 1, 2 }

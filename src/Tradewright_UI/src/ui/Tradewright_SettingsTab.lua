@@ -74,7 +74,7 @@ local function farmingSection()
 		{ kind = "select", label = "Pause a farm after standing still for", path = "farm.idlePauseMinutes", default = 5,
 			options = { { value = 0, label = "Never" }, { value = 2, label = "2 minutes" }, { value = 5, label = "5 minutes" },
 				{ value = 10, label = "10 minutes" } } },
-		{ kind = "note", text = "Start a farm with /ahfarm start, pause with /ahfarm pause, save with /ahfarm stop." },
+		{ kind = "note", text = "Start a farm with /twfarm start, pause with /twfarm pause, save with /twfarm stop." },
 	} }
 end
 
@@ -86,15 +86,16 @@ end
 
 local function auctionHouseSection(pe)
 	return { title = "Auction house", items = {
-		{ kind = "select", label = "Keep price history for", path = "auction.historyRetentionDays", default = 30,
+		{ kind = "select", label = "Keep hourly prices for", path = "auction.historyRetentionDays", default = 30,
 			options = choices({ 7, 14, 30, 60, 90 }, "%d days"),
 			onChange = function() if pe.TrimFullDumpMarketHistory then pe:TrimFullDumpMarketHistory() end end },
-		{ kind = "select", label = "Usual price looks back", path = "auction.usualPriceDays", default = 14,
+		{ kind = "select", label = "Usual price uses the last", path = "auction.usualPriceDays", default = 14,
 			options = choices({ 7, 14, 30 }, "%d days"), onChange = refreshEconomy },
 		{ kind = "select", label = "Keep daily prices for", path = "auction.dailyRetentionDays", default = 180,
 			options = choices({ 90, 180, 365 }, "%d days") },
 		{ kind = "check", label = "Keep the cheapest price steps of each item from a full scan", path = "auction.keepPriceSteps",
 			default = true },
+		{ kind = "note", text = "Price steps: the cheapest prices of an item and how many are listed at each. Price gaps use them." },
 		{ kind = "select", label = "Refresh prices older than", path = "auction.priceFreshnessMinutes", default = 15,
 			options = choices({ 5, 15, 30, 60, 180 }, "%d minutes") },
 		{ kind = "check", label = "Count the lost deposit when cancelling undercut auctions", path = "auction.repostIncludeDeposit",
@@ -105,10 +106,10 @@ local function auctionHouseSection(pe)
 end
 
 local function goldSection()
-	return { title = "Gold dashboard", items = {
-		{ kind = "select", label = "Deal when below usual price by", path = "gold.dealThreshold", default = 0.3,
+	return { title = "Gold view", items = {
+		{ kind = "select", label = "Count as a deal when below the usual price by", path = "gold.dealThreshold", default = 0.3,
 			options = choices({ 0.2, 0.3, 0.4, 0.5 }, "%d%%", 100) },
-		{ kind = "select", label = "Mover when price changed by", path = "gold.moverThreshold", default = 0.15,
+		{ kind = "select", label = "Count as a mover when the price changed by", path = "gold.moverThreshold", default = 0.15,
 			options = choices({ 0.1, 0.15, 0.25 }, "%d%%", 100) },
 	} }
 end
@@ -139,7 +140,7 @@ end
 
 local function opportunitiesSection()
 	return { title = "Opportunities", items = {
-		{ kind = "select", label = "Count as a flip when under the usual price by", path = "opportunities.minDiscount", default = 0.25,
+		{ kind = "select", label = "Count as a flip when below the usual price by", path = "opportunities.minDiscount", default = 0.25,
 			options = choices({ 0.15, 0.2, 0.25, 0.3, 0.4 }, "%d%% or more", 100), onChange = refreshOpportunities },
 		{ kind = "select", label = "Smallest profit worth showing", path = "opportunities.minProfitCopper", default = 10000,
 			options = moneyChoices({ 1000, 2500, 5000, 10000, 50000, 100000, 250000, 500000 }), onChange = refreshOpportunities },
@@ -147,7 +148,7 @@ local function opportunitiesSection()
 			options = choices({ 0.5, 1, 5, 20 }, "%s a day"), onChange = refreshOpportunities },
 		{ kind = "check", label = "Also show items with only 2 to 4 days of prices, marked Early", path = "opportunities.allowEarly",
 			default = false, onChange = refreshOpportunities },
-		{ kind = "check", label = "Show items listed under their vendor price", path = "opportunities.showVendor", default = true,
+		{ kind = "check", label = "Show items listed below their vendor price", path = "opportunities.showVendor", default = true,
 			onChange = refreshOpportunities },
 		{ kind = "check", label = "Show price gaps, marked as risky", path = "opportunities.showGaps", default = true,
 			onChange = refreshOpportunities },
@@ -163,7 +164,7 @@ local function craftsSection()
 	return { title = "Crafts", items = {
 		{ kind = "select", label = "Make enough for", path = "crafts.restockDays", default = 1,
 			options = choices({ 1, 2, 3, 7 }, "%d days of sales"), onChange = refreshEconomy },
-		{ kind = "check", label = "Use my own recipes when a material is cheaper to craft", path = "crafts.useCheapestSource",
+		{ kind = "check", label = "Use my own recipes when a reagent is cheaper to craft", path = "crafts.useCheapestSource",
 			default = true, onChange = function(pe)
 				pe:InvalidateCraftOpportunityCaches()
 				refreshEconomy(pe)
@@ -176,9 +177,9 @@ end
 
 local function professionScanSection()
 	return { title = "Profession scan", items = {
-		{ kind = "check", label = "Capture specialization tree", path = "capture.captureSpecializationTree", default = true,
+		{ kind = "check", label = "Also scan specialization trees (for export)", path = "capture.captureSpecializationTree", default = true,
 			visible = hasProfessionSpecs },
-		{ kind = "check", label = "Include detailed recipe output data", path = "capture.includeRecipeOutputItemData", default = false },
+		{ kind = "check", label = "Also save detailed recipe results (for export)", path = "capture.includeRecipeOutputItemData", default = false },
 	} }
 end
 
@@ -196,13 +197,13 @@ local function inventorySection()
 	return { title = "Inventory", items = {
 		{ kind = "check", label = "Show price and profit columns by default", path = "inventory.economyShowColumns", default = true,
 			onChange = refreshEconomy },
-		{ kind = "check", label = "Estimate material cost", path = "inventory.economyShowMatCost", default = true, onChange = refreshEconomy },
-		{ kind = "select", label = "Inventory items read per frame", path = "capture.inventorySnapshotBatchSize", default = 0,
+		{ kind = "check", label = "Work out craft cost from reagent prices", path = "inventory.economyShowMatCost", default = true, onChange = refreshEconomy },
+		{ kind = "select", label = "Inventory reading speed", path = "capture.inventorySnapshotBatchSize", default = 0,
 			options = { { value = 0, label = "Automatic" }, { value = 50, label = "50" }, { value = 100, label = "100" } } },
 	} }
 end
 
--- The auction house / bank character is chosen per realm (on Forever, one for all characters), from
+-- The bank character is chosen per realm (on Forever, one for all characters), from
 -- the characters known there, by full name on Forever.
 local function mailSection(pe)
 	local sellerOptions = { { value = "", label = "None" } }
@@ -214,9 +215,10 @@ local function mailSection(pe)
 		sellerOptions[#sellerOptions + 1] = { value = characterKey, label = pe:GetMailRecipient(characterKey) }
 	end
 	return { title = "Mail", items = {
-		{ kind = "select", label = "Auction house / bank character", path = "mail.sellerByRealm." .. realm, default = "",
+		{ kind = "select", label = "Bank character", path = "mail.sellerByRealm." .. realm, default = "",
 			options = sellerOptions },
-		{ kind = "check", label = "Mail collected materials to crafters when the mailbox opens", path = "mail.autoSendMaterials", default = true },
+		{ kind = "note", text = "The character that sells at the auction house and holds your reagents." },
+		{ kind = "check", label = "Mail reagents to my crafters when the mailbox opens", path = "mail.autoSendMaterials", default = true },
 	} }
 end
 
@@ -234,7 +236,7 @@ local function bagsSection()
 		{ kind = "check", label = "Use Tradewright bags instead of the game's bag window", path = "bags.enabled", default = true,
 			onChange = function(pe) pe:ApplyBagTakeover() end },
 		{ kind = "note", text = "Off: the bag key and bag buttons open the game's own bags, or your other bag addon."
-			.. " Applies at once. Also /ah bags, or right-click the Bags title bar." },
+			.. " Applies at once. Also /tw bags, or right-click the Bags title bar." },
 		{ kind = "check", label = "Use Tradewright for the bank too", path = "bags.bank", default = true,
 			onChange = function(pe) pe:ApplyBankTakeover() end },
 		{ kind = "note", text = "At a banker the bag window opens on its Bank view. Off: the game's bank window opens."

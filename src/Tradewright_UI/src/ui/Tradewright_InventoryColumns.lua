@@ -59,9 +59,9 @@ end
 
 local function sellsPerDayColumn(pe)
 	return {
-		id = "sellsPerDay", label = "Sells a day", optional = true, justifyH = "RIGHT", width = COL.sellsPerDay, minWidth = 56, flex = 0,
+		id = "sellsPerDay", label = "Sales a day", optional = true, justifyH = "RIGHT", width = COL.sellsPerDay, minWidth = 56, flex = 0,
 		sortable = true, defaultSort = "desc", defaultVisible = false,
-		tooltipTitle = "Sells a day, estimated",
+		tooltipTitle = "Sales a day, estimated",
 		tooltipText = "From how the listed quantity changes between your scans. It runs high: cancelled and expired auctions count too.",
 		sortValue = function(row) return sellsPerDay(pe, row) or -1 end,
 		getText = function(row)
@@ -72,8 +72,19 @@ local function sellsPerDayColumn(pe)
 end
 
 -- An optional copper column that never shrinks below MONEY_MIN_WIDTH.
+local MONEY_COLUMN_TIPS = {
+	currentAh = "Lowest price in your latest auction house scan.",
+	lastSeen = "The latest price seen in the chosen time range.",
+	avgSeen = "Average of the prices seen in the chosen time range.",
+	avgCraft = "Average reagent cost to craft one, in the chosen time range.",
+	lastCraft = "Reagent cost to craft one at the latest prices.",
+	profitUnit = "What one earns after the auction cut, minus its craft cost.",
+	profitStack = "Profit each, times the quantity you own.",
+}
+
 function Tradewright:InventoryMoneyColumn(id, label, field, defaultVisible)
 	local column = self:MoneyColumn({ id = id, label = label, field = field, optional = true, width = COL[id] })
+	column.tooltipTitle, column.tooltipText = label, MONEY_COLUMN_TIPS[id]
 	column.minWidth = MONEY_MIN_WIDTH
 	column.flex = 0
 	column.defaultVisible = defaultVisible

@@ -73,7 +73,7 @@ local function ensurePrompt(pe)
 	prompt.note = pe:CreateText(prompt, "GameFontHighlightSmall", "textMuted")
 	prompt.note:SetPoint("LEFT", prompt, "BOTTOMLEFT", PAD, PAD + 13)
 	prompt.note:SetPoint("RIGHT", prompt.swap, "LEFT", -8, 0)
-	prompt.note:SetText("Deleting cannot be undone.")
+	prompt.note:SetText("Destroying cannot be undone.")
 	return prompt
 end
 
@@ -81,7 +81,7 @@ local function showPrompt(pe, loot, drop)
 	local f = ensurePrompt(pe)
 	local count = loot.count > 1 and (" x" .. loot.count) or ""
 	f.loot, f.drop = loot, drop
-	f.text:SetText(string.format("Delete %s to loot %s%s (%s)?", pe:DescribeBagDrop(drop), loot.name, count,
+	f.text:SetText(string.format("Destroy %s to loot %s%s (%s)?", pe:DescribeBagDrop(drop), loot.name, count,
 		pe:FormatCopperShort(loot.value)))
 	f:ClearAllPoints()
 	if LootFrame and LootFrame:IsShown() then

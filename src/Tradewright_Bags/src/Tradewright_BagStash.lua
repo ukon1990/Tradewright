@@ -37,7 +37,7 @@ end
 local function depositLabel(pe, deposit, stayCount)
 	local _, scanned = pe:GetOwnProfessionReagents()
 	if pe:GetStashOnlyOwnProfessions() and scanned == 0 then
-		return "Scan a profession first, or untick the first box"
+		return "Scan a profession first, or untick Only reagents my professions use"
 	end
 	if #deposit == 0 then
 		return "No reagents to deposit"

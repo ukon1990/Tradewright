@@ -183,7 +183,7 @@ local function targetWanted(item, source, opts)
 	return not (opts.onlyFarmed and not source)
 end
 
--- An item ranks only when its usual price and sells a day are both known, unless it is an early estimate.
+-- An item ranks only when its usual price and sales a day are both known, unless it is an early estimate.
 local function targetPrices(item)
 	local usual, sells = tonumber(item.usual), tonumber(item.sellsPerDay)
 	sells = sells and sells > 0 and sells or nil
@@ -220,7 +220,7 @@ end
 
 --- "What to farm" rows from `items = { { itemID, usual, sellsPerDay, quantity, supplyChange, usedByRecipes,
 --- early, days } }` and a loot index, best `TargetRank` first. `early` items (too little history) may lack
---- sells a day. `tradedPerDay` is a ranking, not income: it inherits the upward bias of the sells-a-day
+--- sales a day. `tradedPerDay` is a ranking, not income: it inherits the upward bias of the sales-a-day
 --- estimate. `yoursPerHour` is your own rate at the usual price after the cut.
 function FarmLogic.BuildFarmTargets(items, lootIndex, opts)
 	opts = opts or {}
@@ -246,7 +246,7 @@ local function activeFilterNames(opts)
 end
 
 --- Title and hint for an empty "what to farm" list, saying which step is missing.
---- `counts = { tradeGoods = scanned trade goods, priced = those with a usual price and sells a day }`.
+--- `counts = { tradeGoods = scanned trade goods, priced = those with a usual price and sales a day }`.
 function FarmLogic.FarmTargetsEmptyText(counts, opts)
 	local tradeGoods, priced = tonumber(counts.tradeGoods) or 0, tonumber(counts.priced) or 0
 	if tradeGoods == 0 then

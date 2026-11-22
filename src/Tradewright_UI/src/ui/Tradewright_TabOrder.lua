@@ -43,6 +43,6 @@ Tradewright.DASHBOARD_TABS = {
 	{ id = "farming", label = "Farming", module = function() return Tradewright.FarmingTab end },
 	{ id = "export", label = "Export", module = function() return Tradewright.ExportTab end,
 		shown = function() return Tradewright:IsExportEnabled() end },
-	{ id = "docs", label = "Docs", module = function() return Tradewright.DocsTab end },
+	{ id = "docs", label = "Help", module = function() return Tradewright.DocsTab end },
 	{ id = "settings", label = "Settings", module = function() return Tradewright.SettingsTab end },
 }

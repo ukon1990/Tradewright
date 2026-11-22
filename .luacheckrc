@@ -24,7 +24,7 @@ globals = {
 	"TradewrightLastExport",
 	"TradewrightProfessionsDB",
 	"TradewrightSourcesDB",
-	"SLASH_AHFARM1",
+	"SLASH_TWFARM1",
 	"SLASH_TRADEWRIGHT1",
 	"SLASH_TRADEWRIGHT2",
 	"SlashCmdList",

@@ -47,9 +47,9 @@ function Tradewright:SetDebugEnabled(enabled)
 		self:DebugLog("SETTINGS", "debug logging enabled", {
 			"Verbose EVENT / LIVE / SCAN / UI lines will print to this chat until you disable it.",
 			self:GetSetting("debug.persistToSavedVariables", false) == true
-				and "Persistent debug ring buffer is stored in SavedVariables under TradewrightDB.settings.debug.lines."
+				and "Persistent debug ring buffer is saved in SavedVariables under TradewrightDB.settings.debug.lines."
 				or "Persistent debug storage is disabled by default; debug output is chat-only unless you enable SavedVariables persistence.",
-			"Toggle: dashboard checkbox or |cffffffff/ah debug|r (on|off|toggle).",
+			"Switch it in Settings, Troubleshooting, or with |cffffffff/tw debug|r (on|off|toggle).",
 		})
 	else
 		self:PrintMessage("Debug logging disabled.")

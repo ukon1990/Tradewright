@@ -22,7 +22,7 @@ function Tradewright:GetOpportunityUsual(storageKey)
 	return nil, false
 end
 
--- Days of prices behind one item (early ones included), and 1 when it has a full usual price and sells a day.
+-- Days of prices behind one item (early ones included), and 1 when it has a full usual price and sales a day.
 local function itemHistory(pe, storageKey)
 	local full = pe:GetUsualPrice(storageKey)
 	local usual = full or (pe.GetEarlyUsualPrice and pe:GetEarlyUsualPrice(storageKey))
@@ -31,7 +31,7 @@ local function itemHistory(pe, storageKey)
 end
 
 --- How many items of the last scan have enough days of prices (`FlipLogic.HistoryCoverage`), plus
---- `withSells`: those with a full usual price that also have a sells-a-day estimate. Cached per scan.
+--- `withSells`: those with a full usual price that also have a sales-a-day estimate. Cached per scan.
 function Tradewright:GetHistoryCoverage(insights)
 	local state = self:GetState()
 	if state.historyCoverageAt ~= insights.builtAt then
@@ -75,7 +75,7 @@ local function expectedDepositLoss(pe, itemID)
 	return pe.FlipLogic.ExpectedDepositLoss(deposit, pe.IncomeLogic.SaleChance(tally))
 end
 
--- One candidate per scanned item that has a usual price and a sells-a-day estimate, and how many items
+-- One candidate per scanned item that has a usual price and a sales-a-day estimate, and how many items
 -- were scanned and had a usual price (for the funnel).
 local function flipCandidates(pe, insights)
 	local items, counts = {}, { scanned = 0, withUsual = 0 }
@@ -175,7 +175,7 @@ function Tradewright:GetGapOptions()
 	}
 end
 
--- One candidate per scanned item that has price steps, a usual price and a sells-a-day estimate.
+-- One candidate per scanned item that has price steps, a usual price and a sales-a-day estimate.
 local function gapCandidates(pe, insights)
 	local items, scanned, withSteps = {}, 0, 0
 	for itemID, row in pairs(insights.byItemID or {}) do

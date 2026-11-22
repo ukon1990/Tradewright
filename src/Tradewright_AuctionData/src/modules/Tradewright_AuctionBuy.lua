@@ -217,33 +217,33 @@ function Tradewright:TryBuyAuctionCartRow(row)
 	local itemID = normalizeItemID(row and row.itemID or self:GetState().auctionCartSelectedItemID)
 	local quantity = math.max(1, math.floor(tonumber(row and row.quantityToBuy) or 0))
 	if not itemID or quantity <= 0 then
-		self:PrintMessage("Select a shopping-cart row with something left to buy.")
+		self:PrintMessage("Select a cart row with something left to buy.")
 		return false
 	end
 	self:GetState().auctionCartSelectedItemID = itemID
 	local function attemptPurchase()
 		local searchAggregate = self:GetLiveAuctionSearchAggregate(itemID, nil)
 		if not searchAggregate then
-			self:PrintMessage("No live search results yet for that reagent.")
+			self:PrintMessage("The search for that reagent has no results yet. Try again in a moment.")
 			return false
 		end
 		if searchAggregate.kind ~= "commodity" then
-			self:PrintMessage("Auto-buy is currently limited to commodity reagents. Search results are ready in the Blizzard AH.")
+			self:PrintMessage("Only stackable reagents can be bought from here. The search is open in the auction house.")
 			return false
 		end
 		if not (C_AuctionHouse and C_AuctionHouse.StartCommoditiesPurchase and C_AuctionHouse.ConfirmCommoditiesPurchase) then
-			self:PrintMessage("Commodity buy API not available on this client.")
+			self:PrintMessage("Buying from the cart is not available here.")
 			return false
 		end
 		if not pcall(C_AuctionHouse.StartCommoditiesPurchase, itemID, quantity) then
-			self:PrintMessage("Could not start commodity purchase.")
+			self:PrintMessage("Could not start the purchase. Try again.")
 			return false
 		end
 		if not pcall(C_AuctionHouse.ConfirmCommoditiesPurchase, itemID, quantity) then
-			self:PrintMessage("Commodity purchase confirmation failed.")
+			self:PrintMessage("The purchase was not confirmed. Try again.")
 			return false
 		end
-		self:PrintMessage(string.format("Buying %s x%s.", self:GetItemDisplayName(itemID), self:FormatNumberGrouped(quantity)))
+		self:PrintMessage(string.format("Buying %s × %s.", self:GetItemDisplayName(itemID), self:FormatNumberGrouped(quantity)))
 		self:ScheduleAuctionCartPurchaseRefresh()
 		C_Timer.After(SEARCH_AGAIN_AFTER_BUY_SEC, function()
 			Tradewright:SearchAuctionCartRow({ itemID = itemID })

@@ -59,7 +59,7 @@ local function ensureCrafterOrderListContextMenuHook()
 		rootDescription:CreateDivider()
 		local oid = tonumber(order.orderID)
 		if Tradewright:IsCraftingOrderQueued(oid) then
-			rootDescription:CreateButton("Remove from shopping", function()
+			rootDescription:CreateButton("Remove from queue", function()
 				local live = ownerRegion and ownerRegion.option
 				local liveID = live and tonumber(live.orderID) or oid
 				Tradewright:RemoveCraftingOrderFromQueue(liveID)
@@ -69,12 +69,12 @@ local function ensureCrafterOrderListContextMenuHook()
 				end
 			end)
 		else
-			rootDescription:CreateButton("Add to shopping", function()
+			rootDescription:CreateButton("Add to queue", function()
 				local live = ownerRegion and ownerRegion.option
 				if type(live) ~= "table" or not live.orderID then
 					return
 				end
-				Tradewright:PrintMessage(string.format("Queueing crafting order #%s...", tostring(live.orderID)))
+				Tradewright:PrintMessage(string.format("Adding crafting order #%s to the queue…", tostring(live.orderID)))
 				Tradewright:AddCraftingOrderToQueue(live)
 				Tradewright:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), live)
 				if Tradewright.ScheduleRefreshProfessionCraftEconomyPanel then
@@ -108,7 +108,7 @@ local function ensureRecipeListContextMenuHook()
 		local inQueue = Tradewright.IsRecipeInCraftQueue
 			and Tradewright:IsRecipeInCraftQueue(recipeID)
 		if inQueue then
-			rootDescription:CreateButton("Remove from shopping", function()
+			rootDescription:CreateButton("Remove from queue", function()
 				if Tradewright.RemoveCraftQueueLinesForRecipeID then
 					Tradewright:RemoveCraftQueueLinesForRecipeID(recipeID)
 				end
@@ -117,7 +117,7 @@ local function ensureRecipeListContextMenuHook()
 				end
 			end)
 		else
-			rootDescription:CreateButton("Add to shopping", function()
+			rootDescription:CreateButton("Add to queue", function()
 				if Tradewright.QueueOpenProfessionRecipe then
 					Tradewright:QueueOpenProfessionRecipe(1, { recipeID = recipeID })
 				end

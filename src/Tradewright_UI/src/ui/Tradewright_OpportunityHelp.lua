@@ -16,7 +16,7 @@ local function usualFix(pe, insights)
 	local text = string.format("A usual price needs scans on 5 different days. Your best item has %d. Today's scans count from tomorrow.",
 		coverage.bestDays)
 	if coverage.early > 0 and not pe:GetSetting("opportunities.allowEarly", false) then
-		text = text .. " Or turn on early rows in Settings, Opportunities."
+		text = text .. " Or turn on \"Also show items with only 2 to 4 days of prices\" in Settings, Opportunities."
 	end
 	return text
 end
@@ -26,9 +26,9 @@ local OFF = { label = "This list is turned off", fix = "Turn it on in Settings, 
 local HELP = {
 	flips = {
 		title = "How flips work",
-		body = "Items listed well under their usual price that also sell, so you can buy them and list them again.\n\n"
+		body = "Items listed well below their usual price that also sell, so you can buy them and list them again.\n\n"
 			.. "Usual price: the middle of your daily scan prices over the last 14 days. It needs scans on 5 different days.\n\n"
-			.. "Sells a day: guessed from how many listings vanish between two of your scans. It needs two scans within a day.\n\n"
+			.. "Sales a day: guessed from how many listings vanish between two of your scans. It needs two scans within a day.\n\n"
 			.. "Profit is after the auction cut. Buy is capped at a third of a day's sales so they can sell at the usual price.\n\n"
 			.. "Settings, Opportunities changes how cheap, how busy and how profitable a flip must be.",
 		steps = {
@@ -36,8 +36,8 @@ local HELP = {
 			usual = { label = "have a usual price", fix = usualFix },
 			sells = { label = "also have a sales estimate", fix = "Sales are guessed from two scans of an item within a day. Scan again later today." },
 			under = {
-				label = function(pe) return string.format("are %d%% or more under it", math.floor(pe:GetFlipOptions().minDiscount * 100 + 0.5)) end,
-				fix = "Nothing is cheap enough now. Scan again later, or lower \"Count as a flip when under the usual price by\" in Settings.",
+				label = function(pe) return string.format("are %d%% or more below it", math.floor(pe:GetFlipOptions().minDiscount * 100 + 0.5)) end,
+				fix = "Nothing is cheap enough now. Scan again later, or lower \"Count as a flip when below the usual price by\" in Settings.",
 			},
 			sellEnough = {
 				label = function(pe) return string.format("sell %s or more a day", pe:GetFlipOptions().minSellsPerDay) end,
@@ -57,13 +57,13 @@ local HELP = {
 		steps = {
 			scanned = { label = "items in the last scan", fix = SCAN_FIX },
 			vendorKnown = { label = "have a known vendor price", fix = "Vendor prices load as items are seen. Look again in a minute." },
-			under = { label = "are listed under it", fix = "Nobody lists under vendor price right now. Check after the next scan." },
-			worth = { label = "gain 10s or more", fix = "Only tiny gains right now. Check after the next scan." },
+			under = { label = "are listed below it", fix = "Nobody lists below vendor price right now. Check after the next scan." },
+			worth = { label = "make 10s or more", fix = "Only tiny profits right now. Check after the next scan." },
 		},
 	},
 	gaps = {
 		title = "How price gaps work",
-		body = "A few cheap listings under a much higher next price. Buy the cheap ones and list them just under the next price.\n\n"
+		body = "A few cheap listings below a much higher next price. Buy the cheap ones and list them just below the next price.\n\n"
 			.. "Risky: anyone can list under you before yours sell. Only items that sell 5 or more a day are shown.\n\n"
 			.. "Needs price steps from a full scan, a usual price (5 scan days) and a sales estimate.\n\n"
 			.. "Settings, Opportunities sets the most you spend to clear one gap.",
@@ -74,7 +74,7 @@ local HELP = {
 			worth = {
 				label = "have a gap that fits",
 				fix = function(pe)
-					return string.format("A gap needs listings 25%% under the next price, 5+ sales a day and at most %s to clear."
+					return string.format("A gap needs listings 25%% below the next price, 5+ sales a day and at most %s to clear."
 						.. " Raise \"Price gaps cost at most\" in Settings.", money(pe, pe:GetGapOptions().maxCost))
 				end,
 			},
@@ -86,7 +86,7 @@ local HELP = {
 			.. "Counts bags and bank of this character. Worth is at today's lowest price, after the auction cut.\n\n"
 			.. "Needs a usual price (5 scan days) and a sales estimate for each item.",
 		steps = {
-			owned = { label = "items you own", fix = "Open your bags and bank once so they are stored." },
+			owned = { label = "items you own", fix = "Open your bags and bank once so they are saved." },
 			scanned = { label = "are in the last scan", fix = SCAN_FIX },
 			known = { label = "have a usual price and a sales estimate", fix = KNOWN_FIX },
 			worth = { label = "are 10% or more above usual", fix = "Nothing you own is priced high right now." },

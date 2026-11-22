@@ -86,7 +86,7 @@ function Tradewright:ShowRecipeTrainerWaypoint(recipeName, npcs, sold)
 	local npc = self.NearestPlace and self:NearestPlace(trainerPlaces(npcs))
 	if not npc then
 		self:PrintMessage(string.format(
-			"No trainer has been seen teaching %s. Open a trainer of this profession once; trainer recipes then get directions.", recipeName))
+			"No trainer has been seen teaching %s. Visit a trainer of this profession once to get directions.", recipeName))
 		return false
 	end
 	local marked = self:SetWaypointTo(npc, npc.name .. " (" .. recipeName .. ")")

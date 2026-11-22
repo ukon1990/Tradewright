@@ -1,7 +1,7 @@
 ## Interface: 16001, 16002, 16100, 16200
 ## AllowLoadGameType: camelot
 ## Title: Tradewright Professions
-## Notes: Profession scan, crafting, and profession data storage for Tradewright
+## Notes: Recipes, reagents and craft profit, read from your profession windows
 ## Author: Ukon1990
 ## Version: 2.0.0
 ## IconTexture: Interface\AddOns\Tradewright\media\logo
@@ -37,7 +37,6 @@ src\modules\Tradewright_CraftQueries.lua
 src\modules\Tradewright_LevelingRoute.lua
 src\modules\Tradewright_TrainerRecipes.lua
 src\modules\Tradewright_OpenProfessionRecipe.lua
-src\modules\Tradewright_CraftDetailText.lua
 src\modules\Tradewright_OrderReagents.lua
 src\modules\Tradewright_CraftingOrdersMaterials.lua
 src\modules\Tradewright_CraftingOrderMenus.lua

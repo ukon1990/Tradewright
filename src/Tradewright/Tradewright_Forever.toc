@@ -1,7 +1,7 @@
 ## Interface: 16001, 16002, 16100, 16200
 ## AllowLoadGameType: camelot
 ## Title: Tradewright
-## Notes: Shared runtime, migration, settings, and compact export services for Tradewright modules
+## Notes: Required by all Tradewright modules: settings, saved data and shared code
 ## Author: Ukon1990
 ## Version: 2.0.0
 ## IconTexture: Interface\AddOns\Tradewright\media\logo

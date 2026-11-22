@@ -5,43 +5,43 @@ Tradewright is an auction, profession and inventory helper for WoW Forever and r
 ## Features
 
 **Auction house**
-- Full scan that stores prices, with a daily price history and a usual price per item.
+- Full scan that saves prices, with a daily price history and a usual price per item.
 - Prices on item tooltips; hold Shift for craft profit and more.
 - Market tab to search the last scan and each item's price history from anywhere, not just at the auction house.
-- Opportunities tab: flips, items listed under vendor price, and what to sell now.
-- Shopping cart for the reagents your queued crafts need.
+- Opportunities tab: flips, items listed below vendor price, and what to sell now.
+- Cart for the reagents your queued crafts need.
 - Bulk posting, and undercut checks on your own auctions.
 
 **Professions**
 - Scans your recipes and reagents, and shows cost and profit per craft.
-- Picks the cheapest way to get each material: buy, craft or vendor.
+- Picks the cheapest way to get each reagent: buy, craft or vendor.
 - Shows which reagents a vendor sells that you still need.
 - Suggests how many to make, and tracks cooldown crafts.
 - Craft queue, and a leveling route for raising a profession skill.
-- Crafting orders (retail): queue patron orders, buy all materials from one shopping list, then craft them in order.
+- Crafting orders (retail): queue patron orders, buy all reagents from one cart, then craft them in order.
 - Reagent quality (retail): the cheapest reagents that reach the rank you want.
 
 **Inventory and gold**
 - Bags and bank across your characters, with quantity history.
 - Ledger and income view: where your gold comes from and what sells.
 - Farm window that logs loot and values it at current prices.
-- Mail tools: send materials to crafters, and crafts and surplus back to your seller.
+- Mail tools: send reagents to crafters, and crafts and surplus back to your bank character.
 
 **Bag window (optional)**
 - Bags and bank grouped by item category, with your other characters as tabs.
-- Select several items at once to move, bank or mail them.
+- Select several items at once to move, sell or destroy them.
 - Item log of what entered and left your bags.
-- Full bags: delete the cheapest stack, or swap it for loot that does not fit.
-- Turn it off with `/ah bags` or in Settings.
+- Full bags: suggests the cheapest stack to destroy, or to swap for loot that does not fit. Nothing is destroyed until you confirm.
+- Turn it off with `/tw bags` or in Settings.
 
 Tradewright is split into several addons, so you can turn off the parts you don't use.
 
 ## Getting started in game
 
 1. Enable the five core addons, and `Tradewright_Bags` if you want the bag window.
-2. Type `/ah` or `/tradewright` to open the window.
+2. Type `/tw` or `/tradewright` to open the window.
 3. Open the auction house and run a full scan to fill in prices.
-4. Open a profession and press Scan to store your recipes.
+4. Open a profession and press Scan to save your recipes.
 5. Open the Crafts tab to see which crafts are profitable.
 
 ## Optional addons
