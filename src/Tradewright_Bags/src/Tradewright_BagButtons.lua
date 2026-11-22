@@ -113,10 +113,10 @@ end
 local function ownerText(pe, owner)
 	local parts = {}
 	if owner.bags > 0 then
-		parts[#parts + 1] = pe:FormatNumberGrouped(owner.bags) .. L[" bags"]
+		parts[#parts + 1] = string.format(L["%s bags"], pe:FormatNumberGrouped(owner.bags))
 	end
 	if owner.bank > 0 then
-		parts[#parts + 1] = pe:FormatNumberGrouped(owner.bank) .. L[" bank"]
+		parts[#parts + 1] = string.format(L["%s bank"], pe:FormatNumberGrouped(owner.bank))
 	end
 	return table.concat(parts, " · ")
 end

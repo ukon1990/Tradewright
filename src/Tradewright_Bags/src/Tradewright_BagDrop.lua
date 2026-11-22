@@ -39,7 +39,7 @@ function Tradewright:DeleteBagStack(drop)
 	C_Container.PickupContainerItem(drop.item.bag, drop.item.slot)
 	if CursorHasItem() then
 		DeleteCursorItem()
-		self:PrintMessage(L["Destroyed "] .. self:DescribeBagDrop(drop) .. ".")
+		self:PrintMessage(string.format(L["Destroyed %s."], self:DescribeBagDrop(drop)))
 	end
 end
 
@@ -58,7 +58,7 @@ local function onClick(button)
 		pe:DeleteBagStack(drop)
 	else
 		button.armedKey, button.armedItem, button.armedAt = key, drop.item.itemID, GetTime()
-		pe:PrintMessage(L["Not junk: click Destroy cheapest again to destroy "] .. pe:DescribeBagDrop(drop) .. ".")
+		pe:PrintMessage(string.format(L["Not junk: click Destroy cheapest again to destroy %s."], pe:DescribeBagDrop(drop)))
 	end
 	if GameTooltip:IsOwned(button) then
 		button:GetScript("OnEnter")(button)
@@ -75,7 +75,7 @@ local function onEnter(button)
 	if not drop then
 		GameTooltip:AddLine(L["Nothing here is safe to destroy."], muted.r, muted.g, muted.b, true)
 	else
-		GameTooltip:AddLine(L["Destroys "] .. pe:DescribeBagDrop(drop) .. ".", danger.r, danger.g, danger.b, true)
+		GameTooltip:AddLine(string.format(L["Destroys %s."], pe:DescribeBagDrop(drop)), danger.r, danger.g, danger.b, true)
 		GameTooltip:AddLine(drop.isJunk and L["The junk stack a vendor pays least for. It cannot be undone."]
 			or L["You have no junk, so this is your cheapest other stack. Click twice. It cannot be undone."],
 			muted.r, muted.g, muted.b, true)

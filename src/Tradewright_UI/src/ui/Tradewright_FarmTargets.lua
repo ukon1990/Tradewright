@@ -88,7 +88,7 @@ end
 local function targetDetail(pe, row)
 	if row.early then
 		local basis = (row.days or 0) > 0 and string.format(L["%d of 5 days"], row.days) or L["latest scan only"]
-		return pe:Colorize(L["Early estimate: "] .. basis, "warning")
+		return pe:Colorize(string.format(L["Early estimate: %s"], basis), "warning")
 	end
 	local supply = row.daysOfSupply < 1 and L["Supply lasts under a day"] or string.format(L["Supply lasts %d days"], math.floor(row.daysOfSupply + 0.5))
 	return supply .. (row.usedByRecipes and L[" · used by your recipes"] or "")

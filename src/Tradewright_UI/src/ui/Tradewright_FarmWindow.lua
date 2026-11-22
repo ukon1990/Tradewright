@@ -197,7 +197,7 @@ function Tradewright:RefreshFarmWindow()
 	end
 	local summary = self:SummarizeFarmRun(run)
 	f.name:SetText(run.name)
-	f.rate:SetText(self:FormatCopperShort(summary.perHour) .. L[" an hour"])
+	f.rate:SetText(string.format(L["%s an hour"], self:FormatCopperShort(summary.perHour)))
 	f.clock:SetText(clock(summary.activeSeconds) .. pauseNote(run))
 	f.facts:SetRows(factRows(self, run, summary))
 	f.pause:SetText(run.pausedAt and L["Resume"] or "Pause")

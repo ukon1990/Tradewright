@@ -105,7 +105,7 @@ end
 local function priceLine(lines, g, f)
 	local unit = g.price or g.estimate
 	if unit then
-		local trend = g.trend and ("  " .. percentText(g.trend) .. L[" usual"]) or ""
+		local trend = g.trend and ("  " .. string.format(L["%s usual"], percentText(g.trend))) or ""
 		add(lines, "Price", f.money(unit) .. trend, trendTone(g.trend))
 	end
 end
@@ -128,7 +128,7 @@ local function listedLine(lines, g, f)
 	local value = f.number(g.listed)
 	if g.sellsPerDay then
 		local perDay = g.sellsPerDay >= 10 and f.number(g.sellsPerDay) or string.format("%.1f", g.sellsPerDay)
-		value = value .. SEP .. "~" .. perDay .. L[" sold/day"]
+		value = value .. SEP .. string.format(L["~%s sold/day"], perDay)
 	end
 	add(lines, "Listed", value)
 end
@@ -141,10 +141,10 @@ local function ownedLine(lines, g, f)
 	local parts = { f.number(owned) }
 	local unit = g.price or g.estimate
 	if unit and owned > 0 then
-		parts[#parts + 1] = L["worth "] .. f.moneyShort(unit * owned)
+		parts[#parts + 1] = string.format(L["worth %s"], f.moneyShort(unit * owned))
 	end
 	if listed > 0 then
-		parts[#parts + 1] = f.number(listed) .. L[" listed"]
+		parts[#parts + 1] = string.format(L["%s listed"], f.number(listed))
 	end
 	add(lines, L["You own"], table.concat(parts, SEP))
 end
@@ -165,7 +165,7 @@ local function ownerLines(lines, g, f)
 		add(lines, owners[i].name, ownerText(owners[i], f))
 	end
 	if #owners > MAX_OWNER_LINES then
-		add(lines, L["and "] .. (#owners - MAX_OWNER_LINES) .. L[" more"], "")
+		add(lines, string.format(L["and %s more"], (#owners - MAX_OWNER_LINES)), "")
 	end
 end
 
@@ -214,7 +214,7 @@ local function detailLines(lines, g, f)
 	if g.rule and g.rule.ignore then
 		add(lines, "Rule", L["never posted in bulk"])
 	elseif g.rule and (tonumber(g.rule.reserveQty) or 0) > 0 then
-		add(lines, "Rule", L["keep "] .. f.number(g.rule.reserveQty))
+		add(lines, "Rule", string.format(L["keep %s"], f.number(g.rule.reserveQty)))
 	end
 	if g.vendor and not g.vendorBeatsAh then
 		add(lines, L["Vendor pays"], f.money(g.vendor))

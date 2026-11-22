@@ -365,7 +365,7 @@ function BagLogic.MoveTargets(place, state)
 	end
 	for _, key in ipairs({ "bags", "bank", "warband" }) do
 		if key ~= place and (key ~= "warband" or state.hasWarband) then
-			targets[#targets + 1] = { key = key, label = L["Move to "] .. PLACE_LABEL[key] }
+			targets[#targets + 1] = { key = key, label = string.format(L["Move to %s"], PLACE_LABEL[key]) }
 		end
 	end
 	return targets

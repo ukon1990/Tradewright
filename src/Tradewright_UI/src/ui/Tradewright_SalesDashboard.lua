@@ -311,7 +311,7 @@ function SalesDashboardMixin:RefreshTopItems(items)
 	local bestEarner, mostOften = topItems(pe, items)
 	local nothing = L["Nothing sold in this period"]
 	if bestEarner then
-		self.stats.bestEarner:SetValues(L["Best earner"], bestEarner.name, pe:FormatCopperShort(bestEarner.net) .. L[" earned"], "gold")
+		self.stats.bestEarner:SetValues(L["Best earner"], bestEarner.name, string.format(L["%s earned"], pe:FormatCopperShort(bestEarner.net)), "gold")
 		self.stats.mostOften:SetValues(L["Sells most often"], mostOften.name,
 			string.format(L["%s sales, %.1f a week"], pe:FormatNumberGrouped(mostOften.sales), mostOften.perWeek))
 	else

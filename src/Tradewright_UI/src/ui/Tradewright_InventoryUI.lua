@@ -98,7 +98,7 @@ end
 function Tradewright:GetInventoryHeldText(rowData)
 	local where = string.format(L["%s bags · %s bank"], self:FormatNumberGrouped(rowData.bags or 0), self:FormatNumberGrouped(rowData.bank or 0))
 	if self.IS_RETAIL and (rowData.warband or 0) > 0 then
-		where = where .. " · " .. self:FormatNumberGrouped(rowData.warband) .. L[" warband"]
+		where = where .. " · " .. string.format(L["%s warband"], self:FormatNumberGrouped(rowData.warband))
 	end
 	return self:FormatNumberGrouped(rowData.total or 0) .. " · " .. where
 end

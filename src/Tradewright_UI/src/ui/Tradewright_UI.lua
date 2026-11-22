@@ -66,10 +66,10 @@ function Tradewright:FormatScanTimestamp(ts)
 	end
 	local day = date("%Y-%m-%d", ts)
 	if day == date("%Y-%m-%d") then
-		return L["today "] .. date("%H:%M", ts)
+		return string.format(L["today %s"], date("%H:%M", ts))
 	end
 	if day == date("%Y-%m-%d", time() - 86400) then
-		return L["yesterday "] .. date("%H:%M", ts)
+		return string.format(L["yesterday %s"], date("%H:%M", ts))
 	end
 	return date("%Y-%m-%d %H:%M", ts)
 end
@@ -246,7 +246,7 @@ function Tradewright:ShowExportProgress(scopeLabel)
 	ui.exportProgressFrame = ui.exportProgressFrame or createExportProgressFrame(self)
 	local f = ui.exportProgressFrame
 	f.scopeLabel = scopeLabel or "export"
-	f.title:SetText(L["Exporting "] .. tostring(f.scopeLabel))
+	f.title:SetText(string.format(L["Exporting %s"], tostring(f.scopeLabel)))
 	f.indeterminateBar = false
 	f.barMode = "gather"
 	f.gatherStartTime = GetTime()

@@ -230,7 +230,7 @@ local function refreshStats(pe, panel, rows)
 		end
 		seconds, value, runs = seconds + row.activeSeconds, value + row.valueWhenSaved, runs + row.runs
 	end
-	local bestPerHour = best and (pe:FormatCopperShort(best.nowPerHour) .. L[" an hour"]) or "-"
+	local bestPerHour = best and (string.format(L["%s an hour"], pe:FormatCopperShort(best.nowPerHour))) or "-"
 	panel.stats.bestFarm:SetValues(L["Best farm at today's prices"], bestPerHour, best and best.name or "")
 	panel.stats.farmed:SetValues(L["Farmed"], pe:FormatCopperShort(value), L["Worth when saved"], "success")
 	panel.stats.timeFarming:SetValues(L["Time farming"], duration(seconds), L["Pauses not counted"])
@@ -240,7 +240,7 @@ end
 
 local function refreshStatus(pe, panel)
 	local running = pe:GetCurrentFarmRun()
-	panel.status:SetText(running and (L["Farm running: "] .. running.name) or L["No farm running"])
+	panel.status:SetText(running and (string.format(L["Farm running: %s"], running.name)) or L["No farm running"])
 	panel.startButton:SetText(running and L["Show farm window"] or L["Start farm"])
 end
 

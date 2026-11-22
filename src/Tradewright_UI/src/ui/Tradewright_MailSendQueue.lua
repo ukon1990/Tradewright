@@ -281,7 +281,7 @@ function Tradewright:AutoSendReadyMaterials()
 		end
 	end
 	if self:StartMailSendQueue(ready, true) then
-		self:PrintMessage(L["Mailing reagents to "] .. table.concat(names, ", ") .. ".")
+		self:PrintMessage(string.format(L["Mailing reagents to %s."], table.concat(names, ", ")))
 	end
 end
 

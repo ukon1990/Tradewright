@@ -452,20 +452,20 @@ function Tradewright:AccountGoldLabel()
 		return ""
 	end
 	local gold = self:GetCurrentGoldSummaryForOverview(self.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__")
-	return gold and (L["Gold on all characters "] .. self:FormatCopperShort(gold)) or ""
+	return gold and (string.format(L["Gold on all characters %s"], self:FormatCopperShort(gold))) or ""
 end
 
 -- Status bar, left: what is running now, else how fresh the AH prices are.
 function Tradewright:GetShellActivityText()
 	local state = self:GetState()
 	if state.scanInProgress then
-		return L["Scanning "] .. tostring(state.currentProfession and state.currentProfession.professionName or "professions") .. "…"
+		return string.format(L["Scanning %s…"], tostring(state.currentProfession and state.currentProfession.professionName or "professions"))
 	end
 	if not self.GetLastFullAuctionScanAt then
 		return ""
 	end
 	local lastScanAt = self:GetLastFullAuctionScanAt()
-	return lastScanAt and (L["Prices from full AH scan "] .. self:FormatScanTimestamp(lastScanAt))
+	return lastScanAt and (string.format(L["Prices from full AH scan %s"], self:FormatScanTimestamp(lastScanAt)))
 		or L["No full AH scan yet · open the auction house to get prices"]
 end
 
@@ -481,9 +481,9 @@ function Tradewright:GetShellStoredText()
 	local charData = characters[self:GetCharacterKey()]
 	local scannedAt = charData and charData.scanFinishedAt
 	if scannedAt and scannedAt > 0 then
-		return text .. L[" · Professions scanned "] .. self:FormatScanTimestamp(scannedAt)
+		return string.format(L["%s · Professions scanned %s"], text, self:FormatScanTimestamp(scannedAt))
 	end
-	return text .. L[" · Professions not scanned yet"]
+	return string.format(L["%s · Professions not scanned yet"], text)
 end
 
 function Tradewright:RefreshShellStatus()

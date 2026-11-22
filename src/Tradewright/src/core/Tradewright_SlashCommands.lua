@@ -48,7 +48,7 @@ function Tradewright:Export(scope, identifier)
 	st.exportJsonBusy = false
 
 	if encodeErr or not payload then
-		self:PrintMessage(L["Package export failed: "] .. tostring(encodeErr or "unknown error"))
+		self:PrintMessage(string.format(L["Package export failed: %s"], tostring(encodeErr or "unknown error")))
 		if dbg then
 			self:PrintMessage(string.format(L["Export timing: gather=%.1fms pack=%.1fms (failed)"], msGather, msEncode))
 		end
@@ -63,7 +63,7 @@ function Tradewright:Export(scope, identifier)
 	local unsavedHint
 	if not savedOk and #payload > self.MAX_SAVEDEXPORT_BYTES then
 		unsavedHint = string.format(L["Full compressed export was not saved (over %d byte SavedVariables limit). Try smaller scopes"]
-			.. L[" such as professions_recipes, profession_talents, inventory, or a single profession."], self.MAX_SAVEDEXPORT_BYTES)
+			.. " such as professions_recipes, profession_talents, inventory, or a single profession.", self.MAX_SAVEDEXPORT_BYTES)
 	end
 
 	debugprofilestart()
@@ -220,17 +220,17 @@ end
 
 local SLASH_HELP_LINES = {
 	"/tw opens the window (/tradewright works too) | /tw scan: scan your professions | /tw status: the last scan"
-		.. L[" | /tw bags on|off: Tradewright bags | /twfarm start|pause|stop: run a farm | /tw docs: open Help"],
+		.. " | /tw bags on|off: Tradewright bags | /twfarm start|pause|stop: run a farm | /tw docs: open Help",
 	"Advanced: /tw debug [on|off|toggle] | /tw settings spectree on|off | recipeoutput on|off | invbatch <n>"
-		.. L[" | /tw auction status|enable|disable|refresh [crafts]|dump [visible|full] | /tw sources [seal]"],
+		.. " | /tw auction status|enable|disable|refresh [crafts]|dump [visible|full] | /tw sources [seal]",
 }
 
 -- Shown in help only while export is switched on; the format itself is described in docs/export-format.md.
 local EXPORT_HELP_LINES = {
 	"Export: /tw export … | /tw full (fresh scan, then full character export) | /tw dev export off",
 	"Export scopes: character | account | account_summary | professions | professions_recipes | professions_talents"
-		.. L[" | professions_compact | inventory | inventory_compact | auction_snapshot | auction_history | crafting_costs"]
-		.. L[" | spec_catalog | meta | profession <id|name> | profession_recipes <id|name> | profession_talents <id|name>"],
+		.. " | professions_compact | inventory | inventory_compact | auction_snapshot | auction_history | crafting_costs"
+		.. " | spec_catalog | meta | profession <id|name> | profession_recipes <id|name> | profession_talents <id|name>",
 }
 
 local EXPORT_USAGE = "Usage: /tw export [character|account|account_summary|professions|professions_recipes"

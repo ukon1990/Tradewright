@@ -154,7 +154,7 @@ function MaterialLogic.CooldownFooter(summary)
 		parts[#parts + 1] = string.format(L["%d %s ready"], #summary.ready, Tradewright:Plural(#summary.ready, "cooldown"))
 	end
 	if summary.nextIn then
-		parts[#parts + 1] = L["next in "] .. MaterialLogic.FormatCooldown(summary.nextIn)
+		parts[#parts + 1] = string.format(L["next in %s"], MaterialLogic.FormatCooldown(summary.nextIn))
 	end
 	return #parts > 0 and table.concat(parts, " · ") or nil
 end

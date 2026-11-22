@@ -15,7 +15,7 @@ local function sourceName(pe, source)
 		return pe:GetMapName(source.id) or L["unknown waters"]
 	elseif source.kind == "object" then
 		local zone = source.places[1] and pe:GetMapName(source.places[1][1])
-		return zone and (L["a node or chest in "] .. zone) or L["a node or chest"]
+		return zone and (string.format(L["a node or chest in %s"], zone)) or L["a node or chest"]
 	end
 	return source.name or L["an unknown creature"]
 end

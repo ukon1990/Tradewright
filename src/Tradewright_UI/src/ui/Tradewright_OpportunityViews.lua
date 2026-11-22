@@ -29,7 +29,7 @@ local function sellsSourceText(pe, row)
 	if row.sellsSource == "own" then
 		return L["your own sales"]
 	elseif row.sellsSource == "both" then
-		return pairsText .. L[" and your sales"]
+		return string.format(L["%s and your sales"], pairsText)
 	end
 	return pairsText
 end
@@ -126,9 +126,9 @@ end
 local function flipDetail(pe, row)
 	local detail = pe:FormatPercent(row.discount) .. L[" below usual"]
 	if row.fewSales then
-		return detail .. L[" · few sales seen"]
+		return string.format(L["%s · few sales seen"], detail)
 	elseif row.slow then
-		return detail .. L[" · sells slowly"]
+		return string.format(L["%s · sells slowly"], detail)
 	elseif row.listedUnder then
 		return string.format(L["%s · %s listed below %s"], detail, pe:FormatNumberGrouped(row.listedUnder), pe:FormatCopperShort(row.limitPrice))
 	end
@@ -160,7 +160,7 @@ local function flipDetailRows(pe, row)
 		{ L["Deposit lost on unsold postings, each"], row.depositLoss > 0 and pe:FormatCopperFull(row.depositLoss) or "unknown" },
 		{ L["Profit each"], pe:FormatSignedMoney(row.profitEach), "success" },
 		{ "Return", pe:FormatPercent(row.roi) },
-		{ L["Listed below "] .. pe:FormatCopperShort(row.limitPrice), row.listedUnder and pe:FormatNumberGrouped(row.listedUnder) or "-" },
+		{ string.format(L["Listed below %s"], pe:FormatCopperShort(row.limitPrice)), row.listedUnder and pe:FormatNumberGrouped(row.listedUnder) or "-" },
 		sells, source,
 		{ string.format(L["Buy %s and spend"], pe:FormatNumberGrouped(units)), pe:FormatCopperFull(row.cost) },
 		{ L["Profit if all sell at the usual price"], pe:FormatSignedMoney(row.profit), "success" },
@@ -180,9 +180,10 @@ local function flipStats(pe, stats, rows, insights)
 	local opts = pe:GetFlipOptions()
 	local profit, note, settled = settledSum(pe, rows, "profit", L["After the auction cut"])
 	profitTile:SetValues(string.format(L["Expected profit, all %d"], settled), pe:FormatSignedMoney(profit), note, "success")
-	goldNeededTile:SetValues(L["Gold needed"], pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), L["You have "] .. pe:FormatCopperShort(GetMoney()))
+	local youHave = string.format(L["You have %s"], pe:FormatCopperShort(GetMoney()))
+	goldNeededTile:SetValues(L["Gold needed"], pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), youHave)
 	coverageStat(pe, coverageTile, insights)
-	cutTile:SetValues(L["Auction cut"], pe:FormatPercent(opts.cut), L["Last scan "] .. lastScanText(pe, insights))
+	cutTile:SetValues(L["Auction cut"], pe:FormatPercent(opts.cut), string.format(L["Last scan %s"], lastScanText(pe, insights)))
 end
 
 local flips = {
@@ -194,11 +195,11 @@ local flips = {
 	detailRows = flipDetailRows,
 	riskText = withDataWarnings(flipRiskText),
 	setStats = flipStats,
-	subtitle = function(pe, row) return pe:FormatPercent(row.discount) .. L[" below its usual price"] end,
+	subtitle = function(pe, row) return string.format(L["%s below its usual price"], pe:FormatPercent(row.discount)) end,
 	tooltipPairs = function(pe, row) return { { L["Profit each after the cut"], pe:FormatSignedMoney(row and row.profitEach) } } end,
 	footer = function(pe, rows, insights)
 		return string.format(L["%d flips from %s items"], #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
-			L["Auction cut "] .. pe:DescribeAuctionCut() .. L[" · Buy is capped at a share of a day's sales"]
+			string.format(L["Auction cut %s · Buy is capped at a share of a day's sales"], pe:DescribeAuctionCut())
 	end,
 }
 
@@ -243,15 +244,15 @@ end
 local function vendorRiskText(_, row)
 	local stale = L["The listings may be gone: this comes from your last scan."]
 	if not row.qtyKnown then
-		return stale .. L[" No price steps are kept for it, so only the cheapest listing is counted."]
+		return string.format(L["%s No price steps are kept for it, so only the cheapest listing is counted."], stale)
 	end
-	return stale .. L[" Check the vendor's price in the item tooltip before buying many."]
+	return string.format(L["%s Check the vendor's price in the item tooltip before buying many."], stale)
 end
 
 local function vendorStats(pe, stats, rows, insights)
 	local gainTile, goldNeededTile, itemsTile, lastScanTile = unpack(stats)
 	gainTile:SetValues(string.format(L["Profit, all %d"], #rows), pe:FormatSignedMoney(sumOf(rows, "gain")), L["Sold to a vendor, no auction cut"], "success")
-	goldNeededTile:SetValues(L["Gold needed"], pe:FormatCopperShort(sumOf(rows, "cost")), L["You have "] .. pe:FormatCopperShort(GetMoney()))
+	goldNeededTile:SetValues(L["Gold needed"], pe:FormatCopperShort(sumOf(rows, "cost")), string.format(L["You have %s"], pe:FormatCopperShort(GetMoney())))
 	itemsTile:SetValues(L["Items"], tostring(#rows), L["Listed below their vendor price"])
 	lastScanTile:SetValues(L["Last scan"], lastScanText(pe, insights), L["Listings may have changed since"])
 end
@@ -265,7 +266,7 @@ local vendor = {
 	detailRows = vendorDetailRows,
 	riskText = vendorRiskText,
 	setStats = vendorStats,
-	subtitle = function(pe, row) return L["Listed below the "] .. pe:FormatCopperShort(row.vendorSell) .. L[" a vendor pays"] end,
+	subtitle = function(pe, row) return string.format(L["Listed below the %s a vendor pays"], pe:FormatCopperShort(row.vendorSell)) end,
 	tooltipPairs = function(pe, row) return { { L["A vendor pays"], pe:FormatCopperFull(row and row.vendorSell) } } end,
 	footer = function(pe, rows, insights)
 		return string.format(L["%d items from %s scanned"], #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
@@ -329,7 +330,8 @@ local function gapStats(pe, stats, rows, insights)
 	local gainTile, goldNeededTile, riskTile, lastScanTile = unpack(stats)
 	local gain, note, settled = settledSum(pe, rows, "gain", L["After the auction cut"])
 	gainTile:SetValues(string.format(L["Profit if all %d hold"], settled), pe:FormatSignedMoney(gain), note, "warning")
-	goldNeededTile:SetValues(L["Gold needed"], pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), L["You have "] .. pe:FormatCopperShort(GetMoney()))
+	local youHave = string.format(L["You have %s"], pe:FormatCopperShort(GetMoney()))
+	goldNeededTile:SetValues(L["Gold needed"], pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), youHave)
 	riskTile:SetValues(L["Risky"], L["Read first"], L["Pays only if nobody lists under you"], "warning")
 	lastScanTile:SetValues(L["Last scan"], lastScanText(pe, insights), L["Listings may have changed since"])
 end
@@ -343,11 +345,11 @@ local gaps = {
 	detailRows = gapDetailRows,
 	riskText = withDataWarnings(gapRiskText),
 	setStats = gapStats,
-	subtitle = function(pe, row) return L["Risky · next price is "] .. pe:FormatPercent(row.gapPct) .. L[" higher"] end,
+	subtitle = function(pe, row) return string.format(L["Risky · next price is %s higher"], pe:FormatPercent(row.gapPct)) end,
 	tooltipPairs = function(pe, row) return { { L["Cost to clear"], pe:FormatCopperFull(row and row.cost) } } end,
 	footer = function(pe, rows, insights)
 		return string.format(L["%d price gaps from %s items"], #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
-			L["Risky: profit counts the "] .. pe:DescribeAuctionCut() .. L[" cut, not undercuts"]
+			string.format(L["Risky: profit counts the %s cut, not undercuts"], pe:DescribeAuctionCut())
 	end,
 }
 
@@ -404,7 +406,7 @@ end
 
 local function sellDetail(pe, row)
 	if row.slow then
-		return whereText(pe, row) .. L[" · more than a day of sales"]
+		return string.format(L["%s · more than a day of sales"], whereText(pe, row))
 	end
 	return whereText(pe, row)
 end
@@ -471,11 +473,11 @@ local sell = {
 	detailRows = sellDetailRows,
 	riskText = withDataWarnings(sellRiskText),
 	setStats = sellStats,
-	subtitle = function(pe, row) return pe:FormatPercent(row.premium) .. L[" above its usual price"] end,
+	subtitle = function(pe, row) return string.format(L["%s above its usual price"], pe:FormatPercent(row.premium)) end,
 	tooltipPairs = function(pe, row) return { { L["Worth after the cut"], pe:FormatCopperFull(row and row.worth) } } end,
 	footer = function(pe, rows)
 		return string.format(L["%d of your items"], #rows),
-			L["Worth = owned at today's lowest price, after the "] .. pe:DescribeAuctionCut() .. L[" cut"]
+			string.format(L["Worth = owned at today's lowest price, after the %s cut"], pe:DescribeAuctionCut())
 	end,
 }
 

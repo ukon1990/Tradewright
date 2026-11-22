@@ -366,7 +366,7 @@ local function queueRecipeRow(pe, entry, index)
 	if orderID then
 		detail[#detail + 1] = L["Order #"] .. orderID
 	end
-	detail[#detail + 1] = L["Profit "] .. (perProfit and pe:FormatSignedMoney(perProfit * quantity) or "unknown")
+	detail[#detail + 1] = string.format(L["Profit %s"], (perProfit and pe:FormatSignedMoney(perProfit * quantity) or "unknown"))
 	local ready, readyNote = craftReadiness(pe, entry, quantity)
 	detail[#detail + 1] = readyNote
 	return {
@@ -409,7 +409,7 @@ local function holdersText(pe, holders)
 	if #holders > MAX_HOLDERS_SHOWN then
 		parts[#parts + 1] = "+" .. (#holders - MAX_HOLDERS_SHOWN)
 	end
-	return #parts > 0 and (L["On other characters: "] .. table.concat(parts, ", ")) or nil
+	return #parts > 0 and (string.format(L["On other characters: %s"], table.concat(parts, ", "))) or nil
 end
 
 -- Cost of buying `buy` units: 0 when nothing is bought, nil when the price is unknown.

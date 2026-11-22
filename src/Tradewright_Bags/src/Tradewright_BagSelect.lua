@@ -41,7 +41,7 @@ end
 function Tradewright:ArmBagDestroy(items)
 	local queue, total, refused = self.BagLogic.DestroyQueue(items, auctionPriceOf)
 	if #queue == 0 then
-		self:PrintMessage(L["Nothing to destroy. "] .. self.BAG_DESTROY_KEPT_TEXT)
+		self:PrintMessage(string.format(L["Nothing to destroy. %s"], self.BAG_DESTROY_KEPT_TEXT))
 		return
 	end
 	selection = {}

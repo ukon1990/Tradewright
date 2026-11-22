@@ -14,7 +14,7 @@ local function ageText(ts)
 	if not ts then
 		return L["never seen"]
 	end
-	return L["seen "] .. Tradewright.TooltipLogic.AgeText(time() - ts)
+	return string.format(L["seen %s"], Tradewright.TooltipLogic.AgeText(time() - ts))
 end
 
 local function itemColumn(pe, getDetail)
@@ -203,7 +203,7 @@ local function moversColumns(pe)
 			if supplyView() then
 				return string.format(L["%s listed, usually %s"], pe:FormatNumberGrouped(row.qtyNow or 0), pe:FormatNumberGrouped(row.qtyAvg7d or 0))
 			end
-			return (row.usualDays and L["Usual price "] or L["7-day average "]) .. pe:FormatCopperShort(row.avg7d or 0)
+			return string.format(row.usualDays and L["Usual price %s"] or L["7-day average %s"], pe:FormatCopperShort(row.avg7d or 0))
 		end),
 		moneyColumn(pe, { id = "price", label = L["Price"], width = 70 }),
 		{ id = "change", label = L["Change"], justifyH = "RIGHT", width = 60,
@@ -325,7 +325,7 @@ function GoldDashboardMixin:RefreshCrafts()
 	self.crafts.table:Refresh()
 	local best = top[1]
 	self.stats.profitableCrafts:SetValues(L["Profitable crafts"], pe:FormatNumberGrouped(#profitable),
-		best and (L["Best "] .. pe:FormatCopperShort(best.profit) .. L[" each"]) or L["None found yet"], #profitable > 0 and "success" or nil)
+		best and (string.format(L["Best %s each"], pe:FormatCopperShort(best.profit))) or L["None found yet"], #profitable > 0 and "success" or nil)
 end
 
 function GoldDashboardMixin:RefreshMovers()
@@ -408,7 +408,8 @@ function GoldDashboardMixin:RefreshGoldStat()
 	local note = L["No history yet"]
 	if first then
 		local delta = gold - first
-		note = (delta >= 0 and pe:Colorize("+" .. pe:FormatCopperShort(delta), "success") or pe:Colorize(pe:FormatCopperShort(delta), "danger")) .. L[" in 7 days"]
+		local change = delta >= 0 and pe:Colorize("+" .. pe:FormatCopperShort(delta), "success") or pe:Colorize(pe:FormatCopperShort(delta), "danger")
+		note = string.format(L["%s in 7 days"], change)
 	end
 	self.stats.gold:SetValues(L["Gold, all characters"], pe:FormatCopperShort(gold), note)
 end

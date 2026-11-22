@@ -121,7 +121,7 @@ function Tradewright:GetCraftCategoryFilterOptions(rows)
 				label = self:ResolveCraftCategoryLabel(row.skillLineID, cid)
 			end
 			if not label or label == "" then
-				label = L["Category "] .. tostring(cid)
+				label = string.format(L["Category %s"], tostring(cid))
 			end
 			opts[#opts + 1] = { value = tostring(cid), label = label }
 		end

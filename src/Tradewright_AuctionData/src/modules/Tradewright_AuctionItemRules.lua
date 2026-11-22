@@ -81,7 +81,7 @@ function Tradewright:RefreshAuctionPanelRules()
 	if panel.btnReserveItem then
 		panel.btnReserveItem:SetEnabled(selectedItemID ~= nil)
 		if rowState.reserveQty and rowState.reserveQty > 0 then
-			panel.btnReserveItem:SetText(L["Keep "] .. tostring(rowState.reserveQty))
+			panel.btnReserveItem:SetText(string.format(L["Keep %s"], tostring(rowState.reserveQty)))
 		else
 			panel.btnReserveItem:SetText("Keep...")
 		end
@@ -158,7 +158,7 @@ function Tradewright:EnsureAuctionReserveWindow()
 	f.cancel:SetPoint("RIGHT", f.keep, "LEFT", -8, 0)
 	f.input:HookScript("OnTextChanged", function()
 		local keepQuantity = tonumber(f.input:GetText()) or 0
-		pe:SetButtonLabel(f.keep, keepQuantity > 0 and (L["Keep "] .. keepQuantity) or L["Remove keep"])
+		pe:SetButtonLabel(f.keep, keepQuantity > 0 and (string.format(L["Keep %s"], keepQuantity)) or L["Remove keep"])
 	end)
 	f:Hide()
 	self._auctionReserveWindow = f

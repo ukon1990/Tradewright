@@ -163,11 +163,11 @@ end
 
 function Tradewright:RefreshCraftQueueBuyTable(view, summary)
 	local buy, mail = linesToBuy(summary)
-	view.buyHeading:SetText(L["Cart for "] .. self:GetCrafterName(self:GetCharacterKey()))
+	view.buyHeading:SetText(string.format(L["Cart for %s"], self:GetCrafterName(self:GetCharacterKey())))
 	view.buyTable:SetRows(buy)
 	view.buyTable:Refresh()
 	local buyCost = summary.totalCurrentCharacterBuyCost
-	view.buyTable:SetFooterText(#mail > 0 and (L["Mail: "] .. table.concat(mail, ", ")) or nil, buyCost and self:FormatCopperShort(buyCost) or nil)
+	view.buyTable:SetFooterText(#mail > 0 and (string.format(L["Mail: %s"], table.concat(mail, ", "))) or nil, buyCost and self:FormatCopperShort(buyCost) or nil)
 end
 
 function Tradewright:RefreshCraftsQueuePanel()

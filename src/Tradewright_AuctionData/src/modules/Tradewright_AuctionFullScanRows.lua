@@ -176,7 +176,7 @@ function Tradewright:StartClassicFullAuctionDump(existingToken)
 	local state = self:GetState()
 	local cooldownRemaining = self:GetFullAuctionDumpCooldownRemaining()
 	if cooldownRemaining > 0 and not existingToken then
-		self:PrintMessage(L["Full scan is on cooldown for "] .. formatDurationShort(cooldownRemaining) .. ".")
+		self:PrintMessage(string.format(L["Full scan is on cooldown for %s."], formatDurationShort(cooldownRemaining)))
 		self:RefreshAuctionHousePanel()
 		return false
 	end

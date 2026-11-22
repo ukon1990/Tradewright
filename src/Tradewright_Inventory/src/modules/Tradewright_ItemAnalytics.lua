@@ -221,7 +221,7 @@ end
 function Tradewright:GetRangeLabel(rangeKey)
 	for _, option in ipairs(self:GetInventoryMetricRangeOptions()) do
 		if option.value == rangeKey then
-			return option.value == "all" and option.label or (L["Last "] .. option.label)
+			return option.value == "all" and option.label or (string.format(L["Last %s"], option.label))
 		end
 	end
 	return tostring(rangeKey or "")

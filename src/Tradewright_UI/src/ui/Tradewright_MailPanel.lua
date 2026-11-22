@@ -27,13 +27,13 @@ local function roleText(pe)
 	elseif seller == pe:GetCharacterKey() then
 		return L["This is your bank character. Reagents your queued crafts need go from here to the crafters."]
 	end
-	return L["Everything sellable here can go to your bank character, "] .. pe:GetMailCharacterLabel(seller) .. "."
+	return string.format(L["Everything sellable here can go to your bank character, %s."], pe:GetMailCharacterLabel(seller))
 end
 
 
 local MAIL_PAD = 12
 local MAIL_ROW = 48
-local ROW_TITLES = { crafts = L["Crafted items to "], surplus = L["Surplus to "] }
+local ROW_TITLES = { crafts = L["Crafted items to %s"], surplus = L["Surplus to %s"] }
 
 -- Tooltip lines for a list of items: name in `color`, count in `valueColor`, `suffix` after each name.
 local function addItemLines(pe, items, color, valueColor, suffix)
@@ -85,18 +85,18 @@ end
 -- "Crafted items to Bånkey · 6 items · ready" with the count muted and the state coloured. The
 -- surplus row has no state: what goes is decided in its review panel.
 local function destTitle(pe, dest)
-	local text = (ROW_TITLES[dest.kind] or "") .. pe:GetMailCharacterLabel(dest.characterKey)
+	local text = string.format(ROW_TITLES[dest.kind] or "%s", pe:GetMailCharacterLabel(dest.characterKey))
 	if dest.kind == "surplus" then
 		return text
 	end
 	text = text .. " " .. pe:Colorize("· " .. pe:FormatNumberGrouped(dest.totalQuantity or 0) .. " items", "textMuted")
 	local ready = dest.complete ~= false
-	return text .. " " .. pe:Colorize("· " .. (ready and "ready" or (#dest.missing .. L[" still missing"])), ready and "success" or "warning")
+	return text .. " " .. pe:Colorize("· " .. (ready and "ready" or (string.format(L["%s still missing"], #dest.missing))), ready and "success" or "warning")
 end
 
 -- "214 to send · 12 stay · 4 skipped" for the surplus row.
 local function surplusText(pe, sum)
-	local text = sum.send > 0 and (pe:FormatNumberGrouped(sum.send) .. L[" to send"]) or L["Nothing to send"]
+	local text = sum.send > 0 and (string.format(L["%s to send"], pe:FormatNumberGrouped(sum.send))) or L["Nothing to send"]
 	local stay = sum.kept - sum.skipped
 	if stay > 0 then
 		text = text .. string.format(L[" · %d stay"], stay)

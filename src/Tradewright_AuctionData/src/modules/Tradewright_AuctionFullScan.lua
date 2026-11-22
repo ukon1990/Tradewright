@@ -122,7 +122,7 @@ function Tradewright:FailFullAuctionDump(reason)
 	dump.status = "failed"
 	dump.error = tostring(reason or "unknown")
 	dump.finishedAt = Tradewright:Now()
-	self:PrintMessage(L["Full scan failed: "] .. tostring(reason or "unknown"))
+	self:PrintMessage(string.format(L["Full scan failed: %s"], tostring(reason or "unknown")))
 	self:RefreshAuctionHousePanel()
 end
 
@@ -372,7 +372,7 @@ function Tradewright:StartAuctionDump(mode)
 	if mode == "full" then
 		local cooldownRemaining = self:GetFullAuctionDumpCooldownRemaining()
 		if cooldownRemaining > 0 then
-			self:PrintMessage(L["Full scan is on cooldown for "] .. formatDurationShort(cooldownRemaining) .. ".")
+			self:PrintMessage(string.format(L["Full scan is on cooldown for %s."], formatDurationShort(cooldownRemaining)))
 			self:RefreshAuctionHousePanel()
 			return false
 		end

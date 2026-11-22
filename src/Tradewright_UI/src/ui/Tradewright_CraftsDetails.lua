@@ -131,7 +131,7 @@ function Tradewright:CraftBadge(row, evaluation)
 	for _, slot in ipairs(evaluation.reagentPlan or {}) do
 		missing = missing + math.max(0, tonumber(slot.purchasedQuantity) or 0)
 	end
-	return missing > 0 and (L["Missing "] .. missing) or "Missing", "danger"
+	return missing > 0 and (string.format(L["Missing %s"], missing)) or "Missing", "danger"
 end
 
 local function moneyOrDash(pe, copper)
@@ -183,7 +183,8 @@ end
 function Tradewright:RenderCraftRow(panel, row)
 	local evaluation = self:GetBestCraftEvaluation(row) or {}
 	local crafter = row.bestCharacterKey and self:GetCrafterName(row.bestCharacterKey) or "-"
-	panel.detailHeader:SetItem(row.outputItemID, self:GetCraftRowName(row), (row.professionName or "?") .. L[" · best crafter "] .. crafter, row.outputIcon)
+	local subtitle = string.format(L["%s · best crafter %s"], row.professionName or "?", crafter)
+	panel.detailHeader:SetItem(row.outputItemID, self:GetCraftRowName(row), subtitle, row.outputIcon)
 	panel.detailHeader.badge:SetBadge(self:CraftBadge(row, evaluation))
 	panel.detailFacts:SetRows(self:CraftDetailFacts(row, evaluation))
 	panel.materialsTable:SetRows(materialRows(evaluation))

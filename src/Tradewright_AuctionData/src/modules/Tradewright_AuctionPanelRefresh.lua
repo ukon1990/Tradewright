@@ -74,7 +74,7 @@ local function summarizeAuctionCart(pe, cartRows)
 		end
 	end
 	if cart.cost > 0 then
-		cart.costHint = L["About "] .. pe:FormatCopperShort(cart.cost) .. (cart.costKnown and "" or "+")
+		cart.costHint = string.format(L["About %s"], pe:FormatCopperShort(cart.cost) .. (cart.costKnown and "" or "+"))
 	end
 	return cart
 end
@@ -165,7 +165,7 @@ end
 local function refreshAuctionPanelFooters(panel, scan, rowCount, preFilterCount)
 	if panel.footerText then
 		local footer = scan.fullDumpActive and L["Full scan running"]
-			or scan.cooldown > 0 and (L["Full scan ready in "] .. formatDurationShort(scan.cooldown))
+			or scan.cooldown > 0 and (string.format(L["Full scan ready in %s"], formatDurationShort(scan.cooldown)))
 			or L["Full scan ready"]
 		panel.footerText:SetText(string.format(L["%s · Last full scan %s"], footer, scan.lastFullScanLabel))
 	end

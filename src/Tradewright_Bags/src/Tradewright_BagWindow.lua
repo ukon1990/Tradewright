@@ -244,10 +244,10 @@ end
 -- Right of the footer on a read-only tab: when it was seen, and its gold (All: the total).
 local function savedFootText(pe, view, record)
 	if not record then
-		return L["All "] .. pe:FormatCopperShort(select(2, pe.BagLogic.GoldByCharacter(pe:GetBagHoldings())))
+		return string.format(L["All %s"], pe:FormatCopperShort(select(2, pe.BagLogic.GoldByCharacter(pe:GetBagHoldings()))))
 	end
 	local seenAt = view.mode == "bank" and record.bankSeenAt or record.seenAt
-	local seen = seenAt and (L["Seen "] .. pe:FormatShortTime(seenAt)) or L["Bank not seen yet"]
+	local seen = seenAt and (string.format(L["Seen %s"], pe:FormatShortTime(seenAt))) or L["Bank not seen yet"]
 	return record.money and (seen .. "  ·  " .. pe:FormatCopperShort(record.money)) or seen
 end
 
@@ -267,7 +267,7 @@ end
 
 local function refreshLogTexts(pe, f, view, rowCount)
 	local record = pe:GetBagHoldings()[view.tab]
-	f.meta:SetText((record and record.name or view.tab) .. L[" · item log"])
+	f.meta:SetText(string.format(L["%s · item log"], (record and record.name or view.tab)))
 	local entries = rowCount .. " " .. pe:Plural(rowCount, "entry", "entries")
 	f.footLeft:SetText(string.format(L["%s · last %d days"], entries, pe:GetItemLogLimits().days))
 	f.footRight:SetText(view.tab == view.current and goldText(pe, GetMoney()) or "")
@@ -289,7 +289,7 @@ local function refreshTexts(pe, f, view, totals, itemCount)
 	end
 	local record = pe:GetBagHoldings()[view.tab]
 	local name = view.tab == "all" and L["All characters"] or (record and record.name or view.tab)
-	f.meta:SetText(name .. L[" · read-only"])
+	f.meta:SetText(string.format(L["%s · read-only"], name))
 	f.footLeft:SetText(string.format(L["%d items · %s"], itemCount, MODE_TEXT[view.mode]))
 	f.footRight:SetText(savedFootText(pe, view, record))
 end

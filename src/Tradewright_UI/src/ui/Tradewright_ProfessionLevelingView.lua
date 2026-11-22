@@ -56,9 +56,9 @@ local function learnSourceText(pe, candidate)
 	if candidate.source == "trainer" then
 		return string.format(L["trainer, skill %d"], candidate.learnSkill or 0)
 	elseif candidate.source == "vendor" then
-		return L["vendor, "] .. pe:FormatCopperShort(candidate.learnCost or 0)
+		return string.format(L["vendor, %s"], pe:FormatCopperShort(candidate.learnCost or 0))
 	elseif candidate.source == "drop" then
-		return L["drops from "] .. dropSourceName(candidate.dropSource)
+		return string.format(L["drops from %s"], dropSourceName(candidate.dropSource))
 	end
 	return L["source unknown"]
 end

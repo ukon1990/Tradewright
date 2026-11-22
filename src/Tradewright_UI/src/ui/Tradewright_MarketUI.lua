@@ -582,7 +582,7 @@ end
 function Tradewright:RefreshMarketScanBadge(panel)
 	local lastScanAt = self.GetLastFullAuctionScanAt and self:GetLastFullAuctionScanAt()
 	if lastScanAt then
-		panel.scanBadge:SetBadge(L["Full scan "] .. self:FormatScanTimestamp(lastScanAt), "accent")
+		panel.scanBadge:SetBadge(string.format(L["Full scan %s"], self:FormatScanTimestamp(lastScanAt)), "accent")
 	else
 		panel.scanBadge:SetBadge(L["No full scan yet"], "warning")
 	end

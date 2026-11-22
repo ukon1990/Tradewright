@@ -281,13 +281,14 @@ local function sellRowTooltipLines(pe, rowData)
 		lines[#lines + 1] = { L["AH price"], L["not checked this visit"] }
 	end
 	if rowData.fallbackPrice and rowData.fallbackPrice > 0 then
-		lines[#lines + 1] = { L["Price from "] .. tostring(rowData.fallbackPriceSource or L["another addon"]), pe:FormatCopperFull(rowData.fallbackPrice) }
+		local priceSource = tostring(rowData.fallbackPriceSource or L["another addon"])
+		lines[#lines + 1] = { string.format(L["Price from %s"], priceSource), pe:FormatCopperFull(rowData.fallbackPrice) }
 	end
 	lines[#lines + 1] = { "Return", pe:FormatPercent(rowData.potentialROI) }
 	if rowData.isIgnoredByRule then
 		lines[#lines + 1] = { "Rule", L["never posted in bulk"] }
 	elseif (tonumber(rowData.reserveQty) or 0) > 0 then
-		lines[#lines + 1] = { "Rule", L["keep "] .. pe:FormatNumberGrouped(rowData.reserveQty) }
+		lines[#lines + 1] = { "Rule", string.format(L["keep %s"], pe:FormatNumberGrouped(rowData.reserveQty)) }
 	end
 	return lines
 end
@@ -300,7 +301,7 @@ local function showSellRowTooltip(rowFrame, rowData)
 	local lines = sellRowTooltipLines(pe, rowData)
 	local hint = L["Click to put it in the sell slot · Shift-click to link"]
 	if rowData.isDumpedLow then
-		hint = L["The price is unusually low. "] .. hint
+		hint = string.format(L["The price is unusually low. %s"], hint)
 	end
 	pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, hint)
 end

@@ -325,7 +325,7 @@ local function professionLogLine(merge)
 end
 
 local function startChunkedFullMerge(self, merge, recipeIDs, filterSnapshot)
-	self:DebugLog("LIVE", MERGE_LOG .. " collecting (chunked full)", { professionLogLine(merge) .. string.format(L[" recipeCount=%d"], #recipeIDs) })
+	self:DebugLog("LIVE", MERGE_LOG .. " collecting (chunked full)", { professionLogLine(merge) .. string.format(" recipeCount=%d", #recipeIDs) })
 	local professionData = self:CreateProfessionDataShell(merge.descriptor, { rebuildSpecs = true })
 	self:RestoreFilters(filterSnapshot)
 	-- Prefer a fingerprint taken under the same filter state used for collection.

@@ -111,7 +111,7 @@ local function fillRow(pe, row, offer)
 	row.icon:SetItem(offer.itemID, offer.icon)
 	row.name:SetText(offer.name or pe:GetItemDisplayName(offer.itemID))
 	row.detail:SetText(string.format(L["Need %s · %s each%s"], pe:FormatNumberGrouped(offer.need),
-		pe:FormatCopperShort(math.ceil(offer.price)), offer.stock and (" · " .. offer.stock .. L[" in stock"]) or ""))
+		pe:FormatCopperShort(math.ceil(offer.price)), offer.stock and (" · " .. string.format(L["%s in stock"], offer.stock)) or ""))
 	-- Keep what the player is typing; otherwise follow the amount still missing.
 	if not row.amount:HasFocus() then
 		row.amount:SetText(tostring(offer.need))
@@ -130,7 +130,7 @@ function Tradewright:RefreshVendorBuyTotal()
 			total = total + amountOf(row) * row.offer.price
 		end
 	end
-	f.total:SetText(L["Total "] .. self:FormatCopperShort(math.ceil(total)))
+	f.total:SetText(string.format(L["Total %s"], self:FormatCopperShort(math.ceil(total))))
 	f.buyAll:SetEnabled(total > 0)
 end
 

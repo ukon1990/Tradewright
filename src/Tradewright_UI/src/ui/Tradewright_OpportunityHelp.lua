@@ -45,7 +45,7 @@ local HELP = {
 				fix = L["Lower \"An item must sell at least\" in Settings."],
 			},
 			worth = {
-				label = function(pe) return L["make "] .. money(pe, pe:GetFlipOptions().minProfit) .. L[" or more"] end,
+				label = function(pe) return string.format(L["make %s or more"], money(pe, pe:GetFlipOptions().minProfit)) end,
 				fix = L["Lower \"Smallest profit worth showing\" in Settings."],
 			},
 		},

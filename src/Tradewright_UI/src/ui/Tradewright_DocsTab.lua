@@ -90,7 +90,7 @@ end
 local function topicItems(sections)
 	local items = {}
 	for index, section in ipairs(sections) do
-		items[index] = { key = index, label = section.title or (L["Topic "] .. index) }
+		items[index] = { key = index, label = section.title or (string.format(L["Topic %s"], index)) }
 	end
 	return items
 end

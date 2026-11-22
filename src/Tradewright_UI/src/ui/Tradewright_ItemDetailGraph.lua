@@ -70,7 +70,7 @@ function Tradewright:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, config)
 	end
 	local function craftingTooltip(tip, pt)
 		tip:AddLine(graphTimestampForSeries(pt.at), 1, 1, 1)
-		tip:AddLine(L["|cffffcc00Crafting cost|r  "] .. Tradewright:FormatCopperFull(pt.value), 0.85, 0.92, 1)
+		tip:AddLine(string.format(L["|cffffcc00Crafting cost|r  %s"], Tradewright:FormatCopperFull(pt.value)), 0.85, 0.92, 1)
 		local m = pt.meta or {}
 		if m.flat then
 			tip:AddLine(L["Estimate, no history yet"], 0.72, 0.8, 0.88)
@@ -93,7 +93,7 @@ function Tradewright:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, config)
 	end
 	local function marketTooltip(tip, pt)
 		tip:AddLine(graphTimestampForSeries(pt.at), 1, 1, 1)
-		tip:AddLine(L["|cffffffffMarket|r  "] .. Tradewright:FormatCopperFull(pt.value), 0.85, 0.92, 1)
+		tip:AddLine(string.format(L["|cffffffffMarket|r  %s"], Tradewright:FormatCopperFull(pt.value)), 0.85, 0.92, 1)
 		local m = pt.meta or {}
 		if m.source then
 			tip:AddLine(string.format(L["Source: %s"], tostring(m.source)), 0.72, 0.8, 0.88)

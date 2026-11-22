@@ -263,7 +263,7 @@ local function goldStatDetail(pe, selectedKey, selectedData, characterCount)
 		return string.format(L["Across %d %s"], characterCount, pe:Plural(characterCount, "character"))
 	end
 	local name = selectedData and selectedData.meta and selectedData.meta.name or L["This character"]
-	return name .. L[" has "] .. pe:FormatCopperShort(gold)
+	return string.format(L["%s has %s"], name, pe:FormatCopperShort(gold))
 end
 
 -- Profession scan card: value, detail and tone while a scan runs, or the stored count when idle.
@@ -281,7 +281,7 @@ function OverviewTab:RefreshStats(panel, selectedKey, selectedData, keys)
 	local agg = pe.db.aggregate or {}
 	local accountGold = pe:GetCurrentGoldSummaryForOverview(ACCT_KEY)
 	local inv = sumInventory(pe, selectedKey, selectedData)
-	panel.stats.characters:SetValues(L["Characters"], tostring(#keys), L["Updated "] .. pe:FormatScanTimestamp(agg.updatedAt))
+	panel.stats.characters:SetValues(L["Characters"], tostring(#keys), string.format(L["Updated %s"], pe:FormatScanTimestamp(agg.updatedAt)))
 	panel.stats.gold:SetValues(L["Gold, all characters"], accountGold and accountGold > 0 and pe:FormatCopperShort(accountGold) or "-",
 		goldStatDetail(pe, selectedKey, selectedData, #keys))
 	panel.stats.itemTypes:SetValues(L["Different items"], pe:FormatNumberGrouped(inv.tracked),
@@ -366,7 +366,7 @@ local function configureEarnedGraph(pe, graph, theme)
 		local n = tonumber(pt.value) or 0
 		tip:AddLine((n >= 0 and "+" or "") .. pe:FormatCopperFull(n))
 		if pt.meta and pt.meta.current then
-			tip:AddLine(L["Balance after "] .. pe:FormatCopperFull(pt.meta.current), theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+			tip:AddLine(string.format(L["Balance after %s"], pe:FormatCopperFull(pt.meta.current)), theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
 		end
 	end)
 end
@@ -397,7 +397,7 @@ function OverviewTab:RefreshGold(panel, selectedKey)
 	panel.goldRange:SetText(pe:GetRangeLabel(rangeKey))
 
 	local gold = pe:GetCurrentGoldSummaryForOverview(selectedKey)
-	panel.goldSummary:SetText(gold ~= nil and (L["Now "] .. pe:FormatCopperFull(gold)) or L["No gold recorded for this view yet."])
+	panel.goldSummary:SetText(gold ~= nil and (string.format(L["Now %s"], pe:FormatCopperFull(gold))) or L["No gold recorded for this view yet."])
 	graph:SetAccentColor(theme.accent)
 	GOLD_GRAPH_SETUP[mode](pe, graph, theme)
 	graph:SetSeries(pe:GetOverviewWalletGraphSeries(selectedKey, rangeKey, mode))

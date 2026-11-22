@@ -138,7 +138,7 @@ function VendorLogic.Where(info)
 	end
 	local text = first.zone and first.zone ~= "" and (first.name .. " in " .. first.zone) or first.name
 	if #info.sellers > 1 then
-		text = text .. L[" and "] .. (#info.sellers - 1) .. L[" more"]
+		text = string.format(L["%s and %d more"], text, #info.sellers - 1)
 	end
 	return text
 end

@@ -128,7 +128,7 @@ end
 local function appendCartMailLines(pe, lines, mailAllocations)
 	for _, alloc in ipairs(type(mailAllocations) == "table" and mailAllocations or {}) do
 		if (tonumber(alloc.mailQuantity) or 0) > 0 then
-			lines[#lines + 1] = { L["Mail to "] .. tostring(alloc.characterKey), pe:FormatNumberGrouped(alloc.mailQuantity) }
+			lines[#lines + 1] = { string.format(L["Mail to %s"], tostring(alloc.characterKey)), pe:FormatNumberGrouped(alloc.mailQuantity) }
 		end
 	end
 end

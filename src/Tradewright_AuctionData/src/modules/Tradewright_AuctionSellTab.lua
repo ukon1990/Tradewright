@@ -152,7 +152,7 @@ function Tradewright:BuildAuctionPanelColumns()
 					return flagText(pe, "Ignored", "textMuted")
 				end
 				if (tonumber(row.reserveQty) or 0) > 0 then
-					return flagText(pe, L["Keep "] .. tostring(row.reserveQty), "gold")
+					return flagText(pe, string.format(L["Keep %s"], tostring(row.reserveQty)), "gold")
 				end
 				return ""
 			end,

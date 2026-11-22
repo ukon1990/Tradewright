@@ -83,7 +83,7 @@ local function sourceTooltip(pe, dash, row)
 		for _, origin in ipairs(ORIGINS) do
 			local copper = dash.split[origin[1]]
 			if copper and copper > 0 then
-				lines[#lines + 1] = { L["Sales, "] .. origin[2]:lower(), pe:FormatCopperFull(copper) }
+				lines[#lines + 1] = { string.format(L["Sales, %s"], origin[2]:lower()), pe:FormatCopperFull(copper) }
 			end
 		end
 	end

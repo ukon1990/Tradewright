@@ -292,7 +292,7 @@ function ChartMixin:DrawAverage(average)
 	label:ClearAllPoints()
 	label:SetJustifyH("LEFT")
 	label:SetPoint("BOTTOMLEFT", self.plot, "BOTTOMLEFT", self.padLeft + 4, y + 2)
-	label:SetText(L["avg "] .. self.yFormatter(average))
+	label:SetText(string.format(L["avg %s"], self.yFormatter(average)))
 end
 
 -- The latest value as a pill above (or below) the last point.

@@ -102,12 +102,13 @@ function Tradewright:GetCartVendorAdvice(row)
 end
 
 local function priceText(pe, advice)
-	return (advice.exact and "" or L["about "]) .. pe:FormatCopperShort(math.ceil(advice.price))
+	local price = pe:FormatCopperShort(math.ceil(advice.price))
+	return advice.exact and price or string.format(L["about %s"], price)
 end
 
 -- "Vendor: about 1s", or "Sold by a vendor" when the price is not known.
 local function plainNote(pe, advice)
-	return advice.price and (L["Vendor: "] .. priceText(pe, advice)) or L["Sold by a vendor"]
+	return advice.price and (string.format(L["Vendor: %s"], priceText(pe, advice))) or L["Sold by a vendor"]
 end
 
 local function hasText(text)
@@ -122,7 +123,7 @@ function Tradewright:GetVendorNote(row)
 		return nil
 	end
 	if advice.cheaper then
-		return self:Colorize(L["Cheaper at a vendor: "] .. priceText(self, advice), "warning")
+		return self:Colorize(string.format(L["Cheaper at a vendor: %s"], priceText(self, advice)), "warning")
 	end
 	return plainNote(self, advice)
 end
@@ -131,10 +132,10 @@ end
 function Tradewright:AuctionCartRowDetail(row)
 	local parts = { self:GetVendorNote(row) }
 	if row and hasText(row.sourceText) then
-		parts[#parts + 1] = L["For "] .. row.sourceText
+		parts[#parts + 1] = string.format(L["For %s"], row.sourceText)
 	end
 	if row and hasText(row.mailToText) then
-		parts[#parts + 1] = L["mail to "] .. row.mailToText
+		parts[#parts + 1] = string.format(L["mail to %s"], row.mailToText)
 	end
 	return table.concat(parts, " · ")
 end
@@ -142,7 +143,7 @@ end
 -- Adds the vendor price and seller to tooltip lines. Returns what a right-click does about it.
 local function appendVendorLines(pe, lines, advice, info)
 	if advice.price then
-		local price = priceText(pe, advice) .. L[" each"]
+		local price = string.format(L["%s each"], priceText(pe, advice))
 		lines[#lines + 1] = { L["Vendor price"], advice.cheaper and pe:Colorize(price .. L[", cheaper than the auction house"], "warning") or price }
 	end
 	lines[#lines + 1] = { L["Sold by"], VendorLogic.Where(info) or "vendors" }

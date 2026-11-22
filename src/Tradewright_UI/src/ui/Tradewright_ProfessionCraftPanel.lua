@@ -490,7 +490,7 @@ local function recipeBadge(confidence, ev)
 		return (ev.concentrationNeeded or ev.concentrationCost) and L["Needs concentration"] or L["Out of reach"], "warning"
 	end
 	local missing = missingReagentCount(ev.reagentPlan)
-	return missing > 0 and (L["Missing "] .. missing) or "Missing", "danger"
+	return missing > 0 and (string.format(L["Missing %s"], missing)) or "Missing", "danger"
 end
 
 local function moneyOrDash(pe, copper, formatter)

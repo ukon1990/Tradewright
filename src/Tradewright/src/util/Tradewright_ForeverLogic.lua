@@ -197,7 +197,7 @@ function ForeverLogic.BuildPlainLuaExportPayload(exportData)
 	if not ok or type(body) ~= "string" or body == "" then
 		return nil, body or L["Lua encode failed"]
 	end
-	return L["AHLUA1:return "] .. body, nil
+	return "AHLUA1:return " .. body, nil
 end
 
 return ForeverLogic

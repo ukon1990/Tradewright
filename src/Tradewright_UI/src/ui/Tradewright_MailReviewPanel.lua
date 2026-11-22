@@ -367,11 +367,11 @@ end
 
 -- Title "Surplus to <seller>", items and mails in the header, totals in the table footer.
 local function refreshTexts(pe, f, sum, seller)
-	f.title:SetText(L["Surplus to "] .. pe:GetMailCharacterLabel(seller))
+	f.title:SetText(string.format(L["Surplus to %s"], pe:GetMailCharacterLabel(seller)))
 	f.meta:SetText(string.format(L["%d different items"], sum.all))
 	local skipped = sum.skipped > 0 and string.format(L[" · %d skipped this time"], sum.skipped) or ""
 	f.table:SetFooterText(string.format(L["%s to send%s"], pe:FormatNumberGrouped(sum.send), skipped),
-		sum.worth > 0 and (L["about "] .. pe:FormatCopperShort(sum.worth)) or "")
+		sum.worth > 0 and (string.format(L["about %s"], pe:FormatCopperShort(sum.worth))) or "")
 end
 
 --- Fills the panel when it is open; the mailbox panel calls this on every refresh with its plan.

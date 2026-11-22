@@ -83,7 +83,7 @@ end
 local function itemKindText(pe, itemID)
 	local desc = pe:ResolveItemDescriptor(itemID) or {}
 	if not desc.itemType then
-		return L["Item "] .. tostring(itemID)
+		return string.format(L["Item %s"], tostring(itemID))
 	end
 	return desc.itemSubType and (desc.itemType .. " · " .. desc.itemSubType) or desc.itemType
 end

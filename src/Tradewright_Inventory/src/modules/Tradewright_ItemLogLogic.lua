@@ -101,9 +101,9 @@ end
 --- "Looted", "Mail from Bankey", "Mailed to Bankey".
 function ItemLogLogic.Describe(entry)
 	if entry.who and entry.why == "mail_in" then
-		return L["Mail from "] .. entry.who
+		return string.format(L["Mail from %s"], entry.who)
 	elseif entry.who and entry.why == "mail_out" then
-		return L["Mailed to "] .. entry.who
+		return string.format(L["Mailed to %s"], entry.who)
 	end
 	return LABELS[entry.why] or "Changed"
 end
