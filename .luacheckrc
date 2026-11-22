@@ -103,6 +103,7 @@ read_globals = {
 	"GetInboxItem",
 	"GetInboxInvoiceInfo",
 	"GetInboxNumItems",
+	"GetInventoryItemID",
 	"GetInventoryItemLink",
 	"GetInventoryItemTexture",
 	"GetItemCount",

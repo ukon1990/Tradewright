@@ -157,23 +157,72 @@ function Tradewright:GetItemCountByLocation(itemID)
 	return total, 0, 0, total
 end
 
+-- The last inventory slot that holds worn gear. Retail adds profession tools and accessories after
+-- the 19 gear slots. Equipped bags sit elsewhere, at slots that differ per client.
+local LAST_GEAR_SLOT = 19
+local LAST_PROFESSION_GEAR_SLOT = 30
+
+-- The inventory slots of everything worn: gear, profession gear and the equipped bags (the reagent
+-- bag too). The game's item count includes all of them.
+local function wornSlots(pe)
+	local slots = {}
+	for slot = 1, pe.IS_RETAIL and LAST_PROFESSION_GEAR_SLOT or LAST_GEAR_SLOT do
+		slots[#slots + 1] = slot
+	end
+	local slotOfBag = C_Container and C_Container.ContainerIDToInventoryID
+	for bag = 1, slotOfBag and pe:GetLastBagIndex() or 0 do
+		slots[#slots + 1] = slotOfBag(bag)
+	end
+	return slots
+end
+
+-- Copies the character has but cannot sell, by item ID: soulbound ones in the bags, soulbound ones
+-- in the bank (as saved at the last bank visit) and everything worn.
+local function countBoundOrWornCopies(pe)
+	local counts = {}
+	local function add(itemID, quantity)
+		itemID = tonumber(itemID)
+		if itemID then
+			counts[itemID] = (counts[itemID] or 0) + (tonumber(quantity) or 1)
+		end
+	end
+	pe:ForEachBagSlot(nil, function(_, _, info)
+		if info and info.isBound then
+			add(info.itemID, info.stackCount)
+		end
+	end)
+	for _, slot in ipairs(wornSlots(pe)) do
+		add(GetInventoryItemID("player", slot), 1)
+	end
+	for itemID, quantity in pairs(pe:GetOwnItemHoldings().boundInBank or {}) do
+		add(itemID, quantity)
+	end
+	return counts
+end
+
+-- One item's entry in inventorySnapshot.items. `unsellable` is only counted for an item that can
+-- be traded by nature: of a bind-on-pickup item every copy is bound, and that says nothing new.
+local function buildSnapshotEntry(pe, itemID, boundOrWornCopies)
+	local bags, bank, warband, total = pe:GetItemCountByLocation(itemID)
+	local boundOrWorn = boundOrWornCopies[itemID] or 0
+	local unsellable = 0
+	if boundOrWorn > 0 and pe:IsItemLikelyTradeableOnAuctionByStaticInfo(itemID) then
+		unsellable = math.min(boundOrWorn, total)
+	end
+	return { bags = bags, bank = bank, warband = warband, total = total, unsellable = unsellable }
+end
+
 function Tradewright:_UpdateInventorySnapshotImmediate(characterData)
 	local ids = self:CollectTrackedItemIdsFromCharacterData(characterData)
+	local boundOrWornCopies = countBoundOrWornCopies(self)
 	local items = {}
 	local totalQuantity = 0
 	local capturedAt = time()
 
 	for _, itemID in ipairs(ids) do
-		local bags, bank, warband, total = self:GetItemCountByLocation(itemID)
-		if total > 0 then
-			totalQuantity = totalQuantity + total
-		end
-		items[tostring(itemID)] = {
-			bags = bags,
-			bank = bank,
-			warband = warband,
-			total = total,
-		}
+		local entry = buildSnapshotEntry(self, itemID, boundOrWornCopies)
+		totalQuantity = totalQuantity + entry.total
+		items[tostring(itemID)] = entry
 	end
 
 	local itemTypesWithStock = 0
@@ -208,16 +257,9 @@ function Tradewright:_InventorySnapshotProcessChunk()
 
 	for i = pending.idx, endIdx do
 		local itemID = ids[i]
-		local bags, bank, warband, total = self:GetItemCountByLocation(itemID)
-		if total > 0 then
-			pending.totalQuantity = pending.totalQuantity + total
-		end
-		pending.items[tostring(itemID)] = {
-			bags = bags,
-			bank = bank,
-			warband = warband,
-			total = total,
-		}
+		local entry = buildSnapshotEntry(self, itemID, pending.boundOrWornCopies)
+		pending.totalQuantity = pending.totalQuantity + entry.total
+		pending.items[tostring(itemID)] = entry
 	end
 
 	if endIdx >= #ids then
@@ -291,15 +333,15 @@ function Tradewright:UpdateInventorySnapshot(characterData, opts)
 		state.invSnapshotPending.cancelled = true
 	end
 
-	local capturedAt = time()
 	state.invSnapshotPending = {
 		characterData = characterData,
 		ids = ids,
 		idx = 1,
 		batchSize = batchSize,
 		items = {},
+		boundOrWornCopies = countBoundOrWornCopies(self),
 		totalQuantity = 0,
-		capturedAt = capturedAt,
+		capturedAt = time(),
 		onComplete = opts.onComplete,
 		cancelled = false,
 	}

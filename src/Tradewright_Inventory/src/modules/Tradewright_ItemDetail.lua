@@ -67,6 +67,18 @@ function Tradewright:GetItemRecipeRelationships(itemID, selectedCharacters)
 	return relationships
 end
 
+-- Adds one character's snapshot entry for an item to the totals over the selected characters.
+local function addSnapshotEntry(totals, characterKey, itemEntry)
+	for _, field in ipairs({ "bags", "bank", "warband", "total", "unsellable" }) do
+		totals[field] = totals[field] + (tonumber(itemEntry[field]) or 0)
+	end
+	-- Bags + bank only: the warband bank is shared, so it belongs to no one character.
+	local own = (tonumber(itemEntry.bags) or 0) + (tonumber(itemEntry.bank) or 0)
+	if own > 0 then
+		totals.holders[#totals.holders + 1] = { key = characterKey, count = own }
+	end
+end
+
 function Tradewright:BuildInventoryItemTotals(itemID, selectedCharacters)
 	self:InitDB()
 	local totals = {
@@ -74,6 +86,7 @@ function Tradewright:BuildInventoryItemTotals(itemID, selectedCharacters)
 		bank = 0,
 		warband = 0,
 		total = 0,
+		unsellable = 0, -- soulbound or worn copies of an item that could otherwise be sold
 		holders = {}, -- { { key = characterKey, count = n }, ... }, most first
 	}
 	for characterKey, characterData in pairs(self.db.characters or {}) do
@@ -83,15 +96,7 @@ function Tradewright:BuildInventoryItemTotals(itemID, selectedCharacters)
 				and characterData.inventorySnapshot.items[tostring(itemID)]
 				or nil
 			if itemEntry then
-				totals.bags = totals.bags + (tonumber(itemEntry.bags) or 0)
-				totals.bank = totals.bank + (tonumber(itemEntry.bank) or 0)
-				totals.warband = totals.warband + (tonumber(itemEntry.warband) or 0)
-				totals.total = totals.total + (tonumber(itemEntry.total) or 0)
-				-- Bags + bank only: the warband bank is shared, so it belongs to no one character.
-				local own = (tonumber(itemEntry.bags) or 0) + (tonumber(itemEntry.bank) or 0)
-				if own > 0 then
-					totals.holders[#totals.holders + 1] = { key = characterKey, count = own }
-				end
+				addSnapshotEntry(totals, characterKey, itemEntry)
 			end
 		end
 	end
@@ -177,11 +182,11 @@ local function applyPriceStats(row, marketStats, craftStats, latestMarket)
 	row.craftingPoints = craftStats.count
 end
 
--- Profit per unit and per stack from the current AH price and the average craft cost.
+-- Profit per unit and for the copies that can be sold, from the current AH price and the average craft cost.
 local function applyProfit(row)
 	local perUnit = row.currentAhCopper and row.avgCraftCost and (row.currentAhCopper - row.avgCraftCost) or nil
 	row.profitCopperPerUnit = perUnit
-	row.profitCopperStack = perUnit and row.total and (perUnit * row.total) or nil
+	row.profitCopperStack = perUnit and row.sellable and (perUnit * row.sellable) or nil
 end
 
 --- Adds economy, price history and profit fields to an inventory row.

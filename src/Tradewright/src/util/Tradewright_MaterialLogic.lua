@@ -188,6 +188,11 @@ function MaterialLogic.ResolveLocationCounts(bags, withBank, withWarband)
 	return bags, bank, warband, bags + bank + warband
 end
 
+--- How many of `total` owned copies can be sold, given how many are soulbound or worn.
+function MaterialLogic.SellableCount(total, unsellable)
+	return math.max(0, (tonumber(total) or 0) - (tonumber(unsellable) or 0))
+end
+
 -- Classic recipe reagent slot from (itemID, quantity).
 function MaterialLogic.MakeClassicReagentSlot(slotIndex, itemID, quantity)
 	itemID = tonumber(itemID)

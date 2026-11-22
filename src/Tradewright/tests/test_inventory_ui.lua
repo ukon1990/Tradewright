@@ -38,15 +38,15 @@ check("filter state ignores expansions on Forever", next(pe:BuildInventoryFilter
 
 -- Footer
 local rows = {
-	{ total = 2, currentAhCopper = 100, avgCraftCost = 30 },
-	{ total = 3, currentAhCopper = 10 },
+	{ total = 2, sellable = 2, currentAhCopper = 100, avgCraftCost = 30 },
+	{ total = 3, sellable = 1, currentAhCopper = 10 },
 	{},
 }
 local characterOptions = { { value = "all" }, { value = "a" }, { value = "b" }, { value = "c" } }
 pe.ui = { invCharacterFilterValues = {} }
 local left, right = pe:GetInventoryFooterTexts(rows, characterOptions)
 check("footer counts all characters", left == "3 items · 5 in total · all 3 characters", left)
-check("footer sums values", right == "Auction value 230c · Craft value 60c", right)
+check("footer values leave out copies that cannot be sold", right == "Auction value 210c · Craft value 60c", right)
 pe.ui.invCharacterFilterValues = { a = true }
 left = pe:GetInventoryFooterTexts(rows, characterOptions)
 check("footer counts selected characters", left == "3 items · 5 in total · 1 of 3 characters", left)

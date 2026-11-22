@@ -175,7 +175,7 @@
    },
    "Tradewright:CollectRecipeData": {
     "ccn": [
-     16
+     12
     ]
    },
    "Tradewright:CreateProfessionDataShell": {
@@ -891,7 +891,7 @@
    },
    "buildEntryFromEval": {
     "lines": [
-     68
+     51
     ],
     "ccn": [
      19
@@ -930,10 +930,7 @@
    },
    "Tradewright:_InventorySnapshotProcessChunk": {
     "lines": [
-     56
-    ],
-    "ccn": [
-     11
+     49
     ]
    }
   },
@@ -945,10 +942,10 @@
    },
    "Tradewright:BuildInventoryRowsAggregatedByItem": {
     "lines": [
-     64
+     45
     ],
     "ccn": [
-     35
+     24
     ]
    },
    "Tradewright:BuildInventoryRowsForCharacter": {
@@ -1019,11 +1016,6 @@
    }
   },
   "src/Tradewright_Inventory/src/modules/Tradewright_ItemDetail.lua": {
-   "Tradewright:BuildInventoryItemTotals": {
-    "ccn": [
-     15
-    ]
-   },
    "Tradewright:BuildItemEconomySnapshot": {
     "ccn": [
      12
@@ -1171,22 +1163,12 @@
      22
     ]
    },
-   "craftIsEnchantRecipe": {
-    "ccn": [
-     14
-    ]
-   },
    "extractOutputItemIDFromApiResult": {
     "ccn": [
      13
     ]
    },
    "pickCheapestReagentForSlot": {
-    "ccn": [
-     11
-    ]
-   },
-   "resolveCraftOutputItemID": {
     "ccn": [
      11
     ]

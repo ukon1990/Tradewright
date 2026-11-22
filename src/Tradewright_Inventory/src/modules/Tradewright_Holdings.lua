@@ -6,7 +6,10 @@ local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return
 -- counts items of scanned recipes, this counts every item. The bags module reads it.
 --
 -- holdings[characterKey] = { name, seenAt, money, bags = { [itemID] = count },
---                            bank = { [itemID] = count }, bankSeenAt }
+--                            bank = { [itemID] = count }, bankSeenAt,
+--                            boundInBank = { [itemID] = count } }
+-- boundInBank counts the soulbound copies within `bank`: a bank slot can only be read while the
+-- bank is open, and the inventory snapshot needs to know which banked copies cannot be sold.
 --
 -- The warband bank (retail) belongs to the whole account, so it is saved apart from the characters,
 -- in the shape of a character that only has a bank:
@@ -48,12 +51,12 @@ function Tradewright:GetItemHoldersOnOtherCharacters(itemID)
 	return holders
 end
 
--- Item counts in `bagIDs` (default: the carried bags), by item ID.
-local function countItems(pe, bagIDs)
+-- Item counts in `bagIDs` (default: the carried bags), by item ID; with `onlyBound`, soulbound copies only.
+local function countItems(pe, bagIDs, onlyBound)
 	local counts = {}
 	pe:ForEachBagSlot(bagIDs, function(_, _, info)
 		local itemID = info and tonumber(info.itemID)
-		if itemID then
+		if itemID and (info.isBound or not onlyBound) then
 			counts[itemID] = (counts[itemID] or 0) + (tonumber(info.stackCount) or 1)
 		end
 	end)
@@ -97,6 +100,7 @@ function Tradewright:SaveBankHoldings()
 	end
 	local own = self:GetOwnItemHoldings()
 	own.bank = countItems(self, bankBagIDs(self))
+	own.boundInBank = countItems(self, bankBagIDs(self), true)
 	own.bankSeenAt = time()
 end
 

@@ -176,6 +176,8 @@ local bags, bank, warband, total = MaterialLogic.ResolveLocationCounts(5, 8, nil
 check("No warband → warband 0", bags == 5 and bank == 3 and warband == 0 and total == 8)
 bags, bank, warband, total = MaterialLogic.ResolveLocationCounts(5, 8, 12)
 check("With warband split", bags == 5 and bank == 3 and warband == 7 and total == 15)
+check("Sellable: bound and worn copies left out", MaterialLogic.SellableCount(3, 1) == 2 and MaterialLogic.SellableCount(1, 1) == 0)
+check("Sellable: snapshot saved before the count existed", MaterialLogic.SellableCount(4, nil) == 4)
 
 -- Classic reagent slot
 local slot = MaterialLogic.MakeClassicReagentSlot(1, 2589, 2)

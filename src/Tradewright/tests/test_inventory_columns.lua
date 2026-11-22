@@ -39,12 +39,12 @@ local expectedOrder = "item,qty,holders,loc,currentAh,lastSeen,avgSeen,avgCraft,
 check("Definitions: order", table.concat(ids, ",") == expectedOrder, table.concat(ids, ","))
 
 local row = {
-	itemID = 7, rankIndex = 2, total = 40, bags = 30, bank = 10, warband = 5,
+	itemID = 7, rankIndex = 2, total = 40, sellable = 38, bags = 30, bank = 10, warband = 5,
 	holders = { { key = "Alt", count = 30 }, { key = "Main", count = 10 } },
 	currentAhCopper = 1200, profitCopperPerUnit = 0, currentAhAt = 99,
 }
 check("Item: name with rank", byId.item.getName(row) == "item7*2")
-check("Qty: text and sort", byId.qty.getText(row) == "40" and byId.qty.sortValue(row) == 40)
+check("Qty: the copies that can be sold", byId.qty.getText(row) == "38" and byId.qty.sortValue(row) == 38)
 check("Holders: who holds it", byId.holders.getText(row) == "[Alt] <textMuted>30, [Main] <textMuted>10", byId.holders.getText(row))
 check("Holders: nobody", byId.holders.getText({}) == "-")
 check("Holders: sorts by count of characters", byId.holders.sortValue(row) == 2)

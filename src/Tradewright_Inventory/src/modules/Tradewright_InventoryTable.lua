@@ -114,6 +114,7 @@ function Tradewright:BuildInventoryRowFromSnapshot(character, invEntry, itemID)
 		bank = invEntry.bank or 0,
 		warband = invEntry.warband or 0,
 		total = invEntry.total or 0,
+		sellable = self.MaterialLogic.SellableCount(invEntry.total, invEntry.unsellable),
 	}
 end
 
@@ -170,6 +171,35 @@ function Tradewright:BuildMergedItemRoleMapForSelection(db, characterSelection)
 	return merged, perCharacterRoleMaps
 end
 
+-- Marks in `held` the items of one character's inventory snapshot that it has at least one of.
+local function markHeldItems(held, snapshot)
+	if not snapshot or type(snapshot.items) ~= "table" then
+		return
+	end
+	for itemKey, entry in pairs(snapshot.items) do
+		local itemID = tonumber(itemKey)
+		if itemID and (entry.total or 0) > 0 then
+			held[itemID] = true
+		end
+	end
+end
+
+-- The IDs of the items the selected characters hold at least one of, sorted.
+local function heldItemIDs(pe, db, characterSelection)
+	local held = {}
+	for characterKey, characterData in pairs(db.characters or {}) do
+		if pe:IsFilterSelectionEmpty(characterSelection) or characterSelection[characterKey] == true then
+			markHeldItems(held, characterData.inventorySnapshot)
+		end
+	end
+	local itemIDs = {}
+	for itemID in pairs(held) do
+		itemIDs[#itemIDs + 1] = itemID
+	end
+	table.sort(itemIDs)
+	return itemIDs
+end
+
 --- One row per itemID; bags/bank/warband/total from BuildInventoryItemTotals(characterSelection).
 --- @param characterDisplayLabel string label for the Character column (e.g. filter summary).
 --- @param mergedRolesOptional table|nil if set, skip rebuilding merged roles (must match characterSelection).
@@ -183,27 +213,7 @@ function Tradewright:BuildInventoryRowsAggregatedByItem(db, characterSelection, 
 	if not mergedRoles then
 		mergedRoles = self:BuildMergedItemRoleMapForSelection(db, characterSelection)
 	end
-	local seen = {}
-	for characterKey, characterData in pairs(db.characters or {}) do
-		if self:IsFilterSelectionEmpty(characterSelection) or characterSelection[characterKey] == true then
-			local inv = characterData.inventorySnapshot
-			if inv and type(inv.items) == "table" then
-				for itemKey, entry in pairs(inv.items) do
-					local id = tonumber(itemKey)
-					if id and (entry.total or 0) > 0 then
-						seen[id] = true
-					end
-				end
-			end
-		end
-	end
-
-	local itemIds = {}
-	for id in pairs(seen) do
-		itemIds[#itemIds + 1] = id
-	end
-	table.sort(itemIds)
-
+	local itemIds = heldItemIDs(self, db, characterSelection)
 	local label = characterDisplayLabel or ""
 	for _, itemID in ipairs(itemIds) do
 		local totals = self:BuildInventoryItemTotals(itemID, characterSelection)
@@ -230,6 +240,7 @@ function Tradewright:BuildInventoryRowsAggregatedByItem(db, characterSelection, 
 				bank = totals.bank or 0,
 				warband = totals.warband or 0,
 				total = totals.total or 0,
+				sellable = self.MaterialLogic.SellableCount(totals.total, totals.unsellable),
 				holders = totals.holders,
 			}
 		end

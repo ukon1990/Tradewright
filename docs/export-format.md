@@ -92,7 +92,7 @@ Rows from schema v3–v10 may still be keyed by spell id until rescanned. All va
 (depth limit, cycle detection) before packing.
 
 **Inventory snapshot**: `capturedAt`, `itemTypesTracked`, `itemTypesWithStock`, `totalQuantity`,
-`items` (itemID string → `{ bags, bank, warband, total }`).
+`items` (itemID string → `{ bags, bank, warband, total, unsellable }`; `unsellable` counts the soulbound or worn copies of an item that could otherwise be sold).
 
 **Aggregate** (`account`, `account_summary`): `updatedAt`, sorted `characterKeys`, `professions`
 (by skillLineID, with `characterStates` and sorted `recipeIDs`), `recipes` (by recipeID, with

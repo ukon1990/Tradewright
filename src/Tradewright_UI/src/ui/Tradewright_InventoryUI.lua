@@ -480,10 +480,10 @@ end
 function Tradewright:GetInventoryFooterTexts(rows, characterOptions)
 	local totalQty, totalValue, totalCraft = 0, 0, 0
 	for _, row in ipairs(rows) do
-		local count = row.total or 0
-		totalQty = totalQty + count
-		totalValue = totalValue + (row.currentAhCopper or 0) * count
-		totalCraft = totalCraft + (row.avgCraftCost or 0) * count
+		-- Soulbound and worn copies are owned, so they count, but they add no value: they cannot be sold.
+		totalQty = totalQty + (row.total or 0)
+		totalValue = totalValue + (row.currentAhCopper or 0) * (row.sellable or 0)
+		totalCraft = totalCraft + (row.avgCraftCost or 0) * (row.sellable or 0)
 	end
 	local storedCharacterCount = math.max(0, #characterOptions - 1)
 	local selectedCharacterCount = self:CountFilterSelection(self.ui.invCharacterFilterValues)

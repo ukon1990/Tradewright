@@ -106,8 +106,10 @@ function Tradewright:InventoryStockColumns()
 		{
 			id = "qty", label = L["Qty"], justifyH = "RIGHT", width = COL.qty, minWidth = 40, flex = 0,
 			sortable = true, defaultSort = "desc", defaultVisible = true,
-			sortValue = function(row) return row.total or 0 end,
-			getText = function(row) return pe:FormatNumberGrouped(row.total or 0) end,
+			tooltipTitle = L["Qty"],
+			tooltipText = L["How many you can sell. Soulbound copies and the ones you wear are left out; hover a row for everything you hold."],
+			sortValue = function(row) return row.sellable or 0 end,
+			getText = function(row) return pe:FormatNumberGrouped(row.sellable or 0) end,
 		},
 		{
 			id = "holders", label = L["Characters"], optional = true,
