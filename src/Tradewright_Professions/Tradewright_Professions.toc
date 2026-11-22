@@ -4,6 +4,7 @@
 ## Notes: Profession scan, crafting, and profession data storage for Tradewright
 ## Author: Ukon1990
 ## Version: 2.0.0
+## IconTexture: Interface\AddOns\Tradewright\media\logo
 ## Dependencies: Tradewright
 ## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator
 ## SavedVariables: TradewrightProfessionsDB

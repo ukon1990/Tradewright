@@ -4,6 +4,7 @@
 ## Notes: Inventory, warehousing, and historical value storage for Tradewright
 ## Author: Ukon1990
 ## Version: 2.0.0
+## IconTexture: Interface\AddOns\Tradewright\media\logo
 ## Dependencies: Tradewright, Tradewright_Professions
 ## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator
 ## SavedVariables: TradewrightInventoryDB

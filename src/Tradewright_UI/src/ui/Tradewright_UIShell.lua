@@ -28,7 +28,7 @@ local TRACKED_BLIZZARD_FRAMES = {
 
 local TAB_ORDER = Tradewright.DASHBOARD_TABS
 
-local ADDON_ICON = "Interface\\Icons\\INV_Misc_Coin_01"
+local ADDON_ICON = "Interface\\AddOns\\Tradewright\\media\\logo"
 Tradewright.ADDON_ICON = ADDON_ICON -- also the minimap button icon
 
 local function addRule(frame, edge, color)

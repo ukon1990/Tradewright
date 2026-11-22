@@ -4,6 +4,7 @@
 ## Notes: Shared runtime, migration, settings, and compact export services for Tradewright modules
 ## Author: Ukon1990
 ## Version: 2.0.0
+## IconTexture: Interface\AddOns\Tradewright\media\logo
 ## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator
 ## SavedVariables: TradewrightDB, TradewrightLastExport
 

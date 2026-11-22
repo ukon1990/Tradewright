@@ -4,6 +4,7 @@
 ## Notes: Auction storage and auction-house integrations for Tradewright
 ## Author: Ukon1990
 ## Version: 2.0.0
+## IconTexture: Interface\AddOns\Tradewright\media\logo
 ## Dependencies: Tradewright
 ## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator, Questie, QuestieDB
 ## SavedVariables: TradewrightAuctionDB

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Tradewright icon: the letters T and W joined, no frame, for small in-game sizes">
+<rect x="0" y="0" width="512" height="512" fill="#0b0d12"/>
+<path d="M112 140H400" fill="none" stroke="#ffd100" stroke-width="52"/>
+<path d="M256 140V250" fill="none" stroke="#ffd100" stroke-width="52"/>
+<path d="M112 206L182 372L256 232L330 372L400 206" fill="none" stroke="#ffd100" stroke-width="52" stroke-linejoin="miter" stroke-miterlimit="6"/>
+</svg>
