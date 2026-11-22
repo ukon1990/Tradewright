@@ -21,7 +21,7 @@ Yields looked up on the web ship with the addon, so disenchanting, prospecting a
 Done. Research note: [salvage yields](../../../../research/salvage-yields.md).
 
 - Rule from the user: nothing is taken from another addon; reference wikis and published counts of outcomes are fine
-- Shipped for Forever in `Tradewright_SalvageData.lua`: the reference wikis' classic disenchant table (confirmed by one counted data set) and Wowpedia's classic prospecting table (agreed with other sources for copper only; thorium is contradictory)
+- Shipped for Forever in `Tradewright_SalvageData.lua`: the reference wikis' classic disenchant table, confirmed by one counted data set. No prospecting table: Forever has no Jewelcrafting or Inscription
 - Read through `Tradewright:GetSalvageYield(action, input)`
 - Retail ships nothing (decided by the user): the only numbers found are other addons' tables. Retail values come from counted outcomes (F136)
 
@@ -33,7 +33,7 @@ Differs from the scope:
 ## Acceptance criteria
 
 - [x] Every shipped table names its source and tier in the research note
-- [x] With no own records, a classic green item and a classic ore have a researched yield on Forever (offline test; the value shows with F138)
+- [x] With no own records, a classic green item has a researched yield on Forever (offline test; the value shows with F138)
 - [x] Own records with enough casts replace the shipped numbers (F135's order of trust)
 - [x] New file in all four TOCs
 - Dropped: researched yields for retail

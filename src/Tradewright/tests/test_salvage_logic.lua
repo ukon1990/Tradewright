@@ -31,21 +31,56 @@ end
 -- `casts` prospects of five ore, each giving one tigerseye.
 local function prospect(store, casts)
 	for _ = 1, casts do
-		SalvageLogic.RecordOutcome(store, "prospect", ORE, 5, { [TIGERSEYE] = 1 })
+		SalvageLogic.RecordOutcome(store, "prospect", { input = ORE, inputCount = 5, results = { [TIGERSEYE] = 1 } })
 	end
 end
 
 -- Recording and the average
 do
 	local store = newStore()
-	SalvageLogic.RecordOutcome(store, "prospect", ORE, 5, { [TIGERSEYE] = 1, [MALACHITE] = 2 })
-	SalvageLogic.RecordOutcome(store, "prospect", ORE, 5, { [MALACHITE] = 1 })
-	SalvageLogic.RecordOutcome(store, "prospect", ORE, 5, {})
+	SalvageLogic.RecordOutcome(store, "prospect", { input = ORE, inputCount = 5, results = { [TIGERSEYE] = 1, [MALACHITE] = 2 } })
+	SalvageLogic.RecordOutcome(store, "prospect", { input = ORE, inputCount = 5, results = { [MALACHITE] = 1 } })
+	SalvageLogic.RecordOutcome(store, "prospect", { input = ORE, inputCount = 5, results = {} })
 	local yield = SalvageLogic.Yield({ own = store }, "prospect", ORE)
 	check("Quantities are averaged per destroyed item, empty casts included",
 		yield.casts == 3 and yield.perInput[MALACHITE] == 3 / 15 and yield.perInput[TIGERSEYE] == 1 / 15)
+	check("How many items one cast destroys comes with it", yield.inputsPerCast == 5)
 	check("Milling the same item is another record", SalvageLogic.Yield({ own = store }, "mill", ORE) == nil)
 	check("Nothing known: nil", SalvageLogic.Yield({}, "prospect", { itemID = 1 }) == nil)
+end
+
+-- An outcome read from the bags before and after
+do
+	local before = { [COPPER_ORE] = 20, [TIGERSEYE] = 3, [STRANGE_DUST] = 7 }
+	local outcome = SalvageLogic.OutcomeBetween(before, { [COPPER_ORE] = 15, [TIGERSEYE] = 4, [MALACHITE] = 2, [STRANGE_DUST] = 7 })
+	check("Bags: what went down is the input, what went up the results",
+		outcome.inputItemID == COPPER_ORE and outcome.inputCount == 5 and outcome.results[TIGERSEYE] == 1
+		and outcome.results[MALACHITE] == 2 and outcome.results[STRANGE_DUST] == nil)
+	check("Bags: the last of a stack counts as an input", SalvageLogic.OutcomeBetween({ [COPPER_ORE] = 5 }, { [MALACHITE] = 1 }).inputCount == 5)
+	check("Bags: nothing received yet is no outcome", SalvageLogic.OutcomeBetween(before, { [COPPER_ORE] = 15, [TIGERSEYE] = 3, [STRANGE_DUST] = 7 }) == nil)
+	check("Bags: two items going down is not one clean outcome",
+		SalvageLogic.OutcomeBetween(before, { [COPPER_ORE] = 15, [TIGERSEYE] = 2, [MALACHITE] = 1, [STRANGE_DUST] = 7 }) == nil)
+	check("Bags: nothing changed is no outcome", SalvageLogic.OutcomeBetween(before, before) == nil)
+	local store = newStore()
+	SalvageLogic.RecordOutcome(store, "prospect", { input = ORE, inputCount = 10, results = { [MALACHITE] = 3 }, casts = 2 })
+	check("Several casts read as one change count as that many casts", SalvageLogic.Yield({ own = store }, "prospect", ORE).casts == 2)
+end
+
+-- Where a result comes from
+do
+	local TIN_ORE = 2771
+	local own, shipped = newStore(), newStore("other")
+	SalvageLogic.RecordOutcome(own, "prospect", { input = ORE, inputCount = 10, results = { [TIGERSEYE] = 4, [MALACHITE] = 1 }, casts = 2 })
+	SalvageLogic.RecordOutcome(own, "prospect", { input = { itemID = TIN_ORE }, inputCount = 5, results = { [TIGERSEYE] = 1 } })
+	SalvageLogic.RecordOutcome(shipped, "prospect", { input = ORE, inputCount = 10, results = { [TIGERSEYE] = 2 }, casts = 2 })
+	SalvageLogic.RecordOutcome(own, "disenchant", { input = { expansionID = 0, quality = 2, itemLevel = 20 }, inputCount = 1, results = { [TIGERSEYE] = 1 } })
+	local sources = SalvageLogic.SourcesOf({ shipped, own }, TIGERSEYE)
+	check("Sources: every ore that gave the item, the most giving first, stores added up",
+		#sources == 2 and sources[1].inputItemID == COPPER_ORE and sources[1].perInput == 6 / 20 and sources[1].casts == 4
+		and sources[2].inputItemID == TIN_ORE and sources[2].perInput == 1 / 5)
+	check("Sources: the action and how many one cast takes", sources[1].action == "prospect" and sources[1].inputsPerCast == 5)
+	check("Sources: disenchanted gear is no source", #SalvageLogic.SourcesOf({ own }, STRANGE_DUST) == 0)
+	check("Sources: an item nothing gave has none", #SalvageLogic.SourcesOf({ own }, 99) == 0)
 end
 
 -- Disenchanted gear is read in bands of item level
@@ -54,9 +89,12 @@ do
 	local function gear(itemLevel, quality, isWeapon)
 		return { expansionID = 0, quality = quality or 2, isWeapon = isWeapon, itemLevel = itemLevel }
 	end
-	SalvageLogic.RecordOutcome(store, "disenchant", gear(16), 1, { [STRANGE_DUST] = 2 })
-	SalvageLogic.RecordOutcome(store, "disenchant", gear(20), 1, { [STRANGE_DUST] = 4 })
-	SalvageLogic.RecordOutcome(store, "disenchant", gear(21), 1, { [STRANGE_DUST] = 9 })
+	local function disenchant(input, dust)
+		SalvageLogic.RecordOutcome(store, "disenchant", { input = input, inputCount = 1, results = { [STRANGE_DUST] = dust } })
+	end
+	disenchant(gear(16), 2)
+	disenchant(gear(20), 4)
+	disenchant(gear(21), 9)
 	local yield = SalvageLogic.Yield({ own = store }, "disenchant", gear(18))
 	check("Gear of nearby item level counts together", yield.casts == 2 and yield.perInput[STRANGE_DUST] == 3)
 	check("The next band is apart", SalvageLogic.Yield({ own = store }, "disenchant", gear(25)).casts == 1)
@@ -116,7 +154,7 @@ do
 	check("Shipped: a classic green armor piece gives mostly dust", gear(2, 18)[STRANGE_DUST] == 1.875)
 	check("Shipped: a classic green weapon gives mostly essence", gear(2, 18, true)[10939] == 1.125)
 	check("Shipped: classic rare and epic gear", gear(3, 60, true)[14344] == 0.995 and gear(4, 60)[20725] == 1)
-	check("Shipped: copper ore, per single ore", SalvageLogic.ResearchedYield(forever, "prospect", ORE)[TIGERSEYE] == 0.5 / 5)
+	check("Shipped: no prospecting table, as WoW Forever has no Jewelcrafting", SalvageLogic.ResearchedYield(forever, "prospect", ORE) == nil)
 	local covered = true
 	for quality = 2, 3 do
 		for itemLevel = 5, 65 do

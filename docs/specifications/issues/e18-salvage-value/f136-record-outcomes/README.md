@@ -20,6 +20,23 @@ Each time the player disenchants, prospects or mills, the destroyed item and eve
 - `/tradewright sources seal` and `npm run sources:build` carry the records like other sightings
 - Only watches; casts nothing
 
+## Status
+
+Implemented (`Tradewright_SalvageSightings.lua`); offline tests cover reading an outcome from the bags. Not yet checked in game.
+
+How it works, which differs from the scope: no loot window or crafted-result event is read. A cast of Disenchant (spell 13262), or of a retail salvage recipe of Jewelcrafting or Inscription, opens a watch with the bag counts at that moment. Half a second after the bags last changed, with no loot window open, the counts are compared: exactly one item gone down is what was destroyed, everything gone up is what it gave. One mechanism serves both clients and all three actions.
+
+Known limits:
+
+- An outcome is recorded only when something was received, so a cast that gives nothing is not counted (disenchanting and prospecting always give something)
+- Loot left in the window for more than 20 seconds, or full bags, drops the outcome
+- Prospects queued back to back can be recorded together as one change; casts and items are still counted in full
+- Disenchanted gear is described by its item id, so on retail an upgraded item counts at its base item level
+- Any retail salvage recipe of Jewelcrafting counts as prospecting and of Inscription as milling, keyed by the item destroyed
+- `/tradewright sources` shows how many kinds of item have counted outcomes
+
+To confirm in game: the Disenchant spell id on Forever, and that the cast events fire for it on both clients.
+
 ## Acceptance criteria
 
 - [ ] After a few disenchants, prospects and mills, the saved casts, inputs and quantities match what dropped, on each client that has the action

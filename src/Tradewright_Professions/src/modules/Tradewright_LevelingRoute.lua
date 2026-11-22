@@ -236,8 +236,11 @@ local function priceCandidate(self, candidate, build, workItem)
 	candidate.name = evaluation.recipeName or candidate.name
 	candidate.materialCost = evaluation.fullMatCost
 	candidate.reagents = candidateReagents(evaluation)
-	-- A salvage recipe (Prospecting, Milling) makes no one item: nothing to sell or to reuse.
-	if not evaluation.isSalvage then
+	-- A salvage recipe (Prospecting, Milling) makes no one item: nothing to reuse or sell to a vendor,
+	-- but what it gives on average can be sold at auction once its yield is known.
+	if evaluation.isSalvage then
+		candidate.auctionGiveBack = evaluation.saleNet and evaluation.saleNet * evaluation.outputQty or nil
+	else
 		candidate.vendorGiveBack, candidate.auctionGiveBack = giveBackPerCraft(self, evaluation)
 		candidate.outputItemID = tonumber(evaluation.outputItemID)
 		candidate.outputQuantity = math.max(1, tonumber(evaluation.outputQty) or 1)

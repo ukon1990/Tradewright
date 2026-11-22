@@ -5,8 +5,7 @@ local _, Tradewright = ...
 -- addon). They are estimates that stand in until outcomes counted in game replace them (see
 -- SalvageLogic.Yield). Sources, their quality and where they disagree: docs/research/salvage-yields.md.
 --
--- Every number is the quantity received per destroyed item: per piece of gear, per single ore, per
--- single herb (the sources give ore and herbs per cast of five; those are divided by five here).
+-- Every number is the quantity received per destroyed item.
 
 local CLASSIC = 0
 
@@ -92,40 +91,10 @@ add(anyGear(EPIC, 51, 55, { [SMALL_BRILLIANT] = 3 }))
 add(anyGear(EPIC, 56, 60, { [NEXUS_CRYSTAL] = 1 }))
 add(anyGear(EPIC, 61, 100, { [NEXUS_CRYSTAL] = 1.5 }))
 
-local COPPER_ORE, TIN_ORE, IRON_ORE, MITHRIL_ORE, THORIUM_ORE = 2770, 2771, 2772, 3858, 10620
-local MALACHITE, TIGERSEYE, SHADOWGEM, MOSS_AGATE, LESSER_MOONSTONE = 774, 818, 1210, 1206, 1705
-local JADE, CITRINE, AQUAMARINE, STAR_RUBY = 1529, 3864, 7909, 7910
-local BLUE_SAPPHIRE, LARGE_OPAL, AZEROTHIAN_DIAMOND, HUGE_EMERALD = 12361, 12799, 12800, 12364
-
--- From the reference wiki's table, which gives a chance per gem and no quantity; one gem is assumed.
--- Only the copper numbers are agreed on by every source found. For tin, iron and mithril others differ
--- by up to ten points per gem, and for thorium they contradict each other outright.
-local COMMON_TIN, RARE_TIN = 0.375 / 5, 0.0333 / 5
-local COMMON_IRON, RARE_IRON = 0.30 / 5, 0.05 / 5
-local COMMON_MITHRIL, RARE_MITHRIL = 0.30 / 5, 0.025 / 5
-local classicProspect = {
-	[COPPER_ORE] = { [MALACHITE] = 0.5 / 5, [TIGERSEYE] = 0.5 / 5, [SHADOWGEM] = 0.1 / 5 },
-	[TIN_ORE] = {
-		[SHADOWGEM] = COMMON_TIN, [MOSS_AGATE] = COMMON_TIN, [LESSER_MOONSTONE] = COMMON_TIN,
-		[JADE] = RARE_TIN, [CITRINE] = RARE_TIN, [AQUAMARINE] = RARE_TIN,
-	},
-	[IRON_ORE] = {
-		[CITRINE] = COMMON_IRON, [LESSER_MOONSTONE] = COMMON_IRON, [JADE] = COMMON_IRON,
-		[AQUAMARINE] = RARE_IRON, [STAR_RUBY] = RARE_IRON,
-	},
-	[MITHRIL_ORE] = {
-		[CITRINE] = COMMON_MITHRIL, [STAR_RUBY] = COMMON_MITHRIL, [AQUAMARINE] = COMMON_MITHRIL,
-		[BLUE_SAPPHIRE] = RARE_MITHRIL, [LARGE_OPAL] = RARE_MITHRIL, [AZEROTHIAN_DIAMOND] = RARE_MITHRIL, [HUGE_EMERALD] = RARE_MITHRIL,
-	},
-	-- The wiki also lists Outland gems at under 2 % each; WoW Forever has classic items only.
-	[THORIUM_ORE] = {
-		[STAR_RUBY] = 0.30 / 5, [BLUE_SAPPHIRE] = 0.16 / 5, [LARGE_OPAL] = 0.16 / 5, [AZEROTHIAN_DIAMOND] = 0.16 / 5, [HUGE_EMERALD] = 0.16 / 5,
-	},
-}
-
 --- Researched yields per game client, in the shape SalvageLogic.ResearchedYield reads.
 Tradewright.SALVAGE_DATA = {
-	forever = { disenchant = classicDisenchant, prospect = classicProspect },
+	-- WoW Forever has no Jewelcrafting or Inscription, so only disenchanting.
+	forever = { disenchant = classicDisenchant },
 	-- Retail ships none: no yields were found outside other addons' tables. Counted outcomes fill it.
 	retail = {},
 }

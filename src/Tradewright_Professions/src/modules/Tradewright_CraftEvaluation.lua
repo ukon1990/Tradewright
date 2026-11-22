@@ -166,11 +166,25 @@ local function applyCraftEvalLedgerSale(self, evaluation, saleGross, saleSrc)
 	return saleGross, saleSrc
 end
 
-local function resolveCraftEvalSale(self, evaluation)
-	-- What a salvage recipe gives is random; it has no sale price, and its stand-in item id must not
-	-- be looked up as an item.
-	if evaluation.isSalvage then
+-- What a salvage recipe gives is random, so its sale is the expected value of the item it destroys,
+-- per destroyed item (one craft destroys several). Without a known yield there is no sale.
+local function resolveSalvageSale(self, evaluation)
+	local input = evaluation.plan[1]
+	local action = self.SalvageLogic.ACTION_BY_PROFESSION[tonumber(evaluation.professionData.skillLineID)]
+	local worth = input and action and self:GetSalvageValue(action, { itemID = input.itemID })
+	if not worth then
 		return
+	end
+	evaluation.outQty = input.quantityRequired
+	-- The value is already after the cut; no separate figure before it exists for a mix of items.
+	evaluation.saleGross, evaluation.saleNet, evaluation.saleSrc = worth.value, worth.value, "Salvage"
+	evaluation.salvageBasis, evaluation.salvageCasts = worth.basis, worth.casts
+end
+
+local function resolveCraftEvalSale(self, evaluation)
+	-- A salvage recipe's stand-in item id must not be looked up as an item.
+	if evaluation.isSalvage then
+		return resolveSalvageSale(self, evaluation)
 	end
 	local saleGross, saleSrc = self:GetMarketEstimateCopper(evaluation.outputItemID)
 	if evaluation.vendorRecipe then
@@ -229,7 +243,8 @@ local function buildCraftEvalResult(self, evaluation)
 		recipeName = recipeDisplayName(recipeData),
 		professionName = professionData.professionName, skillLineID = professionData.skillLineID,
 		expansionTag = self:GetCraftExpansionTag(professionData, recipeData, craftedItemID(self, evaluation)),
-		learned = evaluation.learned, isSalvage = evaluation.isSalvage, qualityIndex = evaluation.qualityIndex, baseQualityIndex = evaluation.baseQ,
+		learned = evaluation.learned, isSalvage = evaluation.isSalvage,
+		salvageBasis = evaluation.salvageBasis, salvageCasts = evaluation.salvageCasts, qualityIndex = evaluation.qualityIndex, baseQualityIndex = evaluation.baseQ,
 		scenarioBaseQualityIndex = evaluation.defaultScenarioQ, qualityReachable = evaluation.qualityReachable ~= false,
 		outputItemID = evaluation.outputItemID, outputQty = evaluation.outQty, outputIcon = evaluation.outputDesc and evaluation.outputDesc.icon,
 		matCost = evaluation.matPerCraft, outOfPocketMatCost = evaluation.outOfPocketMatCost, fullMatCost = evaluation.fullMatCost,

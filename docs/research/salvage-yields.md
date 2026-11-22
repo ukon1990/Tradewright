@@ -4,7 +4,7 @@ Researched 22 November 2026 for E18 (F137). Question: which disenchanting, prosp
 
 Rule set by the user: nothing shipped is taken from another addon. Addon tables appear below only as a comparison that shows how far published numbers agree; the shipped numbers come from the reference wikis and from published counts of outcomes.
 
-Short answer: the classic disenchant table is well supported, including by one counted data set. Classic prospecting is agreed for copper only and contradictory for thorium. For retail, almost everything comes from one addon's data files with no stated origin, and nothing usable exists for the two current expansions. No source at any tier is game data or a Blizzard statement: these loot tables live on the server.
+Short answer: the classic disenchant table is well supported, including by one counted data set, and is the only table shipped. Forever has no Jewelcrafting or Inscription, so prospecting and milling matter on retail only. For retail, almost everything comes from one addon's data files with no stated origin, and nothing usable exists for the two current expansions. No source at any tier is game data or a Blizzard statement: these loot tables live on the server.
 
 ## Evidence labels
 
@@ -37,19 +37,9 @@ Not used: the emulator databases point shields and held-in-off-hand items at the
 
 Whether WoW Forever uses these tables at all is not known. Its own new items appear in no source.
 
-## Classic prospecting (shipped for Forever)
+## Classic prospecting (not shipped)
 
-Chances are per prospect of five ore; the data file stores them per single ore.
-
-| Ore | Agreement | Shipped (per prospect) |
-| --- | --- | --- |
-| Copper | Every source: Malachite 50 %, Tigerseye 50 %, Shadowgem 10 % | the same |
-| Tin, Iron, Mithril | Common gems 30 to 40 % each depending on the source, rare gems 2 to 5 % | Wowpedia: common gems 37.5 % / 30 % / 30 % each, rare gems 3.33 % / 5 % / 2.5 % each |
-| Thorium | Contradictory: Star Ruby 10 to 30 %, each of the four others 15 to 31 %; Outland gems listed by some and not by others | Wowpedia: Star Ruby 30 %, the others 16 % each; its Outland gems (1.66 % each) left out, as Forever has classic items only |
-
-Shipped from [Wowpedia, Prospecting](https://wowpedia.fandom.com/wiki/Prospecting) (reference wiki, marked as needing an update; it gives a chance per gem and no quantity, so one gem per hit is assumed). Compared only: [TradeSkillMaster 4.14 BCC table](https://raw.githubusercontent.com/seanmarthur/TradeSkillMaster/HEAD/LibTSMData/Destroy/Prospect.lua) (addon data; its non-round rates suggest counted data but it does not say), the [legacy TradeSkillMaster port](https://raw.githubusercontent.com/BanditTech/TradeSkillMaster/main/TradeSkillMaster/Data/Conversions.lua) (addon data, a private server's port), and the cmangos TBC and AzerothCore databases (emulators). No counted prospecting data was found. Prospecting is a Burning Crusade feature; whether and how Forever implements it for classic ore is not established by any source.
-
-Everything except the copper row is a weak estimate and is expected to be replaced by counted outcomes.
+WoW Forever has no Jewelcrafting and no Inscription (confirmed by the user), so it needs no prospecting or milling yields. For the record: every source agrees on copper only (Malachite 50 %, Tigerseye 50 %, Shadowgem 10 % per prospect of five ore). For tin, iron and mithril the sources differ by up to ten points per gem, and for thorium they contradict each other outright (Star Ruby 10 to 30 %, each of the four other gems 15 to 31 %). Sources read: [Wowpedia, Prospecting](https://wowpedia.fandom.com/wiki/Prospecting) (reference wiki, marked as needing an update), other addons' tables as a comparison, and two emulator databases. No counted prospecting data was found.
 
 ## Retail (nothing shipped)
 
@@ -70,7 +60,7 @@ One finding changes code and not data: Khaz Algar and Midnight milling destroys 
 
 ## What this means for the addon
 
-- Forever ships the classic disenchant table and the classic prospecting table, all shown as estimates
+- Forever ships the classic disenchant table, shown as an estimate
 - Counted outcomes replace a researched yield from 20 casts on (`SalvageLogic.TRUSTED_CASTS`), which also settles the disputed rows above for whichever client the player is on
 - A few test disenchants of green weapons of item level 21 to 30, and of epic gear, on Forever would settle the two largest doubts
 - Retail ships nothing: no numbers were found outside other addons' tables, and none at all for current content

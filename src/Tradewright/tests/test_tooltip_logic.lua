@@ -146,6 +146,34 @@ local single = TL.BuildLines({ price = 1, recipeUse = { usedCount = 1, professio
 check("Recipes: singular", find(single, "Used in").value == "1 recipe (Cooking)" and find(single, "Crafted by").value == "Maelis (Mining)")
 check("Recipes: empty", TL.RecipeUse({}).usedCount == 0 and #TL.RecipeUse({}).crafters == 0)
 
+-- Salvage value
+do
+	local block = TL.BuildLines({ salvage = {
+		{ action = "disenchant", value = 150, basis = "researched", casts = 0 },
+		{ action = "prospect", value = 200, perCast = 5, basis = "own", casts = 32 },
+	} }, opts(false))
+	check("Salvage: an item with only a salvage value still gets a block", block ~= nil)
+	check("Salvage: researched yields read as an estimate", find(block, "Disenchant value").value == "150c · estimate")
+	check("Salvage: a prospect is valued for the ore one cast takes, and counted outcomes say how many",
+		find(block, "Prospecting value, for 5").value == "200c · 32 counted")
+	check("Salvage: nothing known, no line", find(TL.BuildLines({ price = 10 }, opts(false)), "Disenchant value") == nil)
+end
+
+-- Where a milled or prospected item comes from
+do
+	local sources = {}
+	for index, name in ipairs({ "Mageroyal", "Briarthorn", "Swiftthistle", "Bruiseweed" }) do
+		sources[index] = { action = "mill", name = name, perCast = 5, quantity = 2.9, costEach = index < 4 and 100 * index or nil }
+	end
+	local block = TL.BuildLines({ salvageSources = sources }, opts(false))
+	check("Sources: the herb, what one cast gives, and the cost of one", block.lines[1].label == "Milled from"
+		and block.lines[1].value == "Mageroyal · 2.9 per 5 · 100c each", block.lines[1].value)
+	check("Sources: at most three lines", #block.lines == 3)
+	local unpriced = TL.BuildLines({ salvageSources = { { action = "prospect", name = "Copper Ore", perCast = 5, quantity = 0.5 } } }, opts(false))
+	check("Sources: without a price for the ore, no cost", unpriced.lines[1].label == "Prospected from"
+		and unpriced.lines[1].value == "Copper Ore · 0.5 per 5")
+end
+
 if failed > 0 then
 	print(string.format("%d failure(s)", failed))
 	os.exit(1)

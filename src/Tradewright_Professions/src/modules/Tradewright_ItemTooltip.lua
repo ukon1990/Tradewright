@@ -81,6 +81,75 @@ local function fillExtras(pe, out, itemID, summary)
 	out.avgSale = tonumber(summary.avgSale)
 end
 
+-- The actions and the profession (skill line) each one takes: Enchanting, Jewelcrafting, Inscription.
+local SALVAGE_ACTIONS = { { action = "disenchant", skillLineID = 333 }, { action = "prospect", skillLineID = 755 }, { action = "mill", skillLineID = 773 } }
+
+-- Whether the logged-in character or any saved character has the profession. A saved character
+-- counts once its profession has been scanned.
+local function someCharacterHasProfession(pe, skillLineID)
+	for _, profession in ipairs(pe:GetPlayerProfessions()) do
+		if profession.skillLineID == skillLineID then
+			return true
+		end
+	end
+	for _, character in pairs(pe.db.characters or {}) do
+		if character.professions and character.professions[tostring(skillLineID)] then
+			return true
+		end
+	end
+	return false
+end
+
+-- A prospect or mill destroys several items at once and is valued for that many; gear is
+-- disenchanted one piece at a time.
+local function salvageLine(action, worth)
+	local perCast = action ~= "disenchant" and worth.inputsPerCast and math.floor(worth.inputsPerCast + 0.5) or 1
+	return { action = action, value = worth.value * perCast, perCast = perCast, basis = worth.basis, casts = worth.casts }
+end
+
+-- What destroying the item is worth, for each action one of the player's characters can do and that
+-- has a known yield for it: `{ { action, value, perCast, basis, casts } }`, or nil.
+local function fillSalvage(pe, out, itemID)
+	if not (pe.GetSalvageInput and pe.GetSalvageValue) then
+		return
+	end
+	for _, salvage in ipairs(SALVAGE_ACTIONS) do
+		local input = someCharacterHasProfession(pe, salvage.skillLineID) and pe:GetSalvageInput(salvage.action, itemID)
+		local worth = input and pe:GetSalvageValue(salvage.action, input)
+		if worth then
+			out.salvage = out.salvage or {}
+			out.salvage[#out.salvage + 1] = salvageLine(salvage.action, worth)
+		end
+	end
+end
+
+-- The ore or herbs the item has come from when prospected or milled, the cheapest way to get one
+-- first: `{ { action, name, perCast, quantity, costEach } }`. `quantity` is what one cast gives on
+-- average; `costEach` what one of the item then costs at the input's AH price, nil without a price.
+local function fillSalvageSources(pe, out, itemID)
+	local sources = pe.GetSalvageSources and pe:GetSalvageSources(itemID) or {}
+	if #sources == 0 then
+		return
+	end
+	out.salvageSources = {}
+	for index, source in ipairs(sources) do
+		local price = pe.GetMarketEstimateCopper and (pe:GetMarketEstimateCopper(source.inputItemID))
+		local perCast = math.floor(source.inputsPerCast + 0.5)
+		out.salvageSources[index] = {
+			-- The name lookup lives in the UI module, which loads after this one and may be off.
+			action = source.action, perCast = perCast,
+			name = pe.GetItemDisplayName and pe:GetItemDisplayName(source.inputItemID) or ("#" .. source.inputItemID),
+			quantity = source.perInput * perCast, costEach = price and price / source.perInput or nil,
+		}
+	end
+	table.sort(out.salvageSources, function(a, b)
+		if (a.costEach ~= nil) ~= (b.costEach ~= nil) then
+			return a.costEach ~= nil
+		end
+		return (a.costEach or -a.quantity) < (b.costEach or -b.quantity)
+	end)
+end
+
 -- Finding the recipes of an item walks every saved recipe, so the answer is kept for a minute.
 local recipeUseCache, recipeUseAt = {}, 0
 local function recipeUse(pe, itemID)
@@ -112,6 +181,8 @@ function Tradewright:BuildItemGoldSummary(itemID, detail)
 	fillCraft(self, out, itemID)
 	fillOwned(self, out, itemID)
 	fillExtras(self, out, itemID, summary)
+	fillSalvage(self, out, itemID)
+	fillSalvageSources(self, out, itemID)
 	if detail then
 		out.recipeUse = recipeUse(self, itemID)
 		-- Optional dependency: the sale rate lives in AuctionData and walks the whole ledger,

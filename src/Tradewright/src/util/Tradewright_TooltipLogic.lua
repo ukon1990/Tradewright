@@ -223,6 +223,42 @@ local function detailLines(lines, g, f)
 	ownSalesLines(lines, g, f)
 end
 
+local SALVAGE_LABEL = { disenchant = L["Disenchant value"], prospect = L["Prospecting value"], mill = L["Milling value"] }
+-- A prospect or mill destroys several items; the label says for how many the value is.
+local SALVAGE_LABEL_FOR_SEVERAL = { prospect = L["Prospecting value, for %d"], mill = L["Milling value, for %d"] }
+
+local function salvageLabel(salvage)
+	local forSeveral = (salvage.perCast or 1) > 1 and SALVAGE_LABEL_FOR_SEVERAL[salvage.action]
+	return forSeveral and string.format(forSeveral, salvage.perCast) or SALVAGE_LABEL[salvage.action]
+end
+
+-- "Prospecting value, for 5   62s · 32 counted": what one cast gives on average, and whether that
+-- rests on researched yields ("estimate") or on counted outcomes.
+local function salvageLines(lines, g, f)
+	for _, salvage in ipairs(g.salvage or {}) do
+		local origin = salvage.basis == "researched" and L["estimate"] or string.format(L["%s counted"], f.number(salvage.casts))
+		add(lines, salvageLabel(salvage), f.money(salvage.value) .. SEP .. origin)
+	end
+end
+
+local MAX_SALVAGE_SOURCES = 3
+local SALVAGE_SOURCE_LABEL = { prospect = L["Prospected from"], mill = L["Milled from"] }
+
+-- "Milled from   Mageroyal · 2.9 per 5 · 1g 20s each": where the item comes from, what one cast
+-- gives on average, and what one of the item then costs. The list arrives cheapest first.
+local function salvageSourceLines(lines, g, f)
+	for index, source in ipairs(g.salvageSources or {}) do
+		if index > MAX_SALVAGE_SOURCES then
+			break
+		end
+		local value = source.name .. SEP .. string.format(L["%.1f per %d"], source.quantity, source.perCast)
+		if source.costEach then
+			value = value .. SEP .. string.format(L["%s each"], f.money(source.costEach))
+		end
+		add(lines, SALVAGE_SOURCE_LABEL[source.action], value)
+	end
+end
+
 local function headerOf(g)
 	if not g.price then
 		return { right = g.estimate and "estimate" or nil }
@@ -234,7 +270,7 @@ local function headerOf(g)
 end
 
 local function hasData(g)
-	return g ~= nil and (g.price or g.estimate or g.craftCost or g.avgSale or g.saleRate) ~= nil
+	return g ~= nil and (g.price or g.estimate or g.craftCost or g.avgSale or g.saleRate or g.salvage or g.salvageSources) ~= nil
 end
 
 --- The Tradewright block for an item summary (BuildItemGoldSummary), or nil when there is
@@ -253,6 +289,8 @@ function TooltipLogic.BuildLines(g, opts)
 	if g.vendorBeatsAh then
 		add(lines, L["Vendor pays"], opts.money(g.vendor) .. SEP .. L["more than the AH"], "warning")
 	end
+	salvageLines(lines, g, opts)
+	salvageSourceLines(lines, g, opts)
 	if opts.detail then
 		detailLines(lines, g, opts)
 	end

@@ -16,6 +16,26 @@ The value of disenchanting, prospecting and milling shows where it helps a decis
 - Tooltip line on gear, ore and herbs with the value of the action, marked as an estimate or with the number of own casts
 - The input for a queued salvage recipe may be picked by best profit; the leveling route keeps cheapest cost
 
+## Status
+
+Implemented; offline tests cover the route's give-back and the tooltip line. Not yet checked in game.
+
+- `Tradewright:GetSalvageValue(action, input)` values what one destroyed item gives: each result at the better of its AH price after the cut and its vendor price
+- A salvage recipe's evaluation takes that as its sale, so queue lines, the Recipe view and the Crafts tab show profit when a yield is known
+- The leveling route counts it as give-back when crafted items are counted as sold at auction; never as a vendor sale
+- Tooltips of gear, ore and herbs show "Disenchant value", "Prospecting value" or "Milling value" per item, followed by "estimate" (researched yields) or the number of counted outcomes
+
+Added on request:
+
+- Prospecting and milling values are for the amount one cast takes ("Prospecting value, for 5"), and a line shows only when one of the player's characters has the profession
+- The tooltip of an item got from prospecting or milling lists up to three ores or herbs it has come from, what one cast gives of it, and what one then costs at the input's AH price, cheapest first ("Milled from"). Only counted outcomes; not for disenchanting
+
+Differs from the scope:
+
+- The input of a queued salvage recipe is still picked by cheapest cost, not best profit
+- Retail has no researched yields (F137), so retail shows a value only for items with counted outcomes
+- The Recipe view's "sale before the cut" shows the same figure as after it for a salvage recipe, as the value mixes auction and vendor prices
+
 ## Acceptance criteria
 
 - [ ] A queued Prospecting line shows a profit instead of "unknown" once yields are known

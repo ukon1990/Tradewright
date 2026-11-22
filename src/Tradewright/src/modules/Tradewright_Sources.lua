@@ -19,9 +19,13 @@ local function newCollectorID()
 end
 
 -- Only call from an event or later: saved variables are not loaded while the addon's files run.
+-- The store is completed on first use each session, so one saved by an earlier version gets the
+-- tables added since (EnsureStore keeps what is there, including the collector id).
+local savedStoreReady = false
 local function savedStore()
-	if not (TradewrightSourcesDB and TradewrightSourcesDB.collectorID) then
+	if not savedStoreReady then
 		TradewrightSourcesDB = SourceLogic.EnsureStore(TradewrightSourcesDB, newCollectorID())
+		savedStoreReady = true
 	end
 	return TradewrightSourcesDB
 end
@@ -34,6 +38,17 @@ end
 --- outcomes, shipped ones and researched tables: see SalvageLogic.Yield for the answer and `input`.
 function Tradewright:GetSalvageYield(action, input)
 	return SalvageLogic.Yield({ own = savedStore(), shipped = shippedStore, researched = researchedYields }, action, input)
+end
+
+--- Which ore or herbs `itemID` has been seen to come from when prospected or milled: see
+--- SalvageLogic.SourcesOf.
+function Tradewright:GetSalvageSources(itemID)
+	return SalvageLogic.SourcesOf(stores(), itemID)
+end
+
+--- Writes down what a salvage cast gave: see SalvageLogic.RecordOutcome for `outcome`.
+function Tradewright:RecordSalvageOutcome(action, outcome)
+	SalvageLogic.RecordOutcome(savedStore(), action, outcome)
 end
 
 local function playerFaction()
@@ -186,6 +201,8 @@ function Tradewright:HandleSourcesSlash(rest)
 	if string.lower(rest or "") ~= "seal" then
 		self:PrintMessage(string.format(L["Own sightings: %d NPCs, %d items sold by vendors, %d loot sources in the open count."],
 			countKeys(store.npcs), countKeys(store.sold), countKeys(store.tallies[store.epoch] or {})))
+		self:PrintMessage(string.format(L["Disenchanting, prospecting and milling: %d kinds of item with counted outcomes in the open count."],
+			countKeys(store.yields[store.epoch] or {})))
 		return
 	end
 	if SourceLogic.Seal(store) then

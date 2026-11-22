@@ -10,7 +10,7 @@ On retail, a recipe that destroys an item of the player's choice (Prospecting, M
 - `EvaluateCraftScenario` (`Tradewright_CraftEvaluation.lua`) returns nil without a crafted item. Only the profession window's queue path passes `allowMissingOutput`, which stands the spell id in for the item; profit stays unknown and the reagent plan is empty.
 - `priceCandidate` (`Tradewright_LevelingRoute.lua`) drops a recipe without an evaluation; it counts as "recipes without a price".
 - A finished craft is counted off its queue line by the crafted item (`Tradewright_ProfessionCraftAction.lua`), which cannot match random results.
-- On Forever Prospecting is a spell cast on the ore, not a recipe: nothing to route.
+- Forever has no Jewelcrafting or Inscription: nothing to route there.
 
 ## Scope
 

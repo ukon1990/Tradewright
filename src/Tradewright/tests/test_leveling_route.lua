@@ -72,7 +72,8 @@ local function newAddon(recipes, skill)
 		if recipeData.salvageItemID then
 			-- As the crafts engine answers for Prospecting or Milling: a cost, no crafted item.
 			return { fullMatCost = recipeData.materialCost, isSalvage = true, outputItemID = recipeData.recipeSpellID,
-				outputQty = 5, recipeName = recipeData.info.name, reagentPlan = { { itemID = recipeData.salvageItemID, quantityRequired = 5, priceUnit = 20 } } }
+				outputQty = 5, saleNet = recipeData.salvageValuePerItem, recipeName = recipeData.info.name,
+				reagentPlan = { { itemID = recipeData.salvageItemID, quantityRequired = 5, priceUnit = 20 } } }
 		end
 		return { fullMatCost = recipeData.materialCost, outputQty = 2, outputItemID = 1, saleNet = 70, recipeName = recipeData.info.name }
 	end
@@ -172,16 +173,15 @@ do
 		step.candidate.outputItemID == nil and step.candidate.vendorGiveBack == nil and step.net == step.materials)
 	local pe = newAddon({ ["11"] = prospecting }, 100)
 	local shown = routeFor(pe)
+	local valued = recipe("Prospecting", 200, true, 100)
+	valued.salvageItemID, valued.salvageValuePerItem = ORE, 12
+	local valuedStep = routeFor(newAddon({ ["11"] = valued }, 100)).steps[1]
+	check("With a known yield, what it gives on average counts as sold at auction, never to a vendor",
+		valuedStep.candidate.auctionGiveBack == 60 and valuedStep.candidate.vendorGiveBack == nil)
 	check("The row names the item it is priced with",
 		pe:LevelingStepRow(shown, shown.steps[1], 1, true).detailText:find("with Item " .. ORE, 1, true) ~= nil)
 end
 
--- The profession's highest skill
-do
-	local recipes = { ["11"] = recipe("Long", 400, true, 100) }
-	check("Forever: the route stops at 300 though the recipe stays orange", routeFor(newAddon(recipes, 100)).toSkill == 300)
-	local retail = newAddon(recipes, 100)
-	retail.IS_RETAIL = true
 -- Ranks of one recipe (separate spells; the profession window lists the highest known)
 do
 	local function ranked(greyLevel, learned, materialCost, nextSpellID)
@@ -201,6 +201,12 @@ do
 		not pe:IsReplacedRecipeRank(professionData, rankTwo) and pe:IsReplacedRecipeRank(professionData, rankOne))
 end
 
+-- The profession's highest skill
+do
+	local recipes = { ["11"] = recipe("Long", 400, true, 100) }
+	check("Forever: the route stops at 300 though the recipe stays orange", routeFor(newAddon(recipes, 100)).toSkill == 300)
+	local retail = newAddon(recipes, 100)
+	retail.IS_RETAIL = true
 	local retailRoute = routeFor(retail)
 	check("Retail has no ranks: the profession's own cap is the highest skill, with no rank step",
 		retailRoute.toSkill == 150 and #retailRoute.steps == 1)

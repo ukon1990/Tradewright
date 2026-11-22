@@ -48,6 +48,32 @@ function Tradewright:ApplyAhCutToSaleCopper(copper)
 	return copper * (1 - self:GetAuctionCut())
 end
 
+-- What one item got from salvaging counts for: the better of its AH price after the cut and its
+-- vendor price. nil when it has neither.
+local function salvagedItemValue(self, itemID)
+	local value = math.max(self:ApplyAhCutToSaleCopper((self:GetMarketEstimateCopper(itemID))) or 0, self:GetItemVendorSellCopper(itemID) or 0)
+	return value > 0 and value or nil
+end
+
+--- What disenchanting, prospecting or milling one `input` is worth (see SalvageLogic.Yield for
+--- `input`): `{ value, basis, casts, inputsPerCast, unvalued }`, the value in copper per destroyed
+--- item after the auction cut, `basis` and `casts` saying where the yield comes from, `inputsPerCast`
+--- how many items one cast destroys (nil when not known), `unvalued` how many of the items it gives
+--- have no price. nil when no yield is known or nothing it gives has a price.
+function Tradewright:GetSalvageValue(action, input)
+	local yield = self.GetSalvageYield and self:GetSalvageYield(action, input)
+	if not yield then
+		return nil
+	end
+	local value, unvalued = self.SalvageLogic.Value(yield, function(itemID)
+		return salvagedItemValue(self, itemID)
+	end)
+	if value <= 0 then
+		return nil
+	end
+	return { value = value, basis = yield.basis, casts = yield.casts, inputsPerCast = yield.inputsPerCast, unvalued = unvalued }
+end
+
 local function schematicMaxQuality(recipeData)
 	local sc = recipeData and recipeData.schematic
 	if type(sc) == "table" then

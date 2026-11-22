@@ -18,6 +18,10 @@ Tradewright.SalvageLogic = SalvageLogic
 
 local ACTION_PREFIX = { prospect = "p", mill = "m", disenchant = "d" }
 
+--- The action a retail salvage recipe stands for, by its profession's skill line: Jewelcrafting
+--- prospects, Inscription mills.
+SalvageLogic.ACTION_BY_PROFESSION = { [755] = "prospect", [773] = "mill" }
+
 -- Gear this many item levels apart disenchants alike; the published classic tables step by five.
 SalvageLogic.DISENCHANT_LEVEL_BAND = 5
 -- Own outcomes of an input are trusted over everyone's and over researched yields from this many casts.
@@ -55,17 +59,53 @@ local function groupOfKey(yieldKey)
 	return head .. tostring(math.ceil(tonumber(itemLevel) / band) * band)
 end
 
---- Records one outcome in `store`: `inputCount` of `input` were destroyed in one cast and gave
---- `results = { [itemID] = quantity }` (empty when the cast gave nothing).
-function SalvageLogic.RecordOutcome(store, action, input, inputCount, results)
+-- The one item whose count went down between two `{ [itemID] = count }` tables: `itemID, lost`.
+-- nil when none or several did.
+local function singleLoss(before, after)
+	local lostItemID, lostCount
+	for itemID, count in pairs(before) do
+		local lost = count - (after[itemID] or 0)
+		if lost > 0 then
+			if lostItemID then
+				return nil
+			end
+			lostItemID, lostCount = itemID, lost
+		end
+	end
+	return lostItemID, lostCount
+end
+
+--- What salvaging did to the bags, from the item counts before and after (`{ [itemID] = count }`):
+--- `{ inputItemID, inputCount, results = { [itemID] = quantity } }`. nil unless exactly one item
+--- went down and at least one went up; anything else is not one clean outcome (nothing looted yet,
+--- or something unrelated moved too).
+function SalvageLogic.OutcomeBetween(before, after)
+	local inputItemID, inputCount = singleLoss(before, after)
+	local results = {}
+	for itemID, count in pairs(after) do
+		local gained = count - (before[itemID] or 0)
+		if gained > 0 then
+			results[itemID] = gained
+		end
+	end
+	if not inputItemID or not next(results) then
+		return nil
+	end
+	return { inputItemID = inputItemID, inputCount = inputCount, results = results }
+end
+
+--- Records an outcome in `store`: `outcome = { input, inputCount, results, casts }`, where
+--- `inputCount` of `input` were destroyed over `casts` casts (1 when left out) and gave
+--- `results = { [itemID] = quantity }`.
+function SalvageLogic.RecordOutcome(store, action, outcome)
 	local bucket = store.yields[store.epoch] or {}
 	store.yields[store.epoch] = bucket
-	local key = SalvageLogic.YieldKey(action, input)
+	local key = SalvageLogic.YieldKey(action, outcome.input)
 	local record = bucket[key] or { casts = 0, inputs = 0, items = {} }
 	bucket[key] = record
-	record.casts = record.casts + 1
-	record.inputs = record.inputs + inputCount
-	for itemID, quantity in pairs(results or {}) do
+	record.casts = record.casts + (outcome.casts or 1)
+	record.inputs = record.inputs + outcome.inputCount
+	for itemID, quantity in pairs(outcome.results or {}) do
 		record.items[itemID] = (record.items[itemID] or 0) + quantity
 	end
 end
@@ -91,13 +131,13 @@ local function groupTotal(store, groupKey)
 	return total
 end
 
--- `{ casts, basis, perInput = { [itemID] = quantity per destroyed input } }` from summed counts.
+-- `{ casts, basis, inputsPerCast, perInput = { [itemID] = quantity per destroyed input } }` from summed counts.
 local function yieldOf(total, basis)
 	local perInput = {}
 	for itemID, quantity in pairs(total.items) do
 		perInput[itemID] = quantity / total.inputs
 	end
-	return { casts = total.casts, basis = basis, perInput = perInput }
+	return { casts = total.casts, basis = basis, inputsPerCast = total.inputs / total.casts, perInput = perInput }
 end
 
 -- Whether a researched disenchant row covers the gear: `{ expansionID, quality, isWeapon, fromLevel, toLevel }`,
@@ -133,7 +173,8 @@ end
 --- `sources = { own, shipped, researched }`: the player's saved store, the store shipped with the
 --- addon (other players' counted outcomes), and the researched tables (see ResearchedYield); any of
 --- them may be nil.
---- Returns `{ perInput, casts, basis }`. The player's own outcomes win once there are enough of them
+--- Returns `{ perInput, casts, basis, inputsPerCast }`, the last being how many items one cast
+--- destroyed on average (5 ore for a prospect), nil for researched yields. The player's own outcomes win once there are enough of them
 --- ("own"), as yields shift with skill and talents; then all counted outcomes ("counted"); then
 --- researched yields ("researched", casts 0); last, the few counted outcomes there are.
 function SalvageLogic.Yield(sources, action, input)
@@ -149,6 +190,43 @@ function SalvageLogic.Yield(sources, action, input)
 		return yieldOf(counted, "counted")
 	end
 	return researched and { casts = 0, basis = "researched", perInput = researched } or nil
+end
+
+local ACTION_OF_PREFIX = { p = "prospect", m = "mill" }
+
+--- Which ore or herbs `itemID` has come from, over the counted outcomes of `stores` (a list of
+--- stores): `{ { action, inputItemID, perInput, inputsPerCast, casts } }`, the most giving first.
+--- `perInput` is how many of the item one destroyed input gave on average. Disenchanted gear is left
+--- out: a kind of gear is no item to go and buy.
+function SalvageLogic.SourcesOf(stores, itemID)
+	local totals = {}
+	for _, store in ipairs(stores) do
+		for _, bucket in pairs(store.yields or {}) do
+			for yieldKey, record in pairs(bucket) do
+				local prefix, inputItemID = yieldKey:match("^([pm]):(%d+)$")
+				if prefix and (record.items[itemID] or 0) > 0 then
+					local total = totals[yieldKey] or { casts = 0, inputs = 0, items = {} }
+					totals[yieldKey] = total
+					total.action, total.inputItemID = ACTION_OF_PREFIX[prefix], tonumber(inputItemID)
+					addRecord(total, record)
+				end
+			end
+		end
+	end
+	local sources = {}
+	for _, total in pairs(totals) do
+		sources[#sources + 1] = {
+			action = total.action, inputItemID = total.inputItemID, casts = total.casts,
+			perInput = total.items[itemID] / total.inputs, inputsPerCast = total.inputs / total.casts,
+		}
+	end
+	table.sort(sources, function(a, b)
+		if a.perInput ~= b.perInput then
+			return a.perInput > b.perInput
+		end
+		return a.inputItemID < b.inputItemID
+	end)
+	return sources
 end
 
 --- What salvaging one input is worth: the yield's items at `valueOfItem(itemID)` (copper, or nil

@@ -16,7 +16,7 @@ Decisions taken with the user:
 - Starting yields are researched on the web and shipped for Forever; retail ships none and fills from own records, as the only retail numbers found are other addons' tables
 - Nothing is taken from another addon; web sources such as wikis and published counts are fine
 - Own outcomes are recorded from the start, on both clients
-- On Forever the actions are disenchanting and prospecting; milling is retail only
+- Forever has disenchanting only: it has no Jewelcrafting or Inscription, so prospecting and milling are retail only
 
 Terms: code says **salvage** for the three actions together (the game API's word) and **yield** for what one input gives on average. The player sees the game's own action names, never "salvage". "Destroy" stays the word for deleting an item.
 
