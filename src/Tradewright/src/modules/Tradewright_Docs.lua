@@ -124,7 +124,7 @@ ITEM DETAILS
 Click a row to open the detail pane: auction price, averages, craft cost, where you hold the item, a chart (Price, Craft cost or Quantity) and the scanned recipes that make or use it. Shift-click a row to link the item in chat.
 
 PRICES
-Current AH comes from your auction house scans. With TSM loaded, prices use your TSM price strings (market dbmarket, materials Crafting); Auctionator is a fallback when enabled. SR is the TSM sale rate string (default DBRegionSaleRate). Totals in the table footer add up quantity times price for the rows shown. These are estimates, not official game values.]=],
+Current AH comes from your auction house scans; an item never scanned has no price. Totals in the table footer add up quantity times price for the rows shown. These are estimates, not official game values.]=],
 	},
 	{
 		id = "savedvars_paging",

@@ -52,7 +52,7 @@ function Tradewright:GetRecipeOutputQuantityForCost(recipeData)
 	return 1
 end
 
---- Per-unit material cost estimate for a craft output item (copper), using TSM/Auc unit prices for reagents.
+--- Per-unit material cost estimate for a craft output item (copper), using the last seen auction price of each reagent.
 function Tradewright:EstimateMatCostPerUnitForItem(characterData, itemID)
 	if not characterData or not itemID then
 		return nil
@@ -61,25 +61,8 @@ function Tradewright:EstimateMatCostPerUnitForItem(characterData, itemID)
 	if st.economyShowMatCost == false then
 		return nil
 	end
-	local tsm = self:GetTsmPriceStrings()
 	local function unitPrice(rid)
-		local addonPrice = self.GetLatestObservedAhPrice and self:GetLatestObservedAhPrice(rid, { requireFresh = false }) or nil
-		if addonPrice then
-			return addonPrice
-		end
-		local c = self:GetTSMCustomPriceCopper(tsm.material, rid)
-		if c then
-			return c
-		end
-		c = self:GetTSMCustomPriceCopper(tsm.fallback, rid)
-		if c then
-			return c
-		end
-		c = self:GetTSMCustomPriceCopper(tsm.market, rid)
-		if c then
-			return c
-		end
-		return self:GetAuctionatorPriceCopper(rid)
+		return self.GetLatestObservedAhPrice and self:GetLatestObservedAhPrice(rid, { requireFresh = false }) or nil
 	end
 
 	local _, bestCostOrRecipe = self:FindBestRecipeForOutputItem(characterData, itemID, function(recipeData)
@@ -118,7 +101,7 @@ function Tradewright:EstimateBestMatCostPerUnitAmongSelection(db, itemID, charac
 	return best
 end
 
---- Market/sale rate like ApplyEconomyToInventoryRow; mat cost = best among selected crafters when merged role has output.
+--- Market price like ApplyEconomyToInventoryRow; mat cost = best among selected crafters when merged role has output.
 function Tradewright:ApplyEconomyToAggregatedInventoryRow(row, characterSelection, mergedRoleMap, perCharacterRoleMaps)
 	self:ApplyEconomyToInventoryRow(row, nil, nil)
 	if not row or not row.itemID then
@@ -137,7 +120,7 @@ function Tradewright:ApplyEconomyToAggregatedInventoryRow(row, characterSelectio
 	end
 end
 
---- Fills row table with economy fields: marketCopper, marketSource, matCopperPerUnit, marginCopperPerUnit, saleRateDisplay
+--- Fills row table with economy fields: marketCopper, marketSource, matCopperPerUnit, marginCopperPerUnit
 --- roleMap optional: from BuildItemRoleMap(characterData) to avoid rebuilding per row.
 function Tradewright:ApplyEconomyToInventoryRow(row, characterData, roleMap)
 	if not row then
@@ -147,8 +130,6 @@ function Tradewright:ApplyEconomyToInventoryRow(row, characterData, roleMap)
 	row.marketSource = nil
 	row.matCopperPerUnit = nil
 	row.marginCopperPerUnit = nil
-	row.saleRateDisplay = nil
-	row.saleRateValue = nil
 
 	local st = self.db and self.db.settings or {}
 	if st.economyShowColumns == false then
@@ -156,18 +137,7 @@ function Tradewright:ApplyEconomyToInventoryRow(row, characterData, roleMap)
 	end
 
 	local itemID = row.itemID
-	local tsm = self:GetTsmPriceStrings()
-	local mkt, src = self:GetMarketEstimateCopper(itemID, tsm.market)
-	row.marketCopper = mkt
-	row.marketSource = src
-
-	if st.economyShowSaleRate ~= false and self:IsTSMLoaded() then
-		if tsm.saleRate ~= "" then
-			local v = self:GetTSMCustomPriceCopper(tsm.saleRate, itemID)
-			row.saleRateValue = v
-			row.saleRateDisplay = self:FormatSaleRateDisplay(v)
-		end
-	end
+	row.marketCopper, row.marketSource = self:GetMarketEstimateCopper(itemID)
 
 	if st.economyShowMatCost ~= false and characterData then
 		roleMap = roleMap or self:BuildItemRoleMap(characterData)

@@ -14,7 +14,6 @@ local COL = {
 	lastCraft = 86,
 	profitUnit = 90,
 	profitStack = 90,
-	saleRate = 44,
 	seenAt = 56,
 }
 local MONEY_MIN_WIDTH = 56
@@ -103,15 +102,6 @@ function Tradewright:InventoryMarketColumns()
 		pe:InventoryMoneyColumn("lastCraft", "Last craft", "lastCraftCost", false),
 		pe:InventoryMoneyColumn("profitUnit", "Profit each", "profitCopperPerUnit", true),
 		pe:InventoryMoneyColumn("profitStack", "Profit, all", "profitCopperStack", false),
-		{
-			id = "saleRate", label = "SR", optional = true,
-			tooltipTitle = "Sale rate",
-			tooltipText = "TSM regional sale rate: the share of listings that sell.",
-			justifyH = "RIGHT", width = COL.saleRate, minWidth = 44, flex = 0,
-			sortable = true, defaultSort = "desc", defaultVisible = true,
-			sortValue = function(row) return row.saleRateValue or -1 end,
-			getText = function(row) return row.saleRateDisplay or "-" end,
-		},
 		{
 			id = "seenAt", label = "Seen", optional = true, justifyH = "RIGHT", width = COL.seenAt, minWidth = 88, flex = 0,
 			sortable = true, defaultSort = "desc", defaultVisible = false,

@@ -83,7 +83,7 @@ local function craftEvalBaseSaleCopper(self, evaluation)
 		baseSale = self:GetItemVendorSellCopper(baseItem)
 	end
 	if not baseSale then
-		baseSale = select(1, self:GetMarketEstimateCopper(baseItem, evaluation.tsmMarket, evaluation.fallbackTsm))
+		baseSale = select(1, self:GetMarketEstimateCopper(baseItem))
 	end
 	return baseSale
 end

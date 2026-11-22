@@ -301,8 +301,8 @@ function Tradewright:GetCraftsOptionsNote()
 	if done then
 		return self:Colorize(string.format("Updating %d of %d recipes…", done, total), "warning")
 	end
-	return string.format("Auction cut %d%% · %s", tonumber(self:GetSetting("crafts.ahCutPercent", 5)) or 5,
-		self.IS_RETAIL and "Prices from TSM, Auctionator or scans" or "Prices from the last auction house scan")
+	return string.format("Auction cut %d%% · Prices from the last auction house scan",
+		tonumber(self:GetSetting("crafts.ahCutPercent", 5)) or 5)
 end
 
 -- Footer texts: profitable crafts of all shown, and how many professions they span.

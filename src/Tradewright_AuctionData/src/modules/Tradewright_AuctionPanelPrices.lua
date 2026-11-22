@@ -20,7 +20,7 @@ function Tradewright:GetAuctionPanelFallbackPrice(itemID)
 	end
 
 	local function tryMarketEstimate()
-		local fallbackPrice, fallbackSource = self:GetMarketEstimateCopper(itemID, self:GetTsmPriceStrings().market)
+		local fallbackPrice, fallbackSource = self:GetMarketEstimateCopper(itemID)
 		if fallbackPrice and fallbackPrice > 0 then
 			return fallbackPrice, "fallback:" .. tostring(fallbackSource or "market"), Tradewright:Now()
 		end

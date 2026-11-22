@@ -60,7 +60,7 @@ Retail: open a profession → a route, or the "not available" message.
 
 ## Out of scope
 
-- A shipped recipe or trainer database
+- A shipped recipe or trainer database (now E16)
 - Auction depth: prices are unit prices, so buying a large amount may cost more than shown
 - Routes for gathering professions (no crafts to cost)
 - Retail knowledge points, specializations, first-craft bonuses and concentration

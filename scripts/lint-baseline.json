@@ -1058,13 +1058,6 @@
     ]
    }
   },
-  "src/Tradewright_Inventory/src/modules/Tradewright_MailPlans.lua": {
-   "heldQuantities": {
-    "ccn": [
-     12
-    ]
-   }
-  },
   "src/Tradewright_Inventory/src/modules/Tradewright_QuantityHistory.lua": {
    "Tradewright:RecordItemQuantityObservation": {
     "lines": [
@@ -1318,16 +1311,6 @@
    }
   },
   "src/Tradewright_Professions/src/modules/Tradewright_Integrations.lua": {
-   "Tradewright:GetMarketEstimateCopper": {
-    "ccn": [
-     17
-    ]
-   },
-   "Tradewright:GetTSMCustomPriceCopper": {
-    "ccn": [
-     11
-    ]
-   },
    "formatCoins": {
     "ccn": [
      13
@@ -1366,21 +1349,13 @@
     ]
    },
    "Tradewright:ApplyEconomyToInventoryRow": {
-    "lines": [
-     41
-    ],
     "ccn": [
-     15
+     12
     ]
    },
    "Tradewright:EstimateBestMatCostPerUnitAmongSelection": {
     "ccn": [
      14
-    ]
-   },
-   "Tradewright:EstimateMatCostPerUnitForItem": {
-    "lines": [
-     42
     ]
    },
    "Tradewright:EstimateRecipeMatCostCopper": {

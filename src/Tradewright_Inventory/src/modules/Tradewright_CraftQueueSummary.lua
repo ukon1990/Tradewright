@@ -14,8 +14,7 @@ local function resolveQueueReagentUnitPrice(self, itemID, slot)
 	if not itemID or not self.GetMarketEstimateCopper then
 		return nil, nil
 	end
-	local tsm = self:GetTsmPriceStrings()
-	return self:GetMarketEstimateCopper(itemID, tsm.material, tsm.fallback)
+	return self:GetMarketEstimateCopper(itemID)
 end
 
 -- Adds `value` to totals[name], or marks the total unknown when the line has no value.

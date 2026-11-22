@@ -33,7 +33,6 @@ globals = {
 -- WoW client API, frames and constants, plus optional third-party addons.
 read_globals = {
 	"ATTACHMENTS_MAX_SEND",
-	"Auctionator",
 	"AuctionFrameBrowse_Search",
 	"AuctionFrameTab_OnClick",
 	"AutoLootMailItem",
@@ -190,7 +189,6 @@ read_globals = {
 	"ToggleDropDownMenu",
 	"TomTom",
 	"TooltipDataProcessor",
-	"TSM_API",
 	"UIDropDownMenu_AddButton",
 	"UIDropDownMenu_CreateInfo",
 	"UIDropDownMenu_Initialize",

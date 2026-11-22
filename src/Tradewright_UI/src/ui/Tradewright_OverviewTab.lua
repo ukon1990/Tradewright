@@ -7,10 +7,8 @@ Tradewright.OverviewTab = OverviewTab
 
 -- Overview views drawn by a dashboard: key, button label, constructor, note shown beside the buttons.
 local DASHBOARD_VIEWS = {
-	{ key = "gold", label = "Gold", create = "CreateGoldDashboard", note = function(pe)
-		local source = pe:GetSetting("gold.reference", "best") == "own" and "your scans" or "TSM when installed, else your scans"
-		return "Usual prices come from " .. source .. " · hover a row for details"
-	end },
+	{ key = "gold", label = "Gold", create = "CreateGoldDashboard",
+		note = "Usual prices come from your scans · hover a row for details" },
 	{ key = "sales", label = "Sales", create = "CreateSalesDashboard",
 		note = "Sales are added when you collect auction gold from the mailbox · earned is after the auction house cut" },
 	{ key = "income", label = "Income", create = "CreateIncomeDashboard",

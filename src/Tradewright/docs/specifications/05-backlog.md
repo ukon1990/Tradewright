@@ -88,6 +88,12 @@
 | [f125-deposit-reagents-in-the-bank](issues/e15-reagent-stash/f125-deposit-reagents-in-the-bank/README.md) | Deposit reagents in the bank | implemented, in-game check pending |
 | [f126-take-queue-materials-from-the-bank](issues/e15-reagent-stash/f126-take-queue-materials-from-the-bank/README.md) | Take the craft queue's materials from the bank | implemented, in-game check pending |
 | [f127-reagents-only-surplus-mail](issues/e15-reagent-stash/f127-reagents-only-surplus-mail/README.md) | "Only crafting reagents" in the surplus review | implemented, in-game check pending |
+| [e16-own-sources](issues/e16-own-sources/README.md) | Own source database: no price addons, sightings of vendors, trainers and drops | in progress |
+| [f128-drop-price-addons](issues/e16-own-sources/f128-drop-price-addons/README.md) | Drop the TradeSkillMaster and Auctionator fallbacks | implemented, in-game check pending |
+| [f129-sightings-store](issues/e16-own-sources/f129-sightings-store/README.md) | Sightings store | planned |
+| [f130-collect-sightings](issues/e16-own-sources/f130-collect-sightings/README.md) | Collect vendors, trainers and loot | planned |
+| [f131-show-sources](issues/e16-own-sources/f131-show-sources/README.md) | Show sources in the leveling route and tooltips | planned |
+| [f132-shipped-source-data](issues/e16-own-sources/f132-shipped-source-data/README.md) | Shipped source data without duplicates | planned |
 
 Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E07 follow-ups: F55, then F56 → F57 → F58. E10: F80 first (no dependencies), then F81 and F82. E13: F105, F106, F119, then F107 and F108; F109 and F110 (after F106); F117 (after F109); F111; F112; F113; then the splits F114, F115, F116, F118. E14: F120 → F121 → F122 → F123, then F124. E15: F125 → F126, F127.
 

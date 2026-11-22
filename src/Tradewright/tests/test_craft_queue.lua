@@ -75,9 +75,6 @@ local function newAddon(isRetail)
 		local count = bags[itemID] or 0
 		return count, 0, 0, count
 	end
-	function pe:GetTsmPriceStrings()
-		return { material = "mat", fallback = "fallback" }
-	end
 	function pe:GetMarketEstimateCopper(itemID)
 		return prices[itemID], "ah"
 	end

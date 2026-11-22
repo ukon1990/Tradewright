@@ -40,19 +40,6 @@ function Tradewright:Colorize(text, color)
 	return string.format("|cff%02x%02x%02x%s|r", colorChannel(color.r), colorChannel(color.g), colorChannel(color.b), tostring(text))
 end
 
---- The TSM custom price strings from settings: { market, fallback, material, saleRate }.
-function Tradewright:GetTsmPriceStrings()
-	local function read(key, default)
-		return tostring(self:GetSetting("integrations." .. key, default))
-	end
-	return {
-		market = read("economyTSMMarketString", "dbmarket"),
-		fallback = read("economyTSMFallbackString", "DBMinBuyout"),
-		material = read("economyTSMMatString", "Crafting"),
-		saleRate = read("economyTSMSaleRateString", "DBRegionSaleRate"),
-	}
-end
-
 --- Probe an object whose shape differs between client builds (Blizzard frames, mixins). Calls each
 --- of `methodNames` that exists (inside pcall, so a throwing method is skipped), then reads each of
 --- `fieldNames`. `accept(value)` returns the value to use, or nil to keep looking; it may convert

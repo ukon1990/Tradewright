@@ -9,7 +9,6 @@ local function boolToken(value)
 end
 
 local function getCraftEvaluationSettings(self)
-	local tsm = self:GetTsmPriceStrings()
 	return {
 		scenario = tostring(self:GetSetting("crafts.scenario", "default")),
 		sourceMode = tostring(self:GetSetting("crafts.reagentSourceMode", "owned_first")),
@@ -18,10 +17,6 @@ local function getCraftEvaluationSettings(self)
 		ahCutPercent = tonumber(self:GetSetting("crafts.ahCutPercent", 5)) or 5,
 		metricRange = tostring(self:GetSetting("inventory.metricRange", "30d")),
 		economyShowColumns = self:GetSetting("inventory.economyShowColumns", true) ~= false,
-		economyUseAuctionatorFallback = self:GetSetting("integrations.economyUseAuctionatorFallback", true) ~= false,
-		tsmMarketString = tsm.market,
-		tsmFallbackString = tsm.fallback,
-		tsmMatString = tsm.material,
 		currentCharacterKey = self:GetCharacterKey(),
 	}
 end
@@ -37,10 +32,6 @@ local function getCraftEvaluationCacheKey(self, settings)
 		tostring(settings.ahCutPercent),
 		settings.metricRange,
 		boolToken(settings.economyShowColumns),
-		boolToken(settings.economyUseAuctionatorFallback),
-		settings.tsmMarketString,
-		settings.tsmFallbackString,
-		settings.tsmMatString,
 	}, "|")
 end
 
@@ -217,7 +208,7 @@ local function finalizeCraftOpportunityRowsFromBuckets(self, settings, byKey, ro
 			bucket.requiredTargetReagentAuto = best.requiredTargetReagentAuto
 			bucket.sourceRecipeName = bucket.recipeName
 			bucket.freshnessNote = best.concentrationNeeded and "Needs concentration"
-				or (best.qualityReachable == false and "Target rank unreachable" or (stale and "No TSM/Auc price" or (thin and "Thin AH history" or "OK")))
+				or (best.qualityReachable == false and "Target rank unreachable" or (stale and "No auction price" or (thin and "Thin AH history" or "OK")))
 			bucket.confidence = self:ResolveCraftConfidenceState(best, "scan_row")
 			rows[#rows + 1] = bucket
 		end

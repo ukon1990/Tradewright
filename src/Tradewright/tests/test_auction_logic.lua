@@ -57,7 +57,7 @@ local summary = {
 local orderSources = { { orderID = 7, quantity = 3 }, { orderID = 8, quantity = 2 } }
 local orderSummary = {
 	reagentLines = {
-		{ itemID = 2589, name = "Linen Cloth", estimatedUnitPrice = 90, priceSource = "tsm", sources = orderSources },
+		{ itemID = 2589, name = "Linen Cloth", estimatedUnitPrice = 90, priceSource = "scan", sources = orderSources },
 		{ itemID = 3000, name = "Mirrored Only", estimatedUnitPrice = 5, sources = { { orderID = 7, quantity = 4 } } },
 		{ itemID = 4000, name = "Zinc", sources = { { quantity = 1, outputName = "Ring" } } },
 	},
@@ -94,7 +94,7 @@ local linen = byItem[2589]
 check("Queue and unmirrored order need add up", linen.quantityNeeded == 6, linen.quantityNeeded)
 check("Have is what the character holds", linen.quantityHave == 1 and linen.quantityOnCharacter == 1)
 check("Buy is need minus have", linen.quantityToBuy == 5, linen.quantityToBuy)
-check("Cheaper order price wins with its source", linen.estimatedUnitPrice == 90 and linen.estimatedPriceSource == "tsm",
+check("Cheaper order price wins with its source", linen.estimatedUnitPrice == 90 and linen.estimatedPriceSource == "scan",
 	tostring(linen.estimatedUnitPrice) .. " " .. tostring(linen.estimatedPriceSource))
 check("Buy cost is price times buy", linen.estimatedBuyCost == 450, linen.estimatedBuyCost)
 check("Order sources are prefixed", linen.sourceText == "Bandage, WO: Order #8", linen.sourceText)

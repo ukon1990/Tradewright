@@ -12,35 +12,21 @@ function Tradewright:GetGoldDashboardOptions()
 	return {
 		dealThreshold = tonumber(self:GetSetting("gold.dealThreshold", 0.3)) or 0.3,
 		moverThreshold = tonumber(self:GetSetting("gold.moverThreshold", 0.15)) or 0.15,
-		externalReference = self:GetSetting("gold.reference", "best") ~= "own",
 		usualDays = tonumber(self:GetSetting("auction.usualPriceDays", 14)) or 14,
 		minHours = 3,
 		ahCut = 0.05,
 	}
 end
 
--- TSM market value only: Auctionator and our own snapshot hold the current price, not a baseline.
-local function externalReference(pe, itemID)
-	if not (pe.IsTSMLoaded and pe:IsTSMLoaded() and pe.GetTSMCustomPriceCopper) then
-		return nil
-	end
-	local value = pe:GetTSMCustomPriceCopper(pe:GetTsmPriceStrings().market, itemID)
-	return value and value > 0 and value or nil
-end
-
 -- What an item's price is compared with. Movers use `price` (the usual price once an item has enough
--- daily history, else the 7-day average); deals use `ref`: TSM when allowed, else that same price.
-local function resolveBaseline(pe, opts, itemID, storageKey, summary)
+-- daily history, else the 7-day average); deals use `ref`, that same price.
+local function resolveBaseline(pe, storageKey, summary)
 	local usual = pe:GetUsualPrice(storageKey)
 	local base = { price = summary.avg7d, low = summary.low7d, high = summary.high7d, refSource = "7-day avg" }
 	if usual then
 		base = { price = usual.usual, low = usual.low, high = usual.high, days = usual.days, refSource = "daily middle" }
 	end
 	base.ref = base.price
-	local external = opts.externalReference and externalReference(pe, itemID)
-	if external then
-		base.ref, base.refSource = external, "TSM"
-	end
 	if not base.ref then
 		base.refSource = nil
 	end
@@ -69,7 +55,7 @@ local function evaluateKey(pe, FL, auction, item, opts, ts, byItemID)
 	if previous and (previous.hours or 0) >= summary.hours then
 		return
 	end
-	local base = resolveBaseline(pe, opts, itemID, item.storageKey, summary)
+	local base = resolveBaseline(pe, item.storageKey, summary)
 	local ref, refSource = base.ref, base.refSource
 	local classified = { hours = summary.hours, avg7d = base.price, qtyNow = summary.qtyNow, qtyAvg7d = summary.qtyAvg7d }
 	local flags = MarketLogic.ClassifyMarketItem(snap.price, classified, ref, {
@@ -140,8 +126,7 @@ local function finish(byItemID, ts)
 end
 
 local function insightsRevision(state, opts)
-	return table.concat({ state.auctionDataRevision or 0, opts.dealThreshold, opts.moverThreshold,
-		tostring(opts.externalReference), opts.usualDays }, ":")
+	return table.concat({ state.auctionDataRevision or 0, opts.dealThreshold, opts.moverThreshold, opts.usualDays }, ":")
 end
 
 --- The loading line of tables waiting for the insights. A function without arguments, so a table's

@@ -107,7 +107,7 @@ function Tradewright:GetItemEconomySummary(itemID, opts)
 		snapFresh = (nowTs - tonumber(bestSnap.seenAt or 0)) <= freshWindowSec
 	end
 	-- Trust saved AH data if we recently touched this item *or* the snapshot row is still in-window.
-	-- Requiring both made session-only native + stale-looking snapshot fall through to TSM after closing the AH.
+	-- Requiring both made session-only native + stale-looking snapshot count as no price after closing the AH.
 	local addonAhFresh = scanFresh or snapFresh
 	local stale = not addonAhFresh
 
@@ -192,11 +192,11 @@ function Tradewright:ResolveCurrentAuctionPrice(itemID, opts)
 		return nil
 	end
 
-	local function tryFallbackTSM()
+	local function tryMarketEstimate()
 		if opts.allowFallback == false then
 			return nil
 		end
-		local fallbackPrice, fallbackSource = self:GetMarketEstimateCopper(itemID, self:GetTsmPriceStrings().market)
+		local fallbackPrice, fallbackSource = self:GetMarketEstimateCopper(itemID)
 		if fallbackPrice and fallbackPrice > 0 then
 			if self:IsDebugEnabled() then
 				self:DebugLog("AH", "ResolveCurrentAuctionPrice", {
@@ -212,7 +212,7 @@ function Tradewright:ResolveCurrentAuctionPrice(itemID, opts)
 	if sp then
 		return sp, ss, sa
 	end
-	local fp, fs, fa = tryFallbackTSM()
+	local fp, fs, fa = tryMarketEstimate()
 	if fp then
 		return fp, fs, fa
 	end

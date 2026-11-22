@@ -66,7 +66,7 @@ local function craftEvalSaleUnit(self, evaluation, id)
 	if vb then
 		return vb, "Vendor"
 	end
-	return self:GetMarketEstimateCopper(id, evaluation.tsmMarket, evaluation.fallbackTsm)
+	return self:GetMarketEstimateCopper(id)
 end
 
 local function craftEvalMatUnit(self, evaluation, id)
@@ -80,7 +80,7 @@ local function craftEvalMatUnit(self, evaluation, id)
 			return ledgerAvg, "Ledger"
 		end
 	end
-	local marketEstimate, marketSource = self:GetMarketEstimateCopper(id, evaluation.tsmMat, evaluation.fallbackTsm)
+	local marketEstimate, marketSource = self:GetMarketEstimateCopper(id)
 	if marketEstimate and marketEstimate > 0 then
 		return marketEstimate, marketSource
 	end
@@ -113,8 +113,6 @@ end
 
 --- Price/inventory callbacks; pick and cost get separate closures with the same rules.
 local function bindCraftEvalPricing(self, evaluation)
-	local tsm = self:GetTsmPriceStrings()
-	evaluation.tsmMarket, evaluation.fallbackTsm, evaluation.tsmMat = tsm.market, tsm.fallback, tsm.material
 	local costBasis = evaluation.opts.costBasis or "auto"
 	evaluation.useLedgerMats = costBasis == "ledger" or costBasis == "auto"
 	evaluation.saleUnitFn = function(id) return craftEvalSaleUnit(self, evaluation, id) end
@@ -154,7 +152,7 @@ local function applyCraftEvalLedgerSale(self, evaluation, saleGross, saleSrc)
 end
 
 local function resolveCraftEvalSale(self, evaluation)
-	local saleGross, saleSrc = self:GetMarketEstimateCopper(evaluation.outputItemID, evaluation.tsmMarket, evaluation.fallbackTsm)
+	local saleGross, saleSrc = self:GetMarketEstimateCopper(evaluation.outputItemID)
 	if evaluation.vendorRecipe then
 		local vs = self:GetItemVendorSellCopper(evaluation.outputItemID)
 		if vs and vs > 0 then

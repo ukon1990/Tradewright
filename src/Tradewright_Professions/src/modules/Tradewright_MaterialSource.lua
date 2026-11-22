@@ -39,7 +39,7 @@ function Tradewright:GetCraftUnitCost(itemID)
 end
 
 --- The cheapest unit price for a material and where it comes from. `unit, source` is what the engine
---- found by its usual rules (vendor for vendor-sourced reagents, ledger, market, TSM); your own recipe
+--- found by its usual rules (vendor for vendor-sourced reagents, ledger, market); your own recipe
 --- replaces it when crafting the material is cheaper.
 function Tradewright:CheapestMaterialUnit(itemID, unit, source)
 	if not self:GetSetting("crafts.useCheapestSource", true) then

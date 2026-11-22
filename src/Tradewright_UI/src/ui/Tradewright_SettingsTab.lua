@@ -36,18 +36,6 @@ local function isRetail(pe)
 	return pe.IS_RETAIL == true
 end
 
-local function hasTSM(pe)
-	return pe.IsTSMLoaded ~= nil and pe:IsTSMLoaded() == true
-end
-
-local function hasAuctionator(pe)
-	return pe.IsAuctionatorLoaded ~= nil and pe:IsAuctionatorLoaded() and true or false
-end
-
-local function hasNoPriceAddon(pe)
-	return not hasTSM(pe) and not hasAuctionator(pe)
-end
-
 local function hasProfessionSpecs()
 	return C_ProfSpecs ~= nil and C_ProfSpecs.GetConfigIDForSkillLine ~= nil
 end
@@ -119,26 +107,6 @@ local function goldSection()
 			options = choices({ 0.2, 0.3, 0.4, 0.5 }, "%d%%", 100) },
 		{ kind = "select", label = "Mover when price changed by", path = "gold.moverThreshold", default = 0.15,
 			options = choices({ 0.1, 0.15, 0.25 }, "%d%%", 100) },
-		{ kind = "select", label = "Usual price", path = "gold.reference", default = "best", visible = hasTSM,
-			options = { { value = "best", label = "TSM, else my scans" }, { value = "own", label = "My scans only" } } },
-	} }
-end
-
-local function tsmSourcesText(pe)
-	local tsm = pe:GetTsmPriceStrings()
-	return string.format("TSM sources in use: market %s, materials %s, sale rate %s.", tsm.market, tsm.material, tsm.saleRate)
-end
-
-local function priceSourcesSection()
-	return { title = "Other price sources", items = {
-		{ kind = "check", label = "Use Auctionator when there is no scanned price", path = "integrations.economyUseAuctionatorFallback",
-			default = true, onChange = refreshEconomy, visible = hasAuctionator },
-		{ kind = "select", label = "TSM fallback price", path = "integrations.economyTSMFallbackString", default = "DBMinBuyout",
-			options = { { value = "DBMinBuyout", label = "DBMinBuyout" }, { value = "dbmarket", label = "dbmarket" },
-				{ value = "DBRecent", label = "DBRecent" } }, onChange = refreshEconomy, visible = hasTSM },
-		{ kind = "note", text = tsmSourcesText, visible = hasTSM },
-		{ kind = "note", text = "TradeSkillMaster or Auctionator prices are used here when either addon is enabled.",
-			visible = hasNoPriceAddon },
 	} }
 end
 
@@ -201,8 +169,6 @@ local function inventorySection()
 		{ kind = "check", label = "Show price and profit columns by default", path = "inventory.economyShowColumns", default = true,
 			onChange = refreshEconomy },
 		{ kind = "check", label = "Estimate material cost", path = "inventory.economyShowMatCost", default = true, onChange = refreshEconomy },
-		{ kind = "check", label = "Show TSM sale rate", path = "inventory.economyShowSaleRate", default = true, onChange = refreshEconomy,
-			visible = hasTSM },
 		{ kind = "select", label = "Inventory items read per frame", path = "capture.inventorySnapshotBatchSize", default = 0,
 			options = { { value = 0, label = "Automatic" }, { value = 50, label = "50" }, { value = 100, label = "100" } } },
 	} }
@@ -268,7 +234,7 @@ end
 local function buildCategories(pe)
 	return {
 		{ key = "general", label = "General", sections = { generalSection(pe), farmingSection(), troubleshootingSection() } },
-		{ key = "prices", label = "Prices", sections = { auctionHouseSection(pe), goldSection(), priceSourcesSection() } },
+		{ key = "prices", label = "Prices", sections = { auctionHouseSection(pe), goldSection() } },
 		{ key = "opportunities", label = "Opportunities", sections = { opportunitiesSection() } },
 		{ key = "crafting", label = "Crafting", sections = { craftsSection(), professionScanSection(), craftingOrdersSection() } },
 		{ key = "inventory", label = "Inventory & mail", sections = { inventorySection(), mailSection(pe), bagsSection() } },

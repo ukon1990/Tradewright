@@ -141,7 +141,7 @@ local function finishWith(priceState)
 end
 finishWith({ currentPrice = 100, currentPriceIsNative = true, currentPriceSource = "snapshot" })
 finishWith({ currentPrice = 100, currentPriceSource = "snapshot" })
-finishWith({ currentPrice = 100, currentPriceSource = "tsm" })
+finishWith({ currentPrice = 100, currentPriceSource = "scan" })
 finishWith({ currentPrice = 100 })
 finishWith({ currentPrice = 0, currentPriceIsNative = true })
 local counts = refreshState.auctionSourceCounts or {}

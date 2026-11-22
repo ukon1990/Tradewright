@@ -32,7 +32,8 @@
 | Dep | TOC | Usage |
 | --- | --- | --- |
 | Blizzard_Professions | `OptionalDeps` | Soft; Forever may ship a subset of DF profession UI |
-| TradeSkillMaster / Auctionator | `OptionalDeps` | Pricing fallbacks only |
+| Questie, QuestieDB | `OptionalDeps` (AuctionData) | Soft; vendor places for vendors not visited yet |
+| TomTom | none | Soft; waypoint arrow when the game's own is unavailable |
 
 Load order: `Tradewright` → `Tradewright_AuctionData` + `Tradewright_Professions` → `Tradewright_Inventory` → `Tradewright_UI` → `Tradewright_Bags` (optional; the pack works without it).
 

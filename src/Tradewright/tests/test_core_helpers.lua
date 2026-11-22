@@ -110,19 +110,6 @@ _G.C_Container = nil
 local called = false
 check("ForEachBagSlot: no container API walks nothing", pe:ForEachBagSlot(nil, function() called = true end) == false and not called)
 
--- GetTsmPriceStrings
-local settings = { ["integrations.economyTSMMarketString"] = "DBRecent" }
-function pe:GetSetting(path, default)
-	if settings[path] ~= nil then
-		return settings[path]
-	end
-	return default
-end
-local tsm = pe:GetTsmPriceStrings()
-check("TSM strings: saved value wins", tsm.market == "DBRecent")
-check("TSM strings: defaults for the rest",
-	tsm.fallback == "DBMinBuyout" and tsm.material == "Crafting" and tsm.saleRate == "DBRegionSaleRate")
-
 if failed > 0 then
 	print(failed .. " check(s) failed")
 	os.exit(1)

@@ -12,12 +12,7 @@ local LEGACY_SETTING_PATHS_BY_ROOT = {
 	inventorySnapshotBatchSize = "capture.inventorySnapshotBatchSize",
 	economyShowColumns = "inventory.economyShowColumns",
 	economyShowMatCost = "inventory.economyShowMatCost",
-	economyShowSaleRate = "inventory.economyShowSaleRate",
 	minimapButtonAngle = "integrations.minimapButtonAngle",
-	economyUseAuctionatorFallback = "integrations.economyUseAuctionatorFallback",
-	economyTSMMarketString = "integrations.economyTSMMarketString",
-	economyTSMMatString = "integrations.economyTSMMatString",
-	economyTSMSaleRateString = "integrations.economyTSMSaleRateString",
 	debugEnabled = "debug.enabled",
 }
 
@@ -44,15 +39,9 @@ local EARLY_SEEDS = {
 	{ "inventorySnapshotBatchSize", "capture", "inventorySnapshotBatchSize", 0 },
 	{ "economyShowColumns", "inventory", "economyShowColumns", true },
 	{ "economyShowMatCost", "inventory", "economyShowMatCost", true },
-	{ "economyShowSaleRate", "inventory", "economyShowSaleRate", true },
 }
 local LATE_SEEDS = {
 	{ "minimapButtonAngle", "integrations", "minimapButtonAngle", 225 },
-	{ "economyUseAuctionatorFallback", "integrations", "economyUseAuctionatorFallback", true },
-	{ "economyTSMMarketString", "integrations", "economyTSMMarketString", "dbmarket" },
-	{ "economyTSMFallbackString", "integrations", "economyTSMFallbackString", "DBMinBuyout" },
-	{ "economyTSMMatString", "integrations", "economyTSMMatString", "Crafting" },
-	{ "economyTSMSaleRateString", "integrations", "economyTSMSaleRateString", "DBRegionSaleRate" },
 	{ "debugEnabled", "debug", "enabled", false },
 }
 

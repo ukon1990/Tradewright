@@ -1,6 +1,5 @@
 local _, Tradewright = ...
 
-local CALLER_ID = "Tradewright"
 local MONEY_COLORS = {
 	negative = "ffe36361",
 }
@@ -25,73 +24,6 @@ local function groupDigits(numberText)
 		end
 	end
 	return sign .. out
-end
-
-function Tradewright:IsTSMLoaded()
-	return type(TSM_API) == "table"
-		and type(TSM_API.ToItemString) == "function"
-		and type(TSM_API.GetCustomPriceValue) == "function"
-end
-
-function Tradewright:IsAuctionatorLoaded()
-	return type(Auctionator) == "table"
-		and type(Auctionator.API) == "table"
-		and Auctionator.API.v1
-		and type(Auctionator.API.v1.GetAuctionPriceByItemID) == "function"
-end
-
-function Tradewright:GetTSMItemString(itemID)
-	if not self:IsTSMLoaded() or not itemID then
-		return nil
-	end
-	local ok, itemString = pcall(TSM_API.ToItemString, "item:" .. tostring(itemID))
-	if ok and itemString and itemString ~= "" then
-		return itemString
-	end
-	ok, itemString = pcall(TSM_API.ToItemString, itemID)
-	if ok and itemString and itemString ~= "" then
-		return itemString
-	end
-	return nil
-end
-
---- Price in copper, or nil.
-function Tradewright:GetTSMCustomPriceCopper(customPriceStr, itemID)
-	if not customPriceStr or customPriceStr == "" or not itemID then
-		return nil
-	end
-	if not self:IsTSMLoaded() then
-		return nil
-	end
-	local itemString = self:GetTSMItemString(itemID)
-	if not itemString then
-		return nil
-	end
-	local ok, value, err = pcall(TSM_API.GetCustomPriceValue, customPriceStr, itemString)
-	if not ok or err or value == nil then
-		return nil
-	end
-	local n = tonumber(value)
-	if not n or n ~= n then
-		return nil
-	end
-	return n
-end
-
---- Per-item auction scan estimate in copper, or nil.
-function Tradewright:GetAuctionatorPriceCopper(itemID)
-	if not itemID or not self:IsAuctionatorLoaded() then
-		return nil
-	end
-	local ok, price = pcall(Auctionator.API.v1.GetAuctionPriceByItemID, CALLER_ID, itemID)
-	if not ok or not price then
-		return nil
-	end
-	local n = tonumber(price)
-	if not n or n < 0 then
-		return nil
-	end
-	return n
 end
 
 local function nativeAhObservation(self, itemID)
@@ -149,8 +81,9 @@ function Tradewright:GetFreshAddonCachedPrice(itemID)
 	return self:GetLatestObservedAhPrice(itemID, { requireFresh = true })
 end
 
---- Market column: primary TSM string, configurable fallback TSM string, else Auctionator.
-function Tradewright:GetMarketEstimateCopper(itemID, tsmCustomStr, fallbackTSMStr)
+--- Market price of an item from the pack's own auction data (scan or stored snapshot): copper and
+--- its source, or nil when the item was never seen or price columns are switched off.
+function Tradewright:GetMarketEstimateCopper(itemID)
 	local st = self.db and self.db.settings or {}
 	if st.economyShowColumns == false then
 		return nil, nil
@@ -158,25 +91,6 @@ function Tradewright:GetMarketEstimateCopper(itemID, tsmCustomStr, fallbackTSMSt
 	local cachedPrice, cachedSource = self:GetLatestObservedAhPrice(itemID, { requireFresh = false })
 	if cachedPrice and cachedPrice > 0 then
 		return cachedPrice, "cache:" .. tostring(cachedSource or "addon")
-	end
-	if tsmCustomStr and tsmCustomStr ~= "" then
-		local c = self:GetTSMCustomPriceCopper(tsmCustomStr, itemID)
-		if c then
-			return c, "TSM"
-		end
-	end
-	fallbackTSMStr = fallbackTSMStr or self:GetTsmPriceStrings().fallback
-	if fallbackTSMStr and fallbackTSMStr ~= "" and fallbackTSMStr ~= tsmCustomStr then
-		local c = self:GetTSMCustomPriceCopper(fallbackTSMStr, itemID)
-		if c then
-			return c, "TSM fallback"
-		end
-	end
-	if st.economyUseAuctionatorFallback ~= false then
-		local a = self:GetAuctionatorPriceCopper(itemID)
-		if a then
-			return a, "Auc"
-		end
 	end
 	return nil, nil
 end
@@ -245,22 +159,4 @@ end
 
 function Tradewright:FormatCopperShort(copper)
 	return formatCoins(self, copper, true)
-end
-
---- Sale rate from TSM custom price (often 0-1).
-function Tradewright:FormatSaleRateDisplay(value)
-	if value == nil or value ~= value then
-		return "-"
-	end
-	local n = tonumber(value)
-	if not n then
-		return "-"
-	end
-	if n >= 0 and n <= 1 then
-		return string.format("%.0f%%", n * 100)
-	end
-	if n > 1 and n <= 100 then
-		return string.format("%.0f%%", n)
-	end
-	return self:FormatCopperShort(n)
 end

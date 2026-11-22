@@ -35,13 +35,13 @@ for _, column in ipairs(pe:GetInventoryColumnDefinitions()) do
 	byId[column.id] = column
 	ids[#ids + 1] = column.id
 end
-local expectedOrder = "item,qty,holders,loc,currentAh,lastSeen,avgSeen,avgCraft,lastCraft,profitUnit,profitStack,saleRate,seenAt"
+local expectedOrder = "item,qty,holders,loc,currentAh,lastSeen,avgSeen,avgCraft,lastCraft,profitUnit,profitStack,seenAt"
 check("Definitions: order", table.concat(ids, ",") == expectedOrder, table.concat(ids, ","))
 
 local row = {
 	itemID = 7, rankIndex = 2, total = 40, bags = 30, bank = 10, warband = 5,
 	holders = { { key = "Alt", count = 30 }, { key = "Main", count = 10 } },
-	currentAhCopper = 1200, profitCopperPerUnit = 0, saleRateDisplay = "0.40", saleRateValue = 0.4, currentAhAt = 99,
+	currentAhCopper = 1200, profitCopperPerUnit = 0, currentAhAt = 99,
 }
 check("Item: name with rank", byId.item.getName(row) == "item7*2")
 check("Qty: text and sort", byId.qty.getText(row) == "40" and byId.qty.sortValue(row) == 40)
@@ -56,7 +56,6 @@ check("Money: zero is shown", byId.profitUnit.getText(row) == "0c")
 check("Money: missing is a dash and sorts last", byId.lastSeen.getText(row) == "-" and byId.lastSeen.sortValue(row) == -1)
 check("Money: widths", byId.currentAh.width == 86 and byId.profitStack.width == 90 and byId.avgCraft.minWidth == 56)
 check("Money: optional, right-aligned, desc", byId.avgSeen.optional and byId.avgSeen.justifyH == "RIGHT" and byId.avgSeen.defaultSort == "desc")
-check("Sale rate: text and sort", byId.saleRate.getText(row) == "0.40" and byId.saleRate.sortValue({}) == -1)
 check("Seen: time", byId.seenAt.getText(row) == "t99" and byId.seenAt.sortValue({}) == 0)
 
 -- Default visibility and saved choices
@@ -73,7 +72,7 @@ check("Visible: back to default clears the choice", settings["inventory.hiddenCo
 -- Order and table columns
 pe:SaveInventoryColumnOrder({ { id = "seenAt" }, { id = "qty" }, { id = "gone" } })
 local ordered = pe:GetInventoryColumnOrder()
-check("Order: saved first, then the rest", ordered[1].id == "seenAt" and ordered[2].id == "qty" and ordered[3].id == "item" and #ordered == 13)
+check("Order: saved first, then the rest", ordered[1].id == "seenAt" and ordered[2].id == "qty" and ordered[3].id == "item" and #ordered == 12)
 local tableColumns = pe:BuildInventoryTableColumns()
 local visible = {}
 for _, column in ipairs(tableColumns) do

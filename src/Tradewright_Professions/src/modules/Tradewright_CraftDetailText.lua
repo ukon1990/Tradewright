@@ -7,7 +7,7 @@ local BEST_REACH_FORMATS = { "Status: +%s conc", "Status: +conc", "Status: unrea
 local CONFIDENCE_LINES = {
     " ",
     "|cffffffffConfidence|r",
-    "Profit uses TSM/Auctionator where available, with ledger averages when enabled and data exists.",
+    "Profit uses your auction house scans, with ledger averages when enabled and data exists.",
     "Mats/profit use full market material cost; owned coverage and out-of-pocket spend are shown separately.",
     "Quality reachability is derived from the last profession scan (skill + thresholds), not live reagent swaps.",
 }

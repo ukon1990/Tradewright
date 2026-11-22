@@ -6,7 +6,7 @@
 ## Version: 2.0.0
 ## IconTexture: Interface\AddOns\Tradewright\media\logo
 ## Dependencies: Tradewright, Tradewright_AuctionData, Tradewright_Professions, Tradewright_Inventory, Tradewright_UI
-## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator
+## OptionalDeps: Blizzard_Professions
 ## SavedVariables: TradewrightBagsDB
 
 Bootstrap.lua

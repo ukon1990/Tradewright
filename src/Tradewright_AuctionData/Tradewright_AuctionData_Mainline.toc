@@ -6,7 +6,7 @@
 ## Version: 2.0.0
 ## IconTexture: Interface\AddOns\Tradewright\media\logo
 ## Dependencies: Tradewright
-## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator, Questie, QuestieDB
+## OptionalDeps: Blizzard_Professions, Questie, QuestieDB
 ## SavedVariables: TradewrightAuctionDB
 
 Bootstrap.lua

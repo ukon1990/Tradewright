@@ -30,8 +30,7 @@ chunk("Tradewright_UI", pe)
 -- Options note
 check("note shows cut and scan source", pe:GetCraftsOptionsNote() == "Auction cut 5% · Prices from the last auction house scan", pe:GetCraftsOptionsNote())
 settings["crafts.ahCutPercent"] = 3
-pe.IS_RETAIL = true
-check("note on retail names addons", pe:GetCraftsOptionsNote() == "Auction cut 3% · Prices from TSM, Auctionator or scans", pe:GetCraftsOptionsNote())
+check("note follows the cut setting", pe:GetCraftsOptionsNote() == "Auction cut 3% · Prices from the last auction house scan", pe:GetCraftsOptionsNote())
 state.craftEvalInProgress, state.craftEvalWorkList, state.craftEvalIdx = true, { 1, 2, 3, 4 }, 3
 check("note shows progress while evaluating", pe:GetCraftsOptionsNote() == "<warning>Updating 2 of 4 recipes…", pe:GetCraftsOptionsNote())
 state.craftEvalWorkList = {}

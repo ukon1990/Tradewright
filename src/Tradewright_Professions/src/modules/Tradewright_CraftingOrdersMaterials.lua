@@ -421,7 +421,7 @@ local function addOrderReagents(self, reagentTotals, entry, currentCharacterKey)
 end
 
 -- What the current character still has to buy and mail for one reagent.
-local function finishOrderReagentLine(self, line, tsm)
+local function finishOrderReagentLine(self, line)
 	local have = self.GetCharacterItemTotal and self:GetCharacterItemTotal(line.currentCharacterKey, line.itemID) or 0
 	line.currentCharacterQuantity = have
 	line.currentCharacterAvailable = math.min(have, line.quantityNeeded)
@@ -431,7 +431,7 @@ local function finishOrderReagentLine(self, line, tsm)
 		line.mailToText = self:FormatMailAllocationsShort(line.mailAllocations)
 	end
 	if self.GetMarketEstimateCopper then
-		line.estimatedUnitPrice = select(1, self:GetMarketEstimateCopper(line.itemID, tsm.material, tsm.fallback))
+		line.estimatedUnitPrice = select(1, self:GetMarketEstimateCopper(line.itemID))
 	end
 	if line.estimatedUnitPrice and line.quantityToBuy > 0 then
 		line.estimatedBuyCost = line.estimatedUnitPrice * line.quantityToBuy
@@ -441,12 +441,12 @@ end
 function Tradewright:BuildCraftingOrderQueueSummary()
 	local rows = self:GetCraftingOrderQueueRows()
 	local currentCharacterKey = self:GetCharacterKey()
-	local reagentTotals, reagentLines, tsm = {}, {}, self:GetTsmPriceStrings()
+	local reagentTotals, reagentLines = {}, {}
 	for _, entry in ipairs(rows) do
 		addOrderReagents(self, reagentTotals, entry, currentCharacterKey)
 	end
 	for _, line in pairs(reagentTotals) do
-		finishOrderReagentLine(self, line, tsm)
+		finishOrderReagentLine(self, line)
 		reagentLines[#reagentLines + 1] = line
 	end
 	table.sort(reagentLines, function(a, b)
