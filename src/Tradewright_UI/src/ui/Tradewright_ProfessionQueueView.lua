@@ -132,18 +132,14 @@ local function showReagentTooltip(pe, rowFrame, row)
 	if not row then
 		return
 	end
+	-- The price and who holds the item where are in the Tradewright block above these lines.
 	local pairs = {
 		{ "Needed", pe:FormatNumberGrouped(row.needed) },
-		{ L["On this character"], pe:FormatNumberGrouped(row.have) },
+		{ "Buy", pe:FormatNumberGrouped(row.quantity) },
+		{ L["Used by"], table.concat(row.recipeRefs or {}, ", ") },
 	}
-	for _, holder in ipairs(row.holders) do
-		pairs[#pairs + 1] = { "On " .. pe:GetCharacterNameMarkup(holder.characterKey), pe:FormatNumberGrouped(holder.quantity) }
-	end
-	pairs[#pairs + 1] = { "Buy", pe:FormatNumberGrouped(row.quantity) }
-	pairs[#pairs + 1] = { "Each", row.unitPrice and pe:FormatCopperFull(row.unitPrice) or "-" }
-	pairs[#pairs + 1] = { L["Used by"], table.concat(row.recipeRefs or {}, ", ") }
 	local hint = L["Click to find it at the auction house"]
-	pe:ShowItemRowTooltip(rowFrame, row.itemID, pairs, pe.AppendCartSourceLines and pe:AppendCartSourceLines(pairs, row, hint) or hint)
+	pe:ShowItemTooltip(rowFrame, row.itemID, pairs, pe.AppendCartSourceLines and pe:AppendCartSourceLines(pairs, row, hint) or hint)
 end
 
 -- "Vendor" button on materials a vendor sells: points the way to the nearest one.
@@ -215,6 +211,11 @@ local function createActions(pe, f, host)
 	return actions
 end
 
+-- Height of the "To craft" table: its header and up to three rows, the rest scrolls.
+local function recipeTableHeight(rowCount)
+	return 22 + 2 + TALL_ROW * math.max(1, math.min(rowCount, 3))
+end
+
 local function createRecipeTable(pe, f, card)
 	f.recipeTitle = pe:CreateHeading(card, L["To craft"])
 	f.recipeTitle:SetPoint("TOPLEFT", f.queueOverviewText, "BOTTOMLEFT", 0, -8)
@@ -230,6 +231,10 @@ local function createRecipeTable(pe, f, card)
 	})
 	f.recipeTable.frame:SetPoint("TOPLEFT", f.recipeTitle, "BOTTOMLEFT", 0, -6)
 	f.recipeTable.frame:SetPoint("TOPRIGHT", f.recipeTitle, "BOTTOMRIGHT", 0, -6)
+	-- The cart below hangs from this table. Without a height from the start this table has no
+	-- place on screen until the first refresh, and the game then left the cart without one too:
+	-- it stayed blank until something else moved the card.
+	f.recipeTable.frame:SetHeight(recipeTableHeight(0))
 	f.recipeTable:SetColumns(recipeColumns(pe))
 end
 
@@ -530,7 +535,7 @@ function Tradewright:RefreshProfessionQueueCard(panel)
 	panel.queueOverviewText:SetText(overviewText(self, summary, recipeRows, totals))
 	panel.recipeTable:SetRows(recipeRows)
 	panel.recipeTable:Refresh()
-	panel.recipeTable.frame:SetHeight(22 + 2 + TALL_ROW * math.max(1, math.min(#recipeRows, 3)))
+	panel.recipeTable.frame:SetHeight(recipeTableHeight(#recipeRows))
 	panel.reagentTable:SetRows(reagentRows)
 	panel.reagentTable:Refresh()
 	panel.reagentTable:SetFooterText(shoppingFooter(self, reagentRows),

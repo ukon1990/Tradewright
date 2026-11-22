@@ -353,6 +353,8 @@ local function createRecipeMaterials(pe, host)
 		footer = true,
 		emptyTitle = L["No reagents"],
 		emptyHint = L["This recipe has no saved reagents."],
+		onRowEnter = function(rowFrame, row) pe:ShowItemTooltip(rowFrame, row and row.itemID) end,
+		onRowLeave = function() GameTooltip:Hide() end,
 	})
 	host.materials.frame:SetPoint("TOPLEFT", host.materialsHeading, "BOTTOMLEFT", 0, -6)
 	host.materials.frame:SetPoint("BOTTOMRIGHT", host.actions, "TOPRIGHT", 0, 10)

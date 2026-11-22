@@ -72,7 +72,14 @@ local ore = {
 	recipeUse = { usedCount = 6, professions = { "Alchemy", "Cooking" }, crafters = {} },
 }
 local compact = TL.BuildLines(ore, opts(false))
-check("Compact: four lines", #compact.lines == 4, #compact.lines)
+check("Compact: four lines and one per holder", #compact.lines == 6, #compact.lines)
+check("Compact: holders without Shift", find(compact, "Maelis").value == "200 bags" and find(compact, "Bånkey").value == "80 bank · 5 warband")
+local banked = TL.BuildLines({ ownedAll = 3, owners = { { name = "Me", bags = 1, bank = 2 } } }, opts())
+check("Block: no price, but a banked copy", banked and find(banked, "Me").value == "1 bags · 2 bank")
+check("Block: no price, held by another character",
+	TL.BuildLines({ ownedAll = 3, owners = { { key = "Alt-R", name = "Alt", bags = 3, bank = 0 } } }, opts()) ~= nil)
+check("Block: no price, only in own bags shows nothing",
+	TL.BuildLines({ ownedAll = 3, owners = { { name = "Me", bags = 3, bank = 0 } } }, opts()) == nil)
 check("Compact: header shows the age", compact.header.right == "3 h ago" and compact.header.tone == nil)
 check("Compact: price with trend", compact.lines[1].label == "Price" and compact.lines[1].value == "12000c  +14% usual"
 	and compact.lines[1].tone == "success", compact.lines[1].value)
@@ -109,7 +116,6 @@ check("Vendor: not repeated with Shift", count == 1)
 local detail = TL.BuildLines(ore, opts(true))
 check("Detail: craft cost and profit", find(detail, "Craft cost").value == "9500c"
 	and find(detail, "Profit after cut").value == "+1900c  +20%" and find(detail, "Profit after cut").tone == "success")
-check("Detail: one line per character", find(detail, "Maelis").value == "200 bags" and find(detail, "Bånkey").value == "80 bank · 5 warband")
 check("Detail: rule", find(detail, "Rule").value == "keep 20")
 check("Detail: vendor", find(detail, "Vendor pays").value == "1200c" and find(detail, "Vendor pays").tone == nil)
 check("Detail: used in", find(detail, "Used in").value == "6 recipes (Alchemy, Cooking)")
@@ -123,7 +129,7 @@ for i = 1, 7 do
 	many.owners[i] = { name = "Char" .. i, bags = 10, bank = 0 }
 end
 local manyBlock = TL.BuildLines(many, opts(true))
-check("Detail: five characters, then the rest counted", find(manyBlock, "Char5") and not find(manyBlock, "Char6")
+check("Holders: five characters, then the rest counted", find(manyBlock, "Char5") and not find(manyBlock, "Char6")
 	and find(manyBlock, "and 2 more"))
 
 -- Recipes

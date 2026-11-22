@@ -114,6 +114,8 @@ function Tradewright:CreateCraftsQueueView(parent)
 		footer = true,
 		emptyTitle = L["Nothing to buy"],
 		emptyHint = L["This character has every reagent the queue needs."],
+		onRowEnter = function(rowFrame, row) self:ShowItemTooltip(rowFrame, row and row.itemID) end,
+		onRowLeave = function() GameTooltip:Hide() end,
 	})
 	view.buyTable:SetColumns(self:GetCraftQueueBuyColumns())
 	self:CreateCraftQueueFooter(view)

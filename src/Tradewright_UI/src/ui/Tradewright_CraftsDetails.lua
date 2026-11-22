@@ -84,6 +84,8 @@ function Tradewright:CreateCraftsDetailsView(panel)
 		autoFitToScroll = true,
 		emptyTitle = L["No reagents"],
 		emptyHint = L["This recipe has no saved reagents."],
+		onRowEnter = function(rowFrame, row) self:ShowItemTooltip(rowFrame, row and row.itemID) end,
+		onRowLeave = function() GameTooltip:Hide() end,
 	})
 	panel.materialsTable.frame:SetPoint("TOPLEFT", panel.materialsHeading, "BOTTOMLEFT", 0, -6)
 	panel.materialsTable.frame:SetPoint("BOTTOMRIGHT", panel.detailActions, "TOPRIGHT", 0, 10)

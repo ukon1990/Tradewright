@@ -2,11 +2,12 @@ local _, Tradewright = ...
 
 local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- The Tradewright block on the game's item tooltips: price and how fresh it is, how it compares
--- with the usual price, how much is listed and what you own. Shift adds craft profit, who holds
--- it, your rule, the vendor price, the recipes it is part of, how much of what you posted sold
--- and your average sale.
+-- with the usual price, how much is listed, what you own and which character holds it where.
+-- Shift adds craft profit, your rule, the vendor price, the recipes it is part of, how much of
+-- what you posted sold and your average sale.
 -- Which lines show is decided in TooltipLogic (pure, tested offline); this file gathers the data
--- and draws the lines. Rows in the addon's own windows skip the block (ShowItemRowTooltip).
+-- and draws the lines. Rows in the addon's own windows skip the block (ShowItemRowTooltip), except
+-- reagent rows, which show it in full (ShowItemTooltip).
 
 local HEADER = Tradewright.DISPLAY_NAME
 local STALE_FLOOR_SECONDS = 6 * 3600
@@ -56,7 +57,8 @@ local function fillCraft(pe, out, itemID)
 	end
 end
 
--- The logged-in character is counted live; the others come from their saved holdings.
+-- The logged-in character is counted live; the others come from their saved holdings. Only the
+-- others carry a `key`, which is how TooltipLogic tells them from the logged-in character.
 local function fillOwned(pe, out, itemID)
 	local owners, total = {}, 0
 	if pe.GetItemHoldings then
@@ -288,25 +290,26 @@ local function withSaleRate(pe, pairs, itemID)
 	return out
 end
 
---- Item tooltip for a row in one of the addon's windows: anchored to the row's right edge, the
---- game's item tooltip, then the row's own label/value pairs under the addon name and a muted
---- hint. The general block is left out (blockSkipped), so no fact shows twice.
---- `pairs`: { { label, value }, ... }.
-function Tradewright:ShowItemRowTooltip(owner, itemID, pairs, hint)
-	if not owner then
-		return
-	end
-	local theme = self:GetTheme()
-	local gold, muted, plain = theme.gold, theme.textMuted, theme.textPrimary
-	self._rowTooltipOwner = owner
+-- Starts the game's item tooltip at the row's right edge. A row tooltip (`isRow`) is remembered,
+-- so the general block is left out of it (blockSkipped).
+local function startItemTooltip(pe, owner, itemID, isRow)
+	pe._rowTooltipOwner = isRow and owner or nil
 	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
 	if itemID and GameTooltip.SetItemByID then
 		GameTooltip:SetItemByID(itemID)
 	end
-	pairs = withSaleRate(self, pairs, itemID)
+end
+
+-- The row's label/value pairs, under the addon name unless the block already put it there, then
+-- the muted hint.
+local function finishItemTooltip(pe, pairs, hint)
+	local theme = pe:GetTheme()
+	local gold, muted, plain = theme.gold, theme.textMuted, theme.textPrimary
 	if pairs and #pairs > 0 then
-		GameTooltip:AddLine(" ")
-		GameTooltip:AddLine(HEADER, gold.r, gold.g, gold.b)
+		if not hasBlock(GameTooltip) then
+			GameTooltip:AddLine(" ")
+			GameTooltip:AddLine(HEADER, gold.r, gold.g, gold.b)
+		end
 		for _, pair in ipairs(pairs) do
 			GameTooltip:AddDoubleLine(pair[1], pair[2] or "-", muted.r, muted.g, muted.b, plain.r, plain.g, plain.b)
 		end
@@ -315,6 +318,29 @@ function Tradewright:ShowItemRowTooltip(owner, itemID, pairs, hint)
 		GameTooltip:AddLine(hint, muted.r, muted.g, muted.b, true)
 	end
 	GameTooltip:Show()
+end
+
+--- Item tooltip for a row in one of the addon's windows: anchored to the row's right edge, the
+--- game's item tooltip, then the row's own label/value pairs under the addon name and a muted
+--- hint. The general block is left out (blockSkipped), so no fact shows twice.
+--- `pairs`: { { label, value }, ... }.
+function Tradewright:ShowItemRowTooltip(owner, itemID, pairs, hint)
+	if not owner then
+		return
+	end
+	startItemTooltip(self, owner, itemID, true)
+	finishItemTooltip(self, withSaleRate(self, pairs, itemID), hint)
+end
+
+--- Item tooltip for a reagent row: the same tooltip the item has everywhere else in the game, with
+--- the whole Tradewright block (price, what you own and where), then the row's own pairs and hint.
+--- Pairs should not repeat what the block says.
+function Tradewright:ShowItemTooltip(owner, itemID, pairs, hint)
+	if not owner then
+		return
+	end
+	startItemTooltip(self, owner, itemID, false)
+	finishItemTooltip(self, pairs, hint)
 end
 
 -- Shift pressed or released over an item: show the tooltip again so the detail lines come and go.

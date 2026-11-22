@@ -149,23 +149,33 @@ local function ownedLine(lines, g, f)
 	add(lines, L["You own"], table.concat(parts, SEP))
 end
 
-local function ownerText(owner, f)
+local function ownerText(owner, number)
 	local parts = {}
 	for _, place in ipairs({ "bags", "bank", "warband" }) do
 		if (tonumber(owner[place]) or 0) > 0 then
-			parts[#parts + 1] = f.number(owner[place]) .. " " .. place
+			parts[#parts + 1] = number(owner[place]) .. " " .. place
 		end
 	end
 	return table.concat(parts, SEP)
 end
 
-local function ownerLines(lines, g, f)
-	local owners = g.owners or {}
+--- Where an item is held, one line per character: { { label = "Maelis", value = "200 bags · 80 bank" } },
+--- at most MAX_OWNER_LINES and then "and 2 more". `owners` as from Owners; `number` formats a count.
+function TooltipLogic.OwnerLines(owners, number)
+	local lines = {}
+	owners = owners or {}
 	for i = 1, math.min(#owners, MAX_OWNER_LINES) do
-		add(lines, owners[i].name, ownerText(owners[i], f))
+		add(lines, owners[i].name, ownerText(owners[i], number))
 	end
 	if #owners > MAX_OWNER_LINES then
 		add(lines, string.format(L["and %s more"], (#owners - MAX_OWNER_LINES)), "")
+	end
+	return lines
+end
+
+local function ownerLines(lines, g, f)
+	for _, line in ipairs(TooltipLogic.OwnerLines(g.owners, f.number)) do
+		lines[#lines + 1] = line
 	end
 end
 
@@ -210,7 +220,6 @@ end
 
 local function detailLines(lines, g, f)
 	craftLines(lines, g, f)
-	ownerLines(lines, g, f)
 	if g.rule and g.rule.ignore then
 		add(lines, "Rule", L["never posted in bulk"])
 	elseif g.rule and (tonumber(g.rule.reserveQty) or 0) > 0 then
@@ -269,8 +278,20 @@ local function headerOf(g)
 	return { right = TooltipLogic.AgeText(g.priceAge), tone = g.priceStale and "warning" or nil }
 end
 
+-- An item without any price still gets the block when a copy sits outside the logged-in character's
+-- bags (bank, warband bank, another character): that is where the block tells something new.
+local function heldOutOfReach(g)
+	for _, owner in ipairs(g.owners or {}) do
+		if owner.key or (tonumber(owner.bank) or 0) > 0 or (tonumber(owner.warband) or 0) > 0 then
+			return true
+		end
+	end
+	return false
+end
+
 local function hasData(g)
-	return g ~= nil and (g.price or g.estimate or g.craftCost or g.avgSale or g.saleRate or g.salvage or g.salvageSources) ~= nil
+	return g ~= nil and ((g.price or g.estimate or g.craftCost or g.avgSale or g.saleRate or g.salvage or g.salvageSources) ~= nil
+		or heldOutOfReach(g))
 end
 
 --- The Tradewright block for an item summary (BuildItemGoldSummary), or nil when there is
@@ -286,6 +307,7 @@ function TooltipLogic.BuildLines(g, opts)
 	usualLine(lines, g, opts)
 	listedLine(lines, g, opts)
 	ownedLine(lines, g, opts)
+	ownerLines(lines, g, opts)
 	if g.vendorBeatsAh then
 		add(lines, L["Vendor pays"], opts.money(g.vendor) .. SEP .. L["more than the AH"], "warning")
 	end
