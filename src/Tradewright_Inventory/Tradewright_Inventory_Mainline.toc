@@ -3,7 +3,7 @@
 ## Title: Tradewright Inventory
 ## Notes: What your characters own, the craft queue, gold and farm tracking
 ## Author: Ukon1990
-## Version: 2.0.0
+## Version: 1.0.0
 ## IconTexture: Interface\AddOns\Tradewright\media\logo
 ## Dependencies: Tradewright, Tradewright_Professions
 ## OptionalDeps: Blizzard_Professions

@@ -3,7 +3,7 @@
 ## Title: Tradewright UI
 ## Notes: The Tradewright window, the profession panel and the mail panel
 ## Author: Ukon1990
-## Version: 2.0.0
+## Version: 1.0.0
 ## IconTexture: Interface\AddOns\Tradewright\media\logo
 ## Dependencies: Tradewright, Tradewright_AuctionData, Tradewright_Professions, Tradewright_Inventory
 ## OptionalDeps: Blizzard_Professions

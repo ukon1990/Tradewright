@@ -3,7 +3,7 @@ local _, addonTable = ...
 local Tradewright = _G.Tradewright or addonTable or {}
 _G.Tradewright = Tradewright
 
-Tradewright.VERSION = "2.0.0"
+Tradewright.VERSION = "1.0.0"
 Tradewright.SCHEMA_VERSION = 12
 -- The name players see: window titles, tooltip headers, the chat prefix.
 Tradewright.DISPLAY_NAME = "Tradewright"

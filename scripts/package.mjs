@@ -12,7 +12,7 @@ import { ROOT, copyAddon, listAddons, readJson, sourceDir } from "./addon-files.
 const version = readJson("package.json").version;
 const addons = listAddons();
 
-// A zip named 2.0.0 whose TOCs say something else would show the wrong version in game.
+// A zip named 1.0.0 whose TOCs say something else would show the wrong version in game.
 const wrong = [];
 for (const addon of addons) {
   for (const file of fs.readdirSync(path.join(sourceDir, addon)).filter((f) => f.endsWith(".toc"))) {
