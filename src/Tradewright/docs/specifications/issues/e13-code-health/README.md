@@ -27,8 +27,9 @@ Make the code maintainable by a human: a developer new to a file can read it, un
 - F115: split the UI files
 - F116: split `Tradewright_Auction.lua`
 - F117: shared UI helpers
-- F119: rename `ProfessionExporter` to `Tradewright`
+- F119: rename `ProfessionExporter` to `AuctionHelper`
 - F118: split `Tradewright_Data.lua`, `Tradewright_Util.lua` and `Tradewright_ForeverLogic.lua`
+- F120: rename the pack from `AuctionHelper` to `Tradewright`
 
 ## Acceptance criteria
 

@@ -19,6 +19,7 @@
 | Lint | `scripts/lint.py`, `.luacheckrc`, `scripts/lint-baseline.json` | luacheck + file/function size + complexity, ratcheted |
 | Specs | `src/Tradewright/docs/specifications/` | Issues / backlog |
 | Deploy | `scripts/deploy.mjs`, `deploy.config.json` | Copies `src/*` into the game AddOns folders |
+| Saved-data move | `scripts/migrate-saved-data.mjs` | One-time: carries saved data from the old name (AuctionHelper) over to Tradewright |
 
 ## Repo layout
 

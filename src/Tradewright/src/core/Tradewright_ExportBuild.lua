@@ -439,6 +439,7 @@ function Tradewright:BuildCompactExportPayload(exportData)
 	end
 	local meta = exportData.meta or {}
 	meta.module = tostring(meta.module or meta.scope or "core")
+	-- Part of the export format that outside tools read, so it keeps the pack's earlier name.
 	meta.generatedBy = "AuctionHelper"
 	exportData.meta = meta
 	if C_EncodingUtil and C_EncodingUtil.SerializeCBOR and C_EncodingUtil.CompressString and C_EncodingUtil.EncodeBase64 then

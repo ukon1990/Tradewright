@@ -54,3 +54,21 @@ npm run deploy
 ```
 
 `deploy:forever` and `deploy:retail` deploy a single target. In game, `/reload` picks up changed files. New `.lua` files or TOC changes need a full client restart. `/ah` (or `/tradewright`) opens the UI.
+
+### Coming from AuctionHelper
+
+The pack used to be called AuctionHelper, and the game keeps saved data per addon folder name. With the game closed, move the data over once, then deploy (which also removes the old `AuctionHelper*` folders):
+
+```bash
+npm run migrate:saved-data -- --dry-run
+```
+
+```bash
+npm run migrate:saved-data
+```
+
+```bash
+npm run deploy
+```
+
+The old `AuctionHelper*.lua` saved-data files are left in place as a backup.

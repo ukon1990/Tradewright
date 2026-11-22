@@ -9,6 +9,7 @@
     "deploy:forever": "node scripts/deploy.mjs forever",
     "deploy:retail": "node scripts/deploy.mjs retail",
     "deploy:dry": "node scripts/deploy.mjs --dry-run",
+    "migrate:saved-data": "node scripts/migrate-saved-data.mjs",
     "test": "python3 src/Tradewright/tests/run_tests.py && python3 scripts/lint.py",
     "lint": "python3 scripts/lint.py",
     "lint:baseline": "python3 scripts/lint.py --update-baseline"
