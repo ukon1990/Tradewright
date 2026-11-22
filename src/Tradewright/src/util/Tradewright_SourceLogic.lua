@@ -71,13 +71,25 @@ function SourceLogic.IsTalliedClass(classID)
 	return TALLIED_CLASS[classID] == true
 end
 
+-- The colon between "Pattern" and the recipe name: a full-width one on Chinese clients, an ASCII one
+-- elsewhere (French puts a space before it).
+local NAME_COLONS = { "\239\188\154", ":" }
+
 --- The recipe a recipe item teaches, by name: "Pattern: Dusky Belt" gives "Dusky Belt". nil for an
 --- item of another class or a name without that form.
 function SourceLogic.RecipeNameOfItem(itemName, classID)
 	if classID ~= RECIPE_CLASS then
 		return nil
 	end
-	return tostring(itemName or ""):match("^[^:]+:%s*(.+)$")
+	local name = tostring(itemName or "")
+	for _, colon in ipairs(NAME_COLONS) do
+		local from, to = name:find(colon, 1, true)
+		if from and from > 1 then
+			local recipeName = name:sub(to + 1):gsub("^%s+", "")
+			return recipeName ~= "" and recipeName or nil
+		end
+	end
+	return nil
 end
 
 local function gridCell(value)

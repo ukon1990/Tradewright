@@ -2,75 +2,39 @@ local _, Tradewright = ...
 
 -- Craft basics the other Craft* files build on: expansion tags, AH cut, output quality ranks (Tradewright.CraftQuality), recommended crafter.
 
---- Last-resort: profession variant line when output item expansionID is not available yet.
---- TWW / Midnight IDs from https://wowpedia.fandom.com/wiki/TradeSkillLineID
-local SKILL_LINE_EXPANSION = {
-	[2822] = "tww",
-	[2823] = "tww",
-	[2824] = "tww",
-	[2825] = "tww",
-	[2826] = "tww",
-	[2827] = "tww",
-	[2828] = "tww",
-	[2829] = "tww",
-	[2830] = "tww",
-	[2831] = "tww",
-	[2832] = "tww",
-	[2833] = "tww",
-	[2834] = "tww",
-	[2871] = "midnight",
-	[2872] = "midnight",
-	[2873] = "midnight",
-	[2874] = "midnight",
-	[2875] = "midnight",
-	[2876] = "midnight",
-	[2877] = "midnight",
-	[2878] = "midnight",
-	[2879] = "midnight",
-	[2880] = "midnight",
-	[2881] = "midnight",
-	[2882] = "midnight",
-	[2883] = "midnight",
+-- Expansion of a profession's skill line, for crafts whose output item has no expansion ID yet.
+-- Each expansion's thirteen profession lines are one run of IDs (https://warcraft.wiki.gg/wiki/TradeSkillLineID).
+-- IDs, not names: the names are translated by the client.
+local SKILL_LINE_RANGES = {
+	{ first = 2906, last = 2918, tag = "midnight" },
+	{ first = 2871, last = 2883, tag = "tww" },
+	{ first = 2822, last = 2834, tag = "df" },
 }
 
-local EXPANSION_PATTERNS = {
-	{ tag = "midnight", patterns = { "midnight" } },
-	{ tag = "tww", patterns = { "the war within", "war within", "khaz algar" } },
-	{ tag = "df", patterns = { "dragonflight", "dragon isles" } },
-}
+local function skillLineExpansionTag(skillLineID)
+	for _, range in ipairs(SKILL_LINE_RANGES) do
+		if skillLineID >= range.first and skillLineID <= range.last then
+			return range.tag
+		end
+	end
+	return nil
+end
 
-function Tradewright:GetCraftExpansionTag(professionData, recipeData, outputItemID)
+function Tradewright:GetCraftExpansionTag(professionData, _, outputItemID)
 	local desc = outputItemID and self:ResolveItemDescriptor(outputItemID) or nil
 	local expansionID = desc and tonumber(desc.expansionID) or nil
 	if expansionID then
 		return self:ExpansionLeToFilterTag(expansionID)
 	end
 
-	local info = self:RecipeDataInfo(recipeData)
-	local candidates = {
-		professionData and professionData.currentLevelName,
-		professionData and professionData.professionName,
-		professionData and professionData.baseProfessionInfo and professionData.baseProfessionInfo.parentProfessionName,
-		professionData and professionData.baseProfessionInfo and professionData.baseProfessionInfo.professionName,
-		professionData and professionData.childProfessionInfo and professionData.childProfessionInfo.professionName,
-		info and info.categoryName,
-		info and info.recipeCategoryName,
-		info and info.name,
-	}
-	for _, value in ipairs(candidates) do
-		local lowered = string.lower(tostring(value or ""))
-		for _, expansion in ipairs(EXPANSION_PATTERNS) do
-			for _, pattern in ipairs(expansion.patterns) do
-				if string.find(lowered, pattern, 1, true) then
-					return expansion.tag
-				end
-			end
+	-- The open expansion tier first (child profession, specialization line), then the stored line itself.
+	local profession = type(professionData) == "table" and professionData or {}
+	local child = type(profession.childProfessionInfo) == "table" and profession.childProfessionInfo or {}
+	for _, id in ipairs({ child.professionID or 0, profession.primarySpecializationSkillLineID or 0, profession.skillLineID or professionData or 0 }) do
+		local tag = skillLineExpansionTag(tonumber(id) or 0)
+		if tag then
+			return tag
 		end
-	end
-
-	local skillLineID = professionData and tonumber(professionData.skillLineID) or tonumber(professionData)
-	if skillLineID and SKILL_LINE_EXPANSION[skillLineID] then
-		return SKILL_LINE_EXPANSION[skillLineID]
 	end
 
 	return "legacy"

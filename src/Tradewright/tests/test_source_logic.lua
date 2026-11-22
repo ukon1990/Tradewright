@@ -137,6 +137,9 @@ end
 -- Recipe items
 do
 	check("Recipe item: name after the colon", SL.RecipeNameOfItem("Pattern: Dusky Belt", 9) == "Dusky Belt")
+	check("Recipe item: French space before the colon", SL.RecipeNameOfItem("Patron : ceinture sombre", 9) == "ceinture sombre")
+	check("Recipe item: Chinese full-width colon", SL.RecipeNameOfItem("图样\239\188\154暗色腰带", 9) == "暗色腰带")
+	check("Recipe item: nothing after the colon", SL.RecipeNameOfItem("Pattern: ", 9) == nil)
 	check("Recipe item: another class is no recipe", SL.RecipeNameOfItem("Potion: Something", 0) == nil)
 	check("Recipe item: a name without the form", SL.RecipeNameOfItem("Dusky Belt", 9) == nil)
 	check("Tallied classes: materials and recipes, not gear",
