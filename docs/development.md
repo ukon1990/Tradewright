@@ -53,6 +53,28 @@ npm run deploy:local
 
 `deploy:local` copies the addons into every AddOns folder you configured; `deploy:forever` and `deploy:retail` copy to a single one. In game, `/reload` picks up changed files. New `.lua` files or TOC changes need a full client restart. `/tw` (or `/tradewright`) opens the UI.
 
+## Release
+
+```bash
+npm run package
+```
+
+builds `dist/Tradewright-<version>.zip`: the six addon folders with the same files a deploy copies (no tests, no docs; licence files included). The version comes from `package.json`; every TOC must carry the same `## Version` (`npm test` checks it).
+
+To release a version:
+
+1. Set the version in `package.json` and in every TOC, and add its entry at the top of `CHANGELOG.md`.
+2. `npm test`, then smoke test in game on Forever and on retail: loads without errors, full scan, profession scan, Crafts tab, one post and one cancel. Repeat the Crafts tab and a mailbox visit with the client set to another language.
+3. Commit, tag `v<version>` and push the tag. The Release workflow tests, packages and attaches the zip to a GitHub release.
+4. Upload the zip on CurseForge, or let the workflow do it (below).
+
+One-time CurseForge setup:
+
+- Create the project. Check that a file can be marked for the Forever game version as well as retail.
+- Credit and link CraftSim in the description: the Midnight specialization data is derived from it (see `src/Tradewright_Professions/THIRD-PARTY-NOTICES.md`).
+- Add `## X-Curse-Project-ID: <id>` to the four `Tradewright*.toc` files of the core addon, so the CurseForge app recognises an installed copy.
+- For automatic uploads, set the repository variables `CF_PROJECT_ID` and `CF_GAME_VERSION_IDS` (comma-separated ids from `https://wow.curseforge.com/api/game/versions`) and the secret `CF_API_KEY`. Until then the workflow skips the upload.
+
 ## Coming from AuctionHelper
 
 The pack used to be called AuctionHelper, and the game keeps saved data per addon folder name. With the game closed, move the data over once, then deploy (which also removes the old `AuctionHelper*` folders):

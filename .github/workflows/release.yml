@@ -1,0 +1,53 @@
+# Builds the release zip when a version tag (v2.0.0) is pushed and attaches it to a GitHub release.
+# The CurseForge upload runs only once the project exists: set the repository variables
+# CF_PROJECT_ID and CF_GAME_VERSION_IDS (comma-separated ids from
+# https://wow.curseforge.com/api/game/versions) and the secret CF_API_KEY.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install test tools
+        run: sudo apt-get update && sudo apt-get install -y lua5.1 lua-check zip
+
+      - name: Tag matches package.json
+        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+
+      - name: Test
+        run: npm test
+
+      - name: Package
+        run: npm run package
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.zip --title "$GITHUB_REF_NAME" --notes-file CHANGELOG.md
+
+      - name: Upload to CurseForge
+        if: ${{ vars.CF_PROJECT_ID != '' && vars.CF_GAME_VERSION_IDS != '' }}
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          CF_PROJECT_ID: ${{ vars.CF_PROJECT_ID }}
+          CF_GAME_VERSION_IDS: ${{ vars.CF_GAME_VERSION_IDS }}
+        run: |
+          metadata=$(jq -n --rawfile changelog CHANGELOG.md --arg versions "$CF_GAME_VERSION_IDS" \
+            '{changelog: $changelog, changelogType: "markdown", releaseType: "release",
+              gameVersions: ($versions | split(",") | map(tonumber))}')
+          curl --fail-with-body -sS -H "X-Api-Token: $CF_API_KEY" \
+            --form-string "metadata=$metadata" -F "file=@$(ls dist/*.zip)" \
+            "https://wow.curseforge.com/api/projects/$CF_PROJECT_ID/upload-file"

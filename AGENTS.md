@@ -20,6 +20,7 @@
 | Lint | `scripts/lint.py`, `.luacheckrc`, `scripts/lint-baseline.json` | luacheck + file/function size + complexity, ratcheted |
 | Specs | `docs/specifications/` | Issues / backlog |
 | Deploy | `scripts/deploy.mjs`, `deploy.config.json` | Copies `src/*` into the game AddOns folders |
+| Release | `scripts/package.mjs`, `scripts/addon-files.mjs`, `.github/workflows/release.yml`, `CHANGELOG.md` | `npm run package` builds the release zip with the files a deploy copies; steps in `docs/development.md#release` |
 | Saved-data move | `scripts/migrate-saved-data.mjs` | One-time: carries saved data from the old name (AuctionHelper) over to Tradewright |
 | Shipped sightings | `scripts/build-source-data.mjs` (+ `.lua`), `npm run sources:build` | Builds sealed sightings from saved data into `Tradewright_SourceData.lua`; in game first: `/tradewright sources seal`, then log out |
 

@@ -11,36 +11,13 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { config, copyAddon, listAddons, readJson, sourceDir } from "./addon-files.mjs";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-
-function readJson(file) {
-  const full = path.join(ROOT, file);
-  return fs.existsSync(full) ? JSON.parse(fs.readFileSync(full, "utf8")) : {};
-}
-
-const config = readJson("deploy.config.json");
 const local = readJson("deploy.config.local.json");
 const targets = { ...config.targets, ...local.targets };
-const sourceDir = path.join(ROOT, config.source ?? "src");
 // Folders the pack used to ship under an earlier name. Left in place they would load next to
 // the current ones, so every deploy removes them.
 const retired = config.retired ?? [];
-
-// "*.md" → suffix match, "LICENSE*" → prefix match, ".*" → any dotfile, anything else → exact name.
-const matches = (pattern, name) => {
-  if (pattern === ".*") return name.startsWith(".");
-  if (pattern.startsWith("*")) return name.endsWith(pattern.slice(1));
-  if (pattern.endsWith("*")) return name.startsWith(pattern.slice(0, -1));
-  return name === pattern;
-};
-const exclude = config.exclude ?? [];
-// Licence and third-party notice files must ship with the addon whatever their extension,
-// so `include` wins over `exclude`. It cannot rescue a file inside an excluded folder.
-const include = config.include ?? [];
-const isExcluded = (name) =>
-  !include.some((p) => matches(p, name)) && exclude.some((p) => matches(p, name));
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
@@ -57,10 +34,7 @@ if (unknown.length) {
   process.exit(1);
 }
 
-const addons = fs
-  .readdirSync(sourceDir, { withFileTypes: true })
-  .filter((d) => d.isDirectory() && fs.existsSync(path.join(sourceDir, d.name, `${d.name}.toc`)))
-  .map((d) => d.name);
+const addons = listAddons();
 
 if (!addons.length) {
   console.error(`No addon folders (with <name>/<name>.toc) found in ${sourceDir}`);
@@ -77,15 +51,7 @@ for (const name of names) {
     continue;
   }
   for (const addon of addons) {
-    const from = path.join(sourceDir, addon);
-    const to = path.join(addonsDir, addon);
-    if (!dryRun) {
-      fs.rmSync(to, { recursive: true, force: true });
-      fs.cpSync(from, to, {
-        recursive: true,
-        filter: (src) => src === from || !isExcluded(path.basename(src)),
-      });
-    }
+    if (!dryRun) copyAddon(addon, addonsDir);
     console.log(`  ✓ ${addon}`);
   }
   for (const addon of retired) {

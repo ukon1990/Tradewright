@@ -2,3 +2,4 @@ node_modules/
 deploy.config.local.json
 .luacheckcache
 .claude/worktrees
+dist/

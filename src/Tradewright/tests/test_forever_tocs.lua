@@ -75,6 +75,16 @@ for _, m in ipairs(modules) do
 end
 
 -- AGENTS + skills present
+-- One version everywhere: the release zip is named after package.json, the game shows the TOC's.
+local packageJson = readFile(repoRoot .. "/package.json")
+local version = packageJson and packageJson:match('"version"%s*:%s*"([^"]+)"')
+check("package.json has a version", version ~= nil)
+for _, m in ipairs(modules) do
+	local base = readFile(addonsRoot .. "/" .. m[1] .. "/" .. m[2])
+	local tocVersion = base and base:match("## Version:%s*([^\r\n]+)")
+	check(m[2] .. " version " .. tostring(version), tocVersion == version, tocVersion)
+end
+
 local agents = io.open(repoRoot .. "/AGENTS.md", "r")
 check("AGENTS.md exists", agents ~= nil)
 if agents then agents:close() end
