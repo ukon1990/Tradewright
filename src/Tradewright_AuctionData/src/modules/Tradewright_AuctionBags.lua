@@ -33,11 +33,13 @@ local function isAuctionSellItemValid(bag, slot)
 	if not loc then
 		return false
 	end
-	local ok, result = pcall(C_AuctionHouse.IsSellItemValid, loc)
+	-- displayError defaults to true on retail, which prints a red error per unsellable slot
+	-- (e.g. warbound items); ask quietly first, then fall back to the one-argument form.
+	local ok, result = pcall(C_AuctionHouse.IsSellItemValid, loc, false)
 	if ok then
 		return result == true
 	end
-	ok, result = pcall(C_AuctionHouse.IsSellItemValid, loc, false)
+	ok, result = pcall(C_AuctionHouse.IsSellItemValid, loc)
 	if ok then
 		return result == true
 	end

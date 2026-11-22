@@ -65,6 +65,7 @@ SELL
 • Lists what you can sell from your bags. Click a row to put the item in the sell slot.
 • Check prices looks up the prices picked in the list beside it: your crafts, your items or both.
 • Full scan reads every auction once. The server allows it only now and then; the button shows when it is ready.
+• A lit Full scan button means many prices are older than an hour: one full scan updates them all, faster than checking them one by one.
 • Post profitable and Post all queue the shown items. Click Post next once per auction: the game does not let an addon post by itself.
 • Keep holds back a number of an item. Ignore leaves it out when posting many.
 

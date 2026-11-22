@@ -192,6 +192,16 @@ local function dumpVisibleAuctions()
 	Tradewright:RefreshAuctionHousePanel()
 end
 
+local function addWaitingPricesTooltipLine()
+	local waiting = Tradewright:GetAuctionPricesWaitingForFullScan()
+	if waiting > 0 then
+		local gold = Tradewright:GetTheme().gold
+		GameTooltip:AddLine(string.format(L["%d prices are older than an hour. A full scan updates them all at once."], waiting),
+			gold.r, gold.g, gold.b, true)
+		GameTooltip:Show()
+	end
+end
+
 local function buildSellDumpButtons(panel, w)
 	w.btnDump = panelButton(panel, { 62, 20 }, L["Dump"], rightOf(w.btnScanCraftAndAccount), dumpVisibleAuctions)
 	panel.btnDumpVisible = w.btnDump
@@ -200,6 +210,7 @@ local function buildSellDumpButtons(panel, w)
 		Tradewright:RefreshAuctionHousePanel()
 	end)
 	attachSimpleTooltip(w.btnDumpFull, L["Full scan"], L["Reads every auction and saves this hour's price for each item."])
+	w.btnDumpFull:HookScript("OnEnter", addWaitingPricesTooltipLine)
 	panel.btnDumpFull = w.btnDumpFull
 	-- The countdown would otherwise only move when something else repaints the panel. OnUpdate runs
 	-- only while the button is shown, and the work is skipped unless a cooldown is counting down.

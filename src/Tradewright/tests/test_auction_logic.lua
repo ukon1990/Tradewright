@@ -279,6 +279,21 @@ do
 	check("Cut: works without the ledger module", pe:GetAuctionCut() == 0.05)
 end
 
+-- Which scan runs when the auction house opens
+do
+	local limit = AL.FULL_SCAN_SUGGESTION_MIN_STALE
+	local function plan(fullScanReady, suggestFullScan, staleBulkCount)
+		return AL.PlanScanOnOpen({ fullScanReady = fullScanReady, suggestFullScan = suggestFullScan, staleBulkCount = staleBulkCount })
+	end
+	local many, few = plan(true, true, limit + 1), plan(true, true, limit)
+	check("Scan on open: many stale prices wait for the ready full scan", many.queueBulk == false and many.highlightFullScan == true)
+	check("Scan on open: a few stale prices are checked one by one", few.queueBulk == true and few.highlightFullScan == false)
+	local onCooldown, switchedOff = plan(false, true, limit + 1), plan(true, false, limit + 1)
+	check("Scan on open: on cooldown everything is checked one by one", onCooldown.queueBulk == true and onCooldown.highlightFullScan == false)
+	check("Scan on open: with the suggestion off everything is checked one by one",
+		switchedOff.queueBulk == true and switchedOff.highlightFullScan == false)
+end
+
 if failed > 0 then
 	print(failed .. " test(s) failed")
 	os.exit(1)

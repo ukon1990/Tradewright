@@ -125,6 +125,7 @@ local AUCTION_STATE_KEYS = {
 	"auctionSearchToken", -- id of the latest search; timeouts of older ones are ignored
 	"auctionScanMode", -- what the queue is doing: "idle", "price", "mixed", ...
 	"auctionPendingPriceScanMode", -- mode the next queue run starts in
+	"auctionPricesWaitingForFullScan", -- stale craft and inventory prices left for a full scan
 	"auctionScanTotal", -- progress: targets in this run
 	"auctionScanDone", -- progress: targets finished
 	"auctionScanHoldUntil", -- GetTime() until which a cancelled scan stays held

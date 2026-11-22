@@ -94,6 +94,8 @@
 | [f130-collect-sightings](issues/e16-own-sources/f130-collect-sightings/README.md) | Collect vendors, trainers and loot | done |
 | [f131-show-sources](issues/e16-own-sources/f131-show-sources/README.md) | Show sources in the leveling route and tooltips | done |
 | [f132-shipped-source-data](issues/e16-own-sources/f132-shipped-source-data/README.md) | Shipped source data without duplicates | done |
+| [e17-scan-flow](issues/e17-scan-flow/README.md) | Scan flow: the right scan at the right time | open |
+| [f133-suggest-full-scan](issues/e17-scan-flow/f133-suggest-full-scan/README.md) | Suggest the full scan instead of a long item scan | open |
 
 Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E07 follow-ups: F55, then F56 → F57 → F58. E10: F80 first (no dependencies), then F81 and F82. E13: F105, F106, F119, then F107 and F108; F109 and F110 (after F106); F117 (after F109); F111; F112; F113; then the splits F114, F115, F116, F118. E14: F120 → F121 → F122 → F123, then F124. E15: F125 → F126, F127.
 

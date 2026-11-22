@@ -99,6 +99,8 @@ local function auctionHouseSection(pe)
 		{ kind = "note", text = L["Price steps: the cheapest prices of an item and how many are listed at each. Price gaps use them."] },
 		{ kind = "select", label = L["Refresh prices older than"], path = "auction.priceFreshnessMinutes", default = 15,
 			options = choices({ 5, 15, 30, 60, 180 }, L["%d minutes"]) },
+		{ kind = "check", label = L["Suggest a full scan when one is ready"], path = "auction.suggestFullScan", default = true },
+		{ kind = "note", text = L["Off: every price older than an hour is checked one by one when the auction house opens."] },
 		{ kind = "check", label = L["Count the lost deposit when cancelling undercut auctions"], path = "auction.repostIncludeDeposit",
 			default = true },
 		{ kind = "check", label = L["Show prices and what you own on item tooltips (hold Shift for more)"], path = "auction.tooltipEnabled",

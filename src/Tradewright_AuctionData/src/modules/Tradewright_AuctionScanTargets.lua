@@ -189,6 +189,13 @@ function Tradewright:BuildAccountTradableInventoryAuctionTargets()
 	return targets
 end
 
+local function economyScanMode(wantCrafts, wantInv)
+	if wantCrafts and wantInv then
+		return "mixed"
+	end
+	return wantInv and "account_inv" or "crafts"
+end
+
 --- opts.crafts / opts.accountInventory: queue AH lookups (deduped). Crafts refresh invalidates craft caches when opts.crafts.
 function Tradewright:QueueAuctionEconomyScan(opts)
 	opts = type(opts) == "table" and opts or {}
@@ -231,19 +238,22 @@ function Tradewright:QueueAuctionEconomyScan(opts)
 		end
 		return
 	end
-	if wantCrafts and wantInv then
-		state.auctionPendingPriceScanMode = "mixed"
-	elseif wantInv then
-		state.auctionPendingPriceScanMode = "account_inv"
-	else
-		state.auctionPendingPriceScanMode = "crafts"
-	end
+	state.auctionPendingPriceScanMode = economyScanMode(wantCrafts, wantInv)
 	state.auctionInvalidateCraftsAfterRefresh = wantCrafts == true
+	state.auctionPricesWaitingForFullScan = nil
 	state.auctionRefreshQueue = {}
 	state.auctionRefreshQueueOrderCounter = 0
 	self:QueueAuctionScanTargets(merged, { skipSessionSearched = true })
 	self:PrintMessage(string.format(L["Checking %d prices. Keep the auction house open until it ends."], #merged))
 	self:RefreshAuctionHousePanel()
+end
+
+--- How many stale prices a full scan would update right now; 0 while none is ready or one runs.
+function Tradewright:GetAuctionPricesWaitingForFullScan()
+	if self:IsFullAuctionDumpRunning() or self:GetFullAuctionDumpCooldownRemaining() > 0 then
+		return 0
+	end
+	return tonumber(self:GetState().auctionPricesWaitingForFullScan) or 0
 end
 
 function Tradewright:QueueCraftEconomyAuctionRefresh(opts)

@@ -317,6 +317,19 @@ function AuctionLogic.LiveSearchDiffers(saved, price, quantity, listings)
 	return differs(saved.p, price) or differs(saved.q, quantity) or differs(saved.n, listings)
 end
 
+-- Up to this many stale prices are quick to check one by one on any server; above it a full scan
+-- is the better choice.
+AuctionLogic.FULL_SCAN_SUGGESTION_MIN_STALE = 20
+
+--- What to do with the stale craft and inventory prices when the auction house opens:
+--- `queueBulk` checks them one by one, `highlightFullScan` leaves them for a full scan and points
+--- the player to it. `status` is `{ fullScanReady, suggestFullScan, staleBulkCount }`.
+function AuctionLogic.PlanScanOnOpen(status)
+	local leaveForFullScan = status.fullScanReady == true and status.suggestFullScan == true
+		and status.staleBulkCount > AuctionLogic.FULL_SCAN_SUGGESTION_MIN_STALE
+	return { queueBulk = not leaveForFullScan, highlightFullScan = leaveForFullScan }
+end
+
 --- The item name in the game's "You won an auction for %s" system message, or nil when `message` is
 --- something else. `wonFormat` is the client's own text for it, so this works in any language.
 function AuctionLogic.WonAuctionItemName(message, wonFormat)

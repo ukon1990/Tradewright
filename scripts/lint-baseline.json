@@ -737,10 +737,10 @@
    },
    "Tradewright:QueueAuctionEconomyScan": {
     "lines": [
-     55
+     50
     ],
     "ccn": [
-     19
+     16
     ]
    },
    "Tradewright:QueueVisibleCraftsTabAuctionRefresh": {

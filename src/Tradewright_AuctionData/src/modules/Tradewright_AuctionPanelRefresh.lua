@@ -193,6 +193,12 @@ local function refreshAuctionPanelScanButtons(panel, scan)
 	if panel.btnDumpFull then
 		panel.btnDumpFull:SetEnabled(not scan.fullDumpActive and scan.cooldown <= 0)
 		panel.btnDumpFull:SetText(fullScanButtonLabel(scan))
+		-- The locked highlight is the whole suggestion: the panel has no room for a line of text.
+		if Tradewright:GetAuctionPricesWaitingForFullScan() > 0 then
+			panel.btnDumpFull:LockHighlight()
+		else
+			panel.btnDumpFull:UnlockHighlight()
+		end
 	end
 	if panel.btnDumpVisible then
 		panel.btnDumpVisible:SetEnabled(not scan.fullDumpActive)

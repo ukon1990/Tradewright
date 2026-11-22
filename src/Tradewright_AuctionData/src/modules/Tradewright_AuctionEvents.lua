@@ -3,6 +3,7 @@ local _, Tradewright = ...
 
 local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local shared = Tradewright.AuctionShared
+local AuctionLogic = Tradewright.AuctionLogic
 local normalizeItemID = shared.normalizeItemID
 local normalizeSearchEventItemID = shared.normalizeSearchEventItemID
 
@@ -64,6 +65,41 @@ function Tradewright:IsAuctionHouseFrameOpen()
 	return ah and ah.IsShown and ah:IsShown() and true or false
 end
 
+local function buildStaleScanTargets(pe, includeBulk)
+	return pe:BuildPrioritizedAuctionAutoScanTargets({
+		includeVisibleBags = true,
+		includeCrafts = includeBulk,
+		includeAccountInventory = includeBulk,
+		includeSessionSearched = false,
+		requireStaleNonVisible = true,
+		freshnessWindowSeconds = AUTO_SCAN_MAX_AGE_SEC,
+	})
+end
+
+-- Bag items are always checked one by one: the player needs their prices to see undercuts. The
+-- craft and inventory prices (the bulk) are many, so when a full scan is ready they wait for it.
+local function queueStalePricesOnOpen(pe)
+	local state = pe:GetState()
+	local allTargets, sellingTargets = buildStaleScanTargets(pe, true), buildStaleScanTargets(pe, false)
+	local plan = AuctionLogic.PlanScanOnOpen({
+		fullScanReady = pe:GetFullAuctionDumpCooldownRemaining() <= 0,
+		suggestFullScan = pe:GetSetting("auction.suggestFullScan", true) ~= false,
+		staleBulkCount = #allTargets - #sellingTargets,
+	})
+	local targets = plan.queueBulk and allTargets or sellingTargets
+	state.auctionPricesWaitingForFullScan = #allTargets - #targets
+	if #targets == 0 then
+		-- Nothing is queued, so no scan progress would repaint the panel and light the button.
+		pe:RefreshAuctionHousePanel()
+		return
+	end
+	state.auctionPendingPriceScanMode = plan.queueBulk and "mixed" or nil
+	state.auctionInvalidateCraftsAfterRefresh = plan.queueBulk
+	state.auctionRefreshQueue = {}
+	state.auctionRefreshQueueOrderCounter = 0
+	pe:QueueAuctionScanTargets(targets, { skipSessionSearched = true })
+end
+
 function Tradewright:OnAuctionHouseShow()
 	if self:GetSetting("auction.enabled", true) == false then
 		return
@@ -81,23 +117,9 @@ function Tradewright:OnAuctionHouseShow()
 	self:PrimeAuctionPanelRows()
 	self:RefreshAuctionHousePanel()
 	self:RetryPrimeAuctionPanelRows(1)
+	self:GetState().auctionPricesWaitingForFullScan = nil
 	if self:CanStartFullAuctionSideActions(false) then
-		local state = self:GetState()
-		local targets = self:BuildPrioritizedAuctionAutoScanTargets({
-			includeVisibleBags = true,
-			includeCrafts = true,
-			includeAccountInventory = true,
-			includeSessionSearched = false,
-			requireStaleNonVisible = true,
-			freshnessWindowSeconds = AUTO_SCAN_MAX_AGE_SEC,
-		})
-		if #targets > 0 then
-			state.auctionPendingPriceScanMode = "mixed"
-			state.auctionInvalidateCraftsAfterRefresh = true
-			state.auctionRefreshQueue = {}
-			state.auctionRefreshQueueOrderCounter = 0
-			self:QueueAuctionScanTargets(targets, { skipSessionSearched = true })
-		end
+		queueStalePricesOnOpen(self)
 		self:StartAuctionRoiEnrichment(self:BuildAuctionVisibleItemIDs())
 	end
 end
