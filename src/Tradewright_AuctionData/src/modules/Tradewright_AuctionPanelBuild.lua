@@ -201,6 +201,19 @@ local function buildSellDumpButtons(panel, w)
 	end)
 	attachSimpleTooltip(w.btnDumpFull, L["Full scan"], L["Reads every auction and saves this hour's price for each item."])
 	panel.btnDumpFull = w.btnDumpFull
+	-- The countdown would otherwise only move when something else repaints the panel. OnUpdate runs
+	-- only while the button is shown, and the work is skipped unless a cooldown is counting down.
+	local sinceTick = 0
+	w.btnDumpFull:SetScript("OnUpdate", function(_, elapsed)
+		sinceTick = sinceTick + elapsed
+		if sinceTick < 1 then
+			return
+		end
+		sinceTick = 0
+		if Tradewright:GetFullAuctionDumpCooldownRemaining() > 0 or not w.btnDumpFull:IsEnabled() then
+			Tradewright:RefreshFullScanCountdown(panel)
+		end
+	end)
 end
 
 -- Second sell-tab row, part one: bulk posting and its pause toggle.

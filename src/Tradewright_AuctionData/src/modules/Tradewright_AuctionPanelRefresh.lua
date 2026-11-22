@@ -162,13 +162,17 @@ local function getAuctionPanelScanStatus(pe, state)
 	return scan
 end
 
-local function refreshAuctionPanelFooters(panel, scan, rowCount, preFilterCount)
+local function refreshFullScanFooter(panel, scan)
 	if panel.footerText then
 		local footer = scan.fullDumpActive and L["Full scan running"]
 			or scan.cooldown > 0 and (string.format(L["Full scan ready in %s"], formatDurationShort(scan.cooldown)))
 			or L["Full scan ready"]
 		panel.footerText:SetText(string.format(L["%s · Last full scan %s"], footer, scan.lastFullScanLabel))
 	end
+end
+
+local function refreshAuctionPanelFooters(panel, scan, rowCount, preFilterCount)
+	refreshFullScanFooter(panel, scan)
 	if panel.table and panel.table.SetFooterText then
 		panel.table:SetFooterText(string.format(L["%d of %d items"], rowCount, preFilterCount),
 			queuedHint(scan.queued, L["Click a row to put it in the sell slot"]))
@@ -199,6 +203,19 @@ local function refreshAuctionPanelScanButtons(panel, scan)
 			panel[key]:SetEnabled(canScan)
 		end
 	end
+end
+
+-- Updates only the full-scan countdown (button label and footer line), so a once-a-second timer
+-- can keep it current without rebuilding the sell table.
+function Tradewright:RefreshFullScanCountdown(panel)
+	local dump = self:GetState().auctionDump
+	local scan = {
+		cooldown = self:GetFullAuctionDumpCooldownRemaining(),
+		fullDumpActive = dump and dump.mode == "full" and dump.running == true,
+		lastFullScanLabel = self:FormatScanTimestamp(self:GetLastFullAuctionScanAt()),
+	}
+	refreshAuctionPanelScanButtons(panel, scan)
+	refreshFullScanFooter(panel, scan)
 end
 
 -- While a bulk job runs, the button that started it posts the item waiting in the sell frame.
