@@ -1,23 +1,22 @@
 # Tradewright
 
-Tradewright is an auction, profession and inventory helper for WoW Forever and retail. It combines auction house prices with your profession recipes to show which crafts make a profit.
+Tradewright is an addon for managing auctions, professions and inventory in WoW forever and retail. It collects auction prices, and allows you to use them with your professions to show the crafting cost and potential profit.
 
 ## Features
 
 **Auction house**
-- Full scan that saves prices, with a daily price history and a usual price per item.
-- Prices on item tooltips; hold Shift for craft profit and more.
-- Market tab to search the last scan and each item's price history from anywhere, not just at the auction house.
-- Opportunities tab: flips, items listed below vendor price, and what to sell now.
-- Cart for the reagents your queued crafts need.
-- Bulk posting, and undercut checks on your own auctions.
+- Lets you scan the whole auction house, and collects history, so that you easily can see the change over time.
+- Lets you check and search through the prices on the AH anywhere, based on the last time you did a full AH scan.
+- Lets you easily find potential flips, for items below vendor price etc.
+- Shopping cart, for the reagents you need for the crafts you've got queued up.
+- Uses the native UI for posting, with easy click to sell via the AH side-panel. You can also check if your auctions has been undercut.
 
 **Professions**
-- Scans your recipes and reagents, and shows cost and profit per craft.
-- Picks the cheapest way to get each reagent: buy, craft or vendor.
-- Shows which reagents a vendor sells that you still need.
+- Lets you see potential profit and crafting cost for your recipes.
+- Selects the cheapest option to get the reagent (AH, craft or vendor)
+- Lets you navigate to the vendor that sells a given trade reagent like `Fine thread`etc.
 - Suggests how many to make, and tracks cooldown crafts.
-- Craft queue, and a leveling route for raising a profession skill.
+- Craft queue, and a helper leveling professions skill(not gathering).
 - Crafting orders (retail): queue patron orders, buy all reagents from one cart, then craft them in order.
 - Reagent quality (retail): the cheapest reagents that reach the rank you want.
 
