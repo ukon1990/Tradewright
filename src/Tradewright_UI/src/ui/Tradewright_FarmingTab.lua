@@ -11,6 +11,8 @@ local PAD = 10
 local DETAIL_WIDTH = 300
 local ROW_HEIGHT = 24
 local MAX_ITEM_ROWS = 7
+local PERIOD_WIDTH = 120
+local PERIODS = { { value = 7, label = "Last 7 days" }, { value = 30, label = "Last 30 days" }, { value = 0, label = "All runs" } }
 
 local function duration(seconds)
 	local minutes = math.floor((seconds or 0) / 60 + 0.5)
@@ -69,7 +71,7 @@ local function detailRows(pe, row)
 	return rows
 end
 
--- "Start this farm" and Delete at the bottom of the side pane.
+-- "Start this farm", Rename and Delete at the bottom of the side pane.
 local function buildDetailButtons(pe, panel, card)
 	card.start = pe:CreateButton(card.body, "Start this farm", function()
 		if panel.selected then
@@ -94,7 +96,16 @@ local function buildDetailButtons(pe, panel, card)
 		FarmingTab:Refresh()
 	end)
 	card.delete:SetPoint("BOTTOMRIGHT")
-	card.start:SetPoint("RIGHT", card.delete, "LEFT", -6, 0)
+	card.rename = pe:CreateButton(card.body, "Rename", function()
+		if panel.selected then
+			pe:AskToRenameFarm(panel.selected.name, function(newName)
+				panel.selected.name = newName
+				FarmingTab:Refresh()
+			end)
+		end
+	end)
+	card.rename:SetPoint("RIGHT", card.delete, "LEFT", -6, 0)
+	card.start:SetPoint("RIGHT", card.rename, "LEFT", -6, 0)
 end
 
 local function buildDetail(pe, panel)
@@ -157,7 +168,12 @@ local function buildToolbar(pe, panel)
 		FarmingTab:Refresh()
 	end)
 	panel.startButton:SetPoint("RIGHT")
-	panel.status:SetPoint("RIGHT", panel.startButton, "LEFT", -GAP, 0)
+	panel.period = pe:CreateSettingDropdown(panel.toolbar, {
+		setting = "farming.periodDays", default = 0, width = PERIOD_WIDTH, choices = PERIODS,
+		onChanged = function() FarmingTab:Refresh() end,
+	})
+	panel.period:SetPoint("RIGHT", panel.startButton, "LEFT", -GAP, 0)
+	panel.status:SetPoint("RIGHT", panel.period, "LEFT", -GAP, 0)
 end
 
 local function buildTable(pe, panel)
@@ -214,7 +230,7 @@ local function refreshStats(pe, panel, rows)
 		seconds, value, runs = seconds + row.activeSeconds, value + row.valueWhenSaved, runs + row.runs
 	end
 	panel.stats.bestFarm:SetValues("Best farm at today's prices", best and (pe:FormatCopperShort(best.nowPerHour) .. " an hour") or "-", best and best.name or "")
-	panel.stats.farmed:SetValues("Farmed, all runs", pe:FormatCopperShort(value), "Worth when saved", "success")
+	panel.stats.farmed:SetValues("Farmed", pe:FormatCopperShort(value), "Worth when saved", "success")
 	panel.stats.timeFarming:SetValues("Time farming", duration(seconds), "Pauses not counted")
 	panel.stats.runs:SetValues("Runs", tostring(runs), string.format("%d farms", #rows))
 	pe:LayoutEvenRow(panel.statsRow, panel.stats, 0, GAP)
@@ -242,11 +258,14 @@ function FarmingTab:Refresh() -- luacheck: ignore 212
 		return
 	end
 	refreshStatus(pe, panel)
-	if pe:ApplyFarmView(panel) then
+	local showsTargets = pe:ApplyFarmView(panel)
+	panel.period:SetShown(not showsTargets)
+	if showsTargets then
 		panel.targets:Refresh()
 		return
 	end
-	local rows = pe:GetFarmRows()
+	panel.period:RefreshText()
+	local rows = pe:GetFarmRows(tonumber(pe:GetSetting("farming.periodDays", 0)) or 0)
 	refreshStats(pe, panel, rows)
 	panel.table:SetRows(rows)
 	panel.table:SetFooterText("Gold an hour: Then at the day's prices, Now at today's", string.format("%d farms", #rows))

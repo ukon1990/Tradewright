@@ -38,6 +38,22 @@ function Tradewright:GetCraftUnitCost(itemID)
 	return entry.cost, entry.crafter
 end
 
+--- Queues `count` crafts of a craft row and, for every material its plan prices as crafted, the
+--- crafts that make that material, for the character whose recipe is cheapest. One level deep: the
+--- materials of those crafts are bought, as the queue's "To buy" shows.
+function Tradewright:AddCraftWithMaterialCraftsToQueue(row, count)
+	local added, reason = self:AddCraftToQueue(row, count)
+	if not added then
+		return added, reason
+	end
+	local evaluation = row.perChar and row.perChar[row.bestCharacterKey]
+	local materialCrafts = self.MaterialLogic.MaterialCraftsNeeded(evaluation and evaluation.reagentPlan, count, craftUnitCostIndex(self))
+	for _, material in ipairs(materialCrafts) do
+		self:AddCraftToQueue(material.row, material.crafts)
+	end
+	return added
+end
+
 --- The cheapest unit price for a material and where it comes from. `unit, source` is what the engine
 --- found by its usual rules (vendor for vendor-sourced reagents, ledger, market); your own recipe
 --- replaces it when crafting the material is cheaper.

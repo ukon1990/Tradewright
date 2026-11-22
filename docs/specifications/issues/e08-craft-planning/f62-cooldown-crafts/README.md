@@ -37,8 +37,15 @@ Differs from the scope:
 - **A recipe is known to have a cooldown only after the client has reported one for it.** A cooldown recipe that has never been on cooldown while the addon was watching shows nothing. The client reports no cooldown for a ready recipe, so the addon cannot tell "ready" from "has none" until then.
 - **Only the modern profession API is read** (`GetAllRecipeIDs` and `GetRecipeCooldown`). The classic `GetTradeSkillCooldown` path is not implemented; on a client without the modern calls nothing is stored.
 - **Shared cooldowns** (`BestCooldownUse`) are not handled: each recipe stands alone
-- **Not done:** the row's second-line text, the "Cooldowns" filter value, the footer line and the login chat line. The first three sit in `Tradewright_CraftsUI.lua`, which is over the file-size limit.
+- **Not done:** the row's second-line text
 - The stored key is the recipe ID the client lists; a craft row is matched on its recipe ID, then its spell ID. Whether these line up on Forever needs the in-game check.
+
+Added later, in-game check pending:
+
+- Crafts footer: "1 cooldown ready · next in 1 day 4 hours" across all characters (`MaterialLogic.SummarizeCooldowns`, `CooldownFooter`)
+- "Cooldowns" in the profit-state filter
+- Setting "Tell me at login when a cooldown craft is ready" (on): one chat line per ready cooldown, naming the recipe and character
+- A cooldown stays "ready" until the profession window is opened again after using it, so the login line repeats until then
 
 ## Acceptance criteria
 

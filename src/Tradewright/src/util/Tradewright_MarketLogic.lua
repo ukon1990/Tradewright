@@ -123,7 +123,7 @@ function MarketLogic.ClassifyMarketItem(price, summary, ref, opts)
 	if price and price > 0 and ref and ref > 0 and (opts.refExternal or enoughHistory) then
 		out.discount = (ref - price) / ref
 		out.isDeal = out.discount >= (opts.dealThreshold or 0.3)
-		out.gain = ref * (1 - (opts.ahCut or 0.05)) - price
+		out.gain = ref * (1 - (opts.ahCut or Tradewright.DEFAULT_AUCTION_CUT)) - price
 	end
 	local avg = tonumber(summary.avg7d)
 	if price and price > 0 and avg and avg > 0 and enoughHistory then

@@ -135,6 +135,9 @@ local PROFIT_STATES = {
 	uncraftable = function(row)
 		return not row.canCraftNow
 	end,
+	cooldown = function(row, filters)
+		return filters.hasCooldown ~= nil and filters.hasCooldown(row)
+	end,
 }
 
 -- A set filter that also stands aside when "all" is selected.
@@ -143,7 +146,8 @@ local function narrows(selection)
 end
 
 --- Crafts rows matching `filters` = { text, characters, professions, expansions, categories,
---- profitState }; empty sets (or "all") match any. Text searches recipe and output names; a
+--- profitState, hasCooldown }; empty sets (or "all") match any. The profit state "cooldown" keeps
+--- the rows `hasCooldown(row)` says have a recipe cooldown. Text searches recipe and output names; a
 --- character matches when it appears in the row's perChar.
 function FilterLogic.FilterCraftRows(rows, filters)
 	filters = filters or {}
@@ -167,7 +171,9 @@ function FilterLogic.FilterCraftRows(rows, filters)
 		{ "text", text ~= "", function(row)
 			return contains(row.recipeName, text) or contains(row.outputName, text)
 		end },
-		{ "profit", profitFilter ~= nil, profitFilter },
+		{ "profit", profitFilter ~= nil, function(row)
+			return profitFilter(row, filters)
+		end },
 	})
 end
 

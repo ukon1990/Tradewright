@@ -149,8 +149,7 @@ function Tradewright:TryScanCurrentProfession()
 	end)
 end
 
-function Tradewright:ScanOpenProfession(opts)
-	opts = type(opts) == "table" and opts or {}
+function Tradewright:ScanOpenProfession()
 	if not self.IS_SUPPORTED then
 		self:PrintMessage("Profession scan requires retail or Forever WoW.")
 		return false
@@ -190,12 +189,6 @@ function Tradewright:ScanOpenProfession(opts)
 		professionData.recipeCount or 0,
 		specTierCount
 	))
-
-	if opts.exportTalents then
-		self:Export("profession_talents", skillLineID)
-	elseif opts.exportRecipes then
-		self:Export("profession_recipes", skillLineID)
-	end
 	return true
 end
 

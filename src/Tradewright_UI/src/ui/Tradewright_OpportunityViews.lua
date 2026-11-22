@@ -156,9 +156,9 @@ local function flipDetailRows(pe, row)
 		{ "Cheapest now", pe:FormatCopperFull(row.price) },
 		{ string.format("Usual price, %d days", row.usualDays or 0), pe:FormatCopperFull(row.usual) },
 		{ string.format("Sale after %s cut", pe:FormatPercent(1 - row.saleNet / row.usual)), pe:FormatCopperFull(row.saleNet) },
+		{ "Deposit lost on unsold postings, each", row.depositLoss > 0 and pe:FormatCopperFull(row.depositLoss) or "not known" },
 		{ "Profit each", pe:FormatSignedMoney(row.profitEach), "success" },
 		{ "Return", pe:FormatPercent(row.roi) },
-		{ "", "" },
 		{ "Listed under " .. pe:FormatCopperShort(row.limitPrice), row.listedUnder and pe:FormatNumberGrouped(row.listedUnder) or "-" },
 		sells, source,
 		{ string.format("Buy %s and spend", pe:FormatNumberGrouped(units)), pe:FormatCopperFull(row.cost) },
@@ -197,7 +197,7 @@ local flips = {
 	tooltipPairs = function(pe, row) return { { "Profit each after the cut", pe:FormatSignedMoney(row and row.profitEach) } } end,
 	footer = function(pe, rows, insights)
 		return string.format("%d flips from %s items", #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
-			"Buy is capped at a share of a day's sales"
+			"Auction cut " .. pe:DescribeAuctionCut() .. " · Buy is capped at a share of a day's sales"
 	end,
 }
 
@@ -346,7 +346,7 @@ local gaps = {
 	tooltipPairs = function(pe, row) return { { "Cost to clear", pe:FormatCopperFull(row and row.cost) } } end,
 	footer = function(pe, rows, insights)
 		return string.format("%d price gaps from %s items", #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
-			"Risky: gain counts the cut, not undercuts"
+			"Risky: gain counts the " .. pe:DescribeAuctionCut() .. " cut, not undercuts"
 	end,
 }
 
@@ -373,8 +373,11 @@ local function sellCandidates(pe, insights)
 	return items, { { key = "owned", count = owned }, { key = "scanned", count = scanned }, { key = "known", count = #items } }
 end
 
--- Rebuilt at most every 10 seconds: bags change without a new scan.
-local function sellRows(pe, onReady)
+--- "Sell now" rows, most worth first, the insights and the funnel, or nil while the market insights
+--- are still being built (`onReady` then fires). Rebuilt at most every 10 seconds: bags change
+--- without a new scan.
+function Tradewright:GetSellNowRows(onReady)
+	local pe = self
 	local insights = pe:GetMarketInsights(onReady)
 	if not insights then
 		return nil
@@ -462,15 +465,16 @@ local sell = {
 	id = "sell", label = "Sell now",
 	emptyTitle = "Nothing to sell right now",
 	emptyHint = "Nothing you own is priced 10% or more above its usual price and known to sell.",
-	getRows = sellRows,
+	getRows = function(pe, onReady) return pe:GetSellNowRows(onReady) end,
 	columns = sellColumns,
 	detailRows = sellDetailRows,
 	riskText = withDataWarnings(sellRiskText),
 	setStats = sellStats,
 	subtitle = function(pe, row) return pe:FormatPercent(row.premium) .. " above its usual price" end,
 	tooltipPairs = function(pe, row) return { { "Worth after the cut", pe:FormatCopperFull(row and row.worth) } } end,
-	footer = function(_, rows)
-		return string.format("%d of your items", #rows), "Worth = owned at today's lowest price, after the cut"
+	footer = function(pe, rows)
+		return string.format("%d of your items", #rows),
+			"Worth = owned at today's lowest price, after the " .. pe:DescribeAuctionCut() .. " cut"
 	end,
 }
 

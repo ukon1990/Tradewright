@@ -1,14 +1,24 @@
 local _, Tradewright = ...
 
 -- Sales ledger (Overview → Sales): what the auction house has paid out. Four headline numbers,
--- gold earned per day, the items that sell best and the latest sales. The numbers come from the
--- ledger, which gains a sale whenever auction gold is collected from the mailbox.
+-- gold earned per day, the items that sell best and the latest auction mails: sold, bought, or
+-- come back unsold. The numbers come from the ledger, which gains an entry whenever an auction's
+-- gold or item is collected from the mailbox.
 
 local GAP = 12
 local PAD = 10
 local STATS_HEIGHT = 58
 local CHART_HEIGHT = 190
 local RECENT_ROWS = 100
+-- What the "Latest" card can list; `amount` gives a row's gold: earned, paid (negative) or none.
+local LATEST_KINDS = {
+	{ key = "sold", label = "Sold", kinds = { sell = true },
+		amount = function(event) return tonumber(event.netCopper) or tonumber(event.totalCopper) or 0 end },
+	{ key = "bought", label = "Bought", kinds = { buy = true },
+		amount = function(event) return -(tonumber(event.totalCopper) or 0) end },
+	{ key = "returned", label = "Came back", kinds = { expired = true, cancelled = true }, amount = function() return nil end },
+}
+local KIND_TEXT = { sell = "Sold", buy = "Bought", expired = "Expired unsold", cancelled = "Cancelled" }
 
 -- Table options shared by both cards: rows sort high to low on `sortKey`, item rows link on shift-click.
 local function salesTableOptions(pe, sortKey, tooltipPairs)
@@ -16,8 +26,8 @@ local function salesTableOptions(pe, sortKey, tooltipPairs)
 		rowHeight = 24,
 		sortKey = sortKey,
 		sortAsc = false,
-		emptyTitle = "No sales recorded yet",
-		emptyHint = "A sale is added when you collect its gold from the mailbox.",
+		emptyTitle = "Nothing recorded yet",
+		emptyHint = "An entry is added when you collect an auction's gold or item from the mailbox.",
 		onRowEnter = function(rowFrame, row)
 			if row then
 				pe:ShowItemRowTooltip(rowFrame, row.itemID, tooltipPairs(row), row.itemID and "Shift-click to link." or nil)
@@ -60,6 +70,19 @@ local function addOrigins(items, sales, labels)
 end
 
 -- How much of what this character posted sold (AuctionData's ledger; nil when never posted).
+-- What each sold item cost to buy and what it made per unit, for items the ledger also saw bought.
+local function addPurchases(pe, items)
+	if not pe.GetLedgerItemTally then
+		return
+	end
+	for _, item in ipairs(items) do
+		local tally = pe:GetLedgerItemTally(item.itemID or item.name)
+		local bought, realized = pe.IncomeLogic.PurchaseSummary(tally), pe.IncomeLogic.RealizedProfit(tally)
+		item.boughtEach = bought and bought.avgUnit or nil
+		item.profitEach = realized and realized.profitEach or nil
+	end
+end
+
 local function addSaleRates(pe, items)
 	if not pe.GetAuctionPanelPersonalSaleRate then
 		return
@@ -77,6 +100,7 @@ local function itemTooltipPairs(pe, row)
 		{ "Sold for", pe:FormatCopperFull(row.gross) },
 		{ "Sales a week", string.format("%.1f", row.perWeek) },
 		{ "Last sold", pe:FormatScanTimestamp(row.lastAt) },
+		{ "Bought for, each", row.boughtEach and pe:FormatCopperFull(row.boughtEach) or "not bought at auction" },
 		{ "Came from", originText(row.origins or {}) },
 	}
 end
@@ -91,13 +115,17 @@ local function itemsColumns(pe)
 		pe:MoneyColumn({ id = "net", label = "Earned", width = 78 }),
 		pe:MoneyColumn({ id = "avgUnit", label = "Each", width = 70, optional = true }),
 		pe:NumberColumn({ id = "perWeek", label = "A week", width = 56, format = function(n) return string.format("%.1f", n) end }),
+		pe:MoneyColumn({ id = "boughtEach", label = "Bought each", width = 78, optional = true }),
+		pe:NumberColumn({ id = "profitEach", label = "Profit each", width = 78, optional = true,
+			format = function(copper) return pe:FormatSignedMoney(copper) end }),
 	}
 end
 
 local function recentColumns(pe)
 	return {
 		pe:ItemColumn({ minWidth = 120 }),
-		pe:MoneyColumn({ id = "net", label = "Earned", width = 78 }),
+		pe:NumberColumn({ id = "amount", label = "Gold", width = 78,
+			format = function(copper) return pe:FormatSignedMoney(copper) end }),
 		{ id = "ts", label = "When", justifyH = "RIGHT", width = 104, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.ts end,
 			getText = function(row) return pe:FormatScanTimestamp(row.ts) end },
@@ -105,27 +133,31 @@ local function recentColumns(pe)
 end
 
 local function recentTooltipPairs(pe, row)
-	return {
-		{ "Earned after cut", pe:FormatCopperFull(row.net) },
-		{ "Sold for", pe:FormatCopperFull(row.gross) },
-		{ "Buyer", row.buyer or "several buyers" },
-		{ "Sold by", row.characterKey },
-	}
+	local lines = { { "What happened", KIND_TEXT[row.kind] } }
+	if row.kind == "sell" then
+		lines[#lines + 1] = { "Earned after cut", pe:FormatCopperFull(row.amount) }
+		lines[#lines + 1] = { "Sold for", pe:FormatCopperFull(row.gross) }
+		lines[#lines + 1] = { "Buyer", row.buyer or "several buyers" }
+	elseif row.kind == "buy" then
+		lines[#lines + 1] = { "Paid", pe:FormatCopperFull(row.gross) }
+	end
+	lines[#lines + 1] = { "Character", row.characterKey }
+	return lines
 end
 
--- The latest sales as table rows, newest first.
-local function recentRows(pe, events)
+-- The latest ledger events of one kind choice as table rows, newest first.
+local function recentRows(pe, events, kindChoice)
 	local rows = {}
-	for index = 1, math.min(RECENT_ROWS, #events) do
-		local event = events[index]
+	for index, event in ipairs(events) do
 		local quantity = tonumber(event.quantity) or 1
 		local name = event.itemName or pe:GetItemDisplayName(event.itemID)
 		rows[index] = {
 			_rowIdentity = tostring(index),
 			itemID = event.itemID,
 			name = quantity > 1 and string.format("%s x%d", name, quantity) or name,
+			kind = event.kind,
 			ts = tonumber(event.ts) or 0,
-			net = tonumber(event.netCopper) or tonumber(event.totalCopper) or 0,
+			amount = kindChoice.amount(event),
 			gross = tonumber(event.totalCopper) or 0,
 			buyer = event.buyer,
 			characterKey = event.characterKey,
@@ -157,10 +189,11 @@ function Tradewright:CreateSalesDashboard(parent)
 		table = salesTableOptions(pe, "net", function(row) return itemTooltipPairs(pe, row) end),
 	})
 	dash.recent = pe:CreateTableCard(dash, {
-		title = "Latest sales",
+		title = "Latest",
 		columns = recentColumns(pe),
 		table = salesTableOptions(pe, "ts", function(row) return recentTooltipPairs(pe, row) end),
 	})
+	dash:CreateLatestKindButtons()
 	dash:SetScript("OnSizeChanged", function()
 		dash:Layout()
 	end)
@@ -169,6 +202,49 @@ function Tradewright:CreateSalesDashboard(parent)
 end
 
 -- Gold per day, with the period switch that drives the whole view.
+-- Sold / Bought / Came back at the Latest card's top right; the choice is a setting.
+function SalesDashboardMixin:CreateLatestKindButtons()
+	local pe, previous = self.pe, nil
+	self.kindButtons = {}
+	for index = #LATEST_KINDS, 1, -1 do
+		local choice = LATEST_KINDS[index]
+		local button = pe:CreateButton(self.recent, choice.label, function()
+			pe:SetSetting("sales.latestKind", choice.key)
+			self:Refresh()
+		end, { small = true })
+		button.choice = choice
+		if previous then
+			button:SetPoint("RIGHT", previous, "LEFT", 1, 0)
+		else
+			button:SetPoint("TOPRIGHT", -PAD, -7)
+		end
+		previous = button
+		self.kindButtons[#self.kindButtons + 1] = button
+	end
+	self.recent.heading:SetPoint("RIGHT", previous, "LEFT", -8, 0)
+end
+
+-- Highlights the chosen kind button and returns its entry of LATEST_KINDS.
+function SalesDashboardMixin:StyleLatestKindButtons()
+	local chosenKey = self.pe:GetSetting("sales.latestKind", LATEST_KINDS[1].key)
+	local chosen = LATEST_KINDS[1]
+	for _, button in ipairs(self.kindButtons) do
+		local isChosen = button.choice.key == chosenKey
+		self.pe:StyleShellButton(button, isChosen)
+		chosen = isChosen and button.choice or chosen
+	end
+	return chosen
+end
+
+function SalesDashboardMixin:RefreshLatest(days)
+	local pe = self.pe
+	local kindChoice = self:StyleLatestKindButtons()
+	local since = days > 0 and (time() - days * 86400) or 0
+	local events = pe.GetLedgerEvents and pe.IncomeLogic.LatestEvents(pe:GetLedgerEvents(), kindChoice.kinds, since, RECENT_ROWS) or {}
+	self.recent.table:SetRows(recentRows(pe, events, kindChoice))
+	self.recent.table:Refresh()
+end
+
 function SalesDashboardMixin:CreateChartCard()
 	local pe = self.pe
 	self.chart = pe:CreateDashboardCard(self, "Gold from sales, per day")
@@ -258,9 +334,9 @@ function SalesDashboardMixin:Refresh()
 	self.graph:Refresh()
 	addOrigins(summary.items, summary.recent, pe:GetSaleOrigins())
 	addSaleRates(pe, summary.items)
+	addPurchases(pe, summary.items)
 	self.items.table:SetRows(summary.items)
 	self.items.table:Refresh()
-	self.recent.table:SetRows(recentRows(pe, summary.recent))
-	self.recent.table:Refresh()
+	self:RefreshLatest(days)
 	self:Layout()
 end

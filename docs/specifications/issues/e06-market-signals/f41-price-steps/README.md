@@ -31,6 +31,10 @@ A full scan keeps, for each item, its cheapest price levels and how many are lis
   - the live single-item search (`GetLiveAuctionSearchAggregate`) does not refresh steps yet
   - a full "Price steps" list (price, quantity, cost so far) in the item details window
 
+Added later, in-game check pending:
+
+- A search for one commodity refreshes that item's steps (`PriceLevelsFromSearchRows`, `SavePriceSteps`). Searches for non-commodity items do not: their rows are split by variant. The classic auction frame's single-item search is not covered.
+
 ## Acceptance criteria
 
 - [x] After a full scan an item with several prices has up to 8 steps, cheapest first, and the first step equals the stored lowest price

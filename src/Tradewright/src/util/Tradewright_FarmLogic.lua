@@ -25,7 +25,7 @@ local function auctionNet(price, opts)
 	if not (usual and sells) or sells < option(opts, "minSellsPerDay", 1) then
 		return nil
 	end
-	return usual * (1 - option(opts, "cut", 0.05))
+	return usual * (1 - option(opts, "cut", Tradewright.DEFAULT_AUCTION_CUT))
 end
 
 --- What one looted item counts for. `price = { vendor, usual, sellsPerDay }`, any of them nil.
@@ -87,21 +87,47 @@ local function number(value)
 	return tonumber(value) or 0
 end
 
--- Every run of a farm folded into one: summed items, coin, vendor sales, time and value when saved.
-local function combineRuns(farm)
+local function addRun(all, run)
+	for itemID, qty in pairs(run.items or {}) do
+		all.items[itemID] = (all.items[itemID] or 0) + qty
+	end
+	all.coin = all.coin + number(run.coin)
+	all.vendorSold = all.vendorSold + number(run.vendorSold)
+	all.activeSeconds = all.activeSeconds + number(run.activeSeconds)
+	all.valueWhenSaved = all.valueWhenSaved + number(run.valueWhenSaved)
+	all.lastRunAt = math.max(all.lastRunAt, number(run.endedAt))
+	all.runs = all.runs + 1
+end
+
+-- The runs of a farm that ended at or after `since` (all of them when nil) folded into one: summed
+-- items, coin, vendor sales, time and value when saved.
+local function combineRuns(farm, since)
 	local all = { items = {}, coin = 0, vendorSold = 0, activeSeconds = 0, valueWhenSaved = 0, lastRunAt = 0, runs = 0 }
 	for _, run in ipairs(farm.runs or {}) do
-		for itemID, qty in pairs(run.items or {}) do
-			all.items[itemID] = (all.items[itemID] or 0) + qty
+		if not since or number(run.endedAt) >= since then
+			addRun(all, run)
 		end
-		all.coin = all.coin + number(run.coin)
-		all.vendorSold = all.vendorSold + number(run.vendorSold)
-		all.activeSeconds = all.activeSeconds + number(run.activeSeconds)
-		all.valueWhenSaved = all.valueWhenSaved + number(run.valueWhenSaved)
-		all.lastRunAt = math.max(all.lastRunAt, number(run.endedAt))
-		all.runs = all.runs + 1
 	end
 	return all
+end
+
+--- Gives the farm `oldName` the name `newName`. A farm already called that takes the runs as its own.
+--- Returns false, changing nothing, when the old farm does not exist or the names are the same or empty.
+function FarmLogic.RenameFarm(farms, oldName, newName)
+	local farm = farms[oldName]
+	if not farm or not newName or newName == "" or newName == oldName then
+		return false
+	end
+	local target = farms[newName]
+	if target then
+		for _, run in ipairs(farm.runs or {}) do
+			target.runs[#target.runs + 1] = run
+		end
+	else
+		farms[newName] = farm
+	end
+	farms[oldName] = nil
+	return true
 end
 
 local function perHour(value, seconds)
@@ -111,8 +137,9 @@ end
 --- A saved farm at the prices `priceFn(itemID)` gives now: `{ runs, activeSeconds, lastRunAt,
 --- valueWhenSaved, thenPerHour, nowPerHour, changePct, liquidShare, coinShare, perHourByItem }`.
 --- "Then" is what the runs were worth when saved; "now" values the same loot at today's prices.
+--- With `opts.since` only runs that ended at or after it count.
 function FarmLogic.SummarizeFarm(farm, priceFn, opts)
-	local all = combineRuns(farm)
+	local all = combineRuns(farm, opts and opts.since)
 	local now = FarmLogic.SummarizeRun({ items = all.items, coin = all.coin, vendorSold = all.vendorSold }, priceFn, 0, opts)
 	local out = {
 		runs = all.runs, activeSeconds = all.activeSeconds, lastRunAt = all.lastRunAt, valueWhenSaved = all.valueWhenSaved,
@@ -180,7 +207,7 @@ local function targetRow(item, source, opts)
 	}
 	if source then
 		row.source, row.sourcePerHour = source.farm, source.perHour
-		row.yoursPerHour = source.perHour * usual * (1 - option(opts, "cut", 0.05))
+		row.yoursPerHour = source.perHour * usual * (1 - option(opts, "cut", Tradewright.DEFAULT_AUCTION_CUT))
 	end
 	return row
 end

@@ -12,9 +12,13 @@ function Tradewright:GetLiveCommoditySearchAggregate(itemID)
 	end
 	local commodityResultCount = tonumber(C_AuctionHouse.GetNumCommoditySearchResults(itemID)) or 0
 	local searchAggregate = { kind = "commodity", itemID = itemID, totalQuantity = 0, listingCount = commodityResultCount }
+	local rows = {}
 	for index = 1, commodityResultCount do
-		AL.AddCommodityResult(searchAggregate, C_AuctionHouse.GetCommoditySearchResultInfo(itemID, index))
+		local row = C_AuctionHouse.GetCommoditySearchResultInfo(itemID, index)
+		rows[#rows + 1] = row
+		AL.AddCommodityResult(searchAggregate, row)
 	end
+	searchAggregate.levels = self.PriceLevelsFromSearchRows and self:PriceLevelsFromSearchRows(rows) or nil
 	if not searchAggregate.minUnitPrice then
 		return nil
 	end
@@ -150,6 +154,10 @@ function Tradewright:ApplyAuctionSearchResultToDatabase(itemID, keyFields, sourc
 	self:RecordLiveAuctionObservationsFromAggregate(itemID, searchAggregate, tostring(sourceTag or "manual_search"))
 	self:ApplyLiveAggregateToNativePrice(itemID, searchAggregate)
 	self:SaveLiveSearchToScanEntry(itemID, searchAggregate)
+	-- Only a commodity search lists every price level of the item; item searches are split by variant.
+	if searchAggregate.kind == "commodity" then
+		self:SavePriceSteps(itemID, searchAggregate.levels, Tradewright:Now())
+	end
 	self:UpdateAuctionPanelRowPrice(itemID, self:BuildAuctionPanelPriceState(itemID))
 	return true
 end

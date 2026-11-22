@@ -5,6 +5,7 @@ local _, Tradewright = ...
 local PROFIT_CHOICES = {
 	{ value = "all", label = "Any profit" }, { value = "profitable", label = "Profitable" }, { value = "negative", label = "Losing money" },
 	{ value = "missing_price", label = "Missing price" }, { value = "uncraftable", label = "Can't craft now" },
+	{ value = "cooldown", label = "Cooldowns" },
 }
 local SOURCE_CHOICES = {
 	{ value = "owned_first", label = "Owned first" }, { value = "market_only", label = "Market only" }, { value = "mixed", label = "Mixed" },

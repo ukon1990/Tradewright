@@ -264,3 +264,31 @@ function Tradewright:StartStateWatcher(key, intervalSec, snapshotFn, onChanged)
 	tick()
 	return watcher
 end
+
+local MEASURED_CUT = "measured"
+
+-- The measurement from the Inventory module's ledger, or nil when that module is not loaded.
+local function measuredAuctionCut(self)
+	return self.LedgerMeasuredAuctionCut and self:LedgerMeasuredAuctionCut() or nil
+end
+
+--- The auction house's share of a sale, as a fraction. The setting is a fixed percent or "measured":
+--- the share seen in the player's own sale mails, with DEFAULT_AUCTION_CUT until enough are collected.
+function Tradewright:GetAuctionCut()
+	local percent = tonumber(self:GetSetting("fees.auctionCut", MEASURED_CUT))
+	if percent then
+		return math.max(0, math.min(50, percent)) / 100
+	end
+	local measured = measuredAuctionCut(self)
+	return measured and measured.cut or self.DEFAULT_AUCTION_CUT
+end
+
+--- The cut in use, for footers and notes: "5%", "4.8%, measured" or "5%, not measured yet".
+function Tradewright:DescribeAuctionCut()
+	local text = string.format("%.3g%%", self:GetAuctionCut() * 100)
+	if tonumber(self:GetSetting("fees.auctionCut", MEASURED_CUT)) then
+		return text
+	end
+	local measured = measuredAuctionCut(self)
+	return text .. (measured and measured.cut and ", measured" or ", not measured yet")
+end

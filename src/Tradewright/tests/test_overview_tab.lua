@@ -59,7 +59,7 @@ check("no account gold shows dash", panel.stats.gold.values[2] == "-")
 -- Selection
 local seen
 local function button() return { SetEnabled = function(self, on) self.enabled = on end } end
-local selectionPanel = { refreshInvButton = button(), exportCharacterButton = button() }
+local selectionPanel = { refreshInvButton = button() }
 function OverviewTab:RefreshStats(_, key, data) seen = { key = key, data = data } end
 function OverviewTab:RefreshCharacterList() end
 function OverviewTab:RefreshDetail() end
@@ -74,7 +74,7 @@ keyList = { "Alt", "Me" }
 check("keeps a saved character", selectedAfter("Alt") == "Alt" and selectionPanel.refreshInvButton.enabled == false)
 check("keeps the account", selectedAfter(ACCT) == ACCT and seen.data == pe.db.aggregate)
 local key, stored = selectedAfter("Gone")
-check("unknown falls back to this character", key == "Me" and stored == "Me" and selectionPanel.exportCharacterButton.enabled == true)
+check("unknown falls back to this character", key == "Me" and stored == "Me" and selectionPanel.refreshInvButton.enabled == true)
 currentKey = "New"
 check("then the first stored character", selectedAfter(nil) == "Alt")
 keyList, pe.db.characters = {}, {}

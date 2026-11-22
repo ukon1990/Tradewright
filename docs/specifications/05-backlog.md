@@ -19,29 +19,29 @@
 | [e04-ah-shortcuts](issues/e04-ah-shortcuts/README.md) | AH shortcuts: from Tradewright lists to the auction house | done |
 | [f30-buy-in-ah](issues/e04-ah-shortcuts/f30-buy-in-ah/README.md) | Open a deal's buy page in the auction house | done |
 | [e05-table-paging](issues/e05-table-paging/README.md) | Paging in the shared table | done |
-| [e06-market-signals](issues/e06-market-signals/README.md) | Market signals: usual price, price steps, sells a day, real fees, fuller ledger | in progress: F43 and F44 planned, other features done |
+| [e06-market-signals](issues/e06-market-signals/README.md) | Market signals: usual price, price steps, sells a day, real fees, fuller ledger | implemented, in-game check pending for F43 and F44; open parts listed per feature |
 | [f40-usual-price](issues/e06-market-signals/f40-usual-price/README.md) | Daily price history and a robust usual price | done |
-| [f41-price-steps](issues/e06-market-signals/f41-price-steps/README.md) | Cheapest price steps kept from a full scan | done for full scans; single-item search and the full steps list open |
-| [f42-sells-a-day](issues/e06-market-signals/f42-sells-a-day/README.md) | Estimated sells per day and days of supply | done; Inventory column open |
-| [f43-fees-from-the-game](issues/e06-market-signals/f43-fees-from-the-game/README.md) | Fees read from the game and measured from sale mail | planned |
-| [f44-ledger-buys-and-misses](issues/e06-market-signals/f44-ledger-buys-and-misses/README.md) | Purchases, expired and cancelled auctions in the ledger | planned |
-| [e07-opportunities](issues/e07-opportunities/README.md) | Opportunities tab: what to buy or sell right now | done; open parts listed per feature |
-| [f50-opportunities-tab-flips](issues/e07-opportunities/f50-opportunities-tab-flips/README.md) | Opportunities tab and Flips | done (tab and Flips); cart button, shared Deals card and deposit loss open |
+| [f41-price-steps](issues/e06-market-signals/f41-price-steps/README.md) | Cheapest price steps kept from a full scan | done for full scans; steps from a commodity search implemented, in-game check pending; the full steps list open |
+| [f42-sells-a-day](issues/e06-market-signals/f42-sells-a-day/README.md) | Estimated sells per day and days of supply | done; Inventory column implemented, in-game check pending; price-steps refinement open |
+| [f43-fees-from-the-game](issues/e06-market-signals/f43-fees-from-the-game/README.md) | Fees read from the game and measured from sale mail | implemented, in-game check pending; `house` on sale events and deposits per duration open |
+| [f44-ledger-buys-and-misses](issues/e06-market-signals/f44-ledger-buys-and-misses/README.md) | Purchases, expired and cancelled auctions in the ledger | implemented, in-game check pending; instant `buy` on retail commodity purchases open |
+| [e07-opportunities](issues/e07-opportunities/README.md) | Opportunities tab: what to buy or sell right now | done; newer parts in-game check pending, open parts listed per feature |
+| [f50-opportunities-tab-flips](issues/e07-opportunities/f50-opportunities-tab-flips/README.md) | Opportunities tab and Flips | done (tab and Flips); cart button and deposit loss implemented, in-game check pending; shared Deals card open |
 | [f51-sure-things](issues/e07-opportunities/f51-sure-things/README.md) | Sure things: listed under vendor price | done |
 | [f52-price-gaps](issues/e07-opportunities/f52-price-gaps/README.md) | Price gaps (risky) | done |
 | [f53-weekday-pattern](issues/e07-opportunities/f53-weekday-pattern/README.md) | Weekday pattern in the Market item view | done (one line of text) |
-| [f54-sell-now](issues/e07-opportunities/f54-sell-now/README.md) | Sell now | done (list); Gold view card still separate |
+| [f54-sell-now](issues/e07-opportunities/f54-sell-now/README.md) | Sell now | done (list); Gold view card now takes its rows from the list, in-game check pending |
 | [f55-smaller-profit-floor](issues/e07-opportunities/f55-smaller-profit-floor/README.md) | Smaller profit floor | done |
 | [f56-little-history-warning](issues/e07-opportunities/f56-little-history-warning/README.md) | History coverage, and early rows with a warning | done |
 | [f57-where-sales-come-from](issues/e07-opportunities/f57-where-sales-come-from/README.md) | Where "sells a day" comes from and how sure it is | done |
 | [f58-how-this-page-works](issues/e07-opportunities/f58-how-this-page-works/README.md) | How this page works, and why a list is empty | done |
-| [e08-craft-planning](issues/e08-craft-planning/README.md) | Craft planning: material sources, how many to make, cooldowns | done; open parts listed per feature |
-| [f60-cheapest-material-source](issues/e08-craft-planning/f60-cheapest-material-source/README.md) | Cheapest way to get each material | done (buy or craft); From column and queueing intermediates open |
+| [e08-craft-planning](issues/e08-craft-planning/README.md) | Craft planning: material sources, how many to make, cooldowns | done; newer parts in-game check pending, open parts listed per feature |
+| [f60-cheapest-material-source](issues/e08-craft-planning/f60-cheapest-material-source/README.md) | Cheapest way to get each material | done (buy or craft); From column and queueing crafted materials implemented, in-game check pending; row note and "bought every material" line open |
 | [f61-how-many-to-make](issues/e08-craft-planning/f61-how-many-to-make/README.md) | How many to make | done (columns); detail pane, queue default and listed stock open |
-| [f62-cooldown-crafts](issues/e08-craft-planning/f62-cooldown-crafts/README.md) | Cooldown crafts | done (column and Make cap); row text, footer, filter and login line open |
-| [e09-farming](issues/e09-farming/README.md) | Farming: farm window, my farms, what to farm | done; open parts listed per feature |
-| [f70-farm-window](issues/e09-farming/f70-farm-window/README.md) | Farm window and loot log | done (recording and window); save dialog, idle pause and tooltip lines open |
-| [f71-my-farms](issues/e09-farming/f71-my-farms/README.md) | My farms, re-valued at today's prices | done (tab); rename and period filter open |
+| [f62-cooldown-crafts](issues/e08-craft-planning/f62-cooldown-crafts/README.md) | Cooldown crafts | done (column and Make cap); footer, Cooldowns filter and login line implemented, in-game check pending; row text and shared cooldowns open |
+| [e09-farming](issues/e09-farming/README.md) | Farming: farm window, my farms, what to farm | done; newer parts in-game check pending, open parts listed per feature |
+| [f70-farm-window](issues/e09-farming/f70-farm-window/README.md) | Farm window and loot log | done (recording and window); save dialog and idle pause implemented, in-game check pending; collapsed form and tooltip line open |
+| [f71-my-farms](issues/e09-farming/f71-my-farms/README.md) | My farms, re-valued at today's prices | done (tab); rename and period filter implemented, in-game check pending |
 | [f72-what-to-farm](issues/e09-farming/f72-what-to-farm/README.md) | What to farm | done |
 | [e10-income](issues/e10-income/README.md) | Income: where gold comes from, what earns, how fast it sells | done |
 | [f80-gold-by-source](issues/e10-income/f80-gold-by-source/README.md) | Gold changes by source | done |

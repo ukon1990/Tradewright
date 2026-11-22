@@ -55,13 +55,25 @@ function Tradewright:GetFlipOptions()
 		minProfit = tonumber(self:GetSetting("opportunities.minProfitCopper", 10000)) or 10000,
 		minSellsPerDay = tonumber(self:GetSetting("opportunities.minSellsPerDay", 1)) or 1,
 		dayShare = tonumber(self:GetSetting("opportunities.dayShare", 0.34)) or 0.34,
-		cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05,
+		cut = self:GetAuctionCut(),
 		allowEarly = allowEarly(self),
 	}
 end
 
 -- The funnel of a list that is turned off in Settings: one step nothing passes.
 local TURNED_OFF = { { key = "off", count = 0 } }
+
+-- Deposit lost per sale on average, for an item whose deposit is known because the player has posted
+-- it before: the deposit weighed by the player's own sale chance for it. 0 when the deposit is unknown.
+local function expectedDepositLoss(pe, itemID)
+	local deposit = tonumber(pe:InitAuctionDB().itemDepositPerUnit[tostring(itemID)])
+	if not deposit then
+		return 0
+	end
+	-- The ledger lives in the Inventory module; without it the sale chance counts as unknown.
+	local tally = pe.GetLedgerItemTally and pe:GetLedgerItemTally(itemID)
+	return pe.FlipLogic.ExpectedDepositLoss(deposit, pe.IncomeLogic.SaleChance(tally))
+end
 
 -- One candidate per scanned item that has a usual price and a sells-a-day estimate, and how many items
 -- were scanned and had a usual price (for the funnel).
@@ -77,6 +89,7 @@ local function flipCandidates(pe, insights)
 				itemID = itemID, storageKey = row.storageKey, price = row.price, usual = usual.usual,
 				usualLow = usual.low, usualHigh = usual.high, usualDays = usual.days, early = early or nil,
 				confidence = sells.confidence, steps = pe:GetPriceSteps(itemID),
+				depositLoss = expectedDepositLoss(pe, itemID),
 			}, sells)
 		end
 	end
@@ -158,7 +171,7 @@ function Tradewright:GetGapOptions()
 		minGapPct = 0.25,
 		maxCost = (tonumber(self:GetSetting("opportunities.gapMaxCostGold", 100)) or 100) * 10000,
 		minSellsPerDay = tonumber(self:GetSetting("opportunities.gapMinSellsPerDay", 5)) or 5,
-		cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05,
+		cut = self:GetAuctionCut(),
 	}
 end
 

@@ -1,4 +1,4 @@
--- The /tradewright slash commands, status line, and Export() — the export run that slash, the Export tab, Overview and Scan all start.
+-- The /tradewright slash commands, status line, and Export() — the export run that slash and the Export tab start.
 local _, Tradewright = ...
 
 -- Export scope -> what the progress window calls it. Profession slices fill in the profession at %s.
@@ -218,15 +218,18 @@ function Tradewright:RunAuctionDumpSlash(mode)
 end
 
 local SLASH_HELP_LINES = {
-	"Commands: /tradewright (window) | /tradewright docs | /tradewright scan | /tradewright full | /tradewright status"
-		.. " | /tradewright debug [on|off|toggle] | /tradewright export … | /tradewright settings …"
+	"Commands: /tradewright (window) | /tradewright docs | /tradewright scan | /tradewright status"
+		.. " | /tradewright debug [on|off|toggle] | /tradewright settings …"
 		.. " | /tradewright auction … | /tradewright sources [seal]  (short: /ah)",
-	"Export: character | account | account_summary | professions | professions_recipes | professions_talents"
+	"Settings: spectree on|off | recipeoutput on|off | invbatch <n> (0 = sync snapshot). Auction: status|enable|disable|refresh [crafts]|dump.",
+}
+
+-- Shown in help only while export is switched on; the format itself is described in docs/export-format.md.
+local EXPORT_HELP_LINES = {
+	"Export: /tradewright export … | /tradewright full (fresh scan, then full character export) | /tradewright dev export off",
+	"Export scopes: character | account | account_summary | professions | professions_recipes | professions_talents"
 		.. " | professions_compact | inventory | inventory_compact | auction_snapshot | auction_history | crafting_costs"
 		.. " | spec_catalog | meta | profession <id|name> | profession_recipes <id|name> | profession_talents <id|name>",
-	"Settings: spectree on|off | recipeoutput on|off | invbatch <n> (0 = sync snapshot). Auction: status|enable|disable|refresh [crafts]|dump.",
-	"Export: AHLUA1 (plain Lua text) on Forever, AHCBOR1 (CBOR + Deflate + Base64) on retail. Full payload is written to TradewrightLastExport after /reload"
-		.. " — see timing lines when debug is on.",
 }
 
 local EXPORT_USAGE = "Usage: /tradewright export [character|account|account_summary|professions|professions_recipes"
@@ -268,6 +271,43 @@ local function handleExportSlash(self, rest)
 		return
 	end
 	self:PrintMessage(EXPORT_USAGE)
+end
+
+--- Export is a developer tool for the author's own scripts, so players never see it unless they switch it on.
+function Tradewright:IsExportEnabled()
+	return self:GetSetting("developer.export", false) == true
+end
+
+function Tradewright:SetExportEnabled(enabled)
+	self:SetSetting("developer.export", enabled)
+	self:PrintMessage(enabled and "Export switched on: Export tab and /tradewright export." or "Export switched off.")
+	if self.ApplyDashboardTabVisibility then
+		self:ApplyDashboardTabVisibility()
+	end
+end
+
+local EXPORT_OFF_HINT = "Export is switched off. Turn it on with /tradewright dev export on."
+
+-- Runs `handler` only while export is switched on.
+local function whenExportEnabled(handler)
+	return function(self, rest)
+		if not self:IsExportEnabled() then
+			self:PrintMessage(EXPORT_OFF_HINT)
+			return
+		end
+		handler(self, rest)
+	end
+end
+
+-- `/tradewright dev export on|off`.
+local function handleDeveloperSlash(self, rest)
+	local feature, arg = self:Trim(rest or ""):match("^(%S+)%s*(.*)$")
+	local value = ON_OFF_ARGS[string.lower(arg or "")]
+	if string.lower(feature or "") ~= "export" or value == nil then
+		self:PrintMessage(string.format("Usage: /tradewright dev export on|off  (now %s)", self:IsExportEnabled() and "on" or "off"))
+		return
+	end
+	self:SetExportEnabled(value)
 end
 
 local function setDebugOn(self)
@@ -319,6 +359,11 @@ local function printSlashHelp(self)
 	for _, line in ipairs(SLASH_HELP_LINES) do
 		self:PrintMessage(line)
 	end
+	if self:IsExportEnabled() then
+		for _, line in ipairs(EXPORT_HELP_LINES) do
+			self:PrintMessage(line)
+		end
+	end
 end
 
 local function openDocumentation(self)
@@ -329,9 +374,9 @@ local function handleAuctionSlash(self, rest)
 	self:HandleAuctionSlash(rest)
 end
 
-local function startFullCharacterDump(self)
+local startFullCharacterDump = whenExportEnabled(function(self)
 	self:StartFullCharacterDump()
-end
+end)
 
 -- `/tradewright <command> <rest>` (command lower-cased) -> handler(self, rest).
 local SLASH_COMMANDS = {
@@ -344,7 +389,8 @@ local SLASH_COMMANDS = {
 	scan = function(self) self:StartScan() end,
 	full = startFullCharacterDump, dumpfull = startFullCharacterDump,
 	status = function(self) self:PrintStatus() end,
-	export = handleExportSlash,
+	export = whenExportEnabled(handleExportSlash),
+	dev = handleDeveloperSlash, developer = handleDeveloperSlash,
 	sources = function(self, rest) self:HandleSourcesSlash(rest) end,
 }
 

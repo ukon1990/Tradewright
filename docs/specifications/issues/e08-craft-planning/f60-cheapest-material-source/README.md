@@ -39,8 +39,13 @@ How it differs from the scope, and why:
 - **No recursive resolver.** The craft cost per unit is read from the engine's own last finished evaluation (cheapest full material cost ÷ output quantity per output item) instead of walking recipes again. That keeps the engine's rules (quality, optional reagents) and cannot loop, but it is one evaluation behind: a material that is cheaper to craft is priced that way from the evaluation after the one that first priced its recipe. A new scan or a settings change triggers the next evaluation.
 - **Vendor prices are unchanged.** The engine already prices vendor-sourced reagents at the vendor; widening that to every reagent needs a check of what `C_Item.GetItemVendorPrice` returns for items no vendor sells.
 - **Works in every material mode except "market only"**, as a setting, not as a new "Cheapest way" mode.
-- **Not done:** the "From" column and the "If you bought every material" line in the detail pane, the row note ("bolts made by …"), and adding intermediate crafts to the queue.
+- **Not done:** the "If you bought every material" line in the detail pane and the row note ("bolts made by …")
 - **Cooldowns:** rows carrying `hasCooldown` are left out of the index; nothing sets that flag until F62.
+
+Added later, in-game check pending:
+
+- The materials table in the detail pane has a `From` column: Craft, Vendor, Bought (your own buy average) or Buy
+- "Add to queue" in the Crafts tab also queues the crafts that make each material priced as crafted (`AddCraftWithMaterialCraftsToQueue`), one level deep, without taking owned stock off. The profession panel's own add button is unchanged.
 
 ## Acceptance criteria
 

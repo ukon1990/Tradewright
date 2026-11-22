@@ -11,7 +11,7 @@ local function check(name, cond, detail)
 	end
 end
 
-local pe = {}
+local pe = { DEFAULT_AUCTION_CUT = 0.05 }
 for _, file in ipairs({ "Tradewright_CoreHelpers.lua", "Tradewright_MarketSignals.lua" }) do
 	local chunk, err = loadfile(root .. "/src/util/" .. file)
 	assert(chunk, err)
@@ -155,6 +155,9 @@ local flip = Flip.BuildFlipRow(arcanite, { minProfit = 50000 })
 check("Flip buys what is listed under the limit price", flip and flip.buyQty == 4 and flip.listedUnder == 4 and flip.cost == 4 * 260000)
 check("Flip profit is after the cut", flip and flip.profit == 4 * 380000 * 0.95 - 4 * 260000, flip and flip.profit)
 check("Flip profit each and break-even", flip and flip.profitEach == flip.profit / 4 and math.abs(flip.breakEven - 260000 / 0.95) < 1e-6)
+check("Deposit loss: a sure sale loses nothing", Flip.ExpectedDepositLoss(100, 1) == 0)
+check("Deposit loss: unknown sale chance counts as one failed posting per sale", Flip.ExpectedDepositLoss(100, nil) == 100)
+check("Deposit loss: one sale in four forfeits three deposits", Flip.ExpectedDepositLoss(100, 0.25) == 300)
 local cappedBuy = Flip.BuildFlipRow({ itemID = 2, price = 31, usual = 48, sellsPerDay = 30, steps = { 31, 500 } }, { minProfit = 0 })
 check("Buy is capped at a third of a day's sales", cappedBuy and cappedBuy.buyQty == 10 and cappedBuy.listedUnder == 500)
 local free = { minProfit = 0 }
@@ -328,6 +331,13 @@ local unitIndex = ML.UnitCostIndex({
 check("Unit cost is the full material cost over the output quantity", unitIndex[10] and unitIndex[10].cost == 52 and unitIndex[10].crafter == "Brannoc")
 check("Rows with a missing price or a cooldown are left out", unitIndex[11] == nil and unitIndex[12] == nil)
 check("Output quantity defaults to 1", unitIndex[13] and unitIndex[13].cost == 70)
+local materialCrafts = ML.MaterialCraftsNeeded({
+	{ itemID = 10, quantityRequired = 5, priceSource = "Craft" }, { itemID = 13, quantityRequired = 2, priceSource = "Vendor" },
+	{ itemID = 99, quantityRequired = 1, priceSource = "Craft" },
+}, 3, unitIndex)
+check("Crafted materials: 15 bolts from a recipe that makes 5 is 3 crafts by the cheapest crafter",
+	#materialCrafts == 1 and materialCrafts[1].crafts == 3 and materialCrafts[1].row.bestCharacterKey == "Brannoc")
+check("Crafted materials: none without a plan", #ML.MaterialCraftsNeeded(nil, 3, unitIndex) == 0)
 
 -- How many to make
 check("Sells 8 a day, 2 owned, 1 day: make 6", ML.RestockQuantity({ sellsPerDay = 8, owned = 2, profit = 100 }) == 6)
@@ -342,6 +352,12 @@ check("Listed counts once", ML.RestockQuantity({ sellsPerDay = 8, owned = 2, lis
 -- Cooldowns
 check("No cooldown on record", ML.CooldownState(nil, 1000).state == "none")
 check("A cooldown in the past is ready", ML.CooldownState(900, 1000).state == "ready")
+local cooldowns = ML.SummarizeCooldowns({ Main = { [1] = 900, [2] = 1000 + 7200 }, Alt = { [3] = 1000 + 3600 }, Fresh = {} }, 1000)
+check("Cooldowns: ready ones named, next one is the soonest", #cooldowns.ready == 1 and cooldowns.ready[1].characterKey == "Main"
+	and cooldowns.ready[1].recipeID == 1 and cooldowns.nextIn == 3600)
+pe.Plural = pe.Plural or function(_, count, name) return count == 1 and name or name .. "s" end
+check("Cooldowns: footer text", ML.CooldownFooter(cooldowns) == "1 cooldown ready · next in 1 hour", ML.CooldownFooter(cooldowns))
+check("Cooldowns: nothing on record gives no footer", ML.CooldownFooter(ML.SummarizeCooldowns({}, 1000)) == nil)
 local waiting = ML.CooldownState(1000 + 28 * 3600, 1000)
 check("A cooldown in the future is waiting", waiting.state == "waiting" and waiting.secondsLeft == 28 * 3600)
 check("Cooldown text: days and hours", ML.FormatCooldown(28 * 3600) == "1 day 4 hours")
@@ -402,6 +418,14 @@ local dearer = Farm.SummarizeFarm(savedFarm, function(itemID)
 	return itemID == 1 and { vendor = 10, usual = 200, sellsPerDay = 40 } or farmPrices[itemID]
 end, { cut = 0.05 })
 check("A price rise lifts Now and leaves Then", dearer.nowPerHour > farmNow.nowPerHour and dearer.thenPerHour == 3000)
+local lastRunOnly = Farm.SummarizeFarm(savedFarm, function(itemID) return farmPrices[itemID] end, { cut = 0.05, since = 6000 })
+check("A period counts only the runs that ended in it", lastRunOnly.runs == 1 and lastRunOnly.activeSeconds == 1800 and lastRunOnly.thenPerHour == 3600)
+local farms = { Felwood = { runs = { { endedAt = 1 } } }, Winterspring = { runs = { { endedAt = 2 }, { endedAt = 3 } } } }
+check("Rename: a new name keeps the runs", Farm.RenameFarm(farms, "Felwood", "Satyrs") and farms.Felwood == nil and #farms.Satyrs.runs == 1)
+check("Rename: onto an existing farm adds the runs to it", Farm.RenameFarm(farms, "Satyrs", "Winterspring") and farms.Satyrs == nil
+	and #farms.Winterspring.runs == 3)
+check("Rename: same, empty or unknown name changes nothing", not Farm.RenameFarm(farms, "Winterspring", "Winterspring")
+	and not Farm.RenameFarm(farms, "Winterspring", "") and not Farm.RenameFarm(farms, "Gone", "Here") and #farms.Winterspring.runs == 3)
 local unpriced = Farm.SummarizeFarm({ runs = { { items = { [9] = 3 }, activeSeconds = 600, valueWhenSaved = 0 } } }, function() return nil end)
 check("A farm with no priced items is 0 an hour with no change", unpriced.nowPerHour == 0 and unpriced.changePct == nil)
 
@@ -471,6 +495,12 @@ glue("Tradewright_AuctionData", pe)
 local stepsGlue, stepsErr = loadfile(root .. "/../Tradewright_AuctionData/src/modules/Tradewright_PriceSteps.lua")
 assert(stepsGlue, stepsErr)
 stepsGlue("Tradewright_AuctionData", pe)
+local searchLevels = pe:PriceLevelsFromSearchRows({ { unitPrice = 30, quantity = 5 }, { unitPrice = 20, quantity = 2 }, { unitPrice = 30, quantity = 1 },
+	{ unitPrice = 0, quantity = 9 } })
+local searchSteps = pe.MarketSignals.BuildPriceSteps(searchLevels)
+check("Search rows become price steps, cheapest first, equal prices merged",
+	searchSteps[1] == 20 and searchSteps[2] == 2 and searchSteps[3] == 30 and searchSteps[4] == 6 and #searchSteps == 4)
+check("Search rows without a price give no levels", pe:PriceLevelsFromSearchRows({ { quantity = 3 } }) == nil)
 local logic, logicErr = loadfile(root .. "/src/util/Tradewright_ForeverLogic.lua")
 assert(logic, logicErr)
 logic("Tradewright", pe)

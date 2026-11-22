@@ -1,6 +1,6 @@
 local _, Tradewright = ...
 
--- Cheapest price steps of each item, kept from a full scan.
+-- Cheapest price steps of each item, kept from a full scan and refreshed by a search for one commodity.
 -- `auction.priceSteps[itemID] = { t = seenAt, l = { price1, qty1, price2, qty2, … } }`, cheapest first.
 -- Full scans store one entry per item ID, so the steps are keyed the same way.
 
@@ -21,7 +21,23 @@ function Tradewright.AggregateAuctionRow(aggregate, itemID, count, buyoutPrice)
 	return aggregate
 end
 
-local function savePriceSteps(pe, itemID, levels, seenAt)
+--- Cheapest price levels of a commodity from the rows of a search for it: `rows` is a list of
+--- `{ unitPrice, quantity }` as the auction house reports them. nil when no row is priced.
+function Tradewright:PriceLevelsFromSearchRows(rows)
+	local levels
+	for _, row in ipairs(rows) do
+		local unitPrice = tonumber(row.unitPrice)
+		if unitPrice and unitPrice > 0 then
+			levels = self.MarketSignals.AddPriceStep(levels or {}, unitPrice, math.max(1, tonumber(row.quantity) or 1), MAX_STEPS)
+		end
+	end
+	return levels
+end
+
+--- Keep an item's cheapest price levels (from MarketSignals.AddPriceStep) as its price steps, or
+--- drop its steps when there are none or the setting is off.
+function Tradewright:SavePriceSteps(itemID, levels, seenAt)
+	local pe = self
 	local auction = pe:InitAuctionDB()
 	auction.priceSteps = auction.priceSteps or {}
 	if not levels or not pe:GetSetting("auction.keepPriceSteps", true) then
@@ -51,7 +67,7 @@ function Tradewright:PersistDumpAggregate(itemID, aggregate, dump, seenAt)
 	if weightedQty > 0 then
 		self:RecordItemHistoryObservation(itemID, "market", tonumber(aggregate.weightedSum) / weightedQty, sourceLabel, seenAt)
 	end
-	savePriceSteps(self, itemID, aggregate.levels, seenAt)
+	self:SavePriceSteps(itemID, aggregate.levels, seenAt)
 end
 
 --- Price steps of an item from the last full scan: `steps, seenAt`, or nil when none are kept.

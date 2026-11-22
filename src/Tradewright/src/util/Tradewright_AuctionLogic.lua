@@ -107,6 +107,19 @@ function AuctionLogic.MergeCartReagents(queueLines, orderLines, queueRows, resol
 	return merged
 end
 
+--- Adds the items the player put in the cart by hand to `merged`. `extras[itemID] = { quantity,
+--- unitPrice, reason }`: `quantity` is how many the character should end up holding, so the row
+--- empties as purchases arrive; `reason` shows as the row's source.
+function AuctionLogic.MergeCartExtras(merged, extras, resolveName)
+	for itemID, extra in pairs(extras or {}) do
+		AuctionLogic.MergeCartReagentLine(merged, {
+			itemID = itemID, quantityNeeded = extra.quantity, estimatedUnitPrice = extra.unitPrice,
+			sources = { { recipeName = extra.reason } },
+		}, nil, resolveName)
+	end
+	return merged
+end
+
 local function sourceLabel(source)
 	return tostring(source.recipeName or source.outputName or (source.orderID and ("Order #" .. tostring(source.orderID))) or "")
 end
@@ -252,11 +265,11 @@ end
 --- or not counted. lowestByItem[itemID] is the lowest scanned unit price, if any.
 --- Each row gets `undercut`: true / false, or nil when the item has no scanned price to compare;
 --- undercut rows also get `undercutBy` (copper per unit) and `undercutPct` (of the player's price).
---- ahCut (fraction, default 0.05) gives `net`, what a listing pays out after the auction house cut,
+--- ahCut (fraction, default `Tradewright.DEFAULT_AUCTION_CUT`) gives `net`, what a listing pays out after the auction house cut,
 --- and for undercut rows `repostNet`, the payout if it were cancelled (forfeiting the deposit) and
 --- reposted at the lowest scanned price.
 function AuctionLogic.SummarizeOwnedAuctions(auctions, lowestByItem, ahCut)
-	local keep = 1 - (tonumber(ahCut) or 0.05)
+	local keep = 1 - (tonumber(ahCut) or Tradewright.DEFAULT_AUCTION_CUT)
 	local rows = {}
 	local totals = { soldValue = 0, soldCount = 0, listedValue = 0, listedNet = 0, listedCount = 0, undercutCount = 0 }
 	for _, auction in ipairs(auctions or {}) do

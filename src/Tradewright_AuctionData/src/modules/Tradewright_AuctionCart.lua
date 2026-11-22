@@ -161,12 +161,39 @@ function Tradewright:BuildAuctionCraftCartRow(itemID, reagent)
 	}
 end
 
+--- Puts `quantity` more of an item in the cart, on top of what the character holds now. The entry
+--- lasts until that many are bought, or until the next /reload.
+function Tradewright:AddAuctionCartItem(itemID, quantity, unitPrice, reason)
+	local state = self:GetState()
+	state.auctionCartExtras = state.auctionCartExtras or {}
+	local held = tonumber(self:GetAuctionCartEffectiveHave(itemID)) or 0
+	local extra = state.auctionCartExtras[itemID] or { quantity = held }
+	extra.quantity = math.max(extra.quantity, held) + math.max(1, tonumber(quantity) or 1)
+	extra.unitPrice, extra.reason = unitPrice, reason
+	state.auctionCartExtras[itemID] = extra
+	if self.RefreshAuctionHousePanel then
+		self:RefreshAuctionHousePanel()
+	end
+end
+
+-- Hand-added items the character now holds enough of leave the cart.
+local function dropBoughtCartExtras(pe)
+	local extras = pe:GetState().auctionCartExtras or {}
+	for itemID, extra in pairs(extras) do
+		if (tonumber(pe:GetAuctionCartEffectiveHave(itemID)) or 0) >= extra.quantity then
+			extras[itemID] = nil
+		end
+	end
+	return extras
+end
+
 function Tradewright:BuildAuctionCraftCartRows()
 	self:ClearSettledAuctionCartPurchaseCredits()
 	local summary = self:BuildCraftQueueSummary()
 	local orderSummary = self.BuildCraftingOrderQueueSummary and self:BuildCraftingOrderQueueSummary() or { reagentLines = {} }
 	local merged = AL.MergeCartReagents(summary.reagentLines, orderSummary.reagentLines, self:GetCraftQueueRows(),
 		function(itemID) return self:GetItemDisplayName(itemID) end)
+	AL.MergeCartExtras(merged, dropBoughtCartExtras(self), function(itemID) return self:GetItemDisplayName(itemID) end)
 	local rows = {}
 	for itemID, reagent in pairs(merged) do
 		rows[#rows + 1] = self:BuildAuctionCraftCartRow(itemID, reagent)

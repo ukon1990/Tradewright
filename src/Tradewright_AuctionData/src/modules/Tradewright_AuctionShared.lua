@@ -162,6 +162,7 @@ local AUCTION_STATE_KEYS = {
 	-- Cart.
 	"auctionCartSelectedItemID", -- row the player selected on the cart tab
 	"auctionCartPurchaseCredits", -- item ID -> bought quantity the bags do not show yet
+	"auctionCartExtras", -- item ID -> { quantity, unitPrice, reason }: items put in the cart by hand
 	"auctionCartPendingConfirm", -- commodity purchase waiting for the server's answer
 	"auctionCartPurchaseRefreshPending", -- a cart refresh after a purchase is scheduled
 	"auctionPendingBrowseSearch", -- browse search whose result should be selected when it arrives

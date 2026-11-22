@@ -15,6 +15,7 @@ local COL = {
 	profitUnit = 90,
 	profitStack = 90,
 	seenAt = 56,
+	sellsPerDay = 66,
 }
 local MONEY_MIN_WIDTH = 56
 
@@ -44,6 +45,30 @@ local function storedText(pe, row)
 		text = text .. " / " .. pe:FormatNumberGrouped(row.warband)
 	end
 	return text
+end
+
+-- Estimated units sold per day at the auction house, or nil when the scans do not say (or the
+-- AuctionData module is not loaded).
+local function sellsPerDay(pe, row)
+	if not pe.GetItemPriceSignals then
+		return nil
+	end
+	local _, sells = pe:GetItemPriceSignals(row.itemID)
+	return sells and sells.perDay
+end
+
+local function sellsPerDayColumn(pe)
+	return {
+		id = "sellsPerDay", label = "Sells a day", optional = true, justifyH = "RIGHT", width = COL.sellsPerDay, minWidth = 56, flex = 0,
+		sortable = true, defaultSort = "desc", defaultVisible = false,
+		tooltipTitle = "Sells a day, estimated",
+		tooltipText = "From how the listed quantity changes between your scans. It runs high: cancelled and expired auctions count too.",
+		sortValue = function(row) return sellsPerDay(pe, row) or -1 end,
+		getText = function(row)
+			local perDay = sellsPerDay(pe, row)
+			return perDay and string.format(perDay >= 10 and "%.0f" or "%.1f", perDay) or "-"
+		end,
+	}
 end
 
 -- An optional copper column that never shrinks below MONEY_MIN_WIDTH.
@@ -102,6 +127,7 @@ function Tradewright:InventoryMarketColumns()
 		pe:InventoryMoneyColumn("lastCraft", "Last craft", "lastCraftCost", false),
 		pe:InventoryMoneyColumn("profitUnit", "Profit each", "profitCopperPerUnit", true),
 		pe:InventoryMoneyColumn("profitStack", "Profit, all", "profitCopperStack", false),
+		sellsPerDayColumn(pe),
 		{
 			id = "seenAt", label = "Seen", optional = true, justifyH = "RIGHT", width = COL.seenAt, minWidth = 88, flex = 0,
 			sortable = true, defaultSort = "desc", defaultVisible = false,

@@ -87,7 +87,7 @@ local function newAddon(isRetail, ctx)
 		FormatNumberGrouped = function(_, n) return "n" .. tostring(n) end,
 		FormatScanTimestamp = function(_, at) return "at" .. tostring(at) end,
 		LayoutEvenRow = function() end,
-		GetCraftsAhCutFraction = function() return 0.05 end,
+		GetAuctionCut = function() return 0.05 end,
 		BuildAccountItemInventoryTotals = function(_, itemID) return { total = itemID == 10 and 4 or nil } end,
 	}
 	local chunk, err = loadfile(addons .. "/Tradewright_UI/src/ui/Tradewright_ProfessionCraftPanel.lua")

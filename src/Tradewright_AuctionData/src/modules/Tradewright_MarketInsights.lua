@@ -14,7 +14,7 @@ function Tradewright:GetGoldDashboardOptions()
 		moverThreshold = tonumber(self:GetSetting("gold.moverThreshold", 0.15)) or 0.15,
 		usualDays = tonumber(self:GetSetting("auction.usualPriceDays", 14)) or 14,
 		minHours = 3,
-		ahCut = 0.05,
+		ahCut = self:GetAuctionCut(),
 	}
 end
 

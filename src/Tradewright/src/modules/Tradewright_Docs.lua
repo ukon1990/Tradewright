@@ -3,111 +3,16 @@ local _, Tradewright = ...
 --- Plain-text sections for the in-game Documentation tab.
 Tradewright.DOCUMENTATION_SECTIONS = {
 	{
-		id = "overview",
-		title = "Overview",
-		body = [=[EXPORT FORMAT
-Tradewright exports are machine-readable packages, not JSON: one string for copy/paste or SavedVariables.
-The form depends on the client:
-• WoW Forever (the client has no CBOR encoder): prefix AHLUA1: then plain Lua text, "return { … }".
-  Strip the prefix and load the rest as a Lua chunk to get the table.
-• Retail: prefix AHCBOR1: then CBOR + Deflate + Base64.
-  Strip the prefix, Base64 decode, Deflate decompress, then CBOR decode.
-meta.format ("AHLUA1" or "AHCBOR1") and meta.encoding ("lua-text" or "cbor+deflate+base64") name the form.
+		id = "start",
+		title = "Getting started",
+		body = [=[FIRST STEPS
+• Open the window with /ah or /tradewright, or the minimap button.
+• Open the auction house and run a full scan. Prices on every tab come from your scans.
+• Open each profession window and press Scan below the recipe. Crafts and Inventory then know your recipes.
+• Scan the auction house again on later days. Usual prices, sales estimates and Opportunities need several days of scans.
 
-Every exported package still originates from a table with top-level meta fields such as:
-• scope — which slice was exported
-• generatedAt — Unix timestamp when built
-• addonVersion — addon version string
-• schemaVersion — integer internal schema version
-• characterKey — present for character-based slices
-• professionIdentifier — only for single-profession export
-• format / encoding / module — explicit package decoding hints
-
-Large exports may be paged in the copy dialog. When that happens, concatenate the page payload fragments in order and then hand the combined package string to your import script.
-
-Dashboard: use "All characters (account)" in the sidebar for an account roster and account exports; select a character for detail. When on the logged-in character, use per-profession buttons (All / Recipes / Talents) for smaller packages.
-
-For a fresh complete current-character package, use "Fresh scan + full dump" on the Export tab or `/tradewright full`. This enables specialization capture, scans every learned profession, then exports recipes plus the full known/unknown specialization definitions, descriptions, and current allocations.
-
-The source repository's docs/export-format.md (not installed with the addon) has the compact scope
-field legends, paging reconstruction and SavedVariables notes.]=],
-	},
-	{
-		id = "scopes",
-		title = "Export scopes",
-		body = [=[character — Full stored data for the logged-in character (professions + inventory snapshot + meta).
-
-account — All characters in SavedVariables plus aggregate (largest).
-
-account_summary — aggregate only; no per-character profession blobs.
-
-professions — All professions for current character; no inventorySnapshot.
-
-professions_recipes — Same as professions but each profession omits specializationTree, specializationTrees, primarySpecializationSkillLineID, and recipeIDs (recipe keys live in recipes map only).
-
-professions_talents — Character header + professions map of slim objects: identity/skill fields, base/child profession info, specializationTree + specializationTrees (per expansion tier skill line), specCatalog / specNodeRanks / specNodeRanksByTier (no recipes/categories/recipeIDs/recipeCount).
-
-professions_compact — Website/script-oriented compact profession dump with shortened keys and recipe/reagent lists.
-
-inventory — inventorySnapshot + character header only.
-
-inventory_compact — Website/script-oriented compact inventory dump with shortened keys and row arrays.
-
-auction_snapshot — Compact auction snapshot export from the auction data addon.
-
-auction_history — Compact per-hour auction history export from the auction data addon.
-
-crafting_costs — Compact craft opportunity / mat-cost / profit package built from stored profession and pricing data.
-
-spec_catalog — Bundled profession specialization catalog (Midnight): static nodeData stats + recipeMapping keyed by recipeSpellID (crafting spell id). No character scan required; use for offline respec simulation and unlearned node math. Join to scanned recipes via recipeSpellID.
-
-character_meta — Scan timestamps and identity header only (smallest character slice).
-
-profession <id|name> — One profession; character.meta + full profession object.
-
-profession_recipes <id|name> — One profession, recipes slice (no specializationTree, no recipeIDs).
-
-profession_talents <id|name> — One profession, talents slice only.
-
-Dashboard: All / Recipes / Talents per profession when viewing the logged-in character.
-
-Slash: /tradewright export [character|account|account_summary|professions|professions_recipes|professions_talents|professions_compact|inventory|inventory_compact|auction_snapshot|auction_history|crafting_costs|spec_catalog|meta|profession <id|name>|profession_recipes <id|name>|profession_talents <id|name>]
-Aliases: items → inventory, summary → account_summary, meta → character_meta]=],
-	},
-	{
-		id = "character",
-		title = "Character record",
-		body = [=[FULL CHARACTER (scope "character")
-Contains: meta (player identity), addonVersion, schemaVersion, scanStartedAt, scanFinishedAt, professions map, inventorySnapshot, optional lastLiveProfessionUpdate / lastLiveInventoryUpdate.
-
-CHARACTER HEADER (partial exports)
-Same meta and version/scan/live fields but no professions or inventory blobs—used for professions, inventory, and character_meta scopes.
-
-professions is a map: keys are tostring(skillLineID); values are profession objects (skillLineID, professionName, recipeIDs array of skillLineAbilityIDs, recipes map keyed by tostring(skillLineAbilityID), categories, optional specializationTree / specializationTrees keyed by expansion variant skill line, etc.).]=],
-	},
-	{
-		id = "profession_recipe",
-		title = "Profession & recipe",
-		body = [=[PROFESSION OBJECT
-skillLineID, professionName, levels, icon, categories from C_TradeSkillUI, recipeIDs array (skillLineAbilityID values), recipes map (key = tostring(skillLineAbilityID)), optional specializationTree (primary tier) and specializationTrees map (all expansion tiers with a C_ProfSpecs config—can turn off in settings), specCatalog (bundled static catalog metadata), specNodeRanks / specNodeRanksByTier (invested ranks from scan), base/child profession info (sanitized API tables). Every specializationTrees tier stores configID, skillLineID, tierName, and expansionID (Blizzard expansion index: 9 Dragonflight, 10 The War Within, 11 Midnight). Each specialization tab exports paths (multi-rank nodes like Belts), milestones (single-rank perk unlocks with parentPathID), and edges (path-to-path links only — milestones are never edges). Path/milestone rows include nodeKind, nodeName, and nodeDescription. Recipe-only export scopes omit specialization fields and recipeIDs; talents-only scopes keep identity + specialization fields (+ base/child info) and omit recipe fields.
-
-PROFESSION PANEL — Open any profession window to see the Tradewright panel below the schematic. Scan saves the open profession (recipes + specialization trees) for the logged-in character. Export scans if needed, then opens a profession_talents export for that profession.
-
-RECIPE OBJECT (schema v11)
-Map key is tostring(skillLineAbilityID) — Blizzard Game Data recipe id. Each row also stores recipeSpellID (crafting spell id; use for spec_catalog recipeMapping and in-game APIs). Fields: recipeSpellID, skillLineAbilityID, info (sanitized GetRecipeInfo), schematic, outputs, slots, crafting, optional specBreakdown (recipeID = skillLineAbilityID, recipeSpellID for catalog joins), links (reserved empty). Schema v3–v10 legacy rows may still use spell ids as keys until you rescan.
-
-Values are passed through sanitization before packaging (depth limit, cycle detection).]=],
-	},
-	{
-		id = "inventory_agg",
-		title = "Inventory & aggregate",
-		body = [=[INVENTORY SNAPSHOT
-capturedAt, itemTypesTracked, itemTypesWithStock, totalQuantity, items map: itemID string → { bags, bank, warband, total }.
-
-AGGREGATE (account / account_summary)
-updatedAt, characterKeys (sorted), professions keyed by tostring(skillLineID) with characterStates + sorted recipeIDs array (entry uses name + skillLineID + currentLevelName in v4), recipes keyed by tostring(recipeID) with characterStates + sorted products item-id array, inventoryByCharacter keyed by characterKey (snapshot summary fields only—no items map).
-
-Use account_summary when you only need cross-character rollups without full recipe data per character.]=],
+PROFESSION PANEL
+Below the profession recipe Tradewright shows the materials, what they cost and the profit. Add to queue puts the craft on the Crafts tab queue. Scan saves every recipe and reagent of the open profession for this character.]=],
 	},
 	{
 		id = "inventory_tab",
@@ -125,19 +30,6 @@ Click a row to open the detail pane: auction price, averages, craft cost, where 
 
 PRICES
 Current AH comes from your auction house scans; an item never scanned has no price. Totals in the table footer add up quantity times price for the rows shown. These are estimates, not official game values.]=],
-	},
-	{
-		id = "savedvars_paging",
-		title = "SavedVariables & paging",
-		body = [=[LAST EXPORT (TradewrightLastExport)
-After export, if under the byte limit, the full package string is stored for the next /reload or logout. Fields: savedAt, byteLength, scope, optional characterKey and professionIdentifier, format, encoding, module, and payload.
-
-File: WTF/Account/<account>/SavedVariables/Tradewright.lua.
-
-PAGING (copy dialog)
-Over COPYBOX_PAGE_BYTES, each page starts with a Tradewright paging header. Concatenate the page payload fragments in page order before decoding through your script pipeline.
-
-Compact website scopes use shortened keys plus key tables in the package body so a script can decode them without guessing field meanings.]=],
 	},
 	{
 		id = "prices",

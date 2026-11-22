@@ -373,12 +373,29 @@ local function aboveUsualPrice(rows)
 	return above
 end
 
+-- The Opportunities "Sell now" rows in this card's shape, so both places put the same items first.
+local function sellNowCardRows(pe)
+	local rows = {}
+	for _, sellNow in ipairs(pe.GetSellNowRows and pe:GetSellNowRows() or {}) do
+		rows[#rows + 1] = {
+			_rowIdentity = tostring(sellNow.itemID), itemID = sellNow.itemID, storageKey = sellNow.storageKey,
+			total = sellNow.total, bags = sellNow.bags, bank = sellNow.bank,
+			price = sellNow.price, change = sellNow.premium, value = sellNow.worth,
+		}
+	end
+	return rows
+end
+
 function GoldDashboardMixin:RefreshSell(insights)
 	local pe = self.pe
 	local rows, stockValue, anyHistory = pricedStockRows(pe, insights)
 	local priced = #rows
-	-- With history: items selling above their usual price. Without: what is worth the most.
-	if anyHistory then
+	-- Best: what "Sell now" lists (above usual and known to sell). Before sells-a-day estimates exist:
+	-- items above their usual price, and with no history at all, what is worth the most.
+	local sellNow = sellNowCardRows(pe)
+	if #sellNow > 0 then
+		rows = sellNow
+	elseif anyHistory then
 		rows = aboveUsualPrice(rows)
 	end
 	self.sell.table:SetRows(pe.MarketLogic.TopN(rows, TOP_ROWS, "value"))

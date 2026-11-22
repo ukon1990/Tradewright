@@ -145,6 +145,68 @@ check("Types: sell rate from sales and misses", types[1].sellRate == 0.5 and typ
 local noMisses = IL.SummarizeItemTypes({ sales[1] }, 0, nil, classOf)
 check("Types: no sell rate before misses are tracked", noMisses[1].sellRate == nil and noMisses[1].items[7] == 1000)
 
+-- Auction house mail
+local returnSubjects = { { IL.FormatToPattern("Auction expired: %s"), "expired" }, { IL.FormatToPattern("Auction cancelled: %s"), "cancelled" } }
+local soldMail = { invoiceType = "seller", itemName = "Iron Bar", buyer = "Bo", bid = 1000, consignment = 50, deposit = 12, count = 5,
+	money = 962, ageSeconds = 3600 }
+local soldEvent, soldBy = IL.AuctionMailEvent(soldMail, returnSubjects, 10000)
+check("Mail: a sale is settled by its gold and records what the house kept", soldBy == "money" and soldEvent.kind == "sell"
+	and soldEvent.netCopper == 950 and soldEvent.consignmentCopper == 50 and soldEvent.unitCopper == 200 and soldEvent.ts == 6400)
+soldMail.money = 0
+check("Mail: a sale whose gold is already taken writes nothing", IL.AuctionMailEvent(soldMail, returnSubjects, 10000) == nil)
+local wonEvent, wonBy = IL.AuctionMailEvent({ invoiceType = "buyer", itemName = "Iron Bar", bid = 600,
+	attachment = { name = "Iron Bar", itemID = 2772, count = 3 } }, returnSubjects, 10000)
+check("Mail: a won auction is a buy at the price paid, settled by its item", wonBy == "item" and wonEvent.kind == "buy"
+	and wonEvent.itemID == 2772 and wonEvent.quantity == 3 and wonEvent.unitCopper == 200)
+check("Mail: a won auction whose item is already taken writes nothing",
+	IL.AuctionMailEvent({ invoiceType = "buyer", itemName = "Iron Bar", bid = 600 }, returnSubjects, 10000) == nil)
+local expiredEvent = IL.AuctionMailEvent({ subject = "Auction expired: Iron Bar", attachment = { name = "Iron Bar", itemID = 2772, count = 4 } },
+	returnSubjects, 10000)
+local cancelledEvent = IL.AuctionMailEvent({ subject = "Auction cancelled: Iron Bar", attachment = { name = "Iron Bar", itemID = 2772 } },
+	returnSubjects, 10000)
+check("Mail: expired and cancelled auctions come back as their own kinds", expiredEvent.kind == "expired" and expiredEvent.quantity == 4
+	and cancelledEvent.kind == "cancelled" and cancelledEvent.quantity == 1)
+check("Mail: a letter from a friend with an item is not an auction",
+	IL.AuctionMailEvent({ subject = "For you", attachment = { name = "Iron Bar", itemID = 2772 } }, returnSubjects, 10000) == nil)
+
+-- Per-item totals
+local function ledgerEvent(kind, quantity, total, net, ts)
+	return { kind = kind, itemID = 2772, quantity = quantity, totalCopper = total, netCopper = net, ts = ts }
+end
+local barEvents = {
+	ledgerEvent("buy", 10, 1000, nil, 5), ledgerEvent("buy", 10, 3000, nil, 9),
+	ledgerEvent("sell", 5, 2000, 1900, 6), ledgerEvent("sell", 5, 2000, 1900, 7), ledgerEvent("sell", 1, 400, 380, 8),
+	ledgerEvent("sell", 1, 400, 380, 8), ledgerEvent("expired", 5, nil, nil, 9), { kind = "vendor", itemID = 2772, quantity = 1, totalCopper = 9 },
+}
+local bars = IL.TallyByItem(barEvents)[2772]
+local bought = IL.PurchaseSummary(bars)
+check("Purchases: units, average price and last buy", bought.units == 20 and bought.avgUnit == 200 and bought.lastAt == 9)
+check("Purchases: nothing bought", IL.PurchaseSummary(IL.TallyByItem({ barEvents[3] })[2772]) == nil and IL.PurchaseSummary(nil) == nil)
+check("Sale chance: 4 sales and 1 expiry is 80%", IL.SaleChance(bars) == 0.8)
+check("Sale chance: unknown below the minimum postings", IL.SaleChance(IL.TallyByItem({ barEvents[3], barEvents[7] })[2772]) == nil
+	and IL.SaleChance(nil) == nil)
+local realized = IL.RealizedProfit(bars)
+check("Realized profit: average sale after the cut less average buy", realized.units == 12 and realized.profitEach == 4560 / 12 - 200)
+check("Realized profit: none without buys", IL.RealizedProfit(IL.TallyByItem({ barEvents[3] })[2772]) == nil)
+local rolledOff = {}
+IL.AddRolledOff(rolledOff, barEvents[1])
+IL.AddRolledOff(rolledOff, barEvents[7])
+local afterRollOff = IL.TallyByItem({ barEvents[2], barEvents[3], barEvents[4], barEvents[5], barEvents[6] }, rolledOff)[2772]
+check("Roll-off: totals survive events leaving the ledger", IL.PurchaseSummary(afterRollOff).avgUnit == 200 and IL.SaleChance(afterRollOff) == 0.8)
+local latest = IL.LatestEvents(barEvents, { buy = true, expired = true }, 6, 2)
+check("Latest: chosen kinds since a time, newest first, capped", #latest == 2 and latest[1].ts == 9 and latest[2].ts == 9 and latest[1].kind ~= "sell")
+
+-- Auction cut measured from sale mails
+local function sale(total, kept) return { kind = "sell", totalCopper = total, consignmentCopper = kept } end
+local mixedCuts = { sale(1000, 50), sale(1000, 50), sale(1000, 100), sale(2000, 100), sale(1000, 150) }
+local measured = IL.MeasureAuctionCut(mixedCuts)
+check("Cut: median share over mixed cuts", measured.cut == 0.05 and measured.sales == 5, measured.cut)
+local tooFew = IL.MeasureAuctionCut({ sale(1000, 50), sale(1000, 50) })
+check("Cut: not measured below the minimum, sales still counted", tooFew.cut == nil and tooFew.sales == 2)
+local older = { sale(1000, nil), { kind = "sell", totalCopper = 0, consignmentCopper = 5 }, { kind = "vendor", totalCopper = 9, consignmentCopper = 1 } }
+check("Cut: sales without the kept amount, empty sales and other kinds are skipped", IL.MeasureAuctionCut(older).sales == 0)
+check("Cut: even count takes the middle two", IL.MeasureAuctionCut({ sale(100, 4), sale(100, 6) }, 2).cut == 0.05)
+
 if failed > 0 then
 	print(failed .. " check(s) failed")
 	os.exit(1)

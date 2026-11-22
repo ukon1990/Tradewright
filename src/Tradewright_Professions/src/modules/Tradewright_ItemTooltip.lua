@@ -102,7 +102,7 @@ function Tradewright:BuildItemGoldSummary(itemID, detail)
 		return nil
 	end
 	local summary = self.GetItemEconomySummary and self:GetItemEconomySummary(itemID, {}) or {}
-	local out = { cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05 }
+	local out = { cut = self:GetAuctionCut() }
 	fillPrice(self, out, itemID, summary)
 	out.listed = tonumber((summary.snapshot or {}).sampleSize)
 	if self.FillPriceBaseline then

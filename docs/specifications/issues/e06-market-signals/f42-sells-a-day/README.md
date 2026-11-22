@@ -26,7 +26,7 @@ Each item gets "Sells a day, estimated": how many units leave the auction house 
 - Docs tab: section "Usual price and sells a day" on how both are made and why sells a day runs high
 - Still open:
   - with price steps (F41): count only the drop at or below the next scan's lowest price
-  - Inventory optional column: `Tradewright_InventoryUI.lua` is over the file-size limit and may not grow; it needs a split first
+- Inventory has an optional `Sells a day` column (`Tradewright_InventoryColumns.lua`), hidden by default; in-game check pending
 
 ## Acceptance criteria
 

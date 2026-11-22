@@ -12,7 +12,7 @@ local function check(name, cond, detail)
 end
 
 -- Minimal addon table so ForeverLogic can attach.
-local pe = {}
+local pe = { DEFAULT_AUCTION_CUT = 0.05 }
 _G.Tradewright = pe
 _G.Tradewright = pe
 

@@ -22,15 +22,30 @@ Profit figures use the fees the game really charges: the deposit the client quot
 - Settings group "Fees": "Auction cut" with choices "Measured from my sales: N%", 5%, 10%, 15%; a line saying how many sales the measurement uses
 - Crafts and Opportunities footers name the cut in use ("Auction cut 5%, measured")
 
+## Status
+
+Implemented, in-game check pending:
+
+- Sale events record `consignmentCopper` and `depositCopper`
+- `IncomeLogic.MeasureAuctionCut` (median over the latest 50 sales, nil below 5) and `FlipLogic.ExpectedDepositLoss`; they live there, not in `ForeverLogic`, which is kept for client flags and export encoding
+- `Tradewright:GetAuctionCut()` and `DescribeAuctionCut()` in `Tradewright_Util.lua`; the one default is `Tradewright.DEFAULT_AUCTION_CUT`. The setting is `fees.auctionCut` ("measured", 5, 10 or 15); the unused `crafts.ahCutPercent` is gone
+- Settings → Prices → Fees, and the cut named in the Crafts note and the Opportunities footers
+
+Still open:
+
+- `house` on sale events: the mail does not say which auction house an item was posted in
+- Deposits are stored per item, not per duration
+- GetAuctionCut takes no `house` argument for the same reason
+
 ## Acceptance criteria
 
 - [ ] After 5 collected sale mails the Settings line shows the measured cut and the sale count
 - [ ] With fewer than 5 sales the fallback is used and labelled "not measured yet"
 - [ ] Changing the setting changes Deals, Crafts profit and owned-auction figures together
 - [ ] A client without `GetInboxInvoiceInfo` or without a deposit function keeps working on the fallback
-- [ ] Sale events saved before this feature still load and are ignored by the measurement
-- [ ] No literal 0.05 for the cut remains outside the accessor and its default
-- [ ] Offline tests: median over mixed cuts, fewer than `minSales`, missing fields, expected deposit loss at p = 1 and p unknown
+- [x] Sale events saved before this feature still load and are ignored by the measurement
+- [x] No literal 0.05 for the cut remains outside the accessor and its default
+- [x] Offline tests: median over mixed cuts, fewer than `minSales`, missing fields, expected deposit loss at p = 1 and p unknown
 
 ## Verification
 

@@ -347,19 +347,59 @@ function Tradewright:CreateDashboardStatusBar(frame)
 	end
 end
 
--- One tab button and one hidden content panel per dashboard tab.
-function Tradewright:CreateDashboardTabs(frame)
-	local ui, theme = self.ui, self:GetTheme()
-	ui.tabButtons, ui.tabPanels, ui.tabModules, ui.tabInited = {}, {}, {}, {}
+function Tradewright:IsDashboardTabShown(tabId)
+	for _, tab in ipairs(TAB_ORDER) do
+		if tab.id == tabId then
+			return not tab.shown or tab.shown()
+		end
+	end
+	return false
+end
+
+-- The tab to show for `tabId`: itself while it is offered, else Overview.
+function Tradewright:ResolveDashboardTab(tabId)
+	return tabId and self:IsDashboardTabShown(tabId) and tabId or "overview"
+end
+
+-- Lines up the buttons of the tabs on offer and hides the rest.
+local function layoutTabButtons(pe, frame, buttons)
+	local spacing = pe:GetTheme().spacing
 	local previous
 	for _, tab in ipairs(TAB_ORDER) do
-		local button = createTabButton(frame.tabBar, tab.label)
-		if previous then
-			button:SetPoint("LEFT", previous, "RIGHT", theme.spacing.xs, 0)
-		else
-			button:SetPoint("LEFT", frame.tabBar, "LEFT", theme.spacing.md, 0)
+		local button, shown = buttons[tab.id], pe:IsDashboardTabShown(tab.id)
+		button:SetShown(shown)
+		if shown then
+			button:ClearAllPoints()
+			if previous then
+				button:SetPoint("LEFT", previous, "RIGHT", spacing.xs, 0)
+			else
+				button:SetPoint("LEFT", frame.tabBar, "LEFT", spacing.md, 0)
+			end
+			previous = button
 		end
-		previous = button
+	end
+end
+
+-- Shows only the tabs on offer, and leaves the open tab when it is no longer offered.
+function Tradewright:ApplyDashboardTabVisibility()
+	local ui = self.ui
+	local frame = ui and ui.mainFrame
+	if not (frame and ui.tabButtons) then
+		return
+	end
+	layoutTabButtons(self, frame, ui.tabButtons)
+	local active = ui.activeMainTab
+	if active and frame:IsShown() and self:ResolveDashboardTab(active) ~= active then
+		self:ShowDashboardTab("overview")
+	end
+end
+
+-- One tab button and one hidden content panel per dashboard tab.
+function Tradewright:CreateDashboardTabs(frame)
+	local ui = self.ui
+	ui.tabButtons, ui.tabPanels, ui.tabModules, ui.tabInited = {}, {}, {}, {}
+	for _, tab in ipairs(TAB_ORDER) do
+		local button = createTabButton(frame.tabBar, tab.label)
 		button:SetScript("OnClick", function()
 			Tradewright:ShowDashboardTab(tab.id)
 		end)
@@ -397,6 +437,7 @@ function Tradewright:CreateDashboardFrame()
 		frame.contentHost:SetClipsChildren(true)
 	end
 	self:CreateDashboardTabs(frame)
+	self:ApplyDashboardTabVisibility()
 	self:ApplyWindowScale()
 	self:ApplyThemeToUI()
 	self:UpdateDynamicPanelLayering("dashboard_created")
@@ -534,7 +575,7 @@ function Tradewright:ShowDashboardTab(tabId)
 	if not ui.mainFrame then
 		self:CreateDashboardFrame()
 	end
-	tabId = tabId or "overview"
+	tabId = self:ResolveDashboardTab(tabId)
 	ui.activeMainTab = tabId
 	self:SetSetting("general.lastActiveTab", tabId)
 

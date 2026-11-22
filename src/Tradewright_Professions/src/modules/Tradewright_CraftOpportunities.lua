@@ -14,7 +14,7 @@ local function getCraftEvaluationSettings(self)
 		sourceMode = tostring(self:GetSetting("crafts.reagentSourceMode", "owned_first")),
 		costBasis = tostring(self:GetSetting("crafts.costBasis", "auto")),
 		saleBasis = tostring(self:GetSetting("crafts.saleBasis", "auto")),
-		ahCutPercent = tonumber(self:GetSetting("crafts.ahCutPercent", 5)) or 5,
+		auctionCut = self:GetAuctionCut(),
 		metricRange = tostring(self:GetSetting("inventory.metricRange", "30d")),
 		economyShowColumns = self:GetSetting("inventory.economyShowColumns", true) ~= false,
 		currentCharacterKey = self:GetCharacterKey(),
@@ -29,7 +29,7 @@ local function getCraftEvaluationCacheKey(self, settings)
 		settings.sourceMode,
 		settings.costBasis,
 		settings.saleBasis,
-		tostring(settings.ahCutPercent),
+		tostring(settings.auctionCut),
 		settings.metricRange,
 		boolToken(settings.economyShowColumns),
 	}, "|")

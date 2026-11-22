@@ -23,15 +23,30 @@ The ledger records what you buy at the auction house and which of your auctions 
 - Sales view: "Latest sales" gains a kind filter (Sold, Bought, Came back); "What sells" gains `Bought each` and `Profit each` for items with buys
 - Inventory row analytics and `ResolveReagentUnitPrice` pick the buy average up without change, because they already call the ledger helpers
 
+## Status
+
+Implemented, in-game check pending:
+
+- `IncomeLogic.AuctionMailEvent` reads a mail into a `sell`, `buy`, `expired` or `cancelled` event and says whether its gold or its item settles it; `Tradewright_Ledger.lua` writes the event when that is taken (`TakeInboxMoney`, `TakeInboxItem`, `AutoLootMailItem`)
+- Expired and cancelled mails are recognised by the game's own subject strings (`AUCTION_EXPIRED_MAIL_SUBJECT`, `AUCTION_REMOVED_MAIL_SUBJECT`)
+- Per-item totals: `IncomeLogic.TallyByItem`, `PurchaseSummary`, `SaleChance`, `RealizedProfit` (in `IncomeLogic`, not `ForeverLogic`); `ledger.rolledOff` keeps the totals of events that leave the 2,500 limit
+- Sales view: the Latest card has Sold / Bought / Came back; "What sells" has optional `Bought each` and `Profit each`
+
+Still open:
+
+- Retail: no instant `buy` on a confirmed commodity purchase. The item also arrives by mail with a buyer invoice, so writing both would count the purchase twice
+- `LedgerAverageUnitBuyCopper` reads the ledger's events only, not the rolled-off totals
+- Unverified on Forever: that a won auction's mail carries a "buyer" invoice, and the two subject strings
+
 ## Acceptance criteria
 
 - [ ] Buying an item and taking it from the mailbox writes one `buy` event with the price paid
 - [ ] Letting an auction expire and taking the item back writes one `expired` event; cancelling writes `cancelled`
 - [ ] Opening a mail without taking its contents writes nothing; taking it later writes once
 - [ ] `LedgerAverageUnitBuyCopper` returns the bought price for that item
-- [ ] An item with 4 sales and 1 expiry shows a sale chance of 80%
-- [ ] Ledgers saved before this feature load unchanged
-- [ ] Offline tests: purchase summary, sale chance below and above the minimum, realized profit with no buys, running totals after events roll off
+- [x] An item with 4 sales and 1 expiry shows a sale chance of 80%
+- [x] Ledgers saved before this feature load unchanged
+- [x] Offline tests: purchase summary, sale chance below and above the minimum, realized profit with no buys, running totals after events roll off
 
 ## Verification
 

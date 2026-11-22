@@ -28,7 +28,7 @@ Implemented:
 
 Differs from the scope:
 
-- The Gold view's "Sell what I own" card is unchanged and still builds its own rows (it also feeds the "Stock value" stat and has a fallback for items without history). The two can therefore differ: the card has no turnover check.
+- The Gold view's "Sell what I own" card takes its rows from this list when the list has any (in-game check pending). With no "Sell now" rows it falls back to its own: items above their usual price, or what is worth the most when nothing has history. The "Stock value" stat is built as before.
 - No fallback list when no owned item has a usual price; the list is empty with its hint
 - The side pane does not show what you paid on average (needs F44)
 - Left click opens the side pane; right click opens the item in the auction house when it is open

@@ -36,10 +36,13 @@ Implemented:
 
 Differs from the scope:
 
-- **No Rename** and **no period filter** (all runs are counted)
-- **The stats are over all runs,** not the last 7 days
 - **Vendor items and coin are one share** in the side pane, and are not listed as separate rows under the items
 - The farm column is one line of text (name, then zone and last run in grey), not the item column: table cells do not wrap
+
+Added later, in-game check pending:
+
+- Rename (a dialog; renaming onto an existing farm adds the runs to it)
+- A period choice in the toolbar: last 7 days, last 30 days, all runs. Farms without a run in the period are left out, and the stats follow it.
 
 ## Acceptance criteria
 

@@ -124,6 +124,9 @@ expect("Crafts: category filter skips rows without a category", craftRows({ cate
 expect("Crafts: category 'all' keeps all", craftRows({ categories = { all = true } }), "1,2,3,4")
 expect("Crafts: profit all", craftRows({ profitState = "all" }), "1,2,3,4")
 expect("Crafts: profitable", craftRows({ profitState = "profitable" }), "1,4")
+expect("Crafts: cooldowns keeps rows the caller says have one",
+	craftRows({ profitState = "cooldown", hasCooldown = function(row) return row.id == 3 end }), "3")
+expect("Crafts: cooldowns without a cooldown check keeps none", craftRows({ profitState = "cooldown" }), "")
 expect("Crafts: negative", craftRows({ profitState = "negative" }), "2")
 expect("Crafts: missing price (no profit or a material without price)", craftRows({ profitState = "missing_price" }), "3,4")
 expect("Crafts: uncraftable", craftRows({ profitState = "uncraftable" }), "2,4")

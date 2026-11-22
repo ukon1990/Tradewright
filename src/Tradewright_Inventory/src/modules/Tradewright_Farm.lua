@@ -7,9 +7,13 @@ local _, Tradewright = ...
 local IncomeLogic = Tradewright.IncomeLogic
 local COIN_WINDOW = 1
 local LATEST = 3
+local IDLE_CHECK_SEC = 30
 
 local merchantOpen = false
 local lootCoinAt, lastMoney
+-- GetTime() of the player's last move or loot, nil until the first one; a run pauses itself when
+-- that is too long ago.
+local lastActiveAt
 
 local LOOT_PATTERNS = {}
 for _, format in ipairs({ LOOT_ITEM_SELF_MULTIPLE, LOOT_ITEM_SELF }) do
@@ -64,6 +68,7 @@ function Tradewright:StartFarmRun(name)
 	end
 	if not store.current then
 		store.current = newRun(self, name)
+		lastActiveAt = GetTime()
 		if self.ShowFarmWindow and self:GetSetting("farm.showWindow", true) then
 			self:ShowFarmWindow()
 		end
@@ -80,11 +85,36 @@ function Tradewright:ToggleFarmPause()
 	end
 	if run.pausedAt then
 		run.pausedSeconds = (run.pausedSeconds or 0) + math.max(0, time() - run.pausedAt)
-		run.pausedAt = nil
+		run.pausedAt, run.pausedForIdling = nil, nil
+		lastActiveAt = GetTime()
 	else
 		run.pausedAt = time()
 	end
 	changed(self)
+end
+
+-- Moving or looting: a run that paused itself for idling carries on.
+local function noteActivity(pe)
+	lastActiveAt = GetTime()
+	local run = pe:GetCurrentFarmRun()
+	if run and run.pausedForIdling then
+		pe:ToggleFarmPause()
+	end
+end
+
+-- Pauses the run once the player has stood still, looting nothing, for the minutes chosen in
+-- Settings (0 turns it off). The idle time itself is not farming either, so the pause starts
+-- where the idling did.
+local function pauseWhenIdle(pe)
+	local run = activeRun(pe)
+	local limit = (tonumber(pe:GetSetting("farm.idlePauseMinutes", 5)) or 0) * 60
+	lastActiveAt = lastActiveAt or GetTime()
+	local idle = GetTime() - lastActiveAt
+	if run and limit > 0 and idle >= limit then
+		run.pausedAt = math.max(tonumber(run.startedAt) or 0, time() - math.floor(idle))
+		run.pausedForIdling = true
+		changed(pe)
+	end
 end
 
 --- Price facts for the farm value rule: vendor price, usual price and sells a day of an item.
@@ -98,19 +128,22 @@ end
 
 --- Value of a run at today's prices (see FarmLogic.SummarizeRun).
 function Tradewright:SummarizeFarmRun(run)
-	local cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05
+	local cut = self:GetAuctionCut()
 	return self.FarmLogic.SummarizeRun(run, function(itemID)
 		return self:GetFarmItemPrice(itemID)
 	end, time(), { cut = cut })
 end
 
---- Stop the run and save it under its name; a farm of that name gets one more run. Returns the summary.
-function Tradewright:StopFarmRun()
+--- Stop the run and save it under `name` (default: the name it was started with); a farm of that
+--- name gets one more run. Returns the summary.
+function Tradewright:StopFarmRun(name)
 	local store = farmStore(self)
 	local run = store and store.current
 	if not run then
 		return nil
 	end
+	name = self:Trim(name or "")
+	run.name = name ~= "" and name or run.name
 	if run.pausedAt then
 		self:ToggleFarmPause()
 	end
@@ -127,19 +160,37 @@ function Tradewright:StopFarmRun()
 	return summary, run
 end
 
---- Saved farms as table rows, each with its summary at today's prices (see FarmLogic.SummarizeFarm).
-function Tradewright:GetFarmRows()
+--- Throw the run in progress away without saving it.
+function Tradewright:DiscardFarmRun()
 	local store = farmStore(self)
-	local cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05
+	if store and store.current then
+		store.current = nil
+		changed(self)
+	end
+end
+
+--- Saved farms as table rows, each with its summary at today's prices (see FarmLogic.SummarizeFarm).
+--- With `days` only runs from the last that many days count, and farms without one are left out.
+function Tradewright:GetFarmRows(days)
+	local store = farmStore(self)
+	local opts = { cut = self:GetAuctionCut(), since = days and days > 0 and (time() - days * 86400) or nil }
 	local rows = {}
 	for name, farm in pairs(store and store.farms or {}) do
 		local row = self.FarmLogic.SummarizeFarm(farm, function(itemID)
 			return self:GetFarmItemPrice(itemID)
-		end, { cut = cut })
-		row.name, row.zone, row._rowIdentity = name, farm.zone or "", name
-		rows[#rows + 1] = row
+		end, opts)
+		if row.runs > 0 then
+			row.name, row.zone, row._rowIdentity = name, farm.zone or "", name
+			rows[#rows + 1] = row
+		end
 	end
 	return rows
+end
+
+--- Rename a saved farm; a farm already called `newName` takes its runs. Returns whether it changed.
+function Tradewright:RenameFarm(oldName, newName)
+	local store = farmStore(self)
+	return store ~= nil and self.FarmLogic.RenameFarm(store.farms, oldName, self:Trim(newName or ""))
 end
 
 --- Remove a saved farm and all its runs.
@@ -158,6 +209,7 @@ local function onLoot(pe, message)
 	end
 	quantity = tonumber(quantity) or 1
 	run.items[itemID] = (run.items[itemID] or 0) + quantity
+	lastActiveAt = GetTime()
 	table.insert(run.latest, 1, { itemID = itemID, qty = quantity })
 	run.latest[LATEST + 1] = nil
 	changed(pe)
@@ -199,13 +251,22 @@ local function onBagItemUsed(bag, slot)
 	end
 end
 
+local idleTicker
+
+-- Entering the world happens on every loading screen; the idle check starts on the first.
+local function onEnteringWorld(pe)
+	lastMoney = GetMoney()
+	idleTicker = idleTicker or C_Timer.NewTicker(IDLE_CHECK_SEC, function() pauseWhenIdle(pe) end)
+end
+
 local HANDLERS = {
 	CHAT_MSG_LOOT = function(pe, message) onLoot(pe, message) end,
 	CHAT_MSG_MONEY = function() lootCoinAt = GetTime() end,
 	PLAYER_MONEY = function(pe) onMoney(pe) end,
-	PLAYER_ENTERING_WORLD = function() lastMoney = GetMoney() end,
+	PLAYER_ENTERING_WORLD = onEnteringWorld,
 	MERCHANT_SHOW = function() merchantOpen = true end,
 	MERCHANT_CLOSED = function() merchantOpen = false end,
+	PLAYER_STARTED_MOVING = function(pe) noteActivity(pe) end,
 }
 
 local frame = CreateFrame("Frame")

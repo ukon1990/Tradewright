@@ -12,6 +12,69 @@ local function clock(seconds)
 	return string.format("%d:%02d:%02d", math.floor(seconds / 3600), math.floor(seconds % 3600 / 60), seconds % 60)
 end
 
+-- Farm name dialogs: one to save the run in progress, one to rename a saved farm. Both hand the
+-- typed name to `data.onAccept`.
+local function popupEditBox(popup)
+	return popup.EditBox or popup.editBox -- the field was renamed between client versions
+end
+
+local function acceptName(popup)
+	popup.data.onAccept(popupEditBox(popup):GetText())
+end
+
+local function nameDialog(acceptLabel, discardLabel)
+	return {
+		text = "%s", button1 = acceptLabel, button2 = "Cancel", button3 = discardLabel,
+		hasEditBox = true, timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+		OnShow = function(popup, data)
+			popupEditBox(popup):SetText(data.name or "")
+			popupEditBox(popup):HighlightText()
+		end,
+		OnAccept = acceptName,
+		OnAlt = function(popup) popup.data.onDiscard() end,
+		EditBoxOnEnterPressed = function(editBox)
+			acceptName(editBox:GetParent())
+			editBox:GetParent():Hide()
+		end,
+		EditBoxOnEscapePressed = function(editBox) editBox:GetParent():Hide() end,
+	}
+end
+
+StaticPopupDialogs["TRADEWRIGHT_FARM_SAVE"] = nameDialog("Save farm", "Discard")
+StaticPopupDialogs["TRADEWRIGHT_FARM_RENAME"] = nameDialog("Rename")
+
+--- Asks what to call the run in progress, then saves it, discards it, or (Cancel) lets it run on.
+function Tradewright:AskToSaveFarmRun()
+	local run = self:GetCurrentFarmRun()
+	if not run then
+		return
+	end
+	local summary = self:SummarizeFarmRun(run)
+	local text = string.format("Farm finished: %s in %s, %s an hour.\nSave it as:", self:FormatCopperShort(summary.total),
+		clock(summary.activeSeconds), self:FormatCopperShort(summary.perHour))
+	StaticPopup_Show("TRADEWRIGHT_FARM_SAVE", text, nil, {
+		name = run.name,
+		onAccept = function(name)
+			local _, saved = self:StopFarmRun(name)
+			self:PrintMessage(string.format("Farm \"%s\" saved.", saved.name))
+		end,
+		onDiscard = function() self:DiscardFarmRun() end,
+	})
+end
+
+--- Asks for a new name for the saved farm `name`; `onRenamed(newName)` runs when it changed.
+function Tradewright:AskToRenameFarm(name, onRenamed)
+	StaticPopup_Show("TRADEWRIGHT_FARM_RENAME", string.format("Rename the farm \"%s\" to:", name), nil, {
+		name = name,
+		onAccept = function(newName)
+			newName = self:Trim(newName or "")
+			if self:RenameFarm(name, newName) then
+				onRenamed(newName)
+			end
+		end,
+	})
+end
+
 local function savePosition(pe, f)
 	local point, _, relativePoint, x, y = f:GetPoint(1)
 	pe:SetSetting("farm.windowPosition", { point = point, relativePoint = relativePoint, x = x, y = y })
@@ -57,13 +120,7 @@ local function buildBody(pe, f, top)
 	f.pause = pe:CreateButton(f, "Pause", function() pe:ToggleFarmPause() end)
 	f.pause:SetPoint("BOTTOMLEFT", PAD, PAD)
 	f.pause:SetWidth(70)
-	f.stop = pe:CreateButton(f, "Stop and save", function()
-		local summary, run = pe:StopFarmRun()
-		if summary then
-			pe:PrintMessage(string.format("Farm \"%s\" saved: %s in %s, %s an hour.", run.name,
-				pe:FormatCopperShort(summary.total), clock(summary.activeSeconds), pe:FormatCopperShort(summary.perHour)))
-		end
-	end)
+	f.stop = pe:CreateButton(f, "Stop and save", function() pe:AskToSaveFarmRun() end)
 	f.stop:SetPoint("BOTTOMLEFT", f.pause, "BOTTOMRIGHT", 6, 0)
 	f.stop:SetPoint("BOTTOMRIGHT", -PAD, PAD)
 end
@@ -114,6 +171,13 @@ local function factRows(pe, run, summary)
 	return rows
 end
 
+local function pauseNote(run)
+	if run.pausedForIdling then
+		return " · paused, idle"
+	end
+	return run.pausedAt and " · paused" or ""
+end
+
 --- Redraw the farm window from the run in progress. Hidden windows are left alone.
 function Tradewright:RefreshFarmWindow()
 	local f = self.ui and self.ui.farmWindow
@@ -133,7 +197,7 @@ function Tradewright:RefreshFarmWindow()
 	local summary = self:SummarizeFarmRun(run)
 	f.name:SetText(run.name)
 	f.rate:SetText(self:FormatCopperShort(summary.perHour) .. " an hour")
-	f.clock:SetText(clock(summary.activeSeconds) .. (run.pausedAt and " · paused" or ""))
+	f.clock:SetText(clock(summary.activeSeconds) .. pauseNote(run))
 	f.facts:SetRows(factRows(self, run, summary))
 	f.pause:SetText(run.pausedAt and "Resume" or "Pause")
 	f.pause:SetEnabled(true)

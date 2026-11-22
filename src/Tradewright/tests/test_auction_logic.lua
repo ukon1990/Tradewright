@@ -255,6 +255,30 @@ do
 	check("Confirmed buyout: no bid of that item is waiting", AL.TakeConfirmedBuyout(pending, "Fine Thread") == nil and #pending == 1)
 end
 
+-- Cart items added by hand
+do
+	local merged = { [2772] = { name = "Iron Bar", quantityNeeded = 4, sources = {} } }
+	AL.MergeCartExtras(merged, { [2772] = { quantity = 10, unitPrice = 90, reason = "Flips" }, [2840] = { quantity = 3, reason = "Price gaps" } },
+		function(itemID) return "Item " .. itemID end)
+	check("Cart extras: need adds to the queue's and the reason is a source", merged[2772].quantityNeeded == 14
+		and merged[2772].estimatedUnitPrice == 90 and AL.CartSourceText(merged[2772].sources) == "Flips")
+	check("Cart extras: an item only added by hand gets its own row", merged[2840].quantityNeeded == 3 and merged[2840].name == "Item 2840")
+end
+
+-- Auction cut accessor
+do
+	local cutSetting, measuredCut = "measured", { sales = 2 }
+	pe.GetSetting = function(_, path, default) if path == "fees.auctionCut" then return cutSetting end return default end
+	pe.LedgerMeasuredAuctionCut = function() return measuredCut end
+	check("Cut: default until enough sales are collected", pe:GetAuctionCut() == 0.05 and pe:DescribeAuctionCut() == "5%, not measured yet")
+	measuredCut = { cut = 0.048, sales = 9 }
+	check("Cut: measured share is used and named", pe:GetAuctionCut() == 0.048 and pe:DescribeAuctionCut() == "4.8%, measured")
+	cutSetting = 10
+	check("Cut: a fixed setting wins over the measurement", pe:GetAuctionCut() == 0.1 and pe:DescribeAuctionCut() == "10%")
+	pe.LedgerMeasuredAuctionCut, cutSetting = nil, "measured"
+	check("Cut: works without the ledger module", pe:GetAuctionCut() == 0.05)
+end
+
 if failed > 0 then
 	print(failed .. " test(s) failed")
 	os.exit(1)

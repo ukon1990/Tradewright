@@ -33,6 +33,7 @@ function Tradewright:MakePanelTab(id)
 end
 
 -- The dashboard tabs, left to right. Each module is looked up (or made) when the tab is first shown.
+-- `shown`, when set, decides whether the tab is offered at all (the Export tab only while export is switched on).
 Tradewright.DASHBOARD_TABS = {
 	{ id = "overview", label = "Overview", module = function() return Tradewright.OverviewTab end },
 	{ id = "opportunities", label = "Opportunities", module = function() return Tradewright.OpportunitiesTab end },
@@ -40,7 +41,8 @@ Tradewright.DASHBOARD_TABS = {
 	{ id = "market", label = "Market", module = function() return Tradewright:MakePanelTab("market") end },
 	{ id = "crafts", label = "Crafts", module = function() return Tradewright:MakePanelTab("crafts") end },
 	{ id = "farming", label = "Farming", module = function() return Tradewright.FarmingTab end },
-	{ id = "export", label = "Export", module = function() return Tradewright.ExportTab end },
+	{ id = "export", label = "Export", module = function() return Tradewright.ExportTab end,
+		shown = function() return Tradewright:IsExportEnabled() end },
 	{ id = "docs", label = "Docs", module = function() return Tradewright.DocsTab end },
 	{ id = "settings", label = "Settings", module = function() return Tradewright.SettingsTab end },
 }

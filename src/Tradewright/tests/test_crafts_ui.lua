@@ -15,6 +15,7 @@ local settings, state = {}, {}
 local pe = { IS_RETAIL = false, ui = {}, db = { characters = {} } }
 function pe:GetSetting(key, default) if settings[key] ~= nil then return settings[key] end return default end
 function pe:GetState() return state end
+function pe:DescribeAuctionCut() return "5%, measured" end
 function pe:Colorize(text, colorKey) return "<" .. colorKey .. ">" .. text end
 function pe:FormatNumberGrouped(n) return tostring(n) end
 function pe:TableCount(t) local n = 0 for _ in pairs(t) do n = n + 1 end return n end
@@ -28,9 +29,8 @@ assert(chunk, err)
 chunk("Tradewright_UI", pe)
 
 -- Options note
-check("note shows cut and scan source", pe:GetCraftsOptionsNote() == "Auction cut 5% · Prices from the last auction house scan", pe:GetCraftsOptionsNote())
-settings["crafts.ahCutPercent"] = 3
-check("note follows the cut setting", pe:GetCraftsOptionsNote() == "Auction cut 3% · Prices from the last auction house scan", pe:GetCraftsOptionsNote())
+check("note names the cut in use and the scan source",
+	pe:GetCraftsOptionsNote() == "Auction cut 5%, measured · Prices from the last auction house scan", pe:GetCraftsOptionsNote())
 state.craftEvalInProgress, state.craftEvalWorkList, state.craftEvalIdx = true, { 1, 2, 3, 4 }, 3
 check("note shows progress while evaluating", pe:GetCraftsOptionsNote() == "<warning>Updating 2 of 4 recipes…", pe:GetCraftsOptionsNote())
 state.craftEvalWorkList = {}

@@ -66,7 +66,7 @@ function Tradewright:GetFarmTargetRows(onReady)
 	local lootIndex = Farm.BuildLootIndex(ledger and ledger.farm and ledger.farm.farms or {})
 	local candidates, tradeGoods = targetCandidates(self, insights, self:GetSetting("farming.early", false))
 	local opts = {
-		cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05,
+		cut = self:GetAuctionCut(),
 		onlyRecipes = self:GetSetting("farming.onlyRecipes", false),
 		onlyFarmed = self:GetSetting("farming.onlyFarmed", false),
 	}

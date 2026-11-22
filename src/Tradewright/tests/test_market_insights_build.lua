@@ -29,6 +29,7 @@ local pe = {
 	ForeverLogic = {},
 	GetState = function() return state end,
 	GetSetting = function(_, _, default) return default end,
+	GetAuctionCut = function() return 0.05 end,
 	InitAuctionDB = function() return { snapshot = {} } end,
 	Now = function() return 1000 end,
 }

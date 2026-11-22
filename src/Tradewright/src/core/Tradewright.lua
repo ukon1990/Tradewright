@@ -13,6 +13,8 @@ local interfaceVersion = select(4, GetBuildInfo()) or 0
 Tradewright.IS_FOREVER = interfaceVersion >= 16000 and interfaceVersion < 17000
 Tradewright.IS_RETAIL = (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) and not Tradewright.IS_FOREVER
 Tradewright.IS_SUPPORTED = Tradewright.IS_RETAIL or Tradewright.IS_FOREVER
+-- The auction house's share of a sale when nothing better is known (see Tradewright:GetAuctionCut).
+Tradewright.DEFAULT_AUCTION_CUT = 0.05
 Tradewright.SCAN_WAIT_SECONDS = 0.25
 Tradewright.MAX_SANITIZE_DEPTH = 8
 Tradewright.MAX_EXPORT_BYTES = 2 * 1024 * 1024

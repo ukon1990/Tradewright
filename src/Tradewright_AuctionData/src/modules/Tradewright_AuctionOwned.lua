@@ -132,7 +132,7 @@ end
 local function ownedRowTooltipLines(pe, panel, rowData)
 	local lines = {}
 	if not rowData.sold then
-		local cutLabel = string.format("After %d%% cut", math.floor((panel.ownedCut or 0.05) * 100 + 0.5))
+		local cutLabel = string.format("After %.3g%% cut", (panel.ownedCut or pe.DEFAULT_AUCTION_CUT) * 100)
 		lines[1] = { "Lowest scanned", rowData.marketPrice and pe:FormatCopperFull(rowData.marketPrice) or "not scanned this visit" }
 		lines[2] = { "Scanned", pe:FormatAuctionScanAge(pe:GetItemLastAuctionScanAt(rowData.itemID)) }
 		lines[3] = { cutLabel, pe:FormatCopperFull(rowData.net) }
@@ -237,7 +237,7 @@ function Tradewright:BuildOwnedAuctionRows()
 			lowest[itemID] = lowest[itemID] or self:GetNativeAhPrice(itemID)
 		end
 	end
-	local cut = self.GetCraftsAhCutFraction and self:GetCraftsAhCutFraction() or 0.05
+	local cut = self:GetAuctionCut()
 	local rows, totals = self.AuctionLogic.SummarizeOwnedAuctions(owned, lowest, cut)
 	local cancelRequestedAt = self:GetState().auctionCancelRequestedAt or {}
 	for _, row in ipairs(rows) do

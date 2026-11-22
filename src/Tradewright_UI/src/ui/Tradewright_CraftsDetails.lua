@@ -20,6 +20,7 @@ function Tradewright:GetCraftMaterialColumns()
 				end
 				return slot.have < slot.need and pe:Colorize(tostring(slot.have), "danger") or tostring(slot.have)
 			end },
+		{ id = "from", label = "From", width = 50, getText = function(slot) return slot.from or "-" end },
 		pe:MoneyColumn({ id = "cost", label = "Cost", width = 70, sortable = false }),
 	}
 end
@@ -51,7 +52,7 @@ function Tradewright:CreateCraftsDetailActions(panel)
 	panel.detailQueueAddN = self:CreateButton(panel.detailActions, "Add to queue", function()
 		local count = tonumber(quantity:GetText()) or 1
 		if ui.craftsSelectedRowData and count > 0 then
-			pe:AddCraftToQueue(ui.craftsSelectedRowData, count)
+			pe:AddCraftWithMaterialCraftsToQueue(ui.craftsSelectedRowData, count)
 		end
 	end, { primary = true })
 	panel.detailQueueAddN:SetPoint("LEFT", quantity, "RIGHT", 10, 0)
@@ -141,9 +142,8 @@ local function percentOrDash(value)
 end
 
 function Tradewright:CraftDetailFacts(row, evaluation)
-	local cut = tonumber(self:GetSetting("crafts.ahCutPercent", 5)) or 5
 	return {
-		{ string.format("Sale after %d%% cut", cut), moneyOrDash(self, row.saleNet) },
+		{ string.format("Sale after %.3g%% cut", self:GetAuctionCut() * 100), moneyOrDash(self, row.saleNet) },
 		{ "Materials at market price", moneyOrDash(self, row.matCost) },
 		{ "Profit per craft", self:FormatSignedMoney(row.profit) },
 		{ "Return", percentOrDash(row.roi) },
@@ -151,6 +151,9 @@ function Tradewright:CraftDetailFacts(row, evaluation)
 		{ "Still to buy", moneyOrDash(self, row.outOfPocketMatCost) },
 	}
 end
+
+-- Where a material's price comes from, in the reader's words; other sources are auction prices.
+local FROM_LABELS = { Craft = "Craft", Vendor = "Vendor", Ledger = "Bought" }
 
 local function materialRows(evaluation)
 	local materials = {}
@@ -161,6 +164,7 @@ local function materialRows(evaluation)
 			need = tonumber(slot.quantityRequired) or 0,
 			have = tonumber(slot.ownedQuantity),
 			cost = tonumber(slot.lineCost),
+			from = slot.priceSource and (FROM_LABELS[slot.priceSource] or "Buy") or nil,
 		}
 	end
 	return materials

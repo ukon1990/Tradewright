@@ -118,7 +118,7 @@ local function createViewBar(pe, panel)
 	panel.viewNote:SetPoint("LEFT", previous, "RIGHT", 12, 0)
 end
 
--- Stats row and the Scan / Refresh / Export toolbar of the Characters view.
+-- Stats row and the Scan / Refresh toolbar of the Characters view.
 function OverviewTab:CreateCharactersToolbar(panel, host)
 	local pe = Tradewright
 	panel.statsRow = CreateFrame("Frame", nil, host)
@@ -134,10 +134,6 @@ function OverviewTab:CreateCharactersToolbar(panel, host)
 	panel.scanButton:SetPoint("LEFT")
 	panel.refreshInvButton = pe:CreateButton(panel.toolbar, "Refresh inventory", function() pe:DashboardRefreshInventory() end)
 	pe:ChainRight({ panel.scanButton, panel.refreshInvButton })
-	panel.exportAccountButton = pe:CreateButton(panel.toolbar, "Export account", function() pe:Export("account") end)
-	panel.exportAccountButton:SetPoint("RIGHT")
-	panel.exportCharacterButton = pe:CreateButton(panel.toolbar, "Export character", function() pe:Export("character") end)
-	pe:ChainLeft({ panel.exportAccountButton, panel.exportCharacterButton })
 end
 
 -- Left: character list.
@@ -213,8 +209,7 @@ function OverviewTab:CreateCharacterDetail(panel, host)
 	panel.listTable = pe:CreateReusableTable(panel.detail, { autoFitToScroll = true })
 	panel.listTable.frame:SetPoint("TOPLEFT", panel.listHeading, "BOTTOMLEFT", 0, -8)
 	panel.listTable.frame:SetPoint("BOTTOMRIGHT", panel.detail, "BOTTOMRIGHT", 0, 0)
-	panel.professionColumns = pe:CreateProfessionColumns()
-	panel.professionColumnsReadOnly = pe:CreateProfessionColumns(true)
+	panel.professionColumns = pe:CreateProfessionColumns(true)
 	panel.historyColumns = createHistoryColumns(pe)
 end
 
@@ -343,7 +338,7 @@ function OverviewTab:RefreshCharacterDetail(panel, selectedKey, selectedData, cu
 	panel.listHeading:SetText("Professions")
 
 	local isCurrent = selectedKey == currentKey
-	panel.listTable:SetColumns(isCurrent and panel.professionColumns or panel.professionColumnsReadOnly)
+	panel.listTable:SetColumns(panel.professionColumns)
 	panel.listTable:SetEmptyText("No professions stored", isCurrent and "Open a profession window and press Scan professions."
 		or "Log in on this character to scan and refresh it.")
 	panel.listTable:SetRows(pe:BuildProfessionRows(charData))
@@ -429,7 +424,6 @@ function OverviewTab:RefreshCharactersView(panel)
 	local selectedKey, selectedData, currentKey, keys = getCurrentSelection(pe)
 	local isCurrent = selectedKey ~= ACCT_KEY and selectedKey == currentKey
 	panel.refreshInvButton:SetEnabled(isCurrent)
-	panel.exportCharacterButton:SetEnabled(isCurrent)
 
 	self:RefreshStats(panel, selectedKey, selectedData, keys)
 	self:RefreshCharacterList(panel, currentKey, keys)

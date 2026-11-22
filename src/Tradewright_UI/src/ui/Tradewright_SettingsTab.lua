@@ -71,6 +71,9 @@ end
 local function farmingSection()
 	return { title = "Farming", items = {
 		{ kind = "check", label = "Show the farm window when a farm starts", path = "farm.showWindow", default = true },
+		{ kind = "select", label = "Pause a farm after standing still for", path = "farm.idlePauseMinutes", default = 5,
+			options = { { value = 0, label = "Never" }, { value = 2, label = "2 minutes" }, { value = 5, label = "5 minutes" },
+				{ value = 10, label = "10 minutes" } } },
 		{ kind = "note", text = "Start a farm with /ahfarm start, pause with /ahfarm pause, save with /ahfarm stop." },
 	} }
 end
@@ -110,6 +113,30 @@ local function goldSection()
 	} }
 end
 
+local function refreshAfterFeeChange(pe)
+	pe:InvalidateCraftOpportunityCaches()
+	refreshEconomy(pe)
+	refreshOpportunities(pe)
+end
+
+local function measuredCutNote(pe)
+	local measured = pe.LedgerMeasuredAuctionCut and pe:LedgerMeasuredAuctionCut() or { sales = 0 }
+	if measured.cut then
+		return string.format("Measured from your last %d sales: the auction house kept %.3g%%.", measured.sales, measured.cut * 100)
+	end
+	return string.format("Not measured yet: %d of %d sale mails collected. Until then %.3g%% is used.",
+		measured.sales, pe.IncomeLogic.CUT_MIN_SALES, pe.DEFAULT_AUCTION_CUT * 100)
+end
+
+local function feesSection()
+	return { title = "Fees", items = {
+		{ kind = "select", label = "Auction cut", path = "fees.auctionCut", default = "measured",
+			options = { { value = "measured", label = "Measured from my sales" }, { value = 5, label = "5%" },
+				{ value = 10, label = "10%" }, { value = 15, label = "15%" } }, onChange = refreshAfterFeeChange },
+		{ kind = "note", text = measuredCutNote },
+	} }
+end
+
 local function opportunitiesSection()
 	return { title = "Opportunities", items = {
 		{ kind = "select", label = "Count as a flip when under the usual price by", path = "opportunities.minDiscount", default = 0.25,
@@ -141,6 +168,7 @@ local function craftsSection()
 				pe:InvalidateCraftOpportunityCaches()
 				refreshEconomy(pe)
 			end },
+		{ kind = "check", label = "Tell me at login when a cooldown craft is ready", path = "crafts.announceCooldowns", default = true },
 		{ kind = "check", label = "Include optional reagents in the craft scan", path = "auction.craftScanIncludeOptionalSlots",
 			default = false, visible = isRetail },
 	} }
@@ -234,7 +262,7 @@ end
 local function buildCategories(pe)
 	return {
 		{ key = "general", label = "General", sections = { generalSection(pe), farmingSection(), troubleshootingSection() } },
-		{ key = "prices", label = "Prices", sections = { auctionHouseSection(pe), goldSection() } },
+		{ key = "prices", label = "Prices", sections = { auctionHouseSection(pe), feesSection(), goldSection() } },
 		{ key = "opportunities", label = "Opportunities", sections = { opportunitiesSection() } },
 		{ key = "crafting", label = "Crafting", sections = { craftsSection(), professionScanSection(), craftingOrdersSection() } },
 		{ key = "inventory", label = "Inventory & mail", sections = { inventorySection(), mailSection(pe), bagsSection() } },

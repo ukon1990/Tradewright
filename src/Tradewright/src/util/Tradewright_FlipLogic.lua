@@ -4,11 +4,28 @@ local _, Tradewright = ...
 local FlipLogic = {}
 Tradewright.FlipLogic = FlipLogic
 
-local DEFAULTS = { minDiscount = 0.25, minProfit = 10000, minSellsPerDay = 1, dayShare = 1 / 3, cut = 0.05 }
+local DEFAULTS = { minDiscount = 0.25, minProfit = 10000, minSellsPerDay = 1, dayShare = 1 / 3 }
 
 local function option(opts, key)
 	local value = opts and tonumber(opts[key])
+	if key == "cut" then
+		return value or Tradewright.DEFAULT_AUCTION_CUT
+	end
 	return value or DEFAULTS[key]
+end
+
+-- Half of all postings sell: the assumption while an item has no sale chance of its own.
+local UNKNOWN_SALE_CHANCE = 0.5
+
+--- The deposit lost per sale, on average. An auction that sells with chance `saleChance` is posted
+--- 1 / chance times before it sells, and every posting that fails forfeits `deposit`.
+function FlipLogic.ExpectedDepositLoss(deposit, saleChance)
+	local chance = tonumber(saleChance)
+	if not chance or chance <= 0 then
+		chance = UNKNOWN_SALE_CHANCE
+	end
+	chance = math.min(1, chance)
+	return (tonumber(deposit) or 0) * (1 - chance) / chance
 end
 
 -- How many to buy and what it costs. With price steps: everything listed at or under the limit price,
@@ -169,7 +186,7 @@ function FlipLogic.BuildGapRow(item, opts)
 	if not gapQualifies(item, gap, opts) then
 		return nil
 	end
-	local cut = gapOption(opts, "cut", 0.05)
+	local cut = option(opts, "cut")
 	local deposit = (tonumber(item.deposit) or 0) * gap.belowQty
 	local gain = gap.belowQty * gap.nextPrice * (1 - cut) - gap.belowCost - deposit
 	if gain <= 0 then
@@ -214,7 +231,7 @@ function FlipLogic.BuildSellNowRow(item, opts)
 	return {
 		itemID = item.itemID, storageKey = item.storageKey, total = total, bags = item.bags, bank = item.bank,
 		price = price, usual = usual, premium = premium, sellsPerDay = sells,
-		worth = total * price * (1 - gapOption(opts, "cut", 0.05)),
+		worth = total * price * (1 - option(opts, "cut")),
 		daysToSell = daysToSell, slow = daysToSell > 1,
 	}
 end

@@ -67,17 +67,35 @@ local function unitCostOf(row)
 end
 
 --- Cheapest material cost per unit for every item the player's characters can craft, from evaluated
---- craft rows: `{ [itemID] = { cost, crafter } }`. Rows with a missing material price or a cooldown
---- are left out: a cooldown's output is capped, so it is not a way to get materials in bulk.
+--- craft rows: `{ [itemID] = { cost, crafter, row, outputQty } }`, `row` being the craft row that
+--- makes it cheapest. Rows with a missing material price or a cooldown are left out: a cooldown's
+--- output is capped, so it is not a way to get materials in bulk.
 function MaterialLogic.UnitCostIndex(rows)
 	local index = {}
 	for _, row in ipairs(rows or {}) do
 		local itemID, cost = unitCostOf(row)
 		if itemID and (not index[itemID] or cost < index[itemID].cost) then
-			index[itemID] = { cost = cost, crafter = row.bestCharacterKey }
+			index[itemID] = {
+				cost = cost, crafter = row.bestCharacterKey, row = row, outputQty = math.max(1, tonumber(row.outputQty) or 1),
+			}
 		end
 	end
 	return index
+end
+
+--- The crafts that make the materials of `count` crafts whose reagent plan prices them as crafted
+--- ("Craft"): `{ { row, crafts } }`, one entry per such material, from `unitCostIndex`
+--- (MaterialLogic.UnitCostIndex). Stock already owned is not taken off: the queue shows that itself.
+function MaterialLogic.MaterialCraftsNeeded(reagentPlan, count, unitCostIndex)
+	local needed = {}
+	for _, slot in ipairs(reagentPlan or {}) do
+		local source = slot.priceSource == "Craft" and unitCostIndex[tonumber(slot.itemID)]
+		local units = (tonumber(slot.quantityRequired) or 0) * count
+		if source and units > 0 then
+			needed[#needed + 1] = { row = source.row, crafts = math.ceil(units / source.outputQty) }
+		end
+	end
+	return needed
 end
 
 --- How many to make: enough for `days` of sales, less what is already owned and listed, capped at `cap`.
@@ -108,6 +126,36 @@ function MaterialLogic.CooldownState(readyAt, now)
 		return { state = "ready", secondsLeft = 0 }
 	end
 	return { state = "waiting", secondsLeft = left }
+end
+
+--- Every recipe cooldown on record, across characters: `cooldownsByCharacter = { [characterKey] =
+--- { [recipeID] = readyAt } }`. Returns `{ ready = { { characterKey, recipeID } }, nextIn }`:
+--- the cooldowns that are ready, and the seconds until the next one is (nil when none is waiting).
+function MaterialLogic.SummarizeCooldowns(cooldownsByCharacter, now)
+	local summary = { ready = {} }
+	for characterKey, cooldowns in pairs(cooldownsByCharacter or {}) do
+		for recipeID, readyAt in pairs(cooldowns) do
+			local cooldown = MaterialLogic.CooldownState(readyAt, now)
+			if cooldown.state == "ready" then
+				summary.ready[#summary.ready + 1] = { characterKey = characterKey, recipeID = recipeID }
+			elseif cooldown.state == "waiting" then
+				summary.nextIn = math.min(summary.nextIn or cooldown.secondsLeft, cooldown.secondsLeft)
+			end
+		end
+	end
+	return summary
+end
+
+--- "1 cooldown ready · next in 1 day 4 hours" for a cooldown summary, nil when none is on record.
+function MaterialLogic.CooldownFooter(summary)
+	local parts = {}
+	if #summary.ready > 0 then
+		parts[#parts + 1] = string.format("%d %s ready", #summary.ready, Tradewright:Plural(#summary.ready, "cooldown"))
+	end
+	if summary.nextIn then
+		parts[#parts + 1] = "next in " .. MaterialLogic.FormatCooldown(summary.nextIn)
+	end
+	return #parts > 0 and table.concat(parts, " · ") or nil
 end
 
 --- "1 day 4 hours", "3 hours", "20 minutes" for a cooldown's remaining seconds.

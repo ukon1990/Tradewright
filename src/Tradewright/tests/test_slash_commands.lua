@@ -85,8 +85,7 @@ pe.BuildAuctionInventoryRows = function() return { {}, {}, {} } end
 -- Top-level commands
 local TOP_LEVEL = {
 	{ "", "ToggleDashboard" }, { "docs", "OpenDocumentationTab" }, { "documentation", "OpenDocumentationTab" },
-	{ "scan", "StartScan" }, { "full", "StartFullCharacterDump" }, { "dumpfull", "StartFullCharacterDump" },
-	{ "status", "PrintStatus" }, { "SCAN", "StartScan" },
+	{ "scan", "StartScan" }, { "status", "PrintStatus" }, { "SCAN", "StartScan" },
 }
 for _, case in ipairs(TOP_LEVEL) do
 	reset()
@@ -99,6 +98,29 @@ check("/ah help prints the help lines", printed("^Commands:"))
 reset()
 pe:HandleSlash("nonsense")
 check("/ah nonsense prints unknown command", printed("^Unknown command"))
+
+-- Export is off until switched on
+for _, command in ipairs({ "export", "export account", "full", "dumpfull" }) do
+	reset()
+	pe:HandleSlash(command)
+	check("/ah " .. command .. " is refused while export is off", #calls == 0 and printed("^Export is switched off"))
+end
+reset()
+pe:HandleSlash("help")
+check("/ah help hides export while it is off", not printed("^Export"))
+reset()
+pe:HandleSlash("dev export maybe")
+check("/ah dev export <bad> prints usage", printed("^Usage: /tradewright dev export") and not pe:IsExportEnabled())
+pe:HandleSlash("dev export on")
+check("/ah dev export on switches export on", pe:IsExportEnabled())
+reset()
+pe:HandleSlash("help")
+check("/ah help lists export while it is on", printed("^Export:"))
+for _, command in ipairs({ "full", "dumpfull" }) do
+	reset()
+	pe:HandleSlash(command)
+	check("/ah " .. command .. " -> StartFullCharacterDump while export is on", called("StartFullCharacterDump"))
+end
 
 -- Export
 local EXPORTS = {

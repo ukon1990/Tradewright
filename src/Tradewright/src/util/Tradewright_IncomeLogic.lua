@@ -340,6 +340,200 @@ function IncomeLogic.SummarizeItemTypes(events, since, characterKey, classOf)
 	return rows
 end
 
+-- Auction house mail ----------------------------------------------------------------------------
+
+-- A sale invoice that still holds its gold.
+local function saleEvent(mail)
+	local bid = tonumber(mail.bid) or 0
+	if mail.invoiceType ~= "seller" or not mail.itemName or bid <= 0 or (tonumber(mail.money) or 0) <= 0 then
+		return nil
+	end
+	local quantity, kept = math.max(1, tonumber(mail.count) or 1), tonumber(mail.consignment)
+	return {
+		kind = "sell", itemName = mail.itemName, quantity = quantity, unitCopper = bid / quantity, totalCopper = bid,
+		netCopper = bid - (kept or 0), consignmentCopper = kept, depositCopper = tonumber(mail.deposit),
+		buyer = mail.buyer, source = "mail",
+	}
+end
+
+-- A won auction that still holds its item.
+local function buyEvent(mail)
+	local bid = tonumber(mail.bid) or 0
+	if mail.invoiceType ~= "buyer" or not mail.itemName or bid <= 0 or not mail.attachment then
+		return nil
+	end
+	local quantity = math.max(1, tonumber(mail.attachment.count) or tonumber(mail.count) or 1)
+	return {
+		kind = "buy", itemID = mail.attachment.itemID, itemName = mail.itemName, quantity = quantity,
+		unitCopper = bid / quantity, totalCopper = bid, source = "mail",
+	}
+end
+
+-- An auction that came back unsold: the subject is one of the game's lines for it and the item is still attached.
+local function returnedEvent(mail, returnSubjects)
+	if mail.invoiceType or not (mail.attachment and mail.subject) then
+		return nil
+	end
+	for _, entry in ipairs(returnSubjects or {}) do
+		if mail.subject:match(entry[1]) then
+			return {
+				kind = entry[2], itemID = mail.attachment.itemID, itemName = mail.attachment.name,
+				quantity = math.max(1, tonumber(mail.attachment.count) or 1), source = "mail",
+			}
+		end
+	end
+	return nil
+end
+
+--- What an auction house mail adds to the ledger, or nil for any other mail. `mail` holds what the
+--- inbox reports: invoiceType, itemName, buyer, bid, deposit, consignment, count, money, subject,
+--- ageSeconds and `attachment = { name, itemID, count }` (nil without an item). `returnSubjects` is
+--- a list of { pattern, kind } for auctions that came back unsold.
+--- Returns the event (ts counted back by the mail's age from `now`) and what the player takes from
+--- the mail to settle it, "money" or "item": the event is written once, when that is taken.
+function IncomeLogic.AuctionMailEvent(mail, returnSubjects, now)
+	local sale = saleEvent(mail)
+	local event = sale or buyEvent(mail) or returnedEvent(mail, returnSubjects)
+	if not event then
+		return nil
+	end
+	event.ts = now - math.max(0, tonumber(mail.ageSeconds) or 0)
+	return event, sale and "money" or "item"
+end
+
+-- Per-item totals ---------------------------------------------------------------------------------
+
+IncomeLogic.MIN_POSTINGS = 5
+local TALLIED_KINDS = { sell = true, buy = true, expired = true, cancelled = true }
+
+local function itemKeyOf(event)
+	return event.itemID or event.itemName
+end
+
+local function kindTally(tallies, key, kind)
+	tallies[key] = tallies[key] or {}
+	tallies[key][kind] = tallies[key][kind] or { count = 0, units = 0, total = 0, net = 0, lastAt = 0 }
+	return tallies[key][kind]
+end
+
+local function addEvent(tallies, event)
+	local key = itemKeyOf(event)
+	if not (key and TALLIED_KINDS[event.kind]) then
+		return
+	end
+	local tally = kindTally(tallies, key, event.kind)
+	local total = tonumber(event.totalCopper) or 0
+	tally.count, tally.units = tally.count + 1, tally.units + (tonumber(event.quantity) or 1)
+	tally.total, tally.net = tally.total + total, tally.net + (tonumber(event.netCopper) or total)
+	tally.lastAt = math.max(tally.lastAt, tonumber(event.ts) or 0)
+end
+
+--- Adds an event that is leaving the ledger to `rolledOff`, the per-item totals of older events, so
+--- averages and sale chances do not reset when the ledger reaches its size limit.
+function IncomeLogic.AddRolledOff(rolledOff, event)
+	addEvent(rolledOff, event)
+end
+
+--- Per item and event kind, what the ledger holds plus what has rolled off it:
+--- `{ [itemID or itemName] = { [kind] = { count, units, total, net, lastAt } } }` for the kinds
+--- sell, buy, expired and cancelled. `total` is copper paid or sold for, `net` after the cut.
+function IncomeLogic.TallyByItem(events, rolledOff)
+	local tallies = {}
+	for key, kinds in pairs(rolledOff or {}) do
+		for kind, old in pairs(kinds) do
+			local tally = kindTally(tallies, key, kind)
+			tally.count, tally.units, tally.total = old.count, old.units, old.total
+			tally.net, tally.lastAt = old.net, old.lastAt
+		end
+	end
+	for _, event in ipairs(events or {}) do
+		addEvent(tallies, event)
+	end
+	return tallies
+end
+
+--- What was bought of one item: `{ units, avgUnit, lastAt }`, or nil when nothing was.
+function IncomeLogic.PurchaseSummary(itemTally)
+	local buys = itemTally and itemTally.buy
+	if not buys or buys.units <= 0 then
+		return nil
+	end
+	return { units = buys.units, avgUnit = buys.total / buys.units, lastAt = buys.lastAt }
+end
+
+--- The player's own chance that a posting of this item sells: sales / (sales + expired + cancelled),
+--- nil below `minPostings` (default MIN_POSTINGS) postings.
+function IncomeLogic.SaleChance(itemTally, minPostings)
+	local function count(kind)
+		return itemTally and itemTally[kind] and itemTally[kind].count or 0
+	end
+	local sales, postings = count("sell"), count("sell") + count("expired") + count("cancelled")
+	if postings < (minPostings or IncomeLogic.MIN_POSTINGS) or postings == 0 then
+		return nil
+	end
+	return sales / postings
+end
+
+--- Profit per unit on an item both bought and sold: the average sale after the cut less the average
+--- price paid, and the units that could be matched. nil when it was never bought or never sold.
+function IncomeLogic.RealizedProfit(itemTally)
+	local buys, sales = itemTally and itemTally.buy, itemTally and itemTally.sell
+	if not (buys and sales) or buys.units <= 0 or sales.units <= 0 then
+		return nil
+	end
+	return { profitEach = sales.net / sales.units - buys.total / buys.units, units = math.min(buys.units, sales.units) }
+end
+
+--- The latest events of the given kinds since `since`, newest first, at most `limit`.
+function IncomeLogic.LatestEvents(events, kinds, since, limit)
+	local latest = {}
+	for _, event in ipairs(events or {}) do
+		if kinds[event.kind] and (tonumber(event.ts) or 0) >= since then
+			latest[#latest + 1] = event
+		end
+	end
+	table.sort(latest, function(a, b) return (tonumber(a.ts) or 0) > (tonumber(b.ts) or 0) end)
+	for index = #latest, limit + 1, -1 do
+		latest[index] = nil
+	end
+	return latest
+end
+
+IncomeLogic.CUT_MIN_SALES = 5
+-- Only the latest sales count, so a change in the game's fee shows up within a few dozen sales.
+local CUT_LATEST_SALES = 50
+
+local function median(sorted)
+	local middle = math.floor((#sorted + 1) / 2)
+	if #sorted % 2 == 1 then
+		return sorted[middle]
+	end
+	return (sorted[middle] + sorted[middle + 1]) / 2
+end
+
+--- The auction house's share of a sale, measured from the latest sale events that record what the
+--- house kept (`consignmentCopper` of `totalCopper`). Returns `{ cut, sales }`: the median share and
+--- the number of sales behind it; `cut` is nil below `minSales` (default CUT_MIN_SALES). Sales saved
+--- before the share was recorded carry no `consignmentCopper` and are skipped.
+function IncomeLogic.MeasureAuctionCut(events, minSales)
+	local shares = {}
+	for index = #(events or {}), 1, -1 do
+		local event = events[index]
+		local kept, total = tonumber(event.consignmentCopper), tonumber(event.totalCopper)
+		if event.kind == "sell" and kept and total and total > 0 then
+			shares[#shares + 1] = kept / total
+			if #shares >= CUT_LATEST_SALES then
+				break
+			end
+		end
+	end
+	if #shares < (minSales or IncomeLogic.CUT_MIN_SALES) then
+		return { sales = #shares }
+	end
+	table.sort(shares)
+	return { cut = median(shares), sales = #shares }
+end
+
 --- Sales statistics from ledger events (kind "sell": ts, itemID / itemName, quantity, totalCopper
 --- gross, netCopper after the auction house cut). `days` limits to the last N days; nil is all time.
 --- Returns { totals, items, daily, recent, spanDays }: items carry sales, units, net, avgUnit,

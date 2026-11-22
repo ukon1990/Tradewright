@@ -42,11 +42,14 @@ Implemented:
 - The tab list moved to `Tradewright_TabOrder.lua` (the shell file is over its size limit)
 - Settings group "Opportunities"
 
+Added later, in-game check pending:
+
+- "Add to cart" puts the suggested quantity in the auction house cart (`AddAuctionCartItem`; hand-added items last until bought or `/reload`)
+- Expected deposit loss: the item's stored deposit weighed by the player's own sale chance (F43, F44); 0 for items never posted
+
 Still open:
 
-- "Add to cart": the cart is built from the craft queue and has no call to add a single item
-- Gold view "Deals to buy" still uses its own rows
-- Expected deposit loss is 0 until F43 reads deposits and F44 gives the sale chance
+- Gold view "Deals to buy" still uses its own rows. Flips need a sells-a-day estimate, so switching would empty the card for a player with few scans
 - Left click opens the side pane, not the item details window
 
 ## Acceptance criteria

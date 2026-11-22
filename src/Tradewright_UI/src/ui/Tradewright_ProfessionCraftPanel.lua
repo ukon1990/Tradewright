@@ -298,7 +298,7 @@ local function createRecipeSummary(pe, host)
 	host.materialsHeading:SetPoint("TOPRIGHT", host.facts, "BOTTOMRIGHT", 0, -10)
 end
 
--- Bottom row: quantity box and Add to queue on the left, Scan and Export on the right.
+-- Bottom row: quantity box and Add to queue on the left, Scan on the right.
 local function createRecipeActions(pe, f, host)
 	host.actions = CreateFrame("Frame", nil, host)
 	host.actions:SetPoint("BOTTOMLEFT")
@@ -318,19 +318,10 @@ local function createRecipeActions(pe, f, host)
 		queueOpenRecipe(math.max(1, tonumber(host.qty:GetText()) or 1))
 	end, { primary = true })
 	f.addButton:SetPoint("LEFT", host.qty, "RIGHT", 10, 0)
-	f.exportBtn = pe:CreateButton(host.actions, "Export", function()
-		local info = C_TradeSkillUI and C_TradeSkillUI.GetBaseProfessionInfo and C_TradeSkillUI.GetBaseProfessionInfo() or nil
-		if not (info and tonumber(info.professionID or info.profession or info.skillLineID)) then
-			pe:PrintMessage("Open a profession window first.")
-			return
-		end
-		pe:ScanOpenProfession({ exportTalents = true })
-	end, { tooltip = "Scan this profession, then open the export window." })
-	f.exportBtn:SetPoint("RIGHT")
 	f.scanBtn = pe:CreateButton(host.actions, "Scan", function()
 		pe:ScanOpenProfession()
 	end, { tooltip = "Store every recipe and reagent of this profession." })
-	f.scanBtn:SetPoint("RIGHT", f.exportBtn, "LEFT", -8, 0)
+	f.scanBtn:SetPoint("RIGHT")
 end
 
 local function createRecipeMaterials(pe, host)
@@ -506,12 +497,12 @@ local function moneyOrDash(pe, copper, formatter)
 end
 
 local function recipeFacts(pe, ev)
-	local cut = math.floor((pe:GetCraftsAhCutFraction() or 0) * 100 + 0.5)
+	local cut = pe:GetAuctionCut() * 100
 	local facts = {
 		{ "Return", ev.roi and string.format("%.0f%%", ev.roi) or "-" },
 		{ "Materials you already own", string.format("%.0f%%", (ev.coverage or 0) * 100) },
 		{ "Still to buy", moneyOrDash(pe, ev.outOfPocketMatCost, pe.FormatCopperFull) },
-		{ string.format("Sale before the %d%% auction cut", cut), moneyOrDash(pe, ev.saleGross, pe.FormatCopperFull) },
+		{ string.format("Sale before the %.3g%% auction cut", cut), moneyOrDash(pe, ev.saleGross, pe.FormatCopperFull) },
 	}
 	if pe.IS_RETAIL and ev.concentrationNeeded then
 		facts[#facts + 1] = { "Concentration needed", pe:FormatNumberGrouped(ev.concentrationNeeded) }

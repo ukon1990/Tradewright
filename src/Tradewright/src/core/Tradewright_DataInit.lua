@@ -56,7 +56,7 @@ local CRAFTS_DEFAULTS = {
 	{ "detailsOpen", true }, { "detailsWidth", 340 }, { "detailsGraphMetric", "market" },
 	{ "detailsGraphShowQuantity", true }, { "defaultExpansionMode", "current" }, { "scenario", "default" },
 	{ "reagentSourceMode", "owned_first" }, { "profitState", "all" }, { "costBasis", "auto" },
-	{ "saleBasis", "auto" }, { "sortColumn", "profit" }, { "sortAsc", false }, { "ahCutPercent", 5 },
+	{ "saleBasis", "auto" }, { "sortColumn", "profit" }, { "sortAsc", false },
 }
 local CRAFTS_TABLE_KEYS = { "characterFilter", "professionFilter", "categoryFilter" }
 local CRAFTING_ORDER_DEFAULTS = { { "hideUnlearned", false }, { "patronKnowledgeOnly", false } }

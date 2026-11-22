@@ -6,6 +6,7 @@ local _, Tradewright = ...
 -- assumed about recipes that have never been on cooldown while the addon was watching.
 
 local READ_DELAY = 1
+local LOGIN_ANNOUNCE_DELAY = 5
 
 local function cooldownStore(pe, characterKey)
 	local character = pe.db and pe.db.characters and pe.db.characters[characterKey]
@@ -65,6 +66,31 @@ function Tradewright:IsCooldownRecipe(recipeID)
 	return false
 end
 
+--- Ready and waiting cooldowns of every character (see MaterialLogic.SummarizeCooldowns).
+function Tradewright:GetCooldownSummary()
+	local cooldownsByCharacter = {}
+	for characterKey, character in pairs(self.db and self.db.characters or {}) do
+		cooldownsByCharacter[characterKey] = character.recipeCooldowns
+	end
+	return self.MaterialLogic.SummarizeCooldowns(cooldownsByCharacter, Tradewright:Now())
+end
+
+-- The recipe's name as the client knows it (a recipe ID is a spell ID), or a plain stand-in.
+local function recipeName(recipeID)
+	local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(recipeID)
+	return name or (GetSpellInfo and GetSpellInfo(recipeID)) or "A cooldown craft"
+end
+
+-- One chat line per ready cooldown, said once after login when the setting asks for it.
+local function announceReadyCooldowns(pe)
+	if pe:GetSetting("crafts.announceCooldowns", true) == false then
+		return
+	end
+	for _, ready in ipairs(pe:GetCooldownSummary().ready) do
+		pe:PrintMessage(string.format("%s is off cooldown on %s.", recipeName(ready.recipeID), ready.characterKey))
+	end
+end
+
 -- Profession events fire in bursts; read once shortly after the last one.
 local pending = false
 local function scheduleRead()
@@ -81,7 +107,18 @@ local function scheduleRead()
 end
 
 local frame = CreateFrame("Frame")
-for _, event in ipairs({ "TRADE_SKILL_SHOW", "TRADE_SKILL_LIST_UPDATE", "TRADE_SKILL_ITEM_CRAFTED_RESULT" }) do
+for _, event in ipairs({ "TRADE_SKILL_SHOW", "TRADE_SKILL_LIST_UPDATE", "TRADE_SKILL_ITEM_CRAFTED_RESULT", "PLAYER_LOGIN" }) do
 	pcall(frame.RegisterEvent, frame, event)
 end
-frame:SetScript("OnEvent", scheduleRead)
+frame:SetScript("OnEvent", function(_, event)
+	if event == "PLAYER_LOGIN" then
+		-- Saved data is merged a moment after login.
+		C_Timer.After(LOGIN_ANNOUNCE_DELAY, function()
+			if Tradewright.db then
+				announceReadyCooldowns(Tradewright)
+			end
+		end)
+	else
+		scheduleRead()
+	end
+end)

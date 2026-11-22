@@ -76,18 +76,11 @@ function Tradewright:GetCraftExpansionTag(professionData, recipeData, outputItem
 	return "legacy"
 end
 
-function Tradewright:GetCraftsAhCutFraction()
-	local pct = tonumber(self:GetSetting("crafts.ahCutPercent", 5)) or 5
-	pct = math.max(0, math.min(50, pct))
-	return pct / 100
-end
-
 function Tradewright:ApplyAhCutToSaleCopper(copper)
 	if not copper or copper ~= copper or copper <= 0 then
 		return nil
 	end
-	local f = self:GetCraftsAhCutFraction()
-	return copper * (1 - f)
+	return copper * (1 - self:GetAuctionCut())
 end
 
 local function schematicMaxQuality(recipeData)

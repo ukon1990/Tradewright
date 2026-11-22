@@ -22,6 +22,20 @@ local function currentView(pe)
 	return views[1]
 end
 
+-- Puts the selected row's suggested quantity in the auction house cart; sits above "Open in auction house".
+local function createAddToCartButton(pe, panel, card)
+	local button = pe:CreateButton(card.body, "Add to cart", function()
+		local row = panel.selected
+		if row and pe.AddAuctionCartItem then
+			pe:AddAuctionCartItem(row.itemID, row.buyQty or 1, row.price, currentView(pe).label)
+			card.openHint:SetText(string.format("Added %s to the auction house cart.", pe:FormatNumberGrouped(row.buyQty or 1)))
+		end
+	end)
+	button:SetPoint("BOTTOMLEFT", card.open, "TOPLEFT", 0, 4)
+	button:SetPoint("BOTTOMRIGHT", card.open, "TOPRIGHT", 0, 4)
+	return button
+end
+
 local function buildDetail(pe, panel)
 	local card = pe:CreateInset(panel)
 	card:SetWidth(DETAIL_WIDTH)
@@ -50,9 +64,10 @@ local function buildDetail(pe, panel)
 	end)
 	card.open:SetPoint("BOTTOMLEFT")
 	card.open:SetPoint("BOTTOMRIGHT")
+	card.addToCart = createAddToCartButton(pe, panel, card)
 	card.openHint = pe:CreateText(card.body, "GameFontHighlightSmall", "textMuted")
-	card.openHint:SetPoint("BOTTOMLEFT", card.open, "TOPLEFT", 0, 6)
-	card.openHint:SetPoint("BOTTOMRIGHT", card.open, "TOPRIGHT", 0, 6)
+	card.openHint:SetPoint("BOTTOMLEFT", card.addToCart, "TOPLEFT", 0, 6)
+	card.openHint:SetPoint("BOTTOMRIGHT", card.addToCart, "TOPRIGHT", 0, 6)
 	return card
 end
 
@@ -71,6 +86,8 @@ local function showDetail(pe, panel, row)
 	card.risk:SetText(view.riskText(pe, row))
 	local ahOpen = pe.IsAuctionHouseFrameOpen and pe:IsAuctionHouseFrameOpen()
 	card.open:SetEnabled(ahOpen == true)
+	-- Only lists of things to buy fill the cart; "Sell now" rows are items the player owns.
+	card.addToCart:SetShown(row.buyQty ~= nil or row.cost ~= nil)
 	card.openHint:SetText(ahOpen and "" or "Open the auction house to go to this item.")
 end
 

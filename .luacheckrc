@@ -28,12 +28,15 @@ globals = {
 	"SLASH_TRADEWRIGHT1",
 	"SLASH_TRADEWRIGHT2",
 	"SlashCmdList",
+	"StaticPopupDialogs",
 	"UISpecialFrames",
 }
 
 -- WoW client API, frames and constants, plus optional third-party addons.
 read_globals = {
 	"ATTACHMENTS_MAX_SEND",
+	"AUCTION_EXPIRED_MAIL_SUBJECT",
+	"AUCTION_REMOVED_MAIL_SUBJECT",
 	"AuctionFrameBrowse_Search",
 	"AuctionFrameTab_OnClick",
 	"AutoLootMailItem",
@@ -94,6 +97,7 @@ read_globals = {
 	"GetCVar",
 	"geterrorhandler",
 	"GetInboxHeaderInfo",
+	"GetInboxItem",
 	"GetInboxInvoiceInfo",
 	"GetInboxNumItems",
 	"GetInventoryItemLink",
@@ -189,6 +193,8 @@ read_globals = {
 	"ShoppingTooltip2",
 	"ShowUIPanel",
 	"SpellIsTargeting",
+	"StaticPopup_Show",
+	"TakeInboxItem",
 	"TakeInboxMoney",
 	"time",
 	"tinsert",

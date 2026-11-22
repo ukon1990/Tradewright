@@ -17,6 +17,38 @@ function Tradewright:InitLedger()
 	return L
 end
 
+-- Kept between ledger changes: the cut is asked for once per priced row.
+local measuredAuctionCut
+
+--- The auction cut measured from the player's own sale mails: `{ cut, sales }`, `cut` nil until
+--- enough sales are collected (see IncomeLogic.MeasureAuctionCut).
+function Tradewright:LedgerMeasuredAuctionCut()
+	if not measuredAuctionCut then
+		local ledger = self:InitLedger()
+		measuredAuctionCut = self.IncomeLogic.MeasureAuctionCut(ledger and ledger.events)
+	end
+	return measuredAuctionCut
+end
+
+local itemTallies
+
+--- What the ledger knows about one item per event kind (see IncomeLogic.TallyByItem), or nil.
+function Tradewright:GetLedgerItemTally(itemID)
+	if not itemTallies then
+		local ledger = self:InitLedger()
+		itemTallies = self.IncomeLogic.TallyByItem(ledger and self:GetLedgerEvents(), ledger and ledger.rolledOff)
+	end
+	return itemTallies[itemID]
+end
+
+-- Keeps the ledger at its size limit; what leaves is kept as per-item totals.
+local function dropOldestEvents(ledger)
+	while #ledger.events > MAX_EVENTS do
+		ledger.rolledOff = ledger.rolledOff or {}
+		Tradewright.IncomeLogic.AddRolledOff(ledger.rolledOff, table.remove(ledger.events, 1))
+	end
+end
+
 --- @param entry table { kind, ts, characterKey, itemID, itemName?, quantity, unitCopper, totalCopper, source, recipeID?, meta? }
 --- An entry needs an itemID, or at least an itemName when the id could not be resolved.
 function Tradewright:LedgerAppendEvent(entry)
@@ -41,54 +73,71 @@ function Tradewright:LedgerAppendEvent(entry)
 	entry.source = tostring(entry.source or "")
 	if ((entry.itemID and entry.itemID > 0) or entry.itemName) and entry.quantity > 0 then
 		table.insert(L.events, entry)
+		measuredAuctionCut, itemTallies = nil, nil
 	end
-	while #L.events > MAX_EVENTS do
-		table.remove(L.events, 1)
-	end
+	dropOldestEvents(L)
 end
 
--- Auction sales are read from the auction house's sale mails. Every inbox update lists the sale
--- invoices that still hold their gold; a sale is written to the ledger when that gold is taken,
--- so each one is counted once, however often the mailbox is opened.
+-- Auction mails are read on every inbox update: sale invoices that still hold their gold, and won,
+-- expired and cancelled auctions that still hold their item. Each is written to the ledger when the
+-- player takes that gold or item, so it is counted once, however often the mailbox is opened.
 local AUCTION_MAIL_DAYS = 30
-local pendingSales = {}
+local pendingMail = {}
+local returnSubjects
+
+-- The game's subject lines for auctions that came back unsold, as patterns.
+local function auctionReturnSubjects()
+	if not returnSubjects then
+		returnSubjects = {}
+		for kind, subject in pairs({ expired = AUCTION_EXPIRED_MAIL_SUBJECT, cancelled = AUCTION_REMOVED_MAIL_SUBJECT }) do
+			returnSubjects[#returnSubjects + 1] = { Tradewright.IncomeLogic.FormatToPattern(subject), kind }
+		end
+	end
+	return returnSubjects
+end
+
+local function readMail(index)
+	local _, _, _, subject, money, _, daysLeft, itemCount = GetInboxHeaderInfo(index)
+	local invoiceType, itemName, buyer, bid, _, deposit, consignment, _, _, _, count = GetInboxInvoiceInfo(index)
+	local mail = {
+		invoiceType = invoiceType, itemName = itemName, buyer = buyer, bid = bid, deposit = deposit,
+		consignment = consignment, count = count, money = money, subject = subject,
+		-- The mail was sent when the auction ended; its age comes from how long it has left.
+		ageSeconds = math.min(AUCTION_MAIL_DAYS, AUCTION_MAIL_DAYS - (tonumber(daysLeft) or AUCTION_MAIL_DAYS)) * 86400,
+	}
+	if (tonumber(itemCount) or 0) > 0 and GetInboxItem then
+		local name, itemID, _, stack = GetInboxItem(index, 1)
+		mail.attachment = name and { name = name, itemID = itemID, count = stack } or nil
+	end
+	return mail
+end
 
 function Tradewright:OnMailInboxUpdate()
-	wipe(pendingSales)
+	wipe(pendingMail)
 	for index = 1, GetInboxNumItems() do
-		local _, _, _, _, money, _, daysLeft = GetInboxHeaderInfo(index)
-		local invoiceType, itemName, buyer, bid, _, _, consignment, _, _, _, count = GetInboxInvoiceInfo(index)
-		if invoiceType == "seller" and itemName and (tonumber(money) or 0) > 0 and (tonumber(bid) or 0) > 0 then
-			local quantity = math.max(1, tonumber(count) or 1)
-			-- The mail was sent when the sale paid out; its age comes from how long it has left.
-			local age = (AUCTION_MAIL_DAYS - (tonumber(daysLeft) or AUCTION_MAIL_DAYS)) * 86400
-			pendingSales[index] = {
-				kind = "sell",
-				ts = time() - math.max(0, math.min(AUCTION_MAIL_DAYS * 86400, age)),
-				itemID = Tradewright:ResolveItemIDByName(itemName),
-				itemName = itemName,
-				quantity = quantity,
-				unitCopper = bid / quantity,
-				totalCopper = bid,
-				netCopper = bid - (tonumber(consignment) or 0),
-				buyer = buyer,
-				source = "mail",
-			}
+		local event, settledBy = self.IncomeLogic.AuctionMailEvent(readMail(index), auctionReturnSubjects(), time())
+		if event then
+			event.itemID = event.itemID or self:ResolveItemIDByName(event.itemName)
+			pendingMail[index] = { event = event, settledBy = settledBy }
 		end
 	end
 end
 
-local function recordCollectedSale(index)
-	local sale = pendingSales[index]
-	if sale then
-		pendingSales[index] = nil
-		Tradewright:LedgerAppendEvent(sale)
+-- `taken` is "money", "item", or nil when the whole mail is looted at once.
+local function recordSettledMail(index, taken)
+	local pending = pendingMail[index]
+	if pending and (not taken or pending.settledBy == taken) then
+		pendingMail[index] = nil
+		Tradewright:LedgerAppendEvent(pending.event)
 	end
 end
 
 if hooksecurefunc and TakeInboxMoney and AutoLootMailItem then
-	hooksecurefunc("TakeInboxMoney", recordCollectedSale)
-	hooksecurefunc("AutoLootMailItem", recordCollectedSale)
+	hooksecurefunc("TakeInboxMoney", function(index) recordSettledMail(index, "money") end)
+	hooksecurefunc("AutoLootMailItem", function(index) recordSettledMail(index) end)
+	if TakeInboxItem then
+		hooksecurefunc("TakeInboxItem", function(index) recordSettledMail(index, "item") end)
+	end
 end
 
 local function itemIDsByName()

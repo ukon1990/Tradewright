@@ -246,6 +246,7 @@ function Tradewright:BuildCraftsFilterState()
 		expansions = self.IS_RETAIL and ui.craftsExpansionFilterValues or {},
 		categories = ui.craftsCategoryFilterValues or {},
 		profitState = self:GetSetting("crafts.profitState", "all"),
+		hasCooldown = function(row) return self:GetCraftRowCooldown(row).state ~= "none" end,
 	}
 end
 
@@ -301,11 +302,10 @@ function Tradewright:GetCraftsOptionsNote()
 	if done then
 		return self:Colorize(string.format("Updating %d of %d recipes…", done, total), "warning")
 	end
-	return string.format("Auction cut %d%% · Prices from the last auction house scan",
-		tonumber(self:GetSetting("crafts.ahCutPercent", 5)) or 5)
+	return string.format("Auction cut %s · Prices from the last auction house scan", self:DescribeAuctionCut())
 end
 
--- Footer texts: profitable crafts of all shown, and how many professions they span.
+-- Footer texts: profitable crafts of all shown; how many professions they span and the cooldowns on record.
 function Tradewright:GetCraftsFooterTexts(rows)
 	local profitable, professions = 0, {}
 	for _, row in ipairs(rows) do
@@ -314,8 +314,9 @@ function Tradewright:GetCraftsFooterTexts(rows)
 		end
 		professions[row.professionName or "?"] = true
 	end
+	local cooldowns = self.GetCooldownSummary and self.MaterialLogic.CooldownFooter(self:GetCooldownSummary())
 	return string.format("%s profitable of %s crafts", self:FormatNumberGrouped(profitable), self:FormatNumberGrouped(#rows)),
-		string.format("%d professions", self:TableCount(professions))
+		string.format("%d professions", self:TableCount(professions)) .. (cooldowns and (" · " .. cooldowns) or "")
 end
 
 -- The selected row if it is still shown, else the first row (unless an item-only detail is open).

@@ -4,7 +4,7 @@
    "W631": 1
   },
   "src/Tradewright/src/modules/Tradewright_Docs.lua": {
-   "W631": 19
+   "W631": 5
   },
   "src/Tradewright/tests/test_forever_logic.lua": {
    "W421": 2,
@@ -624,7 +624,7 @@
   "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionOwned.lua": {
    "Tradewright:BuildOwnedAuctionRows": {
     "ccn": [
-     20
+     18
     ]
    }
   },
@@ -1049,12 +1049,7 @@
    },
    "Tradewright:LedgerAppendEvent": {
     "ccn": [
-     15
-    ]
-   },
-   "Tradewright:OnMailInboxUpdate": {
-    "ccn": [
-     11
+     14
     ]
    }
   },
@@ -1436,10 +1431,10 @@
    },
    "Tradewright:ScanOpenProfession": {
     "lines": [
-     49
+     42
     ],
     "ccn": [
-     20
+     16
     ]
    },
    "Tradewright:TryScanCurrentProfession": {

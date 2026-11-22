@@ -47,12 +47,16 @@ Implemented:
 Differs from the scope:
 
 - **Its own slash command, `/ahfarm`,** instead of `/ah farm …`: the `/ah` command table sits in a file that is over the size limit
-- **No "Farm finished" dialog.** Stop saves under the name the run was started with (default: the zone) and prints a chat line; Discard does not exist yet
-- **No automatic pause when idle** and no start on entering an instance
+- **No start on entering an instance**
 - **No collapsed one-line form** of the window
 - **Tooltip lines:** "Vendor pays" is on the item tooltip (with Shift; always, in orange, when a vendor pays more than the auction house after the cut). "You looted it in …" is not added
 - **Vendor sales:** only items sold by using them from the bags with a merchant open are taken out of the run; items sold another way stay counted while their gold is also counted
 - **Storage:** in the ledger table, not a new saved-variables key
+
+Added later, in-game check pending:
+
+- "Stop and save" opens a dialog with the run's time, value and gold an hour and a name field: Save farm, Discard, or Cancel to keep farming. `/ahfarm stop` still saves at once.
+- A run pauses itself after standing still, looting nothing, for the minutes set in Settings (default 5, or Never); the idle minutes are not counted, and moving resumes it
 
 ## Acceptance criteria
 
