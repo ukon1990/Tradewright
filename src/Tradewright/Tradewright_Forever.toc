@@ -6,7 +6,7 @@
 ## Version: 2.0.0
 ## IconTexture: Interface\AddOns\Tradewright\media\logo
 ## OptionalDeps: Blizzard_Professions
-## SavedVariables: TradewrightDB, TradewrightLastExport
+## SavedVariables: TradewrightDB, TradewrightLastExport, TradewrightSourcesDB
 
 Bootstrap.lua
 src\core\Tradewright.lua
@@ -20,6 +20,7 @@ src\util\Tradewright_FlipLogic.lua
 src\util\Tradewright_MaterialLogic.lua
 src\util\Tradewright_ReagentStashLogic.lua
 src\util\Tradewright_VendorLogic.lua
+src\util\Tradewright_SourceLogic.lua
 src\util\Tradewright_SkillUpLogic.lua
 src\util\Tradewright_LevelingRouteLogic.lua
 src\util\Tradewright_FarmLogic.lua
@@ -40,4 +41,7 @@ src\util\Tradewright_JsonCodec.lua
 src\util\Tradewright_ItemInfo.lua
 src\ui\Tradewright_Theme.lua
 src\modules\Tradewright_Docs.lua
+src\data\Tradewright_SourceData.lua
+src\modules\Tradewright_Sources.lua
+src\modules\Tradewright_LootSightings.lua
 src\core\Tradewright_Events.lua

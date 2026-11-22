@@ -220,7 +220,7 @@ end
 local SLASH_HELP_LINES = {
 	"Commands: /tradewright (window) | /tradewright docs | /tradewright scan | /tradewright full | /tradewright status"
 		.. " | /tradewright debug [on|off|toggle] | /tradewright export … | /tradewright settings …"
-		.. " | /tradewright auction …  (short: /ah)",
+		.. " | /tradewright auction … | /tradewright sources [seal]  (short: /ah)",
 	"Export: character | account | account_summary | professions | professions_recipes | professions_talents"
 		.. " | professions_compact | inventory | inventory_compact | auction_snapshot | auction_history | crafting_costs"
 		.. " | spec_catalog | meta | profession <id|name> | profession_recipes <id|name> | profession_talents <id|name>",
@@ -345,6 +345,7 @@ local SLASH_COMMANDS = {
 	full = startFullCharacterDump, dumpfull = startFullCharacterDump,
 	status = function(self) self:PrintStatus() end,
 	export = handleExportSlash,
+	sources = function(self, rest) self:HandleSourcesSlash(rest) end,
 }
 
 function Tradewright:HandleSlash(input)

@@ -142,7 +142,7 @@ local function showReagentTooltip(pe, rowFrame, row)
 	pairs[#pairs + 1] = { "Each", row.unitPrice and pe:FormatCopperFull(row.unitPrice) or "-" }
 	pairs[#pairs + 1] = { "Used by", table.concat(row.recipeRefs or {}, ", ") }
 	local hint = "Click to find it at the auction house"
-	pe:ShowItemRowTooltip(rowFrame, row.itemID, pairs, pe.AppendCartVendorLines and pe:AppendCartVendorLines(pairs, row, hint) or hint)
+	pe:ShowItemRowTooltip(rowFrame, row.itemID, pairs, pe.AppendCartSourceLines and pe:AppendCartSourceLines(pairs, row, hint) or hint)
 end
 
 -- "Vendor" button on materials a vendor sells: points the way to the nearest one.
@@ -249,8 +249,8 @@ local function createReagentTable(pe, f, card, actions)
 		onRowEnter = function(rowFrame, row) showReagentTooltip(pe, rowFrame, row) end,
 		onRowLeave = function() GameTooltip:Hide() end,
 		onRowClick = function(_, row, button)
-			if button == "RightButton" and row and pe.ShowVendorWaypoint then
-				pe:ShowVendorWaypoint(row.itemID)
+			if button == "RightButton" and row and pe.ShowItemSourceWaypoint then
+				pe:ShowItemSourceWaypoint(row.itemID)
 			else
 				findAtAuctionHouse(pe, row)
 			end

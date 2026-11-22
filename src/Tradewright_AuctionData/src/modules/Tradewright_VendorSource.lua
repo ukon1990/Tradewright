@@ -1,7 +1,7 @@
 local _, Tradewright = ...
 
 -- Reagents that are cheaper at a vendor than at the auction house. Every merchant the player opens
--- is remembered (items in endless supply, their price, the vendor's name and position), so the cart
+-- goes to the sightings store (Tradewright_Sources.lua) with its prices and position, so the cart
 -- can warn, point the way to the nearest seller, and offer the reagents when the player is there.
 -- Vendors not visited yet come from the Questie database when that addon is installed: a name and
 -- a position, without a price.
@@ -9,37 +9,20 @@ local _, Tradewright = ...
 
 local VendorLogic = Tradewright.VendorLogic
 
--- { [itemID] = { [npcName] = { price, zone, mapID, x, y, seenAt } } }, account-wide.
-local function sellerStore()
-	TradewrightAuctionDB = TradewrightAuctionDB or {}
-	TradewrightAuctionDB.vendorSellers = TradewrightAuctionDB.vendorSellers or {}
-	return TradewrightAuctionDB.vendorSellers
-end
-
-local function playerPlace()
-	local place = { zone = GetRealZoneText and GetRealZoneText() or nil }
-	local mapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
-	local position = mapID and C_Map.GetPlayerMapPosition and C_Map.GetPlayerMapPosition(mapID, "player")
-	if position then
-		place.mapID = mapID
-		place.x, place.y = position:GetXY()
-	end
-	return place
-end
-
 local function merchantItem(index)
 	local item = { index = index, itemID = GetMerchantItemID and GetMerchantItemID(index) or nil }
 	if C_MerchantFrame and C_MerchantFrame.GetItemInfo then
 		local info = C_MerchantFrame.GetItemInfo(index) or {}
-		item.price, item.stack, item.available, item.extendedCost = info.price, info.stackCount, info.numAvailable, info.hasExtendedCost
+		item.name, item.price, item.stack = info.name, info.price, info.stackCount
+		item.available, item.extendedCost = info.numAvailable, info.hasExtendedCost
 	elseif GetMerchantItemInfo then
-		local _, _, price, stack, available, _, _, extendedCost = GetMerchantItemInfo(index)
-		item.price, item.stack, item.available, item.extendedCost = price, stack, available, extendedCost
+		local name, _, price, stack, available, _, _, extendedCost = GetMerchantItemInfo(index)
+		item.name, item.price, item.stack, item.available, item.extendedCost = name, price, stack, available, extendedCost
 	end
 	return item
 end
 
---- Everything the open merchant sells: `{ { index, itemID, price, stack, available, extendedCost } }`.
+--- Everything the open merchant sells: `{ { index, itemID, name, price, stack, available, extendedCost } }`.
 function Tradewright:GetMerchantItems()
 	local items = {}
 	for index = 1, GetMerchantNumItems and GetMerchantNumItems() or 0 do
@@ -49,14 +32,10 @@ function Tradewright:GetMerchantItems()
 end
 
 local function rememberMerchant(pe)
-	local name = UnitName and UnitName("npc")
-	if not name then
-		return
-	end
-	local store = sellerStore()
-	for itemID, entry in pairs(VendorLogic.SellerEntries(pe:GetMerchantItems(), playerPlace(), pe:Now())) do
-		store[itemID] = store[itemID] or {}
-		store[itemID][name] = entry
+	local items = pe:GetMerchantItems()
+	pe:RecordVendorSighting(VendorLogic.SellerEntries(items, nil, pe:Now()))
+	for _, item in ipairs(items) do
+		pe:RecordRecipeItem(item.itemID, item.name, pe:GetItemClassID(item.itemID))
 	end
 end
 
@@ -108,7 +87,7 @@ end
 --- What is known about buying `itemID` from a vendor (see VendorLogic.Lookup), or nil.
 function Tradewright:GetVendorSource(itemID)
 	itemID = tonumber(itemID)
-	return itemID and VendorLogic.Lookup(itemID, sellerStore()[itemID], directorySellers(itemID)) or nil
+	return itemID and VendorLogic.Lookup(itemID, self:GetSellers(itemID), directorySellers(itemID)) or nil
 end
 
 --- Vendor advice for a cart row: `{ price, exact, cheaper }` and the vendor source, or nil.
@@ -159,20 +138,28 @@ function Tradewright:AuctionCartRowDetail(row)
 	return table.concat(parts, " · ")
 end
 
---- Adds the vendor price and seller to a cart row's tooltip lines. Returns `hint` with the vendor
---- click added to it.
-function Tradewright:AppendCartVendorLines(lines, row, hint)
-	local advice, info = self:GetCartVendorAdvice(row)
-	if not advice then
-		return hint
-	end
+-- Adds the vendor price and seller to tooltip lines. Returns what a right-click does about it.
+local function appendVendorLines(pe, lines, advice, info)
 	if advice.price then
-		local price = priceText(self, advice) .. " each"
-		lines[#lines + 1] = { "Vendor price", advice.cheaper and self:Colorize(price .. ", cheaper than the auction house", "warning") or price }
+		local price = priceText(pe, advice) .. " each"
+		lines[#lines + 1] = { "Vendor price", advice.cheaper and pe:Colorize(price .. ", cheaper than the auction house", "warning") or price }
 	end
 	lines[#lines + 1] = { "Sold by", VendorLogic.Where(info) or "vendors" }
-	return hint .. "\n" .. (VendorLogic.Nearest(info.sellers) and "Right-click to show the way to the nearest vendor"
-		or "Visit a vendor that sells it once to get directions")
+	return VendorLogic.Nearest(info.sellers) and "Right-click to show the way to the nearest vendor" or nil
+end
+
+--- Adds where a cart row's item can be had to its tooltip lines: the vendor price and seller, and
+--- where it has been looted. Returns `hint` with what a right-click does added to it.
+function Tradewright:AppendCartSourceLines(lines, row, hint)
+	local advice, info = self:GetCartVendorAdvice(row)
+	local clickHint = advice and appendVendorLines(self, lines, advice, info)
+	local dropPlaceKnown = self:AppendDropSourceLines(lines, row and row.itemID)
+	if not clickHint and dropPlaceKnown then
+		clickHint = "Right-click to show the way to where it was looted"
+	elseif not clickHint and advice then
+		clickHint = "Visit a vendor that sells it once to get directions"
+	end
+	return clickHint and (hint .. "\n" .. clickHint) or hint
 end
 
 --- "2 items are cheaper at a vendor. " for the rows still to buy, or "".
@@ -235,15 +222,10 @@ local function worldOf(mapID, x, y)
 	return { continent = continent, x = worldX, y = worldY }
 end
 
---- Where the player stands: `{ zone, mapID, x, y }`.
-function Tradewright:GetPlayerPlace()
-	return playerPlace()
-end
-
 --- The nearest of `places` (`{ name, zone, mapID, x, y, seenAt }`, vendors or trainers) to the player;
 --- see VendorLogic.Nearest. nil when none has a position.
 function Tradewright:NearestPlace(places)
-	local here = playerPlace()
+	local here = self:GetPlayerPlace()
 	here.world = here.mapID and worldOf(here.mapID, here.x, here.y)
 	for _, place in ipairs(places) do
 		place.world = place.mapID and place.x and worldOf(place.mapID, place.x, place.y) or nil

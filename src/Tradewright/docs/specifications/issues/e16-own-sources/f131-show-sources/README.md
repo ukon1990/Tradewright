@@ -16,6 +16,13 @@ The leveling route and reagent tooltips say where a recipe or reagent comes from
 - Reagent tooltips gain "Drops from" and "Gathered from" lines with the share of loots that held the item
 - Right-click leads to the nearest vendor, else the nearest drop or node place
 
+## Status
+
+Implemented, in-game check pending. Differs from the scope:
+
+- The skill needed to use a recipe item is not known, so a vendor recipe keeps the estimated skill and Learn is never off for skill
+- Nodes and chests have no name in the loot window; the tooltip names the zone instead
+
 ## Acceptance criteria
 
 - [ ] A vendor-sold recipe is routed like a trainer recipe and shows its price

@@ -7,7 +7,8 @@ local _, Tradewright = ...
 --- `{ recipeID, name, bounds, learned, learnSkill, learnCost, materialCost, vendorGiveBack,
 ---    auctionGiveBack, skillUpsPerCraft, outputItemID, outputQuantity, reagents }`, costs in copper for
 --- one craft. `bounds` comes from `SkillUpLogic.DifficultyBounds`. `learnSkill` and `learnCost` only
---- matter for a recipe not learned. `reagents = { { itemID, quantity, unitPrice } }` per craft.
+--- matter for a recipe not learned; `source` then says where it comes from once that is known:
+--- "trainer" (with `trainers`), "vendor" (with `vendors`) or "drop" (with `dropSource`). `reagents = { { itemID, quantity, unitPrice } }` per craft.
 ---
 --- A recipe that makes a material for another recipe (Heavy Leather from Medium Leather) gives skill
 --- and saves buying that material later. Its output then counts for what the material would cost,
@@ -51,9 +52,9 @@ local function usableAt(candidate, skill, excluded)
 end
 
 --- Whether the player can count on having the recipe: it is known, or a trainer has been seen to
---- teach it. Any other recipe may be a rare drop.
+--- teach it or a vendor to sell it. Any other recipe may be a rare drop.
 function LevelingRouteLogic.IsWithinReach(candidate)
-	return candidate.learned == true or candidate.source == "trainer"
+	return candidate.learned == true or candidate.source == "trainer" or candidate.source == "vendor"
 end
 
 -- What the point at `skill` costs with this candidate, or nil when it cannot give that point.
@@ -407,51 +408,81 @@ function LevelingRouteLogic.ApplyTrainerData(candidates, trainerRecipes)
 	return candidates
 end
 
--- One trainer service as a stored entry.
-local function trainerEntry(service, sighting)
-	local trainers = nil
-	if sighting.trainerName then
-		trainers = { [sighting.trainerName] = sighting.place or {} }
+-- The cheapest price among `sellers = { [npcName] = { price } }`, or nil when none has one.
+local function cheapestPrice(sellers)
+	local cheapest
+	for _, seller in pairs(sellers) do
+		if seller.price and (not cheapest or seller.price < cheapest) then
+			cheapest = seller.price
+		end
 	end
-	return { skillRequired = tonumber(service.skillRequired) or 0, cost = tonumber(service.cost) or 0, seenAt = sighting.now, trainers = trainers }
+	return cheapest
+end
+
+-- A vendor is the surer source, so it wins over a drop.
+local function setRecipeSource(candidate, found)
+	if next(found.sellers or {}) then
+		candidate.source, candidate.vendors, candidate.learnCost = "vendor", found.sellers, cheapestPrice(found.sellers)
+	elseif found.drops and found.drops[1] then
+		candidate.source, candidate.dropSource = "drop", found.drops[1]
+	end
+end
+
+--- Fills in where the recipe item of a recipe comes from, for recipes not learned that no trainer
+--- teaches. `sourceOf(recipeName)` returns `{ sellers = { [npcName] = { price, … } }, drops = { … } }`
+--- or nil (see SourceLogic.RecipeSource). A recipe a vendor sells gets `source = "vendor"`, the
+--- cheapest price as `learnCost` and the sellers as `vendors`; one only seen in loot gets
+--- `source = "drop"` and its likeliest source as `dropSource`. The skill needed to use a recipe
+--- item is not known, so `learnSkill` stays the estimate.
+function LevelingRouteLogic.ApplyRecipeSources(candidates, sourceOf)
+	for _, candidate in ipairs(candidates or {}) do
+		local found = (not candidate.learned) and candidate.source ~= "trainer" and sourceOf(candidate.name)
+		if found then
+			setRecipeSource(candidate, found)
+		end
+	end
+	return candidates
+end
+
+-- One trainer service as a stored entry.
+local function trainerEntry(service, now)
+	return { skillRequired = tonumber(service.skillRequired) or 0, cost = tonumber(service.cost) or 0, seenAt = now }
 end
 
 -- Services that are no scanned recipe, kept as rank training (Expert, Artisan) of the profession the
 -- trainer's recipes belong to. Without recipes of exactly one profession there is no telling which
 -- profession a service is for, and nothing is kept.
-local function rankEntries(otherServices, professionsSeen, sighting)
+local function rankEntries(otherServices, professionsSeen, now)
 	local skillLineKey = next(professionsSeen)
 	if not skillLineKey or next(professionsSeen, skillLineKey) then
 		return {}
 	end
 	local ranks = {}
 	for _, service in ipairs(otherServices) do
-		ranks[service.name] = trainerEntry(service, sighting)
+		ranks[service.name] = trainerEntry(service, now)
 	end
 	return { [skillLineKey] = ranks }
 end
 
 --- What to remember from an open trainer window. `services = { { name, cost, skillRequired } }` as
 --- the trainer lists them; `skillLineByRecipeName` says which profession each known recipe name
---- belongs to. `sighting = { now, trainerName, place = { zone, mapID, x, y } }` says who was asked,
---- where and when. Returns two tables of the same shape,
---- `{ [skillLineKey] = { [serviceName] = { skillRequired, cost, seenAt, trainers } } }` with
---- `trainers = { [trainerName] = place }`: the recipes, and the other services of a profession
---- trainer, which are its rank training. A window without scanned recipes (a class trainer) gives nothing.
-function LevelingRouteLogic.TrainerEntries(services, skillLineByRecipeName, sighting)
+--- belongs to; `now` is when the window was read. Returns two tables of the same shape,
+--- `{ [skillLineKey] = { [serviceName] = { skillRequired, cost, seenAt } } }`: the recipes, and the
+--- other services of a profession trainer, which are its rank training. A window without scanned
+--- recipes (a class trainer) gives nothing. Who was asked is kept by the sightings store.
+function LevelingRouteLogic.TrainerEntries(services, skillLineByRecipeName, now)
 	local recipes, otherServices, professionsSeen = {}, {}, {}
-	sighting = sighting or {}
 	for _, service in ipairs(services or {}) do
 		local skillLineKey = service.name and skillLineByRecipeName[service.name]
 		if skillLineKey then
 			professionsSeen[skillLineKey] = true
 			recipes[skillLineKey] = recipes[skillLineKey] or {}
-			recipes[skillLineKey][service.name] = trainerEntry(service, sighting)
+			recipes[skillLineKey][service.name] = trainerEntry(service, now)
 		elseif service.name then
 			otherServices[#otherServices + 1] = service
 		end
 	end
-	return recipes, rankEntries(otherServices, professionsSeen, sighting)
+	return recipes, rankEntries(otherServices, professionsSeen, now)
 end
 
 -- How far apart a profession's ranks are in skill: the caps are 75, 150, 225 and 300.
@@ -474,26 +505,4 @@ function LevelingRouteLogic.NextRankTraining(rankServices, rankCap)
 		return nil
 	end
 	return { name = bestName, skillRequired = best.skillRequired, cost = best.cost, trainers = best.trainers }
-end
-
-local function addTrainers(target, trainers)
-	for name, place in pairs(trainers or {}) do
-		target[name] = place
-	end
-end
-
---- Two sightings of the same trainer recipe as one: cost and skill from the newer, every trainer
---- from both. `known` may be nil. With `withoutTrainers`, the trainers of `entry` are left out (a
---- sighting by a character of the other faction: its trainers will not teach this one).
-function LevelingRouteLogic.MergeTrainerEntry(known, entry, withoutTrainers)
-	local newer = entry
-	if known and (known.seenAt or 0) > (entry.seenAt or 0) then
-		newer = known
-	end
-	local merged = { skillRequired = newer.skillRequired, cost = newer.cost, seenAt = newer.seenAt, trainers = {} }
-	addTrainers(merged.trainers, known and known.trainers)
-	if not withoutTrainers then
-		addTrainers(merged.trainers, entry.trainers)
-	end
-	return merged
 end

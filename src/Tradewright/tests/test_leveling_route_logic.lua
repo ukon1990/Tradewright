@@ -231,6 +231,27 @@ do
 	check("... and leaves a learned one alone", known.learnSkill == nil and known.source == nil)
 end
 
+-- Recipe items seen at vendors and in loot
+do
+	local taught, sold, dropped = recipe("Taught", 150, 160, 100), recipe("Sold", 150, 160, 100), recipe("Dropped", 150, 160, 100)
+	local unseen, known = recipe("Unseen", 150, 160, 100), recipe("Known", 150, 160, 100)
+	taught.learned, sold.learned, dropped.learned, unseen.learned = false, false, false, false
+	taught.source, sold.learnSkill = "trainer", 110
+	local sources = {
+		Taught = { sellers = { Una = { price = 1 } } },
+		Sold = { sellers = { Una = { price = 700 }, Karolek = { price = 550 }, Wik = {} }, drops = { { name = "Kodo" } } },
+		Dropped = { sellers = {}, drops = { { name = "Bristleback Shaman", share = 0.02 }, { name = "Kodo", share = 0.01 } } },
+		Known = { sellers = { Una = { price = 1 } } },
+	}
+	RL.ApplyRecipeSources({ taught, sold, dropped, unseen, known }, function(recipeName) return sources[recipeName] end)
+	check("Sources: a vendor recipe costs the cheapest price and keeps its skill estimate",
+		sold.source == "vendor" and sold.learnCost == 550 and sold.learnSkill == 110 and sold.vendors.Una.price == 700)
+	check("Sources: a recipe only seen in loot names its likeliest source", dropped.source == "drop" and dropped.dropSource.name == "Bristleback Shaman")
+	check("Sources: a trainer recipe stays a trainer recipe", taught.source == "trainer" and taught.vendors == nil)
+	check("Sources: nothing seen, nothing set", unseen.source == nil and known.source == nil)
+	check("Reach: a vendor recipe is within reach, a dropped one is not", RL.IsWithinReach(sold) and not RL.IsWithinReach(dropped))
+end
+
 -- What is remembered from a trainer
 do
 	local orgrimmar = { zone = "Orgrimmar", mapID = 85, x = 0.6, y = 0.5 }
@@ -238,18 +259,17 @@ do
 		{ name = "Heavy Armor Kit", cost = 500, skillRequired = 150 },
 		{ name = "Expert Leatherworker", cost = 5000, skillRequired = 125 },
 		{ name = "Frostbolt", cost = 100 },
-	}, { ["Heavy Armor Kit"] = "165" }, { now = 1000, trainerName = "Karolek", place = orgrimmar })
+	}, { ["Heavy Armor Kit"] = "165" }, 1000)
 	local kit = entries["165"] and entries["165"]["Heavy Armor Kit"]
 	check("Trainer: a scanned recipe is kept with cost, skill and time", kit and kit.cost == 500 and kit.skillRequired == 150 and kit.seenAt == 1000)
-	check("Trainer: who teaches it and where", kit.trainers.Karolek == orgrimmar)
 	check("Trainer: ranks and other spells are skipped", entries["165"]["Expert Leatherworker"] == nil and next(entries, "165") == nil)
-	check("Trainer: nothing listed, nothing kept", next((RL.TrainerEntries({}, {}, { now = 1 }))) == nil)
+	check("Trainer: nothing listed, nothing kept", next((RL.TrainerEntries({}, {}, 1))) == nil)
 	local expert = ranks["165"] and ranks["165"]["Expert Leatherworker"]
 	check("Trainer: its other services are kept as rank training of that profession",
-		expert and expert.skillRequired == 125 and expert.cost == 5000 and expert.trainers.Karolek == orgrimmar)
-	local _, classRanks = RL.TrainerEntries({ { name = "Frostbolt", cost = 100 } }, { ["Heavy Armor Kit"] = "165" }, { now = 1 })
+		expert and expert.skillRequired == 125 and expert.cost == 5000)
+	local _, classRanks = RL.TrainerEntries({ { name = "Frostbolt", cost = 100 } }, { ["Heavy Armor Kit"] = "165" }, 1)
 	check("Trainer: a window without this character's recipes gives no rank training", next(classRanks) == nil)
-	local _, twoProfessions = RL.TrainerEntries({ { name = "A" }, { name = "B" }, { name = "Rank" } }, { A = "165", B = "197" }, { now = 1 })
+	local _, twoProfessions = RL.TrainerEntries({ { name = "A" }, { name = "B" }, { name = "Rank" } }, { A = "165", B = "197" }, 1)
 	check("Trainer: recipes of two professions leave the other services unassigned", next(twoProfessions) == nil)
 
 	local seen = {
@@ -265,18 +285,11 @@ do
 	check("Next rank: nothing seen", RL.NextRankTraining(nil, 150) == nil)
 
 	local thunderBluff = { zone = "Thunder Bluff", mapID = 88, x = 0.4, y = 0.4 }
-	local later = { skillRequired = 150, cost = 450, seenAt = 2000, trainers = { Una = thunderBluff } }
-	local merged = RL.MergeTrainerEntry(kit, later)
-	check("Merge: cost from the newer sighting, trainers from both",
-		merged.cost == 450 and merged.seenAt == 2000 and merged.trainers.Karolek == orgrimmar and merged.trainers.Una == thunderBluff)
-	check("Merge: order does not matter for the cost", RL.MergeTrainerEntry(later, kit).cost == 450)
-	local otherFaction = RL.MergeTrainerEntry(kit, later, true)
-	check("Merge: another faction's trainers are left out, its cost kept", otherFaction.trainers.Una == nil and otherFaction.cost == 450)
-	check("Merge: first sighting", RL.MergeTrainerEntry(nil, kit).trainers.Karolek == orgrimmar)
+	local seenAtTrainer = { skillRequired = 150, cost = 450, seenAt = 2000, trainers = { Una = thunderBluff } }
 
 	local unknown = recipe("Heavy Armor Kit", 150, 160, 100)
 	unknown.learned = false
-	RL.ApplyTrainerData({ unknown }, { ["Heavy Armor Kit"] = merged })
+	RL.ApplyTrainerData({ unknown }, { ["Heavy Armor Kit"] = seenAtTrainer })
 	check("Trainers reach the recipe in the route", unknown.trainers.Una == thunderBluff)
 end
 

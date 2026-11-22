@@ -22,6 +22,14 @@ One account-wide store for everything seen about NPCs, nodes and what they sell,
 - One-time move of `vendorSellers` and per-character `trainerRecipes` into the store under `"name:<npc name>"` keys; an id-keyed sighting of the same name replaces them
 - `GetVendorSource` and `GetTrainerRecipes` return the shapes they return today
 
+## Status
+
+Implemented, in-game check pending. Differs from the scope:
+
+- Places are stored without a zone name; readers name the zone from the map id
+- An NPC's `faction` is the faction of the characters that met it ("Horde", "Alliance", "both"); vendors are now filtered by it as trainers were
+- `LevelingRouteLogic.MergeTrainerEntry` is gone and `TrainerEntries` no longer carries who was asked: the store keeps that
+
 ## Acceptance criteria
 
 - [ ] Vendors and trainers known before the update are still known after it

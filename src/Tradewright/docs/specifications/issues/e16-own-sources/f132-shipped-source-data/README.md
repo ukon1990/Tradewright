@@ -16,6 +16,14 @@ Collected sightings can be built into a data file that ships with the addon. Rea
 - `/tradewright sources seal` closes the current tally epoch; the build script exports sealed epochs and records the highest per collector; a client that finds its own id deletes its epochs up to that number
 - `scripts/build-source-data.mjs` (`npm run sources:build`): reads `TradewrightSourcesDB` from the SavedVariables file, merges into the shipped file, rewrites it
 
+## Status
+
+Implemented, in-game check pending. Differs from the scope:
+
+- The shipped file has the same shape as the saved store (not a compact positional form), so one set of readers serves both
+- The merge runs in `scripts/build-source-data.lua` with `SourceLogic.ShipStore`; the `.mjs` only finds the saved files
+- NPCs still known by name only are not shipped
+
 ## Acceptance criteria
 
 - [ ] After build, deploy and login the saved store is smaller and every lookup answers as before

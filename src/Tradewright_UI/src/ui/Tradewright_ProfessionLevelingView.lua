@@ -44,16 +44,25 @@ local function craftCountIsExact(step)
 	return not step.estimated and SkillUpLogic.SkillUpChance(step.candidate.bounds, step.toSkill - 1) >= 1
 end
 
+-- "a creature not named yet" stands in until the creature is met with its name showing.
+local function dropSourceName(dropSource)
+	return dropSource.name or "a creature not named yet"
+end
+
 -- The skill needed to learn a recipe is only known once a trainer has been seen teaching it; the
 -- trainer's price is in the row's tooltip.
-local function learnSourceText(candidate)
+local function learnSourceText(pe, candidate)
 	if candidate.source == "trainer" then
 		return string.format("trainer, skill %d", candidate.learnSkill or 0)
+	elseif candidate.source == "vendor" then
+		return "vendor, " .. pe:FormatCopperShort(candidate.learnCost or 0)
+	elseif candidate.source == "drop" then
+		return "drops from " .. dropSourceName(candidate.dropSource)
 	end
 	return "source unknown"
 end
 
-local function craftStepDetail(step, queued, isNextStep)
+local function craftStepDetail(pe, step, queued, isNextStep)
 	-- "~" for an expected count; the detail line has little room at this panel width.
 	local parts = { string.format(craftCountIsExact(step) and "%d crafts" or "~%d crafts", step.crafts) }
 	if isNextStep then
@@ -63,7 +72,7 @@ local function craftStepDetail(step, queued, isNextStep)
 		parts[#parts + 1] = string.format("%d in queue", queued)
 	end
 	if not step.learned then
-		parts[#parts + 1] = learnSourceText(step.candidate)
+		parts[#parts + 1] = learnSourceText(pe, step.candidate)
 	end
 	return table.concat(parts, " · ")
 end
@@ -76,15 +85,24 @@ local function craftStepAction(step, queued)
 	return queued >= step.crafts and "queued" or "queue"
 end
 
--- Why a recipe cannot be learned right now: "no_trainer" (none seen teaching it), "skill" (the
--- trainer asks for more skill than the player has), or nil when it can or is already known.
+-- Who to go to for a recipe not learned: the trainers teaching it, else the vendors selling it.
+local function learnPlaces(candidate)
+	if next(candidate.trainers or {}) then
+		return candidate.trainers, false
+	end
+	return candidate.vendors or {}, true
+end
+
+-- Why a recipe cannot be learned right now: "no_trainer" (no trainer or vendor seen with it),
+-- "skill" (the trainer asks for more skill than the player has), or nil when it can or is already
+-- known. A vendor recipe's skill is an estimate, so it never blocks.
 local function learnBlockedBy(route, step)
 	local candidate = step.candidate
 	if step.learned then
 		return nil
-	elseif not next(candidate.trainers or {}) then
+	elseif not next((learnPlaces(candidate))) then
 		return "no_trainer"
-	elseif (candidate.learnSkill or 0) > route.fromSkill then
+	elseif candidate.source == "trainer" and (candidate.learnSkill or 0) > route.fromSkill then
 		return "skill"
 	end
 	return nil
@@ -122,7 +140,7 @@ function Tradewright:LevelingStepRow(route, step, index, isNextStep)
 	return {
 		_rowIdentity = index, kind = "craft", step = step, route = route, name = step.name or "?",
 		skillText = string.format("%d–%d", step.fromSkill, step.toSkill),
-		detailText = craftStepDetail(step, queued, isNextStep),
+		detailText = craftStepDetail(self, step, queued, isNextStep),
 		cost = route.giveBackMode == "none" and step.materials or step.net,
 		action = craftStepAction(step, queued),
 		learnBlockedBy = learnBlockedBy(route, step),
@@ -169,7 +187,7 @@ local ACTION_BUTTON = {
 		pe:QueueLevelingStep(row.route, row.step)
 	end },
 	learn = { label = "Learn", onClick = function(pe, row)
-		pe:ShowRecipeTrainerWaypoint(row.name, row.step.candidate.trainers)
+		pe:ShowRecipeTrainerWaypoint(row.name, learnPlaces(row.step.candidate))
 	end },
 	trainer = { label = "Trainer", onClick = function(pe, row)
 		pe:ShowRecipeTrainerWaypoint(row.route.nextRank.name, row.route.nextRank.trainers)
@@ -235,19 +253,27 @@ end
 
 -- Under a recipe not learned: where it comes from, and whether Learn can show the way now.
 local LEARN_HINT = {
-	no_trainer = "No trainer has been seen teaching it. It may be a drop or sold by a vendor.",
+	no_trainer = "No trainer or vendor has been seen with it. Recipes show up here once seen at a vendor or in loot.",
 	skill = "Your skill is too low to learn it yet.",
 }
 
+local function learnText(pe, candidate)
+	if candidate.source == "trainer" then
+		return string.format("Not learned yet. Trainer: %s, needs skill %d.",
+			pe:FormatCopperShort(candidate.learnCost or 0), candidate.learnSkill or 0)
+	elseif candidate.source == "vendor" then
+		return string.format("Not learned yet. A vendor sells the recipe for %s.", pe:FormatCopperShort(candidate.learnCost or 0))
+	elseif candidate.source == "drop" then
+		local drop = candidate.dropSource
+		return string.format("Not learned yet. The recipe drops from %s (%d of %d loots).", dropSourceName(drop), drop.held, drop.opened)
+	end
+	return "Not learned yet. Where it comes from is not known."
+end
+
 local function addLearnLines(pe, row)
 	local candidate, theme = row.step.candidate, pe:GetTheme()
-	local text = "Not learned yet. Where it comes from is not known."
-	if candidate.source == "trainer" then
-		text = string.format("Not learned yet. Trainer: %s, needs skill %d.",
-			pe:FormatCopperShort(candidate.learnCost or 0), candidate.learnSkill or 0)
-	end
-	GameTooltip:AddLine(text, theme.accent.r, theme.accent.g, theme.accent.b, true)
-	GameTooltip:AddLine(LEARN_HINT[row.learnBlockedBy] or "Press Learn to show the way to the nearest trainer.",
+	GameTooltip:AddLine(learnText(pe, candidate), theme.accent.r, theme.accent.g, theme.accent.b, true)
+	GameTooltip:AddLine(LEARN_HINT[row.learnBlockedBy] or "Press Learn to show the way to the nearest one.",
 		theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, true)
 end
 

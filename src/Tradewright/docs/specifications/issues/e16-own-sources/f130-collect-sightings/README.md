@@ -18,6 +18,15 @@ Vendors, trainers and loot are written to the sightings store as the player meet
 - Only items that matter are tallied: item classes trade goods, reagent, gem and recipe
 - A recipe item on sale or looted is a source of the recipe it teaches, matched by name
 
+## Status
+
+Implemented, in-game check pending. Unverified on Forever:
+
+- `GetLootSourceInfo`, `IsFishingLoot`, `LOOT_READY`, and that `UnitGUID` has the `Creature-0-…-<id>-…` form
+- That spell ids 8613, 2575 and 2366 exist, so a gathering cast can be told by name. Without them a corpse's second loot window still counts as gathering
+- A looted creature gets its name only when it is the target or under the cursor; otherwise it reads "a creature not named yet" until met again
+- A corpse with nothing on it opens no loot window, so the share shown for a kill reads a little high
+
 ## Acceptance criteria
 
 - [ ] Opening a vendor, a trainer, a corpse, a node and a fishing catch each leaves a record

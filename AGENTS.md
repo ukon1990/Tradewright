@@ -14,12 +14,14 @@
 | Inventory | `src/Tradewright_Inventory/` | Bags/bank snapshot, ledger |
 | UI | `src/Tradewright_UI/` | Dashboard, craft panel, mail |
 | Bags (optional) | `src/Tradewright_Bags/` | Bag and bank window grouped by category, other characters as tabs, multi-select; own on/off switches |
-| Pure helpers | `src/Tradewright/src/util/Tradewright_*Logic.lua` | No WoW API, offline-testable: `ForeverLogic` (client flags, storage keys, export encoding), `AuctionLogic`, `MarketLogic`, `MailLogic`, `IncomeLogic`, `FilterLogic`, `MaterialLogic`, `SkillUpLogic`, `LevelingRouteLogic`, … |
+| Sightings | `src/Tradewright/src/modules/Tradewright_Sources.lua`, `Tradewright_LootSightings.lua`, `src/Tradewright/src/data/Tradewright_SourceData.lua` | Own record of vendors, trainers and loot sources (`TradewrightSourcesDB`), read together with the shipped data file |
+| Pure helpers | `src/Tradewright/src/util/Tradewright_*Logic.lua` | No WoW API, offline-testable: `ForeverLogic` (client flags, storage keys, export encoding), `AuctionLogic`, `MarketLogic`, `MailLogic`, `IncomeLogic`, `FilterLogic`, `MaterialLogic`, `SkillUpLogic`, `LevelingRouteLogic`, `SourceLogic` (sightings store, shipping and pruning), … |
 | Tests | `src/Tradewright/tests/run_tests.py` | Offline Lua 5.1 (no WoW client) |
 | Lint | `scripts/lint.py`, `.luacheckrc`, `scripts/lint-baseline.json` | luacheck + file/function size + complexity, ratcheted |
 | Specs | `src/Tradewright/docs/specifications/` | Issues / backlog |
 | Deploy | `scripts/deploy.mjs`, `deploy.config.json` | Copies `src/*` into the game AddOns folders |
 | Saved-data move | `scripts/migrate-saved-data.mjs` | One-time: carries saved data from the old name (AuctionHelper) over to Tradewright |
+| Shipped sightings | `scripts/build-source-data.mjs` (+ `.lua`), `npm run sources:build` | Builds sealed sightings from saved data into `Tradewright_SourceData.lua`; in game first: `/tradewright sources seal`, then log out |
 
 ## Repo layout
 

@@ -56,6 +56,7 @@ local function newAddon(recipes, skill)
 	function pe:RecipeDataInfo(recipeData) return recipeData.info end
 	function pe:GetRecipeSpellID(recipeData) return recipeData.recipeSpellID end
 	function pe:GetItemVendorSellCopper() return 40 end
+	function pe:GetRecipeSource() return nil end
 	function pe:EvaluateCraftScenario(_, _, _, recipeData)
 		if not recipeData.materialCost then
 			return { matMissingPrice = true }
@@ -238,6 +239,16 @@ do
 		pe:LevelingStepRow(route, last, #route.steps, false).learnBlockedBy == "skill")
 	last.candidate.learnSkill = 100
 	check("Skill reached and a trainer known: Learn is on", pe:LevelingStepRow(route, last, #route.steps, false).learnBlockedBy == nil)
+	last.candidate.source, last.candidate.trainers, last.candidate.learnSkill = "vendor", nil, 190
+	last.candidate.vendors = { Una = { price = 500 } }
+	local sold = pe:LevelingStepRow(route, last, #route.steps, false)
+	check("Vendor recipe shows its price, and an estimated skill does not turn Learn off",
+		sold.detailText:find("vendor, 500c", 1, true) and sold.learnBlockedBy == nil)
+	last.candidate.source, last.candidate.vendors = "drop", nil
+	last.candidate.dropSource = { name = "Bristleback Shaman", held = 1, opened = 40 }
+	local dropped = pe:LevelingStepRow(route, last, #route.steps, false)
+	check("Dropped recipe names the creature, Learn stays off",
+		dropped.detailText:find("drops from Bristleback Shaman", 1, true) and dropped.learnBlockedBy == "no_trainer")
 	pe.settings["professions.leveling.giveBack"] = "none"
 	local materialsOnly = routeFor(pe)
 	check("Crafted items counted as nothing: the row shows materials",

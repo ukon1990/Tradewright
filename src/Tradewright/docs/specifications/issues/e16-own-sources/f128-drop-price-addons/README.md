@@ -19,6 +19,10 @@ Prices come from the pack's own auction scans only. The TradeSkillMaster and Auc
 - Remove the settings, defaults and help text; saved keys of old settings are ignored
 - Remove `TradeSkillMaster, Auctionator` from `OptionalDeps` in all TOCs, the globals from `.luacheckrc`, and update `AGENTS.md`
 
+## Status
+
+Implemented, in-game check pending.
+
 ## Acceptance criteria
 
 - [ ] `grep -r "TSM\|Auctionator" src --include=*.lua --include=*.toc` finds nothing

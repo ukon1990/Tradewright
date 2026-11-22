@@ -40,3 +40,4 @@ src\modules\Tradewright_PriceHistory.lua
 src\modules\Tradewright_MarketInsights.lua
 src\modules\Tradewright_Opportunities.lua
 src\modules\Tradewright_VendorSource.lua
+src\modules\Tradewright_DropSource.lua

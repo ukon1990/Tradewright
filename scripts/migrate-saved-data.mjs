@@ -99,7 +99,7 @@ function migrate(wtfDir, opts) {
   return true;
 }
 
-function wtfDirsFromArgs(args) {
+export function wtfDirsFromArgs(args) {
   const wtfFlag = args.indexOf("--wtf");
   if (wtfFlag >= 0) return [path.resolve(args[wtfFlag + 1])];
   const targets = { ...readJson("deploy.config.json").targets, ...readJson("deploy.config.local.json").targets };

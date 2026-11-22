@@ -144,7 +144,7 @@ local function showCartRowTooltip(rowFrame, rowData)
 		{ "Cost to buy", rowData.estimatedBuyCost and pe:FormatCopperFull(rowData.estimatedBuyCost) or "no price yet" },
 	}
 	appendCartMailLines(pe, lines, rowData.mailAllocations)
-	pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, pe:AppendCartVendorLines(lines, rowData, "Click to find it at the auction house"))
+	pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, pe:AppendCartSourceLines(lines, rowData, "Click to find it at the auction house"))
 end
 
 local function buildCartTable(self, panel)
@@ -171,7 +171,7 @@ local function buildCartTable(self, panel)
 		onRowClick = function(_, rowData, button)
 			Tradewright:GetState().auctionCartSelectedItemID = rowData and rowData.itemID or nil
 			if button == "RightButton" and rowData then
-				Tradewright:ShowVendorWaypoint(rowData.itemID)
+				Tradewright:ShowItemSourceWaypoint(rowData.itemID)
 			else
 				Tradewright:SearchAuctionCartRow(rowData)
 			end

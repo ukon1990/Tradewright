@@ -1,12 +1,9 @@
 local _, Tradewright = ...
 
 -- Trainer recipes. The profession scan does not say at which skill a recipe can be learned, what it
--- costs or who teaches it, but an open trainer window does. What a trainer lists is kept per
--- character, with the trainer's name and where it stands:
--- `db.characters[characterKey].trainerRecipes[skillLineKey][recipeName] =
---    { skillRequired, cost, seenAt, trainers = { [trainerName] = { zone, mapID, x, y } } }`.
--- The trainer's other services are its rank training (Expert, Artisan), kept the same way under
--- `trainerRanks`.
+-- costs or who teaches it, but an open trainer window does. What a trainer lists goes to the
+-- sightings store (Tradewright_Sources.lua) with the trainer and where it stands; its services
+-- that are no recipe are its rank training (Expert, Artisan).
 -- The leveling route uses it for recipes not learned yet, and to point the way to a trainer.
 -- Only reads the window; buys nothing. A trainer's own filters can hide services, so a recipe that
 -- is absent proves nothing.
@@ -40,26 +37,6 @@ local function listedServices()
 	return services
 end
 
--- Merges what one trainer window listed into `characterData[storeName]`, kept per profession.
-local function storeTrainerEntries(characterData, storeName, entries)
-	characterData[storeName] = characterData[storeName] or {}
-	for skillLineKey, services in pairs(entries) do
-		local stored = characterData[storeName][skillLineKey] or {}
-		characterData[storeName][skillLineKey] = stored
-		for serviceName, entry in pairs(services) do
-			stored[serviceName] = LevelingRouteLogic.MergeTrainerEntry(stored[serviceName], entry)
-		end
-	end
-end
-
--- Who is being asked, where and when.
-local function trainerSighting(pe)
-	return {
-		now = pe:Now(), trainerName = UnitName and UnitName("npc") or nil,
-		place = pe.GetPlayerPlace and pe:GetPlayerPlace() or nil,
-	}
-end
-
 --- Records what the open trainer window lists for the character's scanned professions.
 function Tradewright:ReadOpenTrainerRecipes()
 	if not (GetNumTrainerServices and GetTrainerServiceInfo and GetTrainerServiceCost) then
@@ -70,40 +47,17 @@ function Tradewright:ReadOpenTrainerRecipes()
 	if not characterData then
 		return
 	end
-	local recipes, ranks = LevelingRouteLogic.TrainerEntries(
-		listedServices(), skillLineByRecipeName(self, characterData), trainerSighting(self))
+	local recipes, ranks = LevelingRouteLogic.TrainerEntries(listedServices(), skillLineByRecipeName(self, characterData), self:Now())
 	if not next(recipes) then
 		return
 	end
-	storeTrainerEntries(characterData, "trainerRecipes", recipes)
-	storeTrainerEntries(characterData, "trainerRanks", ranks)
+	self:RecordTrainerSighting(recipes, ranks)
 	self:InvalidateLevelingRoute()
-end
-
-local function factionOf(characterData)
-	return characterData.meta and characterData.meta.faction
-end
-
--- What any character has seen trainers offer for one profession, from `characterData[storeName]`:
--- `{ [serviceName] = { skillRequired, cost, seenAt, trainers } }`. Trainers seen by a character of
--- the other faction are left out: they will not teach this one.
-local function seenAtTrainers(pe, storeName, skillLineID)
-	local characters = pe.db and pe.db.characters or {}
-	local ownFaction = factionOf(characters[pe:GetCharacterKey()] or {})
-	local merged = {}
-	for _, characterData in pairs(characters) do
-		local services = characterData[storeName] and characterData[storeName][tostring(skillLineID)]
-		local otherFaction = factionOf(characterData) ~= ownFaction
-		for serviceName, entry in pairs(services or {}) do
-			merged[serviceName] = LevelingRouteLogic.MergeTrainerEntry(merged[serviceName], entry, otherFaction)
-		end
-	end
-	return merged
 end
 
 --- Trainer recipes of one profession: `{ [recipeName] = { skillRequired, cost, seenAt, trainers } }`.
 function Tradewright:GetTrainerRecipes(skillLineID)
-	return seenAtTrainers(self, "trainerRecipes", skillLineID)
+	return self:GetTrainerOffers("taught", skillLineID)
 end
 
 --- The training that lifts a rank cap of `rankCap` for a profession, when a trainer has been seen
@@ -113,7 +67,7 @@ function Tradewright:GetNextRankTraining(skillLineID, rankCap)
 	if not rankCap then
 		return nil
 	end
-	return LevelingRouteLogic.NextRankTraining(seenAtTrainers(self, "trainerRanks", skillLineID), rankCap)
+	return LevelingRouteLogic.NextRankTraining(self:GetTrainerOffers("ranks", skillLineID), rankCap)
 end
 
 -- `trainers` as a list of places with the trainer's name on each.
@@ -125,19 +79,20 @@ local function trainerPlaces(trainers)
 	return places
 end
 
---- Points the way to the nearest trainer seen teaching `recipeName`, and says where it is in chat.
---- `trainers` is the recipe's `{ [trainerName] = place }`. Returns whether a waypoint was set.
-function Tradewright:ShowRecipeTrainerWaypoint(recipeName, trainers)
-	local trainer = self.NearestPlace and self:NearestPlace(trainerPlaces(trainers))
-	if not trainer then
+--- Points the way to the nearest NPC a recipe can be had from, and says where it is in chat.
+--- `npcs` is `{ [npcName] = place }`: the trainers seen teaching it, or with `sold` the vendors seen
+--- selling its recipe item. Returns whether a waypoint was set.
+function Tradewright:ShowRecipeTrainerWaypoint(recipeName, npcs, sold)
+	local npc = self.NearestPlace and self:NearestPlace(trainerPlaces(npcs))
+	if not npc then
 		self:PrintMessage(string.format(
 			"No trainer has been seen teaching %s. Open a trainer of this profession once; trainer recipes then get directions.", recipeName))
 		return false
 	end
-	local marked = self:SetWaypointTo(trainer, trainer.name .. " (" .. recipeName .. ")")
-	local zone = trainer.zone and trainer.zone ~= "" and (" in " .. trainer.zone) or ""
-	self:PrintMessage(string.format("%s teaches %s%s, at %.1f, %.1f.%s", trainer.name, recipeName, zone,
-		trainer.x * 100, trainer.y * 100, marked and " Waypoint set." or ""))
+	local marked = self:SetWaypointTo(npc, npc.name .. " (" .. recipeName .. ")")
+	local zone = npc.zone and npc.zone ~= "" and (" in " .. npc.zone) or ""
+	self:PrintMessage(string.format("%s %s %s%s, at %.1f, %.1f.%s", npc.name, sold and "sells the recipe for" or "teaches",
+		recipeName, zone, npc.x * 100, npc.y * 100, marked and " Waypoint set." or ""))
 	return marked
 end
 

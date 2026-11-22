@@ -204,6 +204,9 @@ end
 local function finishBuild(self, build)
 	local trainerRecipes = self.GetTrainerRecipes and self:GetTrainerRecipes(build.professionData.skillLineID)
 	LevelingRouteLogic.ApplyTrainerData(build.candidates, trainerRecipes)
+	LevelingRouteLogic.ApplyRecipeSources(build.candidates, function(recipeName)
+		return self:GetRecipeSource(recipeName)
+	end)
 	build.done = true
 	if self.ScheduleRefreshProfessionCraftEconomyPanel then
 		self:ScheduleRefreshProfessionCraftEconomyPanel(0)
