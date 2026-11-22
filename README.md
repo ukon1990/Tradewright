@@ -14,9 +14,9 @@ Tradewright is an addon for managing auctions, professions and inventory in WoW 
 **Professions**
 - Lets you see potential profit and crafting cost for your recipes.
 - Selects the cheapest option to get the reagent (AH, craft or vendor)
-- Lets you navigate to the vendor that sells a given trade reagent like `Fine thread`etc.
+- Lets you navigate to the vendor that sells a given trade reagent like `Fine thread` etc.
 - Suggests how many to make, and tracks cooldown crafts.
-- Craft queue, and a helper leveling professions skill(not gathering).
+- Craft queue, and a helper leveling crafting professions.
 - Crafting orders (retail): queue patron orders, buy all reagents from one cart, then craft them in order.
 - Reagent quality (retail): the cheapest reagents that reach the rank you want.
 
