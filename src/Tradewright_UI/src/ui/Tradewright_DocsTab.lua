@@ -1,5 +1,6 @@
 local addonName, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local DocsTab = {}
 Tradewright.DocsTab = DocsTab
 
@@ -36,7 +37,7 @@ local function createTopicList(pe, panel)
 	panel.topics:SetPoint("TOPLEFT")
 	panel.topics:SetPoint("BOTTOMLEFT")
 	panel.topics:SetWidth(TOPIC_WIDTH)
-	panel.topicHeading = pe:CreateHeading(panel.topics, "Topics")
+	panel.topicHeading = pe:CreateHeading(panel.topics, L["Topics"])
 	panel.topicHeading:SetPoint("TOPLEFT")
 	panel.topicHeading:SetPoint("TOPRIGHT")
 	panel.topicList = pe:CreateSelectList(panel.topics, function(key)
@@ -89,7 +90,7 @@ end
 local function topicItems(sections)
 	local items = {}
 	for index, section in ipairs(sections) do
-		items[index] = { key = index, label = section.title or ("Topic " .. index) }
+		items[index] = { key = index, label = section.title or (L["Topic "] .. index) }
 	end
 	return items
 end
@@ -105,8 +106,8 @@ function DocsTab:Refresh()
 	panel.topicList:SetItems(topicItems(sections))
 
 	local selected = sections[panel.selectedIndex]
-	panel.bodyTitle:SetText(selected and selected.title or "Help")
-	panel.body:SetText(selected and formatBody(pe, selected.body) or "No help topics.")
+	panel.bodyTitle:SetText(selected and selected.title or L["Help"])
+	panel.body:SetText(selected and formatBody(pe, selected.body) or L["No help topics."])
 	panel.bodyScroll:SetVerticalScroll(0)
 	self:Layout(panel)
 end

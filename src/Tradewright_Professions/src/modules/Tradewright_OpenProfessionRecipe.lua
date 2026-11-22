@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Reads the open Blizzard profession window (selected recipe, live reagent picks, order form) and queues its recipe.
 
 local ReagentPlan = Tradewright.CraftReagentPlan
@@ -437,15 +438,15 @@ function Tradewright:QueueOpenProfessionRecipe(quantity, opts)
 	local ctx, reason = self:BuildProfessionRecipeQueueContext(recipeID, opts)
 	if not ctx then
 		if not opts.quiet then
-			local msg = "Could not add the recipe to the queue."
+			local msg = L["Could not add the recipe to the queue."]
 			if reason == "no_recipe" then
-				msg = "Select a recipe first."
+				msg = L["Select a recipe first."]
 			elseif reason == "no_data" then
-				msg = "No saved data for this recipe — run a profession scan first."
+				msg = L["No saved data for this recipe — run a profession scan first."]
 			elseif reason == "no_eval" then
-				msg = "The reagents of this recipe are not known yet. Try again in a moment."
+				msg = L["The reagents of this recipe are not known yet. Try again in a moment."]
 			elseif reason == "not_ready" then
-				msg = "Profession UI not ready yet."
+				msg = L["Profession UI not ready yet."]
 			end
 			self:PrintMessage(msg)
 		end
@@ -458,14 +459,14 @@ function Tradewright:QueueOpenProfessionRecipe(quantity, opts)
 	local key, err = self:AddCraftToQueue(ctx, quantity)
 	if not key then
 		if not opts.quiet then
-			self:PrintMessage("Could not add the recipe to the queue.")
+			self:PrintMessage(L["Could not add the recipe to the queue."])
 		end
 		return nil, err or "add_failed"
 	end
 
 	if not opts.quiet then
 		local name = ctx.recipeName or ctx.eval and ctx.eval.recipeName or ("#" .. tostring(ctx.recipeID))
-		self:PrintMessage(string.format("Added %s × %d to the queue.", tostring(name), quantity))
+		self:PrintMessage(string.format(L["Added %s × %d to the queue."], tostring(name), quantity))
 	end
 	if self.ScheduleRefreshProfessionCraftEconomyPanel then
 		self:ScheduleRefreshProfessionCraftEconomyPanel(0.05)

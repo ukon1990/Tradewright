@@ -1,23 +1,24 @@
 local Tradewright = select(2, ...)
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- "What to farm": trade goods ranked by the gold that changes hands in them each day, with
 -- the farm where you looted each one before. The addon ships no drop data: the last two columns come
 -- only from your own saved farms.
 
 local GAP = 12
 local TRADE_GOODS_CLASS = 7
-local VIEWS = { { id = "farms", label = "My farms" }, { id = "targets", label = "What to farm" } }
+local VIEWS = { { id = "farms", label = L["My farms"] }, { id = "targets", label = L["What to farm"] } }
 
 local function isTradeGood(itemID)
 	local getInstant = C_Item and C_Item.GetItemInfoInstant or GetItemInfoInstant
 	return getInstant ~= nil and select(6, getInstant(itemID)) == TRADE_GOODS_CLASS
 end
 
-local HELP = "Trade goods ranked by the gold that changes hands in them each day, from your auction house scans."
-	.. " An item needs full scans on 5 different days, about a day apart, before it shows up."
-	.. " Early estimates lists the rest now, from fewer scans, below the ranked ones.\n\n"
-	.. "Your saved farms fill the last two columns: where you looted the item and what that earns an hour."
-	.. " Tradewright ships no drop data or routes."
+local HELP = L["Trade goods ranked by the gold that changes hands in them each day, from your auction house scans."]
+	.. L[" An item needs full scans on 5 different days, about a day apart, before it shows up."]
+	.. L[" Early estimates lists the rest now, from fewer scans, below the ranked ones.\n\n"]
+	.. L["Your saved farms fill the last two columns: where you looted the item and what that earns an hour."]
+	.. L[" Tradewright ships no drop data or routes."]
 
 -- A candidate for one scanned trade good: full when it has a usual price and sales a day, an early estimate
 -- (latest price, sales if known) when `early` is on, otherwise nil.
@@ -86,21 +87,21 @@ end
 
 local function targetDetail(pe, row)
 	if row.early then
-		local basis = (row.days or 0) > 0 and string.format("%d of 5 days", row.days) or "latest scan only"
-		return pe:Colorize("Early estimate: " .. basis, "warning")
+		local basis = (row.days or 0) > 0 and string.format(L["%d of 5 days"], row.days) or L["latest scan only"]
+		return pe:Colorize(L["Early estimate: "] .. basis, "warning")
 	end
-	local supply = row.daysOfSupply < 1 and "Supply lasts under a day" or string.format("Supply lasts %d days", math.floor(row.daysOfSupply + 0.5))
-	return supply .. (row.usedByRecipes and " · used by your recipes" or "")
+	local supply = row.daysOfSupply < 1 and L["Supply lasts under a day"] or string.format(L["Supply lasts %d days"], math.floor(row.daysOfSupply + 0.5))
+	return supply .. (row.usedByRecipes and L[" · used by your recipes"] or "")
 end
 
 -- "Sales a day" and "Traded a day"; early estimates may lack both.
 local function salesColumns(pe)
 	local sells = {
-		id = "sellsPerDay", label = "Sales a day", justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
+		id = "sellsPerDay", label = L["Sales a day"], justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
 		sortValue = function(row) return row.sellsPerDay or -1 end,
 		getText = function(row) return row.sellsPerDay and perDayText(pe, row.sellsPerDay) or "?" end,
 	}
-	local traded = pe:MoneyColumn({ id = "traded", label = "Traded a day", field = "tradedPerDay", width = 86, sortValue = pe.FarmLogic.TargetRank })
+	local traded = pe:MoneyColumn({ id = "traded", label = L["Traded a day"], field = "tradedPerDay", width = 86, sortValue = pe.FarmLogic.TargetRank })
 	return sells, traded
 end
 
@@ -108,29 +109,29 @@ local function targetColumns(pe)
 	local sells, traded = salesColumns(pe)
 	return {
 		pe:CreateItemColumn({
-			label = "Item", defaultSort = "asc",
+			label = L["Item"], defaultSort = "asc",
 			getItemID = function(row) return row.itemID end,
 			getName = function(row) return pe:GetItemDisplayName(row.itemID) end,
 			getDetail = function(row) return targetDetail(pe, row) end,
 		}),
-		pe:MoneyColumn({ id = "usual", label = "Usual price", width = 80 }),
+		pe:MoneyColumn({ id = "usual", label = L["Usual price"], width = 80 }),
 		sells, traded,
 		{
-			id = "listed", label = "Listed", justifyH = "RIGHT", width = 56, sortable = true, defaultSort = "asc", optional = true,
+			id = "listed", label = L["Listed"], justifyH = "RIGHT", width = 56, sortable = true, defaultSort = "asc", optional = true,
 			sortValue = function(row) return row.supplyChange or 0 end,
 			getText = function(row) return pe:FormatSignedPercent(row.supplyChange) end,
 		},
 		{
-			id = "source", label = "Where you got it", width = 190, minWidth = 120, sortable = true, defaultSort = "asc",
+			id = "source", label = L["Where you got it"], width = 190, minWidth = 120, sortable = true, defaultSort = "asc",
 			sortValue = function(row) return row.source or "~" end,
 			getText = function(row)
 				if not row.source then
-					return "Not looted in a farm yet"
+					return L["Not looted in a farm yet"]
 				end
-				return string.format("%s, %.1f an hour", row.source, row.sourcePerHour)
+				return string.format(L["%s, %.1f an hour"], row.source, row.sourcePerHour)
 			end,
 		},
-		pe:MoneyColumn({ id = "yours", label = "Yours, an hour", field = "yoursPerHour", width = 90 }),
+		pe:MoneyColumn({ id = "yours", label = L["Yours, an hour"], field = "yoursPerHour", width = 90 }),
 	}
 end
 
@@ -139,7 +140,7 @@ local function buildTargetFilters(pe, view)
 	view.filters = {}
 	local previous
 	for _, filter in ipairs({
-		{ "farming.onlyFarmed", "Only farmed before" }, { "farming.onlyRecipes", "My recipes use it" }, { "farming.early", "Early estimates" },
+		{ "farming.onlyFarmed", L["Only farmed before"] }, { "farming.onlyRecipes", L["My recipes use it"] }, { "farming.early", L["Early estimates"] },
 	}) do
 		local button = pe:CreateButton(view, filter[2], function()
 			pe:SetSetting(filter[1], not pe:GetSetting(filter[1], false))
@@ -157,7 +158,7 @@ local function materialCount(rows)
 	for _, row in ipairs(rows) do
 		early = early + (row.early and 1 or 0)
 	end
-	return early > 0 and string.format("%d trade goods · %d early", #rows, early) or string.format("%d trade goods", #rows)
+	return early > 0 and string.format(L["%d trade goods · %d early"], #rows, early) or string.format(L["%d trade goods"], #rows)
 end
 
 --- The "What to farm" view: a note, two filter buttons and the table. Call `:Refresh()` when shown.
@@ -166,7 +167,7 @@ function Tradewright:CreateFarmTargetsView(panel)
 	local view = CreateFrame("Frame", nil, panel)
 	view.note = pe:CreateText(view, "GameFontHighlightSmall", "textMuted")
 	view.note:SetPoint("TOPLEFT")
-	view.note:SetText("Trade goods that move the most gold a day.")
+	view.note:SetText(L["Trade goods that move the most gold a day."])
 	buildTargetFilters(pe, view)
 	view.help = pe:CreateButton(view, "?", nil, { small = true, width = 22, tooltip = HELP })
 	view.help:SetPoint("LEFT", view.note, "RIGHT", 6, 0)
@@ -193,7 +194,7 @@ function Tradewright:CreateFarmTargetsView(panel)
 		self.table:SetEmptyText(emptyTitle, emptyHint)
 		self.table:SetLoading(not rows and pe.MarketInsightsLoadingNote or nil)
 		self.table:SetRows(rows or {})
-		self.table:SetFooterText(rows and "Traded a day = usual price times estimated sales, a ranking and not income" or "Reading the last scan…",
+		self.table:SetFooterText(rows and L["Traded a day = usual price times estimated sales, a ranking and not income"] or L["Reading the last scan…"],
 			rows and materialCount(rows) or "")
 		self.table:Refresh()
 	end

@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Reagents that are cheaper at a vendor than at the auction house. Every merchant the player opens
 -- goes to the sightings store (Tradewright_Sources.lua) with its prices and position, so the cart
 -- can warn, point the way to the nearest seller, and offer the reagents when the player is there.
@@ -101,12 +102,12 @@ function Tradewright:GetCartVendorAdvice(row)
 end
 
 local function priceText(pe, advice)
-	return (advice.exact and "" or "about ") .. pe:FormatCopperShort(math.ceil(advice.price))
+	return (advice.exact and "" or L["about "]) .. pe:FormatCopperShort(math.ceil(advice.price))
 end
 
 -- "Vendor: about 1s", or "Sold by a vendor" when the price is not known.
 local function plainNote(pe, advice)
-	return advice.price and ("Vendor: " .. priceText(pe, advice)) or "Sold by a vendor"
+	return advice.price and (L["Vendor: "] .. priceText(pe, advice)) or L["Sold by a vendor"]
 end
 
 local function hasText(text)
@@ -121,7 +122,7 @@ function Tradewright:GetVendorNote(row)
 		return nil
 	end
 	if advice.cheaper then
-		return self:Colorize("Cheaper at a vendor: " .. priceText(self, advice), "warning")
+		return self:Colorize(L["Cheaper at a vendor: "] .. priceText(self, advice), "warning")
 	end
 	return plainNote(self, advice)
 end
@@ -130,10 +131,10 @@ end
 function Tradewright:AuctionCartRowDetail(row)
 	local parts = { self:GetVendorNote(row) }
 	if row and hasText(row.sourceText) then
-		parts[#parts + 1] = "For " .. row.sourceText
+		parts[#parts + 1] = L["For "] .. row.sourceText
 	end
 	if row and hasText(row.mailToText) then
-		parts[#parts + 1] = "mail to " .. row.mailToText
+		parts[#parts + 1] = L["mail to "] .. row.mailToText
 	end
 	return table.concat(parts, " · ")
 end
@@ -141,11 +142,11 @@ end
 -- Adds the vendor price and seller to tooltip lines. Returns what a right-click does about it.
 local function appendVendorLines(pe, lines, advice, info)
 	if advice.price then
-		local price = priceText(pe, advice) .. " each"
-		lines[#lines + 1] = { "Vendor price", advice.cheaper and pe:Colorize(price .. ", cheaper than the auction house", "warning") or price }
+		local price = priceText(pe, advice) .. L[" each"]
+		lines[#lines + 1] = { L["Vendor price"], advice.cheaper and pe:Colorize(price .. L[", cheaper than the auction house"], "warning") or price }
 	end
-	lines[#lines + 1] = { "Sold by", VendorLogic.Where(info) or "vendors" }
-	return VendorLogic.Nearest(info.sellers) and "Right-click to show the way to the nearest vendor" or nil
+	lines[#lines + 1] = { L["Sold by"], VendorLogic.Where(info) or "vendors" }
+	return VendorLogic.Nearest(info.sellers) and L["Right-click to show the way to the nearest vendor"] or nil
 end
 
 --- Adds where a cart row's item can be had to its tooltip lines: the vendor price and seller, and
@@ -155,9 +156,9 @@ function Tradewright:AppendCartSourceLines(lines, row, hint)
 	local clickHint = advice and appendVendorLines(self, lines, advice, info)
 	local dropPlaceKnown = self:AppendDropSourceLines(lines, row and row.itemID)
 	if not clickHint and dropPlaceKnown then
-		clickHint = "Right-click to show the way to where it was looted"
+		clickHint = L["Right-click to show the way to where it was looted"]
 	elseif not clickHint and advice then
-		clickHint = "Directions appear once you have visited a vendor that sells it"
+		clickHint = L["Directions appear once you have visited a vendor that sells it"]
 	end
 	return clickHint and (hint .. "\n" .. clickHint) or hint
 end
@@ -174,7 +175,7 @@ function Tradewright:CartVendorHint(rows)
 	if count == 0 then
 		return ""
 	end
-	return self:Colorize(string.format("%d %s cheaper at a vendor. ", count, self:Plural(count, "item is", "items are")), "warning")
+	return self:Colorize(string.format(L["%d %s cheaper at a vendor. "], count, self:Plural(count, "item is", "items are")), "warning")
 end
 
 -- The game's own waypoint arrow, where the client has one and the map allows it.
@@ -203,10 +204,10 @@ end
 
 local function noSellerMessage(info, name)
 	if not info then
-		return string.format("No vendor is known to sell %s.", name)
+		return string.format(L["No vendor is known to sell %s."], name)
 	end
-	return string.format("No vendor visited yet for %s. Look for %s; the first visit saves the place.",
-		name, info.kind or "a vendor that sells it")
+	return string.format(L["No vendor visited yet for %s. Look for %s; the first visit saves the place."],
+		name, info.kind or L["a vendor that sells it"])
 end
 
 -- Position in the world (continent and yards), to compare sellers on different maps.
@@ -249,8 +250,8 @@ function Tradewright:ShowVendorWaypoint(itemID)
 	end
 	local marked = self:SetWaypointTo(seller, seller.name .. " (" .. name .. ")")
 	local zone = hasText(seller.zone) and (" in " .. seller.zone) or ""
-	self:PrintMessage(string.format("%s sells %s%s, at %.1f, %.1f.%s", seller.name, name, zone,
-		seller.x * 100, seller.y * 100, marked and " Waypoint set." or ""))
+	self:PrintMessage(string.format(L["%s sells %s%s, at %.1f, %.1f.%s"], seller.name, name, zone,
+		seller.x * 100, seller.y * 100, marked and L[" Waypoint set."] or ""))
 	return marked
 end
 

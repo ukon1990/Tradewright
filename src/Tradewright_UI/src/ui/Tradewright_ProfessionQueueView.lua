@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Queue view of the profession side panel: the queued crafts, and the shopping list of materials
 -- this character still misses, with the other characters that hold them.
 
@@ -59,12 +60,12 @@ end
 
 local function recipeColumns(pe)
 	return {
-		{ id = "recipe", label = "Recipe", width = 100, flex = 1, minWidth = 90, createCell = recipeNameCell(pe),
+		{ id = "recipe", label = L["Recipe"], width = 100, flex = 1, minWidth = 90, createCell = recipeNameCell(pe),
 			updateCell = function(cell, row)
 				cell.name:SetText(row.recipeLabel .. rankMarkup(row.qualityIndex))
 				cell.detail:SetText(row.detailText)
 			end },
-		{ id = "qty", label = "Qty", width = 80, createCell = stepperCell(pe),
+		{ id = "qty", label = L["Qty"], width = 80, createCell = stepperCell(pe),
 			updateCell = function(cell, row)
 				cell.value:SetText(tostring(row.quantity))
 				cell.minus:SetScript("OnClick", function() pe:UpdateCraftQueueQuantity(row.queueKey, row.quantity - 1) end)
@@ -107,7 +108,7 @@ local function showQueueRowTooltip(pe, rowFrame, row)
 	local muted = pe:GetTheme().textMuted
 	GameTooltip:SetOwner(rowFrame, "ANCHOR_RIGHT")
 	GameTooltip:SetText(row.recipeLabel, 1, 1, 1)
-	GameTooltip:AddLine("Click to show this recipe in the profession window", muted.r, muted.g, muted.b, true)
+	GameTooltip:AddLine(L["Click to show this recipe in the profession window"], muted.r, muted.g, muted.b, true)
 	GameTooltip:Show()
 end
 
@@ -121,9 +122,9 @@ local function findAtAuctionHouse(pe, row)
 		pe:SetAuctionPanelActiveTab("cart", true)
 	end
 	if pe.SearchAuctionCartRow and pe:SearchAuctionCartRow({ itemID = itemID, quantity = row.quantity }) then
-		pe:PrintMessage(string.format("Searching AH for %s.", pe:GetItemDisplayName(itemID)))
+		pe:PrintMessage(string.format(L["Searching AH for %s."], pe:GetItemDisplayName(itemID)))
 	elseif not (_G.AuctionHouseFrame and _G.AuctionHouseFrame:IsShown()) and not (_G.AuctionFrame and _G.AuctionFrame:IsShown()) then
-		pe:PrintMessage("Open the auction house to find reagents from the cart.")
+		pe:PrintMessage(L["Open the auction house to find reagents from the cart."])
 	end
 end
 
@@ -133,15 +134,15 @@ local function showReagentTooltip(pe, rowFrame, row)
 	end
 	local pairs = {
 		{ "Needed", pe:FormatNumberGrouped(row.needed) },
-		{ "On this character", pe:FormatNumberGrouped(row.have) },
+		{ L["On this character"], pe:FormatNumberGrouped(row.have) },
 	}
 	for _, holder in ipairs(row.holders) do
 		pairs[#pairs + 1] = { "On " .. pe:GetCharacterNameMarkup(holder.characterKey), pe:FormatNumberGrouped(holder.quantity) }
 	end
 	pairs[#pairs + 1] = { "Buy", pe:FormatNumberGrouped(row.quantity) }
 	pairs[#pairs + 1] = { "Each", row.unitPrice and pe:FormatCopperFull(row.unitPrice) or "-" }
-	pairs[#pairs + 1] = { "Used by", table.concat(row.recipeRefs or {}, ", ") }
-	local hint = "Click to find it at the auction house"
+	pairs[#pairs + 1] = { L["Used by"], table.concat(row.recipeRefs or {}, ", ") }
+	local hint = L["Click to find it at the auction house"]
 	pe:ShowItemRowTooltip(rowFrame, row.itemID, pairs, pe.AppendCartSourceLines and pe:AppendCartSourceLines(pairs, row, hint) or hint)
 end
 
@@ -162,14 +163,14 @@ end
 
 local function reagentColumns(pe)
 	return {
-		pe:CreateItemColumn({ label = "Reagent", sortable = true, minWidth = 100,
+		pe:CreateItemColumn({ label = L["Reagent"], sortable = true, minWidth = 100,
 			getItemID = function(row) return row.itemID end,
 			getName = function(row) return row.name .. rankMarkup(row.qualityIndex) end,
 			getDetail = function(row) return row.detailText end }),
 		numberColumn(pe, "needed", "Need", 36),
 		numberColumn(pe, "have", "Have", 36),
 		numberColumn(pe, "quantity", "Buy", 34),
-		pe:MoneyColumn({ id = "totalCost", label = "Cost", width = 68 }),
+		pe:MoneyColumn({ id = "totalCost", label = L["Cost"], width = 68 }),
 		vendorColumn(pe),
 	}
 end
@@ -182,17 +183,17 @@ local function createOrderNav(pe, f, host)
 	orderNav:SetHeight(48)
 	orderNav:Hide()
 	f.orderNav = orderNav
-	f.peAddToQueueBtn = pe:CreateButton(orderNav, "Add to queue", nil,
-		{ tooltip = "Adds this order to the craft queue without starting it. Only the reagents you must supply go in the cart." })
+	f.peAddToQueueBtn = pe:CreateButton(orderNav, L["Add to queue"], nil,
+		{ tooltip = L["Adds this order to the craft queue without starting it. Only the reagents you must supply go in the cart."] })
 	f.peAddToQueueBtn:SetPoint("TOPLEFT")
 	f.peAddToQueueBtn:Hide()
-	f.peRemoveFromQueueBtn = pe:CreateButton(orderNav, "Remove")
+	f.peRemoveFromQueueBtn = pe:CreateButton(orderNav, L["Remove"])
 	f.peRemoveFromQueueBtn:SetPoint("LEFT", f.peAddToQueueBtn, "RIGHT", 8, 0)
 	f.peRemoveFromQueueBtn:Hide()
-	f.pePrevOrderBtn = pe:CreateButton(orderNav, "Previous", nil, { small = true })
+	f.pePrevOrderBtn = pe:CreateButton(orderNav, L["Previous"], nil, { small = true })
 	f.pePrevOrderBtn:SetPoint("TOPLEFT", f.peAddToQueueBtn, "BOTTOMLEFT", 0, -4)
 	f.pePrevOrderBtn:Hide()
-	f.peNextOrderBtn = pe:CreateButton(orderNav, "Next", nil, { small = true })
+	f.peNextOrderBtn = pe:CreateButton(orderNav, L["Next"], nil, { small = true })
 	f.peNextOrderBtn:SetPoint("LEFT", f.pePrevOrderBtn, "RIGHT", 8, 0)
 	f.peNextOrderBtn:Hide()
 	f.peQueueStatusText = pe:CreateText(orderNav, "GameFontHighlightSmall", "textMuted")
@@ -205,9 +206,9 @@ local function createActions(pe, f, host)
 	actions:SetPoint("BOTTOMLEFT")
 	actions:SetPoint("BOTTOMRIGHT")
 	actions:SetHeight(26)
-	local open = pe:CreateButton(actions, "Open in Tradewright", function() pe:OpenCraftsTabWithQueueFocus() end)
+	local open = pe:CreateButton(actions, L["Open in Tradewright"], function() pe:OpenCraftsTabWithQueueFocus() end)
 	open:SetPoint("LEFT")
-	f.clearQueueButton = pe:CreateButton(actions, "Clear queue", function() pe:ClearCraftQueue() end)
+	f.clearQueueButton = pe:CreateButton(actions, L["Clear queue"], function() pe:ClearCraftQueue() end)
 	f.clearQueueButton:SetPoint("RIGHT")
 	local danger = pe:GetTheme().danger
 	f.clearQueueButton:GetFontString():SetTextColor(danger.r, danger.g, danger.b)
@@ -215,14 +216,14 @@ local function createActions(pe, f, host)
 end
 
 local function createRecipeTable(pe, f, card)
-	f.recipeTitle = pe:CreateHeading(card, "To craft")
+	f.recipeTitle = pe:CreateHeading(card, L["To craft"])
 	f.recipeTitle:SetPoint("TOPLEFT", f.queueOverviewText, "BOTTOMLEFT", 0, -8)
 	f.recipeTitle:SetPoint("TOPRIGHT", f.queueOverviewText, "BOTTOMRIGHT", 0, -8)
 	f.recipeTable = pe:CreateReusableTable(card, {
 		rowHeight = TALL_ROW,
 		autoFitToScroll = true,
-		emptyTitle = "Nothing queued",
-		emptyHint = "Pick a recipe and press Add to queue.",
+		emptyTitle = L["Nothing queued"],
+		emptyHint = L["Pick a recipe and press Add to queue."],
 		onRowClick = function(_, row) pe:OpenProfessionQueueRow(row) end,
 		onRowEnter = function(rowFrame, row) showQueueRowTooltip(pe, rowFrame, row) end,
 		onRowLeave = function() GameTooltip:Hide() end,
@@ -235,7 +236,7 @@ end
 -- The table fills the space down to the action row. It is anchored to that row directly, the same
 -- way the Recipe view's materials table is.
 local function createReagentTable(pe, f, card, actions)
-	f.reagentTitle = pe:CreateHeading(card, "Cart")
+	f.reagentTitle = pe:CreateHeading(card, L["Cart"])
 	f.reagentTitle:SetPoint("TOPLEFT", f.recipeTable.frame, "BOTTOMLEFT", 0, -10)
 	f.reagentTitle:SetPoint("TOPRIGHT", f.recipeTable.frame, "BOTTOMRIGHT", 0, -10)
 	f.reagentTable = pe:CreateReusableTable(card, {
@@ -244,8 +245,8 @@ local function createReagentTable(pe, f, card, actions)
 		footer = true,
 		sortKey = "totalCost",
 		sortAsc = false,
-		emptyTitle = "Nothing missing",
-		emptyHint = "This character has every reagent the queue needs.",
+		emptyTitle = L["Nothing missing"],
+		emptyHint = L["This character has every reagent the queue needs."],
 		onRowEnter = function(rowFrame, row) showReagentTooltip(pe, rowFrame, row) end,
 		onRowLeave = function() GameTooltip:Hide() end,
 		onRowClick = function(_, row, button)
@@ -332,7 +333,7 @@ local function learnFirstNote(pe, entry)
 		entry.levelingLearn = nil
 		return nil
 	end
-	return learn.skill and string.format("learn first: trainer, skill %d", learn.skill) or "learn the recipe first"
+	return learn.skill and string.format(L["learn first: trainer, skill %d"], learn.skill) or L["learn the recipe first"]
 end
 
 -- Whether a queued craft can be started now, from what is in this character's bags at this moment
@@ -353,7 +354,7 @@ local function craftReadiness(pe, entry, quantity)
 	if craftable >= quantity then
 		return true, "ready"
 	end
-	return craftable > 0, craftable > 0 and string.format("reagents for %d of %d", craftable, quantity) or nil
+	return craftable > 0, craftable > 0 and string.format(L["reagents for %d of %d"], craftable, quantity) or nil
 end
 
 local function queueRecipeRow(pe, entry, index)
@@ -363,9 +364,9 @@ local function queueRecipeRow(pe, entry, index)
 	local orderID = tonumber(entry.orderID)
 	local detail = {}
 	if orderID then
-		detail[#detail + 1] = "Order #" .. orderID
+		detail[#detail + 1] = L["Order #"] .. orderID
 	end
-	detail[#detail + 1] = "Profit " .. (perProfit and pe:FormatSignedMoney(perProfit * quantity) or "unknown")
+	detail[#detail + 1] = L["Profit "] .. (perProfit and pe:FormatSignedMoney(perProfit * quantity) or "unknown")
 	local ready, readyNote = craftReadiness(pe, entry, quantity)
 	detail[#detail + 1] = readyNote
 	return {
@@ -408,7 +409,7 @@ local function holdersText(pe, holders)
 	if #holders > MAX_HOLDERS_SHOWN then
 		parts[#parts + 1] = "+" .. (#holders - MAX_HOLDERS_SHOWN)
 	end
-	return #parts > 0 and ("On other characters: " .. table.concat(parts, ", ")) or nil
+	return #parts > 0 and (L["On other characters: "] .. table.concat(parts, ", ")) or nil
 end
 
 -- Cost of buying `buy` units: 0 when nothing is bought, nil when the price is unknown.
@@ -434,11 +435,11 @@ end
 -- "23 from queued crafts" when crafts in the queue make part of what this material's line needs.
 local function queuedCraftsNote(reagent)
 	local fromQueue = tonumber(reagent.quantityFromQueue) or 0
-	return fromQueue > 0 and string.format("%d from queued crafts", fromQueue) or nil
+	return fromQueue > 0 and string.format(L["%d from queued crafts"], fromQueue) or nil
 end
 
 local function shoppingFooter(pe, rows)
-	return (pe.CartVendorHint and pe:CartVendorHint(rows) or "") .. "Click a reagent to find it at the auction house"
+	return (pe.CartVendorHint and pe:CartVendorHint(rows) or "") .. L["Click a reagent to find it at the auction house"]
 end
 
 -- One shopping-list row for a material this character misses.
@@ -498,16 +499,16 @@ end
 
 local function overviewText(pe, summary, recipeRows, totals)
 	if #recipeRows == 0 then
-		return "The queue is empty."
+		return L["The queue is empty."]
 	end
 	local crafts = 0
 	for _, row in ipairs(recipeRows) do
 		crafts = crafts + row.quantity
 	end
-	local text = string.format("%d crafts of %d recipes · potential profit %s · %d reagents to buy",
+	local text = string.format(L["%d crafts of %d recipes · potential profit %s · %d reagents to buy"],
 		crafts, #recipeRows, summary.totalProfit and pe:FormatSignedMoney(summary.totalProfit) or "unknown", totals.toBuy)
 	if totals.onAlts > 0 then
-		text = text .. string.format(" · %d on other characters", totals.onAlts)
+		text = text .. string.format(L[" · %d on other characters"], totals.onAlts)
 	end
 	return text
 end
@@ -522,7 +523,7 @@ function Tradewright:RefreshProfessionQueueCard(panel)
 		recipeRows[index] = queueRecipeRow(self, entry, index)
 	end
 	local reagentRows, totals = shoppingRows(self, summary)
-	self:SetButtonLabel(panel.tabQueue, #recipeRows > 0 and string.format("Queue (%d)", #recipeRows) or "Queue", true)
+	self:SetButtonLabel(panel.tabQueue, #recipeRows > 0 and string.format(L["Queue (%d)"], #recipeRows) or "Queue", true)
 	panel.queueOverviewText:SetText(overviewText(self, summary, recipeRows, totals))
 	panel.recipeTable:SetRows(recipeRows)
 	panel.recipeTable:Refresh()

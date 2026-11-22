@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Item slots of the bag window. Live slots are the game's own item buttons, so use,
 -- drag, split and tooltips run the game's code; read-only slots are plain buttons.
 
@@ -112,10 +113,10 @@ end
 local function ownerText(pe, owner)
 	local parts = {}
 	if owner.bags > 0 then
-		parts[#parts + 1] = pe:FormatNumberGrouped(owner.bags) .. " bags"
+		parts[#parts + 1] = pe:FormatNumberGrouped(owner.bags) .. L[" bags"]
 	end
 	if owner.bank > 0 then
-		parts[#parts + 1] = pe:FormatNumberGrouped(owner.bank) .. " bank"
+		parts[#parts + 1] = pe:FormatNumberGrouped(owner.bank) .. L[" bank"]
 	end
 	return table.concat(parts, " · ")
 end
@@ -131,12 +132,12 @@ local function showSavedTooltip(button)
 	for _, owner in ipairs(owners) do
 		rows[#rows + 1] = { owner.name, ownerText(pe, owner) }
 	end
-	rows[#rows + 1] = { "All characters", pe:FormatNumberGrouped(total) }
+	rows[#rows + 1] = { L["All characters"], pe:FormatNumberGrouped(total) }
 	local price = pe.GetNativeAhPrice and pe:GetNativeAhPrice(item.itemID)
 	if price and price > 0 then
-		rows[#rows + 1] = { "Auction price each", pe:FormatCopperShort(price) }
+		rows[#rows + 1] = { L["Auction price each"], pe:FormatCopperShort(price) }
 	end
-	pe:ShowItemRowTooltip(button, item.itemID, rows, "Stacks are added up per item. Log in on that character to move or use them.")
+	pe:ShowItemRowTooltip(button, item.itemID, rows, L["Stacks are added up per item. Log in on that character to move or use them."])
 end
 
 --- A plain slot that only shows an item: tooltip and shift-click to link, nothing else.

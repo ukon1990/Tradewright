@@ -1,6 +1,7 @@
 -- Item and currency info: descriptors from the item API, auction tradeability, expansion filter tags and vendor prices.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 --- Profession crafting tier (1+) embedded in item hyperlink; matches default tooltip quality diamond.
 function Tradewright:ParseProfessionQualityTierFromItemLink(link)
 	if type(link) ~= "string" or link == "" then
@@ -140,11 +141,12 @@ end
 
 function Tradewright:GetExpansionFilterOptions()
 	return {
-		{ value = "all", label = "All expansions" },
-		{ value = "midnight", label = "Midnight" },
-		{ value = "tww", label = "The War Within" },
-		{ value = "df", label = "Dragonflight" },
-		{ value = "legacy", label = "Older" },
+		{ value = "all", label = L["All expansions"] },
+		-- The game's own expansion names where the client has them.
+		{ value = "midnight", label = EXPANSION_NAME11 or L["Midnight"] },
+		{ value = "tww", label = EXPANSION_NAME10 or L["The War Within"] },
+		{ value = "df", label = EXPANSION_NAME9 or L["Dragonflight"] },
+		{ value = "legacy", label = L["Older"] },
 	}
 end
 

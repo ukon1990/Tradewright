@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 --- Per itemID: appears as recipe output and/or reagent in scanned professions.
 function Tradewright:BuildItemRoleMap(characterData)
 	local roles = {}
@@ -61,13 +62,13 @@ function Tradewright:GetItemRoleLabelFromRoles(roleEntry)
 	end
 	local o, r = roleEntry.output, roleEntry.reagent
 	if o and r then
-		return "Crafted + reagent"
+		return L["Crafted + reagent"]
 	end
 	if o then
 		return "Crafted"
 	end
 	if r then
-		return "Crafting reagent"
+		return L["Crafting reagent"]
 	end
 	return "Other"
 end

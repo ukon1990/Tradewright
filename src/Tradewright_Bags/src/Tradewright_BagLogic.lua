@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Pure bag helpers: which category an item belongs to, how the slots are grouped and laid
 -- out, and the totals. No WoW API here, so the offline tests can load this file on its own.
 local BagLogic = {}
@@ -7,15 +8,15 @@ Tradewright.BagLogic = BagLogic
 
 -- Display order of the category headings.
 BagLogic.CATEGORIES = {
-	{ key = "gearset", label = "Gear in a set" },
-	{ key = "gearloose", label = "Gear not in a set" },
-	{ key = "gear", label = "Gear" },
-	{ key = "consumable", label = "Consumables" },
-	{ key = "food", label = "Food and drink" },
-	{ key = "trade", label = "Trade goods" },
-	{ key = "quest", label = "Quest" },
-	{ key = "other", label = "Other" },
-	{ key = "junk", label = "Junk" },
+	{ key = "gearset", label = L["Gear in a set"] },
+	{ key = "gearloose", label = L["Gear not in a set"] },
+	{ key = "gear", label = L["Gear"] },
+	{ key = "consumable", label = L["Consumables"] },
+	{ key = "food", label = L["Food and drink"] },
+	{ key = "trade", label = L["Trade goods"] },
+	{ key = "quest", label = L["Quest"] },
+	{ key = "other", label = L["Other"] },
+	{ key = "junk", label = L["Junk"] },
 }
 
 -- The game's item class IDs (Enum.ItemClass).
@@ -353,7 +354,7 @@ function BagLogic.SelectedItems(selection, items)
 	return picked
 end
 
-local PLACE_LABEL = { bags = "bags", bank = "bank", warband = "warband bank" }
+local PLACE_LABEL = { bags = "bags", bank = "bank", warband = L["warband bank"] }
 
 --- Where a stack in `place` ("bags", "bank" or "warband") can be moved: { { key, label } }.
 --- `state`: bankOpen, hasWarband. Nothing moves while the bank is closed.
@@ -364,7 +365,7 @@ function BagLogic.MoveTargets(place, state)
 	end
 	for _, key in ipairs({ "bags", "bank", "warband" }) do
 		if key ~= place and (key ~= "warband" or state.hasWarband) then
-			targets[#targets + 1] = { key = key, label = "Move to " .. PLACE_LABEL[key] }
+			targets[#targets + 1] = { key = key, label = L["Move to "] .. PLACE_LABEL[key] }
 		end
 	end
 	return targets

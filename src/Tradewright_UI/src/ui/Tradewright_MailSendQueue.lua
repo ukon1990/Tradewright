@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Mail send queue: splits mail destinations into parcels and sends them one by one through the
 -- game's Send Mail window, automatically or prepared for the player to send.
 -- Retail always; Forever when send-mail + bag APIs exist.
@@ -11,8 +12,8 @@ end
 
 local ATTACHMENTS_MAX = ATTACHMENTS_MAX_SEND or 12
 local AUTO_SEND_TIMEOUT = 6
-local MAIL_SUBJECTS = { materials = "Tradewright reagents", crafts = "Tradewright crafts", surplus = "Tradewright surplus" }
-local MAIL_BODY = "Sent with Tradewright."
+local MAIL_SUBJECTS = { materials = L["Tradewright reagents"], crafts = L["Tradewright crafts"], surplus = L["Tradewright surplus"] }
+local MAIL_BODY = L["Sent with Tradewright."]
 
 local function clearMailAttachments()
 	for i = 1, ATTACHMENTS_MAX do
@@ -124,7 +125,7 @@ local function watchAutoSend(queueState)
 	C_Timer.After(AUTO_SEND_TIMEOUT, function()
 		if queueState.running and queueState.auto and queueState.index == index then
 			Tradewright:CancelMailSendQueue()
-			Tradewright:PrintMessage("Could not mail the reagents automatically. Use Attach all in the mail panel.")
+			Tradewright:PrintMessage(L["Could not mail the reagents automatically. Use Attach all in the mail panel."])
 		end
 	end)
 end
@@ -135,7 +136,7 @@ local function fillParcel(pe, parcel, queueState)
 	clearMailAttachments()
 	for _, item in ipairs(parcel.items or {}) do
 		if not attachItemQuantity(item.itemID, item.quantity) then
-			pe:PrintMessage(string.format("Could not attach all of %s for %s.", tostring(item.name or item.itemID), tostring(parcel.mailName)))
+			pe:PrintMessage(string.format(L["Could not attach all of %s for %s."], tostring(item.name or item.itemID), tostring(parcel.mailName)))
 		end
 	end
 	local subject = string.format("%s %d/%d", MAIL_SUBJECTS[parcel.kind] or MAIL_SUBJECTS.materials, queueState.index, queueState.total)
@@ -187,7 +188,7 @@ function Tradewright:FinishMailSendQueue(queueState)
 		self:RefreshMailPanel()
 	end
 	if queueState.sent and queueState.sent > 0 then
-		self:PrintMessage(string.format("Tradewright sent %d mails.", queueState.sent))
+		self:PrintMessage(string.format(L["Tradewright sent %d mails."], queueState.sent))
 	end
 	if self.ScheduleLiveInventoryRefresh then
 		self:ScheduleLiveInventoryRefresh()
@@ -234,7 +235,7 @@ function Tradewright:ProcessNextMailParcel()
 		self:RefreshMailPanel()
 	end
 	if not MailFrame or not MailFrame:IsShown() then
-		self:PrintMessage("Open the mailbox to send reagents.")
+		self:PrintMessage(L["Open the mailbox to send reagents."])
 		queueState.running = false
 		queueState.cancel = true
 		return
@@ -249,7 +250,7 @@ function Tradewright:StartMailSendQueue(destinations, auto)
 	local parcels = buildMailParcels(destinations)
 	if #parcels == 0 then
 		if not auto then
-			self:PrintMessage("No reagents to mail from your bags.")
+			self:PrintMessage(L["No reagents to mail from your bags."])
 		end
 		return false
 	end
@@ -280,7 +281,7 @@ function Tradewright:AutoSendReadyMaterials()
 		end
 	end
 	if self:StartMailSendQueue(ready, true) then
-		self:PrintMessage("Mailing reagents to " .. table.concat(names, ", ") .. ".")
+		self:PrintMessage(L["Mailing reagents to "] .. table.concat(names, ", ") .. ".")
 	end
 end
 
@@ -317,7 +318,7 @@ end
 
 --- A failed automatic send moves on; a prepared mail stays as it is for the player to fix or cancel.
 function Tradewright:OnMailSendFailed()
-	self:PrintMessage("Mail send failed.")
+	self:PrintMessage(L["Mail send failed."])
 	if self:EnsureMailSendQueueState().auto then
 		self:AdvanceMailSendQueue(false)
 	end

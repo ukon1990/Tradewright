@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Log view of the bag window: the item log of the inventory module (Tradewright_ItemLog.lua) as
 -- rows, newest first: count, item, why and when. Read-only; the search box filters it. A long log
 -- is shown a page at a time, with "Show more" under the last row.
@@ -19,7 +20,7 @@ local moreButton
 local function showTooltip(row)
 	local pe, entry = Tradewright, row.entry
 	pe:ShowItemRowTooltip(row, entry.id, {
-		{ entry.n > 0 and "Entered the bags" or "Left the bags", pe:FormatNumberGrouped(math.abs(entry.n)) },
+		{ entry.n > 0 and L["Entered the bags"] or L["Left the bags"], pe:FormatNumberGrouped(math.abs(entry.n)) },
 		{ "How", pe.ItemLogLogic.Describe(entry) },
 		{ "When", date("%Y-%m-%d %H:%M", entry.t) },
 	})
@@ -90,7 +91,7 @@ local function placeMoreButton(pe, f, y, left)
 		shownLimit = shownLimit + PAGE
 		pe:RefreshBagWindow()
 	end, { small = true })
-	pe:SetButtonLabel(moreButton, string.format("Show more (%d left)", left), true)
+	pe:SetButtonLabel(moreButton, string.format(L["Show more (%d left)"], left), true)
 	moreButton:ClearAllPoints()
 	moreButton:SetPoint("TOP", f.content, "TOP", 0, -(y + MORE_GAP))
 	moreButton:Show()

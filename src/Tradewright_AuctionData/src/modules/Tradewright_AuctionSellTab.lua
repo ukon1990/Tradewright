@@ -1,6 +1,7 @@
 -- The sell tab's rows: columns, class and subclass filters, the row filter and priming rows when the panel opens.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local shared = Tradewright.AuctionShared
 local containsText = shared.containsText
 local flagText = shared.flagText
@@ -13,7 +14,7 @@ local PRIME_ROWS_MAX_ATTEMPTS = 6
 function Tradewright:GetAuctionClassFilterOptions(rows)
 	local seen = {}
 	local options = {
-		{ value = "all", label = "All classes" },
+		{ value = "all", label = L["All classes"] },
 	}
 	for _, row in ipairs(rows or {}) do
 		local label = tostring(row and row.itemClassLabel or "")
@@ -40,7 +41,7 @@ end
 function Tradewright:GetAuctionSubclassFilterOptions(rows, classSelection)
 	local seen = {}
 	local options = {
-		{ value = "all", label = "All subclasses" },
+		{ value = "all", label = L["All subclasses"] },
 	}
 	for _, row in ipairs(rows or {}) do
 		local classLabel = tostring(row and row.itemClassLabel or "")
@@ -75,7 +76,7 @@ function Tradewright:BuildAuctionPanelColumns()
 	return {
 		self:CreateItemColumn({
 			id = "itemRecipe",
-			label = "Item",
+			label = L["Item"],
 			defaultSort = "asc",
 			minWidth = 120,
 			getItemID = function(row) return row and row.itemID end,
@@ -87,8 +88,8 @@ function Tradewright:BuildAuctionPanelColumns()
 			sortValue = function(row) return row and row.itemName end,
 		}),
 		{
-			id = "quantityOwned", label = "Qty", justifyH = "RIGHT", width = 58, sortable = true, defaultSort = "desc",
-			tooltipTitle = "Quantity", tooltipText = "Sellable / owned when a keep rule holds some back.",
+			id = "quantityOwned", label = L["Qty"], justifyH = "RIGHT", width = 58, sortable = true, defaultSort = "desc",
+			tooltipTitle = L["Quantity"], tooltipText = L["Sellable / owned when a keep rule holds some back."],
 			sortValue = function(row) return tonumber(row and row.quantityOwned) or 0 end,
 			getText = function(row)
 				local owned = pe:FormatNumberGrouped(row and row.quantityOwned or 0)
@@ -102,8 +103,8 @@ function Tradewright:BuildAuctionPanelColumns()
 			end,
 		},
 		{
-			id = "currentPrice", label = "Price", justifyH = "RIGHT", width = 84, sortable = true, defaultSort = "desc",
-			tooltipTitle = "Price", tooltipText = "Lowest buyout at the auction house. Grey when it comes from an earlier visit or another addon.",
+			id = "currentPrice", label = L["Price"], justifyH = "RIGHT", width = 84, sortable = true, defaultSort = "desc",
+			tooltipTitle = L["Price"], tooltipText = L["Lowest buyout at the auction house. Grey when it comes from an earlier visit or another addon."],
 			sortValue = function(row) return tonumber(row and row.currentPrice) or -1 end,
 			getText = function(row)
 				if not row or not row.currentPrice then
@@ -117,26 +118,26 @@ function Tradewright:BuildAuctionPanelColumns()
 			end,
 		},
 		{
-			id = "lastAuctionScan", label = "Checked", justifyH = "RIGHT", width = 72, sortable = true, defaultSort = "desc", optional = true,
-			tooltipTitle = "Checked", tooltipText = "When this price was last looked up at the auction house.",
+			id = "lastAuctionScan", label = L["Checked"], justifyH = "RIGHT", width = 72, sortable = true, defaultSort = "desc", optional = true,
+			tooltipTitle = L["Checked"], tooltipText = L["When this price was last looked up at the auction house."],
 			sortValue = function(row) return tonumber(row and row.lastAuctionScanAtTs) or 0 end,
 			getText = function(row) return row and row.auctionScanAgeDisplay or "never" end,
 		},
 		{
-			id = "potentialROI", label = "Return", justifyH = "RIGHT", width = 54, sortable = true, defaultSort = "desc",
-			tooltipTitle = "Return", tooltipText = "Profit divided by reagent cost, for crafted items.",
+			id = "potentialROI", label = L["Return"], justifyH = "RIGHT", width = 54, sortable = true, defaultSort = "desc",
+			tooltipTitle = L["Return"], tooltipText = L["Profit divided by reagent cost, for crafted items."],
 			sortValue = function(row) return tonumber(row and row.potentialROI) or -9999 end,
 			getText = function(row) return formatPercent(row and row.potentialROI) end,
 		},
 		{
-			id = "personalSaleRate", label = "Sold %", justifyH = "RIGHT", width = 50, sortable = true, defaultSort = "desc", optional = true,
-			tooltipTitle = "Sold %", tooltipText = "Share of your own past listings of this item that sold.",
+			id = "personalSaleRate", label = L["Sold %"], justifyH = "RIGHT", width = 50, sortable = true, defaultSort = "desc", optional = true,
+			tooltipTitle = L["Sold %"], tooltipText = L["Share of your own past listings of this item that sold."],
 			sortValue = function(row) return tonumber(row and row.personalSaleRateValue) or -1 end,
 			getText = function(row) return row and row.personalSaleRateDisplay or "-" end,
 		},
 		{
-			id = "dumpAlert", label = "Note", width = 64, sortable = true, defaultSort = "desc",
-			tooltipTitle = "Note", tooltipText = "Keep and Ignore rules, and prices that are unusually low.",
+			id = "dumpAlert", label = L["Note"], width = 64, sortable = true, defaultSort = "desc",
+			tooltipTitle = L["Note"], tooltipText = L["Keep and Ignore rules, and prices that are unusually low."],
 			sortValue = function(row)
 				return (row and row.isDumpedLow and 4 or 0) + (row and row.isIgnoredByRule and 2 or 0) + ((tonumber(row and row.reserveQty) or 0) > 0 and 1 or 0)
 			end,
@@ -151,7 +152,7 @@ function Tradewright:BuildAuctionPanelColumns()
 					return flagText(pe, "Ignored", "textMuted")
 				end
 				if (tonumber(row.reserveQty) or 0) > 0 then
-					return flagText(pe, "Keep " .. tostring(row.reserveQty), "gold")
+					return flagText(pe, L["Keep "] .. tostring(row.reserveQty), "gold")
 				end
 				return ""
 			end,

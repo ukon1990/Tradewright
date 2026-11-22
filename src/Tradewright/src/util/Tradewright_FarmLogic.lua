@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 --- Pure farm-run maths. A run is `{ name, zone, startedAt, endedAt, pausedSeconds, pausedAt,
 --- coin, vendorSold, items = { [itemID] = qty } }`. No WoW API.
 local FarmLogic = {}
@@ -237,10 +238,10 @@ end
 local function activeFilterNames(opts)
 	local names = {}
 	if opts.onlyRecipes then
-		names[#names + 1] = "\"My recipes use it\""
+		names[#names + 1] = L["\"My recipes use it\""]
 	end
 	if opts.onlyFarmed then
-		names[#names + 1] = "\"Only farmed before\""
+		names[#names + 1] = L["\"Only farmed before\""]
 	end
 	return names
 end
@@ -250,14 +251,14 @@ end
 function FarmLogic.FarmTargetsEmptyText(counts, opts)
 	local tradeGoods, priced = tonumber(counts.tradeGoods) or 0, tonumber(counts.priced) or 0
 	if tradeGoods == 0 then
-		return "No trade goods scanned yet", "Run a full auction house scan."
+		return L["No trade goods scanned yet"], L["Run a full auction house scan."]
 	end
 	local names = activeFilterNames(opts or {})
 	if priced == 0 or #names == 0 then
-		return "Not enough price history yet", string.format(
-			"%d trade goods scanned. Each needs full scans on 5 different days, or turn on Early estimates.", tradeGoods)
+		return L["Not enough price history yet"], string.format(
+			L["%d trade goods scanned. Each needs full scans on 5 different days, or turn on Early estimates."], tradeGoods)
 	end
-	return "Hidden by filters", string.format("%d trade goods hidden by %s.", priced, table.concat(names, " and "))
+	return L["Hidden by filters"], string.format(L["%d trade goods hidden by %s."], priced, table.concat(names, L[" and "]))
 end
 
 return FarmLogic

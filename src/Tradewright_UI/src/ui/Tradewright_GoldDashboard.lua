@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Gold dashboard (Overview → Gold): five headline numbers and four cards that answer
 -- "what should I buy, craft and sell right now". Market numbers come from GetMarketInsights,
 -- which builds in the background; crafts come from the cached crafts engine (never forced).
@@ -11,9 +12,9 @@ local ACCT_KEY = Tradewright.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
 
 local function ageText(ts)
 	if not ts then
-		return "never seen"
+		return L["never seen"]
 	end
-	return "seen " .. Tradewright.TooltipLogic.AgeText(time() - ts)
+	return L["seen "] .. Tradewright.TooltipLogic.AgeText(time() - ts)
 end
 
 local function itemColumn(pe, getDetail)
@@ -72,9 +73,9 @@ end
 
 --- The tooltip line naming what a click on such a row does.
 function Tradewright:DealRowHint(buyable)
-	return "Click for price history · Right-click to "
-		.. (canBuyNow(self, buyable) and "buy at the auction house" or "open in Market")
-		.. " · Shift-click to link"
+	return L["Click for price history · Right-click to "]
+		.. (canBuyNow(self, buyable) and L["buy at the auction house"] or L["open in Market"])
+		.. L[" · Shift-click to link"]
 end
 
 local function rowClickHandler(pe, buyable)
@@ -91,32 +92,32 @@ end
 
 local function createDealsCard(pe, dash)
 	dash.deals = pe:CreateTableCard(dash, {
-		title = "Deals to buy",
+		title = L["Deals to buy"],
 		viewAllLabel = "Market",
 		onViewAll = function() pe:ShowDashboardTab("market") end,
 		columns = {
 			itemColumn(pe, function(row)
 				local parts = { "vs " .. (row.refSource or "usual"), ageText(row.seenAt) }
 				if dash.materials and dash.materials[row.itemID] then
-					parts[#parts + 1] = pe:Colorize("your reagent", "gold")
+					parts[#parts + 1] = pe:Colorize(L["your reagent"], "gold")
 				end
 				return table.concat(parts, " · ")
 			end),
-			moneyColumn(pe, { id = "price", label = "Price", width = 70 }),
-			moneyColumn(pe, { id = "ref", label = "Usual", width = 70, optional = true }),
-			{ id = "off", label = "Off", justifyH = "RIGHT", width = 48,
+			moneyColumn(pe, { id = "price", label = L["Price"], width = 70 }),
+			moneyColumn(pe, { id = "ref", label = L["Usual"], width = 70, optional = true }),
+			{ id = "off", label = L["Off"], justifyH = "RIGHT", width = 48,
 				getText = function(row) return pe:FormatPercentChange(row.discount and -row.discount, true) end },
 		},
 		table = itemTableOptions(pe, {
-			emptyTitle = "No deals right now",
-			emptyHint = "Deals show when an item is listed well below its usual price. Scan the auction house a few times to learn usual prices.",
+			emptyTitle = L["No deals right now"],
+			emptyHint = L["Deals show when an item is listed well below its usual price. Scan the auction house a few times to learn usual prices."],
 			hint = rowHint(pe, true),
 			onClick = rowClickHandler(pe, true),
 			tooltipPairs = function(row)
 				return {
-					{ row.refSource == "7-day avg" and "7-day average" or "Usual price", pe:FormatCopperFull(row.ref) },
-					{ "Resale profit after cut", pe:FormatSignedMoney(row.gain) },
-					{ "Listed", string.format("%s in %s auctions", pe:FormatNumberGrouped(row.quantity), pe:FormatNumberGrouped(row.listed)) },
+					{ row.refSource == "7-day avg" and L["7-day average"] or L["Usual price"], pe:FormatCopperFull(row.ref) },
+					{ L["Resale profit after cut"], pe:FormatSignedMoney(row.gain) },
+					{ "Listed", string.format(L["%s in %s auctions"], pe:FormatNumberGrouped(row.quantity), pe:FormatNumberGrouped(row.listed)) },
 				}
 			end,
 		}),
@@ -126,7 +127,7 @@ end
 -- Craft rows carry the output in outputItemID, so they get their own row handlers.
 local function createCraftsCard(pe, dash)
 	dash.crafts = pe:CreateTableCard(dash, {
-		title = "Best crafts now",
+		title = L["Best crafts now"],
 		viewAllLabel = "Crafts",
 		onViewAll = function() pe:ShowDashboardTab("crafts") end,
 		columns = {
@@ -138,16 +139,16 @@ local function createCraftsCard(pe, dash)
 				getName = function(row) return (pe:GetCraftRowLabels(row)) end,
 				getDetail = function(row) return select(2, pe:GetCraftRowLabels(row)) end,
 			}),
-			{ id = "profit", label = "Profit", justifyH = "RIGHT", width = 80,
+			{ id = "profit", label = L["Profit"], justifyH = "RIGHT", width = 80,
 				getText = function(row) return pe:FormatSignedMoney(row.profit) end },
 			-- roi is already a percent (not a fraction), so it skips PercentColumn.
-			{ id = "roi", label = "Return", justifyH = "RIGHT", width = 54, optional = true,
+			{ id = "roi", label = L["Return"], justifyH = "RIGHT", width = 54, optional = true,
 				getText = function(row) return row.roi and string.format("%.0f%%", row.roi) or "-" end },
 		},
 		table = {
 			rowHeight = ROW,
-			emptyTitle = "No profitable crafts",
-			emptyHint = "Scan your professions and the auction house to compare reagent cost with sale price.",
+			emptyTitle = L["No profitable crafts"],
+			emptyHint = L["Scan your professions and the auction house to compare reagent cost with sale price."],
 			onRowEnter = function(rowFrame, row)
 				if row then
 					pe:ShowCraftRowTooltip(rowFrame, row)
@@ -164,29 +165,29 @@ end
 
 local function createSellCard(pe, dash)
 	dash.sell = pe:CreateTableCard(dash, {
-		title = "Sell what I own",
+		title = L["Sell what I own"],
 		viewAllLabel = "Inventory",
 		onViewAll = function() pe:ShowDashboardTab("inventory") end,
 		columns = {
 			itemColumn(pe, function(row)
-				local note = row.change and (row.change >= 0.1 and "above its usual price" or "near its usual price") or "no price history yet"
-				return string.format("%s owned · %s", pe:FormatNumberGrouped(row.total), note)
+				local note = row.change and (row.change >= 0.1 and L["above its usual price"] or L["near its usual price"]) or L["no price history yet"]
+				return string.format(L["%s owned · %s"], pe:FormatNumberGrouped(row.total), note)
 			end),
-			moneyColumn(pe, { id = "price", label = "Price", width = 70, optional = true }),
-			{ id = "change", label = "Vs usual", justifyH = "RIGHT", width = 60,
+			moneyColumn(pe, { id = "price", label = L["Price"], width = 70, optional = true }),
+			{ id = "change", label = L["Vs usual"], justifyH = "RIGHT", width = 60,
 				getText = function(row) return pe:FormatPercentChange(row.change) end },
-			moneyColumn(pe, { id = "value", label = "Worth", width = 76 }),
+			moneyColumn(pe, { id = "value", label = L["Worth"], width = 76 }),
 		},
 		table = itemTableOptions(pe, {
-			emptyTitle = "Nothing to sell yet",
-			emptyHint = "Refresh your inventory and scan the auction house to price what you own.",
+			emptyTitle = L["Nothing to sell yet"],
+			emptyHint = L["Refresh your inventory and scan the auction house to price what you own."],
 			hint = rowHint(pe, false),
 			onClick = rowClickHandler(pe, false),
 			tooltipPairs = function(row)
 				return {
-					{ "You own", string.format("%s (bags %s, bank %s)", pe:FormatNumberGrouped(row.total),
+					{ L["You own"], string.format(L["%s (bags %s, bank %s)"], pe:FormatNumberGrouped(row.total),
 						pe:FormatNumberGrouped(row.bags or 0), pe:FormatNumberGrouped(row.bank or 0)) },
-					{ "Worth now", pe:FormatCopperFull(row.value) },
+					{ L["Worth now"], pe:FormatCopperFull(row.value) },
 				}
 			end,
 		}),
@@ -200,12 +201,12 @@ local function moversColumns(pe)
 	return {
 		itemColumn(pe, function(row)
 			if supplyView() then
-				return string.format("%s listed, usually %s", pe:FormatNumberGrouped(row.qtyNow or 0), pe:FormatNumberGrouped(row.qtyAvg7d or 0))
+				return string.format(L["%s listed, usually %s"], pe:FormatNumberGrouped(row.qtyNow or 0), pe:FormatNumberGrouped(row.qtyAvg7d or 0))
 			end
-			return (row.usualDays and "Usual price " or "7-day average ") .. pe:FormatCopperShort(row.avg7d or 0)
+			return (row.usualDays and L["Usual price "] or L["7-day average "]) .. pe:FormatCopperShort(row.avg7d or 0)
 		end),
-		moneyColumn(pe, { id = "price", label = "Price", width = 70 }),
-		{ id = "change", label = "Change", justifyH = "RIGHT", width = 60,
+		moneyColumn(pe, { id = "price", label = L["Price"], width = 70 }),
+		{ id = "change", label = L["Change"], justifyH = "RIGHT", width = 60,
 			getText = function(row)
 				if supplyView() then
 					return pe:FormatPercentChange(row.supplyChange, true)
@@ -238,21 +239,21 @@ end
 
 local function createMoversCard(pe, dash)
 	dash.movers = pe:CreateTableCard(dash, {
-		title = "Market movers",
+		title = L["Market movers"],
 		viewAllLabel = "Market",
 		onViewAll = function() pe:ShowDashboardTab("market") end,
 		columns = moversColumns(pe),
 		table = itemTableOptions(pe, {
-			emptyTitle = "No big moves",
-			emptyHint = "Movers compare today's price and supply with the usual level in your scans.",
+			emptyTitle = L["No big moves"],
+			emptyHint = L["Movers compare today's price and supply with the usual level in your scans."],
 			hint = rowHint(pe, true),
 			onClick = rowClickHandler(pe, true),
 			tooltipPairs = function(row)
 				return {
-					{ row.usualDays and "Usual price" or "7-day average", pe:FormatCopperFull(row.avg7d) },
-					{ row.usualDays and "Usual range" or "7-day range",
+					{ row.usualDays and L["Usual price"] or L["7-day average"], pe:FormatCopperFull(row.avg7d) },
+					{ row.usualDays and L["Usual range"] or L["7-day range"],
 						string.format("%s – %s", pe:FormatCopperShort(row.low7d or 0), pe:FormatCopperShort(row.high7d or 0)) },
-					{ "Listed now", string.format("%s, usually %s", pe:FormatNumberGrouped(row.qtyNow or 0), pe:FormatNumberGrouped(row.qtyAvg7d or 0)) },
+					{ L["Listed now"], string.format(L["%s, usually %s"], pe:FormatNumberGrouped(row.qtyNow or 0), pe:FormatNumberGrouped(row.qtyAvg7d or 0)) },
 				}
 			end,
 		}),
@@ -323,8 +324,8 @@ function GoldDashboardMixin:RefreshCrafts()
 	self.crafts.table:SetRows(top)
 	self.crafts.table:Refresh()
 	local best = top[1]
-	self.stats.profitableCrafts:SetValues("Profitable crafts", pe:FormatNumberGrouped(#profitable),
-		best and ("Best " .. pe:FormatCopperShort(best.profit) .. " each") or "None found yet", #profitable > 0 and "success" or nil)
+	self.stats.profitableCrafts:SetValues(L["Profitable crafts"], pe:FormatNumberGrouped(#profitable),
+		best and (L["Best "] .. pe:FormatCopperShort(best.profit) .. L[" each"]) or L["None found yet"], #profitable > 0 and "success" or nil)
 end
 
 function GoldDashboardMixin:RefreshMovers()
@@ -394,8 +395,8 @@ function GoldDashboardMixin:RefreshSell(insights)
 	end
 	self.sell.table:SetRows(pe.MarketLogic.TopN(rows, TOP_ROWS, "value"))
 	self.sell.table:Refresh()
-	self.stats.stockValue:SetValues("Stock value", insights and pe:FormatCopperShort(stockValue) or "…",
-		string.format("%s different items priced", pe:FormatNumberGrouped(priced)))
+	self.stats.stockValue:SetValues(L["Stock value"], insights and pe:FormatCopperShort(stockValue) or "…",
+		string.format(L["%s different items priced"], pe:FormatNumberGrouped(priced)))
 end
 
 -- Account gold and its 7-day change.
@@ -404,26 +405,26 @@ function GoldDashboardMixin:RefreshGoldStat()
 	local gold = pe:GetCurrentGoldSummaryForOverview(ACCT_KEY) or 0
 	local series = pe:GetOverviewWalletGraphSeries(ACCT_KEY, "7d", "balance") or {}
 	local first = series[1] and tonumber(series[1].value)
-	local note = "No history yet"
+	local note = L["No history yet"]
 	if first then
 		local delta = gold - first
-		note = (delta >= 0 and pe:Colorize("+" .. pe:FormatCopperShort(delta), "success") or pe:Colorize(pe:FormatCopperShort(delta), "danger")) .. " in 7 days"
+		note = (delta >= 0 and pe:Colorize("+" .. pe:FormatCopperShort(delta), "success") or pe:Colorize(pe:FormatCopperShort(delta), "danger")) .. L[" in 7 days"]
 	end
-	self.stats.gold:SetValues("Gold, all characters", pe:FormatCopperShort(gold), note)
+	self.stats.gold:SetValues(L["Gold, all characters"], pe:FormatCopperShort(gold), note)
 end
 
 -- Deals found and data freshness, or the progress while market insights are read.
 function GoldDashboardMixin:RefreshMarketStats(insights)
 	local pe = self.pe
 	if not insights then
-		local working = pe.MarketInsightsLoadingNote and pe.MarketInsightsLoadingNote() or "Auction Data module is off"
-		self.stats.deals:SetValues("Deals found", "…", working)
-		self.stats.marketData:SetValues("Market data", "…", working)
+		local working = pe.MarketInsightsLoadingNote and pe.MarketInsightsLoadingNote() or L["Auction Data module is off"]
+		self.stats.deals:SetValues(L["Deals found"], "…", working)
+		self.stats.marketData:SetValues(L["Market data"], "…", working)
 		return
 	end
 	local best = insights.deals[1]
-	self.stats.deals:SetValues("Deals found", pe:FormatNumberGrouped(insights.dealCount),
-		best and string.format("Best %s below usual", pe:FormatPercent(best.discount)) or "None right now",
+	self.stats.deals:SetValues(L["Deals found"], pe:FormatNumberGrouped(insights.dealCount),
+		best and string.format(L["Best %s below usual"], pe:FormatPercent(best.discount)) or L["None right now"],
 		insights.dealCount > 0 and "gold" or nil)
 	self:RefreshMarketDataStat(insights)
 end
@@ -433,8 +434,8 @@ function GoldDashboardMixin:RefreshMarketDataStat(insights)
 	local pe = self.pe
 	local lastScanAt = pe.GetLastFullAuctionScanAt and pe:GetLastFullAuctionScanAt()
 	local stale = not lastScanAt or time() - lastScanAt > STALE_SCAN_SEC
-	self.stats.marketData:SetValues("Market data", lastScanAt and pe:FormatScanTimestamp(lastScanAt) or "No full scan",
-		string.format("%s items", pe:FormatNumberGrouped(insights.itemCount)), stale and "warning" or nil)
+	self.stats.marketData:SetValues(L["Market data"], lastScanAt and pe:FormatScanTimestamp(lastScanAt) or L["No full scan"],
+		string.format(L["%s items"], pe:FormatNumberGrouped(insights.itemCount)), stale and "warning" or nil)
 end
 
 function GoldDashboardMixin:Refresh()

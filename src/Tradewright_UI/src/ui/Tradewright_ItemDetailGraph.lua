@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Fills the item detail window's time-series graph (price, crafting cost or quantity history) from Tradewright_Inventory data.
 
 local function graphTimestampForSeries(at)
@@ -23,7 +24,7 @@ function Tradewright:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, config)
 	local rangeKey = config.rangeKey or self:GetInventoryMetricRange()
 	local qtyFilter = config.quantityCharacterFilter or {}
 	local emptyQty = config.quantityEmptyHint
-		or "No quantity history in this range yet. Run an inventory refresh while this item is tracked."
+		or L["No quantity history in this range yet. Run an inventory refresh while this item is tracked."]
 	graphWidget:SetAccentColor(self:GetTheme().accent)
 	if graphWidget.SetSecondaryAccentColor then
 		graphWidget:SetSecondaryAccentColor(self:GetTheme().warning)
@@ -35,27 +36,27 @@ function Tradewright:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, config)
 	local secondarySeries = {}
 	local quantitySeries = {}
 	local yFormatter
-	local emptyExtra = "No data in this range."
+	local emptyExtra = L["No data in this range."]
 	local tooltipBuilder
 	local function qtyTooltip(tip, pt)
 		tip:AddLine(graphTimestampForSeries(pt.at), 1, 1, 1)
 		local m = pt.meta or {}
 		if m.ahHistory then
 			tip:AddLine(
-				string.format("Listed when scanned: %s", Tradewright:FormatNumberGrouped(tonumber(pt.value) or 0)),
+				string.format(L["Listed when scanned: %s"], Tradewright:FormatNumberGrouped(tonumber(pt.value) or 0)),
 				0.85,
 				0.92,
 				1
 			)
 			if (m.sampleCount or 0) > 0 then
-				tip:AddLine(string.format("Prices seen this hour: %d", m.sampleCount), 0.72, 0.8, 0.88)
+				tip:AddLine(string.format(L["Prices seen this hour: %d"], m.sampleCount), 0.72, 0.8, 0.88)
 			end
 		else
-			tip:AddLine(string.format("Total quantity: %s", Tradewright:FormatNumberGrouped(tonumber(pt.value) or 0)), 0.85, 0.92, 1)
+			tip:AddLine(string.format(L["Total quantity: %s"], Tradewright:FormatNumberGrouped(tonumber(pt.value) or 0)), 0.85, 0.92, 1)
 			if (m.sampleCount or 0) > 0 then
 				tip:AddLine(
 					string.format(
-						"Bags %s  |  Bank %s  |  Warband %s",
+						L["Bags %s  |  Bank %s  |  Warband %s"],
 						Tradewright:FormatNumberGrouped(m.bags or 0),
 						Tradewright:FormatNumberGrouped(m.bank or 0),
 						Tradewright:FormatNumberGrouped(m.warband or 0)
@@ -69,18 +70,18 @@ function Tradewright:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, config)
 	end
 	local function craftingTooltip(tip, pt)
 		tip:AddLine(graphTimestampForSeries(pt.at), 1, 1, 1)
-		tip:AddLine("|cffffcc00Crafting cost|r  " .. Tradewright:FormatCopperFull(pt.value), 0.85, 0.92, 1)
+		tip:AddLine(L["|cffffcc00Crafting cost|r  "] .. Tradewright:FormatCopperFull(pt.value), 0.85, 0.92, 1)
 		local m = pt.meta or {}
 		if m.flat then
-			tip:AddLine("Estimate, no history yet", 0.72, 0.8, 0.88)
+			tip:AddLine(L["Estimate, no history yet"], 0.72, 0.8, 0.88)
 		end
 		if m.count and m.count > 0 then
-			tip:AddLine(string.format("Prices seen this hour: %d", m.count), 0.72, 0.8, 0.88)
+			tip:AddLine(string.format(L["Prices seen this hour: %d"], m.count), 0.72, 0.8, 0.88)
 		end
 		if m.min and m.max then
 			tip:AddLine(
 				string.format(
-					"Min %s  |  Max %s",
+					L["Min %s  |  Max %s"],
 					Tradewright:FormatCopperFull(m.min),
 					Tradewright:FormatCopperFull(m.max)
 				),
@@ -92,18 +93,18 @@ function Tradewright:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, config)
 	end
 	local function marketTooltip(tip, pt)
 		tip:AddLine(graphTimestampForSeries(pt.at), 1, 1, 1)
-		tip:AddLine("|cffffffffMarket|r  " .. Tradewright:FormatCopperFull(pt.value), 0.85, 0.92, 1)
+		tip:AddLine(L["|cffffffffMarket|r  "] .. Tradewright:FormatCopperFull(pt.value), 0.85, 0.92, 1)
 		local m = pt.meta or {}
 		if m.source then
-			tip:AddLine(string.format("Source: %s", tostring(m.source)), 0.72, 0.8, 0.88)
+			tip:AddLine(string.format(L["Source: %s"], tostring(m.source)), 0.72, 0.8, 0.88)
 		end
 		if m.count and m.count > 0 then
-			tip:AddLine(string.format("Prices seen this hour: %d", m.count), 0.72, 0.8, 0.88)
+			tip:AddLine(string.format(L["Prices seen this hour: %d"], m.count), 0.72, 0.8, 0.88)
 		end
 		if m.min and m.max then
 			tip:AddLine(
 				string.format(
-					"Min %s  |  Max %s",
+					L["Min %s  |  Max %s"],
 					Tradewright:FormatCopperFull(m.min),
 					Tradewright:FormatCopperFull(m.max)
 				),
@@ -193,9 +194,9 @@ function Tradewright:ApplyItemDetailTimeSeriesGraph(itemID, graphWidget, config)
 		if metric == "quantity" then
 			graphWidget:SetSeriesLabels("Owned", nil, nil, nil)
 		elseif metric == "crafting" then
-			graphWidget:SetSeriesLabels("Craft cost", nil, "Listed", nil)
+			graphWidget:SetSeriesLabels(L["Craft cost"], nil, "Listed", nil)
 		else
-			graphWidget:SetSeriesLabels("Price", "Craft cost", "Listed", "Margin")
+			graphWidget:SetSeriesLabels("Price", L["Craft cost"], "Listed", "Margin")
 		end
 		graphWidget:SetTooltipBuilder(nil)
 	else

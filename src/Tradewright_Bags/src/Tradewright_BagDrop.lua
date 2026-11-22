@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- "Make room" button of the bag window: when no normal bag slot is free, it deletes the
 -- stack worth least, one stack per click. Junk goes on the first click; anything else must be
 -- clicked twice. The stack is picked again at the moment of the click, never from an old redraw.
@@ -31,14 +32,14 @@ end
 --- picking the stack up would cast the spell on it, which the game blocks for addons.
 function Tradewright:DeleteBagStack(drop)
 	if SpellIsTargeting() then
-		self:PrintMessage("Finish or cancel the spell first, then try again.")
+		self:PrintMessage(L["Finish or cancel the spell first, then try again."])
 		return
 	end
 	ClearCursor()
 	C_Container.PickupContainerItem(drop.item.bag, drop.item.slot)
 	if CursorHasItem() then
 		DeleteCursorItem()
-		self:PrintMessage("Destroyed " .. self:DescribeBagDrop(drop) .. ".")
+		self:PrintMessage(L["Destroyed "] .. self:DescribeBagDrop(drop) .. ".")
 	end
 end
 
@@ -57,7 +58,7 @@ local function onClick(button)
 		pe:DeleteBagStack(drop)
 	else
 		button.armedKey, button.armedItem, button.armedAt = key, drop.item.itemID, GetTime()
-		pe:PrintMessage("Not junk: click Destroy cheapest again to destroy " .. pe:DescribeBagDrop(drop) .. ".")
+		pe:PrintMessage(L["Not junk: click Destroy cheapest again to destroy "] .. pe:DescribeBagDrop(drop) .. ".")
 	end
 	if GameTooltip:IsOwned(button) then
 		button:GetScript("OnEnter")(button)
@@ -70,13 +71,13 @@ local function onEnter(button)
 	local muted, danger = theme.textMuted, theme.danger
 	local drop = pe:GetBagDropCandidate()
 	GameTooltip:SetOwner(button, "ANCHOR_TOPLEFT")
-	GameTooltip:SetText("Destroy cheapest", 1, 1, 1)
+	GameTooltip:SetText(L["Destroy cheapest"], 1, 1, 1)
 	if not drop then
-		GameTooltip:AddLine("Nothing here is safe to destroy.", muted.r, muted.g, muted.b, true)
+		GameTooltip:AddLine(L["Nothing here is safe to destroy."], muted.r, muted.g, muted.b, true)
 	else
-		GameTooltip:AddLine("Destroys " .. pe:DescribeBagDrop(drop) .. ".", danger.r, danger.g, danger.b, true)
-		GameTooltip:AddLine(drop.isJunk and "The junk stack a vendor pays least for. It cannot be undone."
-			or "You have no junk, so this is your cheapest other stack. Click twice. It cannot be undone.",
+		GameTooltip:AddLine(L["Destroys "] .. pe:DescribeBagDrop(drop) .. ".", danger.r, danger.g, danger.b, true)
+		GameTooltip:AddLine(drop.isJunk and L["The junk stack a vendor pays least for. It cannot be undone."]
+			or L["You have no junk, so this is your cheapest other stack. Click twice. It cannot be undone."],
 			muted.r, muted.g, muted.b, true)
 	end
 	GameTooltip:Show()
@@ -84,7 +85,7 @@ end
 
 --- The button, hidden until the bags are full.
 function Tradewright:CreateBagDropButton(parent)
-	local button = self:CreateButton(parent, "Destroy cheapest", onClick, { small = true })
+	local button = self:CreateButton(parent, L["Destroy cheapest"], onClick, { small = true })
 	button:SetScript("OnEnter", onEnter)
 	button:SetScript("OnLeave", GameTooltip_Hide)
 	button:Hide()

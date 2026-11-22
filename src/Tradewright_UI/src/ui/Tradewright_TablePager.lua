@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Table footer and pager: the footer texts and Prev / Page N of M / Next (methods of the reusable table).
 
 local TableMixin = Tradewright.TableMixin
@@ -27,7 +28,7 @@ function TableMixin:UpdateFooter()
 	local pe = Tradewright
 	local left, right = self.footer.left, self.footer.right
 	local paged = (self.pageCount or 1) > 1
-	left:SetText(paged and string.format("Showing %s-%s of %s", pe:FormatNumberGrouped(self.pageFirst), pe:FormatNumberGrouped(self.pageLast),
+	left:SetText(paged and string.format(L["Showing %s-%s of %s"], pe:FormatNumberGrouped(self.pageFirst), pe:FormatNumberGrouped(self.pageLast),
 		pe:FormatNumberGrouped(self.totalRowCount)) or self.footerLeftOverride or "")
 	local pager = self.pager
 	if not pager then
@@ -40,7 +41,7 @@ function TableMixin:UpdateFooter()
 	if paged then
 		-- Pager at the right edge. "Showing A-B of N" keeps its full width, and the caller's text
 		-- gets what is left between the two, cut short when the table is narrow.
-		pager.label:SetText(string.format("Page %d of %d", self.page, self.pageCount))
+		pager.label:SetText(string.format(L["Page %d of %d"], self.page, self.pageCount))
 		pager.prev:SetEnabled(self.page > 1)
 		pager.next:SetEnabled(self.page < self.pageCount)
 		pager:SetWidth(pager.prev:GetWidth() + pager.next:GetWidth() + math.ceil(pager.label:GetStringWidth()) + 16)
@@ -89,12 +90,12 @@ function TableMixin:CreatePager(footerHeight)
 	local pager = CreateFrame("Frame", nil, self.footer)
 	pager:SetPoint("RIGHT", -theme.size.scrollGutter, 0)
 	pager:SetHeight(footerHeight)
-	pager.next = Tradewright:CreateButton(pager, "Next", function() self:SetPage(self.page + 1) end, { small = true })
+	pager.next = Tradewright:CreateButton(pager, L["Next"], function() self:SetPage(self.page + 1) end, { small = true })
 	pager.next:SetPoint("RIGHT")
 	pager.label = pager:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	pager.label:SetPoint("RIGHT", pager.next, "LEFT", -8, 0)
 	pager.label:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
-	pager.prev = Tradewright:CreateButton(pager, "Previous", function() self:SetPage(self.page - 1) end, { small = true })
+	pager.prev = Tradewright:CreateButton(pager, L["Previous"], function() self:SetPage(self.page - 1) end, { small = true })
 	pager.prev:SetPoint("RIGHT", pager.label, "LEFT", -8, 0)
 	for _, button in ipairs({ pager.prev, pager.next }) do
 		button:SetHeight(footerHeight - 6)

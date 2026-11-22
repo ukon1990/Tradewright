@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 --- Pure client flags, auction storage keys and the AHLUA1 export encoding (offline-testable).
 local ForeverLogic = {}
 Tradewright.ForeverLogic = ForeverLogic
@@ -190,13 +191,13 @@ ForeverLogic.EncodeLuaValue = encodeLuaValue
 --- Build AHLUA1 plain-text export package body (including prefix).
 function ForeverLogic.BuildPlainLuaExportPayload(exportData)
 	if type(exportData) ~= "table" then
-		return nil, "invalid export data"
+		return nil, L["invalid export data"]
 	end
 	local ok, body = pcall(encodeLuaValue, exportData, 0)
 	if not ok or type(body) ~= "string" or body == "" then
-		return nil, body or "Lua encode failed"
+		return nil, body or L["Lua encode failed"]
 	end
-	return "AHLUA1:return " .. body, nil
+	return L["AHLUA1:return "] .. body, nil
 end
 
 return ForeverLogic

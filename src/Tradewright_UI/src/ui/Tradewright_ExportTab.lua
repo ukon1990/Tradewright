@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local ExportTab = {}
 Tradewright.ExportTab = ExportTab
 
@@ -73,26 +74,26 @@ local function createExportGroups(pe, panel)
 	panel.left:SetPoint("TOPLEFT", panel.intro, "BOTTOMLEFT", 0, -GAP)
 	panel.left:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 0)
 
-	panel.characterGroup = createGroup(pe, panel.left, "This character", {
-		{ "Scan and export everything", function() pe:StartFullCharacterDump() end, { primary = true,
-			tooltip = "Rescans every learned profession first, then exports recipes, specialization data and talent choices." } },
+	panel.characterGroup = createGroup(pe, panel.left, L["This character"], {
+		{ L["Scan and export everything"], function() pe:StartFullCharacterDump() end, { primary = true,
+			tooltip = L["Rescans every learned profession first, then exports recipes, specialization data and talent choices."] } },
 		{ "Character", function() pe:Export("character") end },
 		{ "Inventory", function() pe:Export("inventory") end },
-		{ "Character info", function() pe:Export("character_meta") end },
-	}, "Scan and export everything rescans every learned profession first.")
+		{ L["Character info"], function() pe:Export("character_meta") end },
+	}, L["Scan and export everything rescans every learned profession first."])
 	panel.accountGroup = createGroup(pe, panel.left, "Account", {
-		{ "Export account", function() pe:Export("account") end },
-		{ "Account summary", function() pe:Export("account_summary") end },
+		{ L["Export account"], function() pe:Export("account") end },
+		{ L["Account summary"], function() pe:Export("account_summary") end },
 	})
-	panel.accountGroup.body:SetText("Every saved character. The summary is smaller and easier to read.")
-	panel.compactGroup = createGroup(pe, panel.left, "Compact packages", {
+	panel.accountGroup.body:SetText(L["Every saved character. The summary is smaller and easier to read."])
+	panel.compactGroup = createGroup(pe, panel.left, L["Compact packages"], {
 		{ "Inventory", function() pe:Export("inventory_compact") end },
 		{ "Professions", function() pe:Export("professions_compact") end },
-		{ "Auction prices", function() pe:Export("auction_snapshot") end },
-		{ "Auction history", function() pe:Export("auction_history") end },
-		{ "Craft costs", function() pe:Export("crafting_costs") end },
+		{ L["Auction prices"], function() pe:Export("auction_snapshot") end },
+		{ L["Auction history"], function() pe:Export("auction_history") end },
+		{ L["Craft costs"], function() pe:Export("crafting_costs") end },
 	})
-	panel.compactGroup.body:SetText("Smaller packages for the website, one topic each.")
+	panel.compactGroup.body:SetText(L["Smaller packages for the website, one topic each."])
 	panel.groups = { panel.characterGroup, panel.accountGroup, panel.compactGroup }
 end
 
@@ -101,14 +102,14 @@ local function createProfessionTable(pe, panel)
 	panel.right = CreateFrame("Frame", nil, panel)
 	panel.right:SetPoint("TOPLEFT", panel.left, "TOPRIGHT", GAP, 0)
 	panel.right:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
-	panel.profHeading = pe:CreateHeading(panel.right, "One profession")
+	panel.profHeading = pe:CreateHeading(panel.right, L["One profession"])
 	panel.profHeading:SetPoint("TOPLEFT")
 	panel.profHeading:SetPoint("TOPRIGHT")
 	panel.profTable = pe:CreateReusableTable(panel.right, {
 		autoFitToScroll = true,
 		footer = true,
-		emptyTitle = "No professions scanned",
-		emptyHint = "Open a profession window and press Scan.",
+		emptyTitle = L["No professions scanned"],
+		emptyHint = L["Open a profession window and press Scan."],
 	})
 	panel.profTable.frame:SetPoint("TOPLEFT", panel.profHeading, "BOTTOMLEFT", 0, -8)
 	panel.profTable.frame:SetPoint("BOTTOMRIGHT", panel.right, "BOTTOMRIGHT", 0, 0)
@@ -124,7 +125,8 @@ function ExportTab:Create(container, uiState)
 	panel.intro = pe:CreateParagraph(panel)
 	panel.intro:SetPoint("TOPLEFT")
 	panel.intro:SetPoint("TOPRIGHT")
-	panel.intro:SetText("Each button opens the export window with a compressed package to copy. The same package is written to the addon's saved data on /reload.")
+	panel.intro:SetText(
+		L["Each button opens the export window with a compressed package to copy. The same package is written to the addon's saved data on /reload."])
 	createExportGroups(pe, panel)
 	createProfessionTable(pe, panel)
 
@@ -142,7 +144,7 @@ end
 local function characterSummary(pe, key, charData)
 	local meta = charData and charData.meta or {}
 	local professionCount = pe:TableCount(charData and charData.professions or {})
-	return string.format("%s, %d %s saved.",
+	return string.format(L["%s, %d %s saved."],
 		meta.name and meta.realm and (meta.name .. " · " .. meta.realm) or tostring(key),
 		professionCount, pe:Plural(professionCount, "profession"))
 end
@@ -160,6 +162,6 @@ function ExportTab:Refresh()
 	local rows = pe:BuildProfessionRows(charData)
 	panel.profTable:SetRows(rows)
 	panel.profTable:Refresh()
-	panel.profTable:SetFooterText(string.format("%d %s scanned on this character", #rows, pe:Plural(#rows, "profession")))
+	panel.profTable:SetFooterText(string.format(L["%d %s scanned on this character"], #rows, pe:Plural(#rows, "profession")))
 	self:Layout(panel)
 end

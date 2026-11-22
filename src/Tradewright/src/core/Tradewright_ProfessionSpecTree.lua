@@ -1,6 +1,7 @@
 -- Profession specialization trees: which skill lines have a spec config and the full tab, node and entry dump.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 function Tradewright:SkillLineHasSpecializationConfig(skillLineID)
 	skillLineID = tonumber(skillLineID)
 	if not skillLineID or skillLineID <= 0 or not C_ProfSpecs or not C_ProfSpecs.GetConfigIDForSkillLine then
@@ -50,7 +51,7 @@ function Tradewright:ResolveProfessionSpecSkillLineIDs(baseSkillLineID, childInf
 		seen[skillLineID] = true
 		table.insert(ordered, skillLineID)
 		self:DebugLog("SCAN", "spec skill line candidate", {
-			string.format("skillLineID=%s source=%s baseSkillLineID=%s", tostring(skillLineID), tostring(source), tostring(baseSkillLineID)),
+			string.format(L["skillLineID=%s source=%s baseSkillLineID=%s"], tostring(skillLineID), tostring(source), tostring(baseSkillLineID)),
 		})
 	end
 
@@ -327,7 +328,7 @@ function Tradewright:CollectSpecializationTreesForProfession(baseSkillLineID, ch
 	local candidates = self:ResolveProfessionSpecSkillLineIDs(baseSkillLineID, childInfo, categories)
 	if #candidates == 0 then
 		self:DebugLog("SCAN", "CollectSpecializationTreesForProfession no candidates", {
-			string.format("baseSkillLineID=%s currentLevelName=%s", tostring(baseSkillLineID), tostring(currentLevelName)),
+			string.format(L["baseSkillLineID=%s currentLevelName=%s"], tostring(baseSkillLineID), tostring(currentLevelName)),
 		})
 		return nil
 	end
@@ -342,7 +343,7 @@ function Tradewright:CollectSpecializationTreesForProfession(baseSkillLineID, ch
 
 	if not next(bySkillLineID) then
 		self:DebugLog("SCAN", "CollectSpecializationTreesForProfession no trees captured", {
-			string.format("baseSkillLineID=%s candidateCount=%d", tostring(baseSkillLineID), #candidates),
+			string.format(L["baseSkillLineID=%s candidateCount=%d"], tostring(baseSkillLineID), #candidates),
 		})
 		return nil
 	end
@@ -356,7 +357,7 @@ function Tradewright:CollectSpecializationTreesForProfession(baseSkillLineID, ch
 	end
 
 	self:DebugLog("SCAN", "CollectSpecializationTreesForProfession captured", {
-		string.format("baseSkillLineID=%s tierCount=%d primarySkillLineID=%s",
+		string.format(L["baseSkillLineID=%s tierCount=%d primarySkillLineID=%s"],
 			tostring(baseSkillLineID), self:TableCount(bySkillLineID), tostring(primarySkillLineID)),
 	})
 

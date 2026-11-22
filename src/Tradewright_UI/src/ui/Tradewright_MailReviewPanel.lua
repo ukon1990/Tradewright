@@ -1,5 +1,6 @@
 local addonName, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Surplus review (mailbox panel → Review… on the surplus row): every item the surplus mail could send,
 -- docked to the right of the mailbox panel. Keep amounts are edited in the row and saved per
 -- character; unticking an item skips it for this mailbox visit only. Rows come from
@@ -7,12 +8,12 @@ local addonName, Tradewright = ...
 
 local PAD = 12
 local WIDTH = 520
-local FILTERS = { { id = "sending", label = "Sending" }, { id = "kept", label = "Kept" }, { id = "all", label = "All" } }
+local FILTERS = { { id = "sending", label = L["Sending"] }, { id = "kept", label = L["Kept"] }, { id = "all", label = L["All"] } }
 local REASONS = {
-	held = "For your crafts", kept = "All kept", skipped = "Not this time", othersOff = "No keep amount set",
-	notReagent = "Not a reagent",
+	held = L["For your crafts"], kept = L["All kept"], skipped = L["Not this time"], othersOff = L["No keep amount set"],
+	notReagent = L["Not a reagent"],
 }
-local KEEP_HINT = "Type a number; while typing, mouse wheel adds or removes one stack. Shift-click: keep all. Ctrl-click: clear the keep amount."
+local KEEP_HINT = L["Type a number; while typing, mouse wheel adds or removes one stack. Shift-click: keep all. Ctrl-click: clear the keep amount."]
 
 -- Numbers in rows that send nothing are greyed out.
 local function cellText(pe, row, value)
@@ -28,10 +29,10 @@ local function showRowTooltip(pe, owner, row)
 	end
 	local n = function(v) return pe:FormatNumberGrouped(v or 0) end
 	pe:ShowItemRowTooltip(owner, row.itemID, {
-		{ "In bags", n(row.bags) },
-		{ "Held for your queued crafts", n(row.held) },
-		{ "Keep on this character", row.keep and n(row.keep) or "-" },
-		{ "Sends to the bank character", n(row.send) },
+		{ L["In bags"], n(row.bags) },
+		{ L["Held for your queued crafts"], n(row.held) },
+		{ L["Keep on this character"], row.keep and n(row.keep) or "-" },
+		{ L["Sends to the bank character"], n(row.send) },
 	}, KEEP_HINT)
 end
 
@@ -88,8 +89,8 @@ end
 
 local function keepColumn(pe)
 	return {
-		id = "keep", label = "Keep", justifyH = "RIGHT", width = 58,
-		tooltipTitle = "Keep on this character", tooltipText = KEEP_HINT,
+		id = "keep", label = L["Keep"], justifyH = "RIGHT", width = 58,
+		tooltipTitle = L["Keep on this character"], tooltipText = KEEP_HINT,
 		createCell = function(rowFrame) return createKeepCell(pe, rowFrame) end,
 		updateCell = function(box, row)
 			box:SetShown(not row.group)
@@ -165,7 +166,7 @@ end
 local function createTable(pe, f)
 	f.table = pe:CreateReusableTable(f, {
 		autoFitToScroll = true, rowHeight = 24, footer = true,
-		emptyTitle = "Nothing to review", emptyHint = "Your bags hold no sellable items.",
+		emptyTitle = L["Nothing to review"], emptyHint = L["Your bags hold no sellable items."],
 		onRowEnter = function(rowFrame, row) showRowTooltip(pe, rowFrame, row) end,
 		onRowLeave = GameTooltip_Hide,
 	})
@@ -175,7 +176,7 @@ local function createTable(pe, f)
 		numberColumn(pe, "held", "Held", 44, "held"),
 		keepColumn(pe),
 		numberColumn(pe, "send", "Send", 48, "send"),
-		{ id = "worth", label = "Worth", justifyH = "RIGHT", width = 96, getText = function(row) return worthText(pe, row) end },
+		{ id = "worth", label = L["Worth"], justifyH = "RIGHT", width = 96, getText = function(row) return worthText(pe, row) end },
 	})
 end
 
@@ -201,12 +202,12 @@ end
 -- "Only crafting reagents" narrows the surplus for this mailbox visit, to stash reagents on the
 -- bank character; the second box picks which reagents and is shared with the bag window's deposit.
 local function createReagentChecks(pe, f)
-	f.reagentsOnly = pe:CreateCheckbox(f, "Only crafting reagents", function(checked)
+	f.reagentsOnly = pe:CreateCheckbox(f, L["Only crafting reagents"], function(checked)
 		pe:SetMailReagentsOnly(checked)
 		pe:RefreshMailPanel()
 	end)
 	f.reagentsOnly:SetPoint("TOPLEFT", f.sendOthers, "BOTTOMLEFT", 0, 0)
-	f.ownProfessions = pe:CreateCheckbox(f, "only ones my professions use", function(checked)
+	f.ownProfessions = pe:CreateCheckbox(f, L["only ones my professions use"], function(checked)
 		pe:SetStashOnlyOwnProfessions(checked)
 		pe:RefreshMailPanel()
 	end)
@@ -231,13 +232,13 @@ local function createToolbar(pe, f)
 		button.filter = filter
 		f.filterButtons[i], previous = button, button
 	end
-	f.search = pe:CreateSearchBox(f, "Search items", function(text)
+	f.search = pe:CreateSearchBox(f, L["Search items"], function(text)
 		f.searchText = text
 		pe:RefreshMailReviewPanel()
 	end)
 	f.search:SetPoint("LEFT", f, "TOPLEFT", PAD + 6, top - 11)
 	f.search:SetPoint("RIGHT", previous, "LEFT", -10, 0)
-	f.sendOthers = pe:CreateCheckbox(f, "Send everything sellable, not just items with a keep amount", function(checked)
+	f.sendOthers = pe:CreateCheckbox(f, L["Send everything sellable, not just items with a keep amount"], function(checked)
 		pe:SetMailSendOthers(checked)
 		pe:RefreshMailPanel()
 	end)
@@ -249,41 +250,41 @@ end
 local function confirmClearKeeps(pe, button)
 	if button.armed then
 		button.armed = nil
-		pe:SetButtonLabel(button, "Clear keep amounts", false)
+		pe:SetButtonLabel(button, L["Clear keep amounts"], false)
 		pe:ClearMailKeepAmounts()
 		pe:RefreshMailPanel()
 		return
 	end
 	button.armed = true
-	pe:SetButtonLabel(button, "Click again to clear", false)
+	pe:SetButtonLabel(button, L["Click again to clear"], false)
 	C_Timer.After(4, function()
 		if button.armed then
 			button.armed = nil
-			pe:SetButtonLabel(button, "Clear keep amounts", false)
+			pe:SetButtonLabel(button, L["Clear keep amounts"], false)
 		end
 	end)
 end
 
 local function createActions(pe, f)
-	f.sendBtn = pe:CreateButton(f, "Attach", function()
+	f.sendBtn = pe:CreateButton(f, L["Attach"], function()
 		if f.dest then
 			pe:StartMailSendQueue({ f.dest })
 		end
 	end, { primary = true })
 	f.sendBtn:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -PAD, PAD)
-	local clear = pe:CreateButton(f, "Clear keep amounts")
+	local clear = pe:CreateButton(f, L["Clear keep amounts"])
 	clear:SetScript("OnClick", function(button) confirmClearKeeps(pe, button) end)
 	clear:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", PAD, PAD)
-	local keepAll = pe:CreateButton(f, "Keep what I have now", function()
+	local keepAll = pe:CreateButton(f, L["Keep what I have now"], function()
 		pe:KeepCurrentMailBags()
 		pe:RefreshMailPanel()
-	end, { tooltip = "Keep everything the bags hold now, so nothing goes until you have more." })
+	end, { tooltip = L["Keep everything the bags hold now, so nothing goes until you have more."] })
 	keepAll:SetPoint("LEFT", clear, "RIGHT", 8, 0)
 	f.hint = pe:CreateText(f, "GameFontHighlightSmall", "textMuted")
 	f.hint:SetPoint("BOTTOMLEFT", clear, "TOPLEFT", 0, 8)
 	f.hint:SetPoint("RIGHT", f, "RIGHT", -PAD, 0)
 	f.hint:SetWordWrap(false)
-	f.hint:SetText("Keep is saved for this character. Unticked items are skipped this visit only.")
+	f.hint:SetText(L["Keep is saved for this character. Unticked items are skipped this visit only."])
 end
 
 local function ensurePanel(pe)
@@ -355,7 +356,7 @@ local function refreshControls(pe, f, sum)
 	end
 	local sending = pe:EnsureMailSendQueueState().running
 	local mails = f.dest and pe:CountMailParcels({ f.dest }) or 0
-	pe:SetButtonLabel(f.sendBtn, string.format("Attach %s items · %d %s", pe:FormatNumberGrouped(sum.send), mails,
+	pe:SetButtonLabel(f.sendBtn, string.format(L["Attach %s items · %d %s"], pe:FormatNumberGrouped(sum.send), mails,
 		pe:Plural(mails, "mail")), false)
 	f.sendBtn:SetEnabled(sum.send > 0 and not sending)
 	f.sendOthers.check:SetChecked(pe:GetMailSendOthers())
@@ -366,11 +367,11 @@ end
 
 -- Title "Surplus to <seller>", items and mails in the header, totals in the table footer.
 local function refreshTexts(pe, f, sum, seller)
-	f.title:SetText("Surplus to " .. pe:GetMailCharacterLabel(seller))
-	f.meta:SetText(string.format("%d different items", sum.all))
-	local skipped = sum.skipped > 0 and string.format(" · %d skipped this time", sum.skipped) or ""
-	f.table:SetFooterText(string.format("%s to send%s", pe:FormatNumberGrouped(sum.send), skipped),
-		sum.worth > 0 and ("about " .. pe:FormatCopperShort(sum.worth)) or "")
+	f.title:SetText(L["Surplus to "] .. pe:GetMailCharacterLabel(seller))
+	f.meta:SetText(string.format(L["%d different items"], sum.all))
+	local skipped = sum.skipped > 0 and string.format(L[" · %d skipped this time"], sum.skipped) or ""
+	f.table:SetFooterText(string.format(L["%s to send%s"], pe:FormatNumberGrouped(sum.send), skipped),
+		sum.worth > 0 and (L["about "] .. pe:FormatCopperShort(sum.worth)) or "")
 end
 
 --- Fills the panel when it is open; the mailbox panel calls this on every refresh with its plan.

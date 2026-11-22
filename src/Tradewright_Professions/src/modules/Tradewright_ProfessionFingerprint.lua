@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Fingerprint of the open profession window (skill line, recipe IDs, hash), so live updates merge only when it changed.
 
 local LIVE_FINGERPRINT_DEBOUNCE_SEC = 0.35
@@ -103,7 +104,7 @@ function Tradewright:ApplyOpenProfessionFingerprintInfo(info)
 			state.liveProfessionOpenFingerprint = info.fingerprint
 			state.liveProfessionOpenFingerprintInfo = info
 			self:DebugLog("LIVE", "openFingerprint locked (stable)", {
-				string.format("skillLineID=%s recipeCount=%s", tostring(info.skillLineID), tostring(info.recipeCount)),
+				string.format(L["skillLineID=%s recipeCount=%s"], tostring(info.skillLineID), tostring(info.recipeCount)),
 			})
 		end
 	end

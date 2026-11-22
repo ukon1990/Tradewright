@@ -1,5 +1,6 @@
 local Tradewright = select(2, ...)
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- The lists of the Opportunities tab. Each view supplies: id, label, getRows(pe, onReady) → rows, insights, funnel,
 -- columns(pe), detailRows(pe, row), riskText(pe, row), subtitle(pe, row), tooltipPairs(pe, row),
 -- setStats(pe, stats, rows, insights) with the four stat tiles left to right, footer(pe, rows, insights), emptyTitle, emptyHint.
@@ -16,7 +17,7 @@ end
 -- "Sales a day", with a "?" when the estimate rests on few scan pairs or on own sales alone.
 local function sellsColumn(pe, width)
 	return {
-		id = "sellsPerDay", label = "Sales a day", justifyH = "RIGHT", width = width, sortable = true, defaultSort = "desc",
+		id = "sellsPerDay", label = L["Sales a day"], justifyH = "RIGHT", width = width, sortable = true, defaultSort = "desc",
 		sortValue = function(row) return row.sellsPerDay or 0 end,
 		getText = function(row) return perDayText(pe, row.sellsPerDay) .. (pe.FlipLogic.SellsUnsure(row) and " ?" or "") end,
 	}
@@ -24,19 +25,19 @@ end
 
 -- Where a row's sales a day comes from.
 local function sellsSourceText(pe, row)
-	local pairsText = string.format("%s scan pairs", pe:FormatNumberGrouped(row.sellsPairs or 0))
+	local pairsText = string.format(L["%s scan pairs"], pe:FormatNumberGrouped(row.sellsPairs or 0))
 	if row.sellsSource == "own" then
-		return "your own sales"
+		return L["your own sales"]
 	elseif row.sellsSource == "both" then
-		return pairsText .. " and your sales"
+		return pairsText .. L[" and your sales"]
 	end
 	return pairsText
 end
 
 -- The two side-pane lines about sales.
 local function sellsLines(pe, row)
-	return { "Sales a day, estimated", perDayText(pe, row.sellsPerDay) },
-		{ "Estimated from", sellsSourceText(pe, row), pe.FlipLogic.SellsUnsure(row) and "warning" or nil }
+	return { L["Sales a day, estimated"], perDayText(pe, row.sellsPerDay) },
+		{ L["Estimated from"], sellsSourceText(pe, row), pe.FlipLogic.SellsUnsure(row) and "warning" or nil }
 end
 
 local function signedColumn(pe, label, field)
@@ -50,11 +51,11 @@ end
 -- An early row's second line starts with how few days its usual price rests on.
 local function itemColumn(pe, detail)
 	return pe:ItemColumn({
-		label = "Item", defaultSort = "asc",
+		label = L["Item"], defaultSort = "asc",
 		getName = function(row) return pe:GetItemDisplayName(row.itemID) end,
 		getDetail = function(row)
 			if row.early then
-				return pe:Colorize(string.format("Early · %d days of prices", row.usualDays or 0), "warning") .. " · " .. detail(pe, row)
+				return pe:Colorize(string.format(L["Early · %d days of prices"], row.usualDays or 0), "warning") .. " · " .. detail(pe, row)
 			end
 			return detail(pe, row)
 		end,
@@ -64,10 +65,10 @@ end
 -- What the sales estimate cannot tell, when it rests on little.
 local function sellsCaveat(row)
 	if row.sellsSource == "own" then
-		return " Only your own sales are known. Scan at least twice within a day to see the whole market."
+		return L[" Only your own sales are known. Scan at least twice within a day to see the whole market."]
 	elseif row.sellsConfidence == "few" then
-		return string.format(" Sales were seen over only %d pairs of scans, and cancelled or expired auctions count as sold,"
-			.. " so it may sell slower.", row.sellsPairs or 0)
+		return string.format(L[" Sales were seen over only %d pairs of scans, and cancelled or expired auctions count as sold,"]
+			.. L[" so it may sell slower."], row.sellsPairs or 0)
 	end
 	return ""
 end
@@ -75,7 +76,7 @@ end
 -- The risk text of a list, led by a warning on early rows and followed by one on thin sales data.
 local function withDataWarnings(riskText)
 	return function(pe, row)
-		local early = row.early and string.format("Usual price from only %d days, so one odd day moves it a lot. ", row.usualDays or 0) or ""
+		local early = row.early and string.format(L["Usual price from only %d days, so one odd day moves it a lot. "], row.usualDays or 0) or ""
 		return early .. riskText(pe, row) .. sellsCaveat(row)
 	end
 end
@@ -84,7 +85,7 @@ end
 local function settledSum(pe, rows, field, note)
 	local total, early = pe.FlipLogic.SumSettled(rows, field)
 	if early > 0 then
-		note = string.format("%s · %d early not counted", note, early)
+		note = string.format(L["%s · %d early not counted"], note, early)
 	end
 	return total, note, #rows - early
 end
@@ -94,21 +95,21 @@ local function coverageStat(pe, stat, insights)
 	local coverage = pe:GetHistoryCoverage(insights)
 	local note
 	if coverage.full == 0 then
-		note = string.format("Best item has %d of 5 scan days · today's scans count tomorrow", coverage.bestDays)
+		note = string.format(L["Best item has %d of 5 scan days · today's scans count tomorrow"], coverage.bestDays)
 	elseif (coverage.withSells or 0) < coverage.full / 2 then
-		note = string.format("Only %s know what sells · scan twice within a day", pe:FormatNumberGrouped(coverage.withSells or 0))
+		note = string.format(L["Only %s know what sells · scan twice within a day"], pe:FormatNumberGrouped(coverage.withSells or 0))
 	elseif coverage.early > 0 then
-		local shown = pe:GetSetting("opportunities.allowEarly", false) and ", shown as Early" or ", hidden in Settings"
-		note = string.format("%s more have 2 to 4 days%s", pe:FormatNumberGrouped(coverage.early), shown)
+		local shown = pe:GetSetting("opportunities.allowEarly", false) and L[", shown as Early"] or L[", hidden in Settings"]
+		note = string.format(L["%s more have 2 to 4 days%s"], pe:FormatNumberGrouped(coverage.early), shown)
 	else
-		note = string.format("5+ scan days in the last %d days", pe:GetSetting("auction.usualPriceDays", 14))
+		note = string.format(L["5+ scan days in the last %d days"], pe:GetSetting("auction.usualPriceDays", 14))
 	end
 	local value = string.format("%s of %s", pe:FormatNumberGrouped(coverage.full), pe:FormatNumberGrouped(coverage.scanned))
-	stat:SetValues("Usual price known for", value, note, coverage.full == 0 and "warning" or nil)
+	stat:SetValues(L["Usual price known for"], value, note, coverage.full == 0 and "warning" or nil)
 end
 
 local function lastScanText(pe, insights)
-	return insights.lastSeenAt and pe:FormatScanTimestamp(insights.lastSeenAt) or "not yet"
+	return insights.lastSeenAt and pe:FormatScanTimestamp(insights.lastSeenAt) or L["not yet"]
 end
 
 local function sumOf(rows, field)
@@ -123,13 +124,13 @@ end
 
 -- Second line of a flip row: how far under usual, and the caveat that matters most.
 local function flipDetail(pe, row)
-	local detail = pe:FormatPercent(row.discount) .. " below usual"
+	local detail = pe:FormatPercent(row.discount) .. L[" below usual"]
 	if row.fewSales then
-		return detail .. " · few sales seen"
+		return detail .. L[" · few sales seen"]
 	elseif row.slow then
-		return detail .. " · sells slowly"
+		return detail .. L[" · sells slowly"]
 	elseif row.listedUnder then
-		return string.format("%s · %s listed below %s", detail, pe:FormatNumberGrouped(row.listedUnder), pe:FormatCopperShort(row.limitPrice))
+		return string.format(L["%s · %s listed below %s"], detail, pe:FormatNumberGrouped(row.listedUnder), pe:FormatCopperShort(row.limitPrice))
 	end
 	return detail
 end
@@ -137,10 +138,10 @@ end
 local function flipColumns(pe)
 	return {
 		itemColumn(pe, flipDetail),
-		pe:MoneyColumn({ id = "price", label = "Buy at", width = 76 }),
-		pe:MoneyColumn({ id = "usual", label = "Usual", width = 76 }),
+		pe:MoneyColumn({ id = "price", label = L["Buy at"], width = 76 }),
+		pe:MoneyColumn({ id = "usual", label = L["Usual"], width = 76 }),
 		{
-			id = "buyQty", label = "Buy", justifyH = "RIGHT", width = 44, sortable = true, defaultSort = "desc",
+			id = "buyQty", label = L["Buy"], justifyH = "RIGHT", width = 44, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.buyQty or 0 end,
 			getText = function(row) return row.buyQty and pe:FormatNumberGrouped(row.buyQty) or "-" end,
 		},
@@ -153,51 +154,51 @@ local function flipDetailRows(pe, row)
 	local units = row.buyQty or 1
 	local sells, source = sellsLines(pe, row)
 	return {
-		{ "Cheapest now", pe:FormatCopperFull(row.price) },
-		{ string.format("Usual price, %d days", row.usualDays or 0), pe:FormatCopperFull(row.usual) },
-		{ string.format("Sale after %s cut", pe:FormatPercent(1 - row.saleNet / row.usual)), pe:FormatCopperFull(row.saleNet) },
-		{ "Deposit lost on unsold postings, each", row.depositLoss > 0 and pe:FormatCopperFull(row.depositLoss) or "unknown" },
-		{ "Profit each", pe:FormatSignedMoney(row.profitEach), "success" },
+		{ L["Cheapest now"], pe:FormatCopperFull(row.price) },
+		{ string.format(L["Usual price, %d days"], row.usualDays or 0), pe:FormatCopperFull(row.usual) },
+		{ string.format(L["Sale after %s cut"], pe:FormatPercent(1 - row.saleNet / row.usual)), pe:FormatCopperFull(row.saleNet) },
+		{ L["Deposit lost on unsold postings, each"], row.depositLoss > 0 and pe:FormatCopperFull(row.depositLoss) or "unknown" },
+		{ L["Profit each"], pe:FormatSignedMoney(row.profitEach), "success" },
 		{ "Return", pe:FormatPercent(row.roi) },
-		{ "Listed below " .. pe:FormatCopperShort(row.limitPrice), row.listedUnder and pe:FormatNumberGrouped(row.listedUnder) or "-" },
+		{ L["Listed below "] .. pe:FormatCopperShort(row.limitPrice), row.listedUnder and pe:FormatNumberGrouped(row.listedUnder) or "-" },
 		sells, source,
-		{ string.format("Buy %s and spend", pe:FormatNumberGrouped(units)), pe:FormatCopperFull(row.cost) },
-		{ "Profit if all sell at the usual price", pe:FormatSignedMoney(row.profit), "success" },
+		{ string.format(L["Buy %s and spend"], pe:FormatNumberGrouped(units)), pe:FormatCopperFull(row.cost) },
+		{ L["Profit if all sell at the usual price"], pe:FormatSignedMoney(row.profit), "success" },
 	}
 end
 
 local function flipRiskText(pe, row)
-	local range = string.format("Its price stayed between %s and %s on the middle half of the last %d days.",
+	local range = string.format(L["Its price stayed between %s and %s on the middle half of the last %d days."],
 		pe:FormatCopperShort(row.usualLow or row.usual), pe:FormatCopperShort(row.usualHigh or row.usual), row.usualDays or 0)
-	local breakEven = string.format(" Below %s you lose gold on each one.", pe:FormatCopperShort(row.breakEven))
-	local caveat = row.buyQty and "" or " No price steps are kept, so the quantity at this price is unknown."
+	local breakEven = string.format(L[" Below %s you lose gold on each one."], pe:FormatCopperShort(row.breakEven))
+	local caveat = row.buyQty and "" or L[" No price steps are kept, so the quantity at this price is unknown."]
 	return range .. breakEven .. caveat
 end
 
 local function flipStats(pe, stats, rows, insights)
 	local profitTile, goldNeededTile, coverageTile, cutTile = unpack(stats)
 	local opts = pe:GetFlipOptions()
-	local profit, note, settled = settledSum(pe, rows, "profit", "After the auction cut")
-	profitTile:SetValues(string.format("Expected profit, all %d", settled), pe:FormatSignedMoney(profit), note, "success")
-	goldNeededTile:SetValues("Gold needed", pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), "You have " .. pe:FormatCopperShort(GetMoney()))
+	local profit, note, settled = settledSum(pe, rows, "profit", L["After the auction cut"])
+	profitTile:SetValues(string.format(L["Expected profit, all %d"], settled), pe:FormatSignedMoney(profit), note, "success")
+	goldNeededTile:SetValues(L["Gold needed"], pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), L["You have "] .. pe:FormatCopperShort(GetMoney()))
 	coverageStat(pe, coverageTile, insights)
-	cutTile:SetValues("Auction cut", pe:FormatPercent(opts.cut), "Last scan " .. lastScanText(pe, insights))
+	cutTile:SetValues(L["Auction cut"], pe:FormatPercent(opts.cut), L["Last scan "] .. lastScanText(pe, insights))
 end
 
 local flips = {
-	id = "flips", label = "Flips",
-	emptyTitle = "No flips right now",
-	emptyHint = "Scan the auction house on a few different days to build usual prices.",
+	id = "flips", label = L["Flips"],
+	emptyTitle = L["No flips right now"],
+	emptyHint = L["Scan the auction house on a few different days to build usual prices."],
 	getRows = function(pe, onReady) return pe:GetFlipRows(onReady) end,
 	columns = flipColumns,
 	detailRows = flipDetailRows,
 	riskText = withDataWarnings(flipRiskText),
 	setStats = flipStats,
-	subtitle = function(pe, row) return pe:FormatPercent(row.discount) .. " below its usual price" end,
-	tooltipPairs = function(pe, row) return { { "Profit each after the cut", pe:FormatSignedMoney(row and row.profitEach) } } end,
+	subtitle = function(pe, row) return pe:FormatPercent(row.discount) .. L[" below its usual price"] end,
+	tooltipPairs = function(pe, row) return { { L["Profit each after the cut"], pe:FormatSignedMoney(row and row.profitEach) } } end,
 	footer = function(pe, rows, insights)
-		return string.format("%d flips from %s items", #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
-			"Auction cut " .. pe:DescribeAuctionCut() .. " · Buy is capped at a share of a day's sales"
+		return string.format(L["%d flips from %s items"], #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
+			L["Auction cut "] .. pe:DescribeAuctionCut() .. L[" · Buy is capped at a share of a day's sales"]
 	end,
 }
 
@@ -205,18 +206,18 @@ local flips = {
 
 local function vendorDetail(pe, row)
 	if not row.qtyKnown then
-		return "Below vendor price · quantity at this price unknown"
+		return L["Below vendor price · quantity at this price unknown"]
 	end
-	return string.format("%s listed below vendor price", pe:FormatNumberGrouped(row.qty))
+	return string.format(L["%s listed below vendor price"], pe:FormatNumberGrouped(row.qty))
 end
 
 local function vendorColumns(pe)
 	return {
 		itemColumn(pe, vendorDetail),
-		pe:MoneyColumn({ id = "price", label = "Listed at", width = 76 }),
-		pe:MoneyColumn({ id = "vendorSell", label = "Vendor pays", width = 84 }),
+		pe:MoneyColumn({ id = "price", label = L["Listed at"], width = 76 }),
+		pe:MoneyColumn({ id = "vendorSell", label = L["Vendor pays"], width = 84 }),
 		{
-			id = "qty", label = "Qty", justifyH = "RIGHT", width = 50, sortable = true, defaultSort = "desc",
+			id = "qty", label = L["Qty"], justifyH = "RIGHT", width = 50, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.qty or 0 end,
 			getText = function(row) return row.qtyKnown and pe:FormatNumberGrouped(row.qty) or "-" end,
 		},
@@ -226,49 +227,49 @@ end
 
 local function vendorDetailRows(pe, row)
 	return {
-		{ "Cheapest listing", pe:FormatCopperFull(row.price) },
-		{ "A vendor pays", pe:FormatCopperFull(row.vendorSell) },
+		{ L["Cheapest listing"], pe:FormatCopperFull(row.price) },
+		{ L["A vendor pays"], pe:FormatCopperFull(row.vendorSell) },
 		{ "", "" },
-		{ "Units below vendor price", row.qtyKnown and pe:FormatNumberGrouped(row.qty) or "at least 1" },
-		{ "Cost to buy them", pe:FormatCopperFull(row.cost) },
-		{ "Vendor pays in total", pe:FormatCopperFull(row.qty * row.vendorSell) },
+		{ L["Units below vendor price"], row.qtyKnown and pe:FormatNumberGrouped(row.qty) or L["at least 1"] },
+		{ L["Cost to buy them"], pe:FormatCopperFull(row.cost) },
+		{ L["Vendor pays in total"], pe:FormatCopperFull(row.qty * row.vendorSell) },
 		{ "Profit", pe:FormatSignedMoney(row.gain), "success" },
 		{ "", "" },
-		{ "Bag slots needed", "depends on stack size" },
-		{ "Auction cut", "none, sold to a vendor" },
+		{ L["Bag slots needed"], L["depends on stack size"] },
+		{ L["Auction cut"], L["none, sold to a vendor"] },
 	}
 end
 
 local function vendorRiskText(_, row)
-	local stale = "The listings may be gone: this comes from your last scan."
+	local stale = L["The listings may be gone: this comes from your last scan."]
 	if not row.qtyKnown then
-		return stale .. " No price steps are kept for it, so only the cheapest listing is counted."
+		return stale .. L[" No price steps are kept for it, so only the cheapest listing is counted."]
 	end
-	return stale .. " Check the vendor's price in the item tooltip before buying many."
+	return stale .. L[" Check the vendor's price in the item tooltip before buying many."]
 end
 
 local function vendorStats(pe, stats, rows, insights)
 	local gainTile, goldNeededTile, itemsTile, lastScanTile = unpack(stats)
-	gainTile:SetValues(string.format("Profit, all %d", #rows), pe:FormatSignedMoney(sumOf(rows, "gain")), "Sold to a vendor, no auction cut", "success")
-	goldNeededTile:SetValues("Gold needed", pe:FormatCopperShort(sumOf(rows, "cost")), "You have " .. pe:FormatCopperShort(GetMoney()))
-	itemsTile:SetValues("Items", tostring(#rows), "Listed below their vendor price")
-	lastScanTile:SetValues("Last scan", lastScanText(pe, insights), "Listings may have changed since")
+	gainTile:SetValues(string.format(L["Profit, all %d"], #rows), pe:FormatSignedMoney(sumOf(rows, "gain")), L["Sold to a vendor, no auction cut"], "success")
+	goldNeededTile:SetValues(L["Gold needed"], pe:FormatCopperShort(sumOf(rows, "cost")), L["You have "] .. pe:FormatCopperShort(GetMoney()))
+	itemsTile:SetValues(L["Items"], tostring(#rows), L["Listed below their vendor price"])
+	lastScanTile:SetValues(L["Last scan"], lastScanText(pe, insights), L["Listings may have changed since"])
 end
 
 local vendor = {
-	id = "vendor", label = "Sure things",
-	emptyTitle = "Nothing below vendor price",
-	emptyHint = "No item in the last scan is listed for less than a vendor pays.",
+	id = "vendor", label = L["Sure things"],
+	emptyTitle = L["Nothing below vendor price"],
+	emptyHint = L["No item in the last scan is listed for less than a vendor pays."],
 	getRows = function(pe, onReady) return pe:GetVendorRows(onReady) end,
 	columns = vendorColumns,
 	detailRows = vendorDetailRows,
 	riskText = vendorRiskText,
 	setStats = vendorStats,
-	subtitle = function(pe, row) return "Listed below the " .. pe:FormatCopperShort(row.vendorSell) .. " a vendor pays" end,
-	tooltipPairs = function(pe, row) return { { "A vendor pays", pe:FormatCopperFull(row and row.vendorSell) } } end,
+	subtitle = function(pe, row) return L["Listed below the "] .. pe:FormatCopperShort(row.vendorSell) .. L[" a vendor pays"] end,
+	tooltipPairs = function(pe, row) return { { L["A vendor pays"], pe:FormatCopperFull(row and row.vendorSell) } } end,
 	footer = function(pe, rows, insights)
-		return string.format("%d items from %s scanned", #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
-			"Profit = vendor price minus what you pay"
+		return string.format(L["%d items from %s scanned"], #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
+			L["Profit = vendor price minus what you pay"]
 	end,
 }
 
@@ -276,22 +277,22 @@ local vendor = {
 
 local function daysText(days)
 	if days <= 1 then
-		return "sells out in under a day"
+		return L["sells out in under a day"]
 	end
-	return string.format("takes about %d days to sell", math.floor(days + 0.5))
+	return string.format(L["takes about %d days to sell"], math.floor(days + 0.5))
 end
 
 local function gapDetail(pe, row)
-	return string.format("Buy %s · %s", pe:FormatNumberGrouped(row.buyQty), daysText(row.daysToSell))
+	return string.format(L["Buy %s · %s"], pe:FormatNumberGrouped(row.buyQty), daysText(row.daysToSell))
 end
 
 local function gapColumns(pe)
 	return {
 		itemColumn(pe, gapDetail),
-		pe:MoneyColumn({ id = "price", label = "Cheapest", width = 70 }),
-		pe:MoneyColumn({ id = "nextPrice", label = "Next price", width = 70 }),
-		pe:MoneyColumn({ id = "cost", label = "To clear", width = 74 }),
-		signedColumn(pe, "Profit if it holds", "gain"),
+		pe:MoneyColumn({ id = "price", label = L["Cheapest"], width = 70 }),
+		pe:MoneyColumn({ id = "nextPrice", label = L["Next price"], width = 70 }),
+		pe:MoneyColumn({ id = "cost", label = L["To clear"], width = 74 }),
+		signedColumn(pe, L["Profit if it holds"], "gain"),
 		sellsColumn(pe, 66),
 	}
 end
@@ -300,25 +301,25 @@ end
 local function gapDetailRows(pe, row)
 	local sells, source = sellsLines(pe, row)
 	local rows = {
-		{ string.format("Cost to clear, %s", pe:FormatNumberGrouped(row.buyQty)), pe:FormatCopperFull(row.cost) },
-		{ "Relist at", pe:FormatCopperFull(row.nextPrice) },
-		{ "Profit if all sell", pe:FormatSignedMoney(row.gain), "success" },
+		{ string.format(L["Cost to clear, %s"], pe:FormatNumberGrouped(row.buyQty)), pe:FormatCopperFull(row.cost) },
+		{ L["Relist at"], pe:FormatCopperFull(row.nextPrice) },
+		{ L["Profit if all sell"], pe:FormatSignedMoney(row.gain), "success" },
 		sells, source,
-		{ "Already waiting at that price", pe:FormatNumberGrouped(row.waitingAtNext) },
+		{ L["Already waiting at that price"], pe:FormatNumberGrouped(row.waitingAtNext) },
 		{ "", "" },
 	}
 	for index = 1, math.min(#row.steps, 8), 2 do
 		local price = row.steps[index]
-		local label = price < row.nextPrice and "Buy at " or "Stays at "
+		local label = price < row.nextPrice and L["Buy at "] or L["Stays at "]
 		rows[#rows + 1] = { label .. pe:FormatCopperShort(price), "x" .. pe:FormatNumberGrouped(row.steps[index + 1]) }
 	end
 	return rows
 end
 
 local function gapRiskText(pe, row)
-	local text = "Anyone can list under you before these sell, and the listings come from your last scan."
+	local text = L["Anyone can list under you before these sell, and the listings come from your last scan."]
 	if row.waitingAtNext > 0 then
-		text = text .. string.format(" %s already wait at %s, so yours may sell after them unless you list lower.",
+		text = text .. string.format(L[" %s already wait at %s, so yours may sell after them unless you list lower."],
 			pe:FormatNumberGrouped(row.waitingAtNext), pe:FormatCopperShort(row.nextPrice))
 	end
 	return text
@@ -326,27 +327,27 @@ end
 
 local function gapStats(pe, stats, rows, insights)
 	local gainTile, goldNeededTile, riskTile, lastScanTile = unpack(stats)
-	local gain, note, settled = settledSum(pe, rows, "gain", "After the auction cut")
-	gainTile:SetValues(string.format("Profit if all %d hold", settled), pe:FormatSignedMoney(gain), note, "warning")
-	goldNeededTile:SetValues("Gold needed", pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), "You have " .. pe:FormatCopperShort(GetMoney()))
-	riskTile:SetValues("Risky", "Read first", "Pays only if nobody lists under you", "warning")
-	lastScanTile:SetValues("Last scan", lastScanText(pe, insights), "Listings may have changed since")
+	local gain, note, settled = settledSum(pe, rows, "gain", L["After the auction cut"])
+	gainTile:SetValues(string.format(L["Profit if all %d hold"], settled), pe:FormatSignedMoney(gain), note, "warning")
+	goldNeededTile:SetValues(L["Gold needed"], pe:FormatCopperShort((settledSum(pe, rows, "cost", ""))), L["You have "] .. pe:FormatCopperShort(GetMoney()))
+	riskTile:SetValues(L["Risky"], L["Read first"], L["Pays only if nobody lists under you"], "warning")
+	lastScanTile:SetValues(L["Last scan"], lastScanText(pe, insights), L["Listings may have changed since"])
 end
 
 local gaps = {
-	id = "gaps", label = "Price gaps",
-	emptyTitle = "No price gaps",
-	emptyHint = "No item in the last full scan has a few cheap listings below a much higher price.",
+	id = "gaps", label = L["Price gaps"],
+	emptyTitle = L["No price gaps"],
+	emptyHint = L["No item in the last full scan has a few cheap listings below a much higher price."],
 	getRows = function(pe, onReady) return pe:GetGapRows(onReady) end,
 	columns = gapColumns,
 	detailRows = gapDetailRows,
 	riskText = withDataWarnings(gapRiskText),
 	setStats = gapStats,
-	subtitle = function(pe, row) return "Risky · next price is " .. pe:FormatPercent(row.gapPct) .. " higher" end,
-	tooltipPairs = function(pe, row) return { { "Cost to clear", pe:FormatCopperFull(row and row.cost) } } end,
+	subtitle = function(pe, row) return L["Risky · next price is "] .. pe:FormatPercent(row.gapPct) .. L[" higher"] end,
+	tooltipPairs = function(pe, row) return { { L["Cost to clear"], pe:FormatCopperFull(row and row.cost) } } end,
 	footer = function(pe, rows, insights)
-		return string.format("%d price gaps from %s items", #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
-			"Risky: profit counts the " .. pe:DescribeAuctionCut() .. " cut, not undercuts"
+		return string.format(L["%d price gaps from %s items"], #rows, pe:FormatNumberGrouped(insights.itemCount or 0)),
+			L["Risky: profit counts the "] .. pe:DescribeAuctionCut() .. L[" cut, not undercuts"]
 	end,
 }
 
@@ -398,12 +399,12 @@ function Tradewright:GetSellNowRows(onReady)
 end
 
 local function whereText(pe, row)
-	return string.format("%s bags · %s bank", pe:FormatNumberGrouped(row.bags or 0), pe:FormatNumberGrouped(row.bank or 0))
+	return string.format(L["%s bags · %s bank"], pe:FormatNumberGrouped(row.bags or 0), pe:FormatNumberGrouped(row.bank or 0))
 end
 
 local function sellDetail(pe, row)
 	if row.slow then
-		return whereText(pe, row) .. " · more than a day of sales"
+		return whereText(pe, row) .. L[" · more than a day of sales"]
 	end
 	return whereText(pe, row)
 end
@@ -411,14 +412,14 @@ end
 local function sellColumns(pe)
 	return {
 		itemColumn(pe, sellDetail),
-		pe:MoneyColumn({ id = "price", label = "Price", width = 70 }),
+		pe:MoneyColumn({ id = "price", label = L["Price"], width = 70 }),
 		{
-			id = "premium", label = "Vs usual", justifyH = "RIGHT", width = 60, sortable = true, defaultSort = "desc",
+			id = "premium", label = L["Vs usual"], justifyH = "RIGHT", width = 60, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.premium or 0 end,
 			getText = function(row) return "+" .. pe:FormatPercent(row.premium) end,
 		},
 		{
-			id = "total", label = "Owned", justifyH = "RIGHT", width = 56, sortable = true, defaultSort = "desc",
+			id = "total", label = L["Owned"], justifyH = "RIGHT", width = 56, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.total or 0 end,
 			getText = function(row) return pe:FormatNumberGrouped(row.total) end,
 		},
@@ -430,23 +431,23 @@ end
 local function sellDetailRows(pe, row)
 	local sells, source = sellsLines(pe, row)
 	return {
-		{ "Lowest price now", pe:FormatCopperFull(row.price) },
-		{ "Usual price", pe:FormatCopperFull(row.usual) },
-		{ "Above usual by", pe:FormatPercent(row.premium), "success" },
+		{ L["Lowest price now"], pe:FormatCopperFull(row.price) },
+		{ L["Usual price"], pe:FormatCopperFull(row.usual) },
+		{ L["Above usual by"], pe:FormatPercent(row.premium), "success" },
 		{ "", "" },
-		{ "You own", pe:FormatNumberGrouped(row.total) },
+		{ L["You own"], pe:FormatNumberGrouped(row.total) },
 		{ "Where", whereText(pe, row) },
-		{ "Worth after the cut", pe:FormatCopperFull(row.worth), "success" },
+		{ L["Worth after the cut"], pe:FormatCopperFull(row.worth), "success" },
 		{ "", "" },
 		sells, source,
-		{ "Your stock is", string.format("%.1f days of sales", row.daysToSell) },
+		{ L["Your stock is"], string.format(L["%.1f days of sales"], row.daysToSell) },
 	}
 end
 
 local function sellRiskText(pe, row)
-	local text = "Worth assumes every one sells at today's lowest price. Prices above usual tend to come back down."
+	local text = L["Worth assumes every one sells at today's lowest price. Prices above usual tend to come back down."]
 	if row.slow then
-		text = text .. string.format(" You own more than a day of sales, so listing all %s at once will likely push the price down.",
+		text = text .. string.format(L[" You own more than a day of sales, so listing all %s at once will likely push the price down."],
 			pe:FormatNumberGrouped(row.total))
 	end
 	return text
@@ -454,27 +455,27 @@ end
 
 local function sellStats(pe, stats, rows, insights)
 	local worthTile, coverageTile, thresholdTile, lastScanTile = unpack(stats)
-	local worth, note, settled = settledSum(pe, rows, "worth", "After the auction cut")
-	worthTile:SetValues(string.format("Worth, all %d", settled), pe:FormatCopperShort(worth), note, "success")
+	local worth, note, settled = settledSum(pe, rows, "worth", L["After the auction cut"])
+	worthTile:SetValues(string.format(L["Worth, all %d"], settled), pe:FormatCopperShort(worth), note, "success")
 	coverageStat(pe, coverageTile, insights)
-	thresholdTile:SetValues("Counts as above usual", "10% or more", "Against the usual price of your scans")
-	lastScanTile:SetValues("Last scan", lastScanText(pe, insights), "Prices may have changed since")
+	thresholdTile:SetValues(L["Counts as above usual"], L["10% or more"], L["Against the usual price of your scans"])
+	lastScanTile:SetValues(L["Last scan"], lastScanText(pe, insights), L["Prices may have changed since"])
 end
 
 local sell = {
-	id = "sell", label = "Sell now",
-	emptyTitle = "Nothing to sell right now",
-	emptyHint = "Nothing you own is priced 10% or more above its usual price and known to sell.",
+	id = "sell", label = L["Sell now"],
+	emptyTitle = L["Nothing to sell right now"],
+	emptyHint = L["Nothing you own is priced 10% or more above its usual price and known to sell."],
 	getRows = function(pe, onReady) return pe:GetSellNowRows(onReady) end,
 	columns = sellColumns,
 	detailRows = sellDetailRows,
 	riskText = withDataWarnings(sellRiskText),
 	setStats = sellStats,
-	subtitle = function(pe, row) return pe:FormatPercent(row.premium) .. " above its usual price" end,
-	tooltipPairs = function(pe, row) return { { "Worth after the cut", pe:FormatCopperFull(row and row.worth) } } end,
+	subtitle = function(pe, row) return pe:FormatPercent(row.premium) .. L[" above its usual price"] end,
+	tooltipPairs = function(pe, row) return { { L["Worth after the cut"], pe:FormatCopperFull(row and row.worth) } } end,
 	footer = function(pe, rows)
-		return string.format("%d of your items", #rows),
-			"Worth = owned at today's lowest price, after the " .. pe:DescribeAuctionCut() .. " cut"
+		return string.format(L["%d of your items"], #rows),
+			L["Worth = owned at today's lowest price, after the "] .. pe:DescribeAuctionCut() .. L[" cut"]
 	end,
 }
 

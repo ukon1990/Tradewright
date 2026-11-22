@@ -1,22 +1,23 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Where a material has been looted, for the tooltip of a shopping row and the way there. The
 -- sightings come from the sightings store (Tradewright_Sources.lua): creatures killed or skinned,
 -- nodes and chests opened, waters fished.
 
-local SOURCE_LABEL = { kill = "Drops from", gather = "Gathered from", object = "Found in", fishing = "Fished in" }
+local SOURCE_LABEL = { kill = L["Drops from"], gather = L["Gathered from"], object = L["Found in"], fishing = L["Fished in"] }
 -- A tooltip names the likeliest sources only.
 local MAX_TOOLTIP_SOURCES = 3
 
 -- What to call a source. Nodes and chests have no name in the loot window, so the zone stands in.
 local function sourceName(pe, source)
 	if source.kind == "fishing" then
-		return pe:GetMapName(source.id) or "unknown waters"
+		return pe:GetMapName(source.id) or L["unknown waters"]
 	elseif source.kind == "object" then
 		local zone = source.places[1] and pe:GetMapName(source.places[1][1])
-		return zone and ("a node or chest in " .. zone) or "a node or chest"
+		return zone and (L["a node or chest in "] .. zone) or L["a node or chest"]
 	end
-	return source.name or "an unknown creature"
+	return source.name or L["an unknown creature"]
 end
 
 --- Adds where `itemID` has been looted to tooltip lines, the likeliest sources first:
@@ -25,7 +26,7 @@ function Tradewright:AppendDropSourceLines(lines, itemID)
 	local placeKnown = false
 	for index, source in ipairs(self:GetDropSources(itemID)) do
 		if index <= MAX_TOOLTIP_SOURCES then
-			lines[#lines + 1] = { SOURCE_LABEL[source.kind], string.format("%s (%d of %d loots)", sourceName(self, source), source.held, source.opened) }
+			lines[#lines + 1] = { SOURCE_LABEL[source.kind], string.format(L["%s (%d of %d loots)"], sourceName(self, source), source.held, source.opened) }
 		end
 		placeKnown = placeKnown or source.places[1] ~= nil
 	end
@@ -53,8 +54,8 @@ function Tradewright:ShowDropWaypoint(itemID)
 	local name = self:GetItemDisplayName(itemID)
 	local marked = self:SetWaypointTo(place, place.name .. " (" .. name .. ")")
 	local zone = place.zone and (" in " .. place.zone) or ""
-	self:PrintMessage(string.format("%s was looted from %s%s, at %.1f, %.1f.%s", name, place.name, zone,
-		place.x * 100, place.y * 100, marked and " Waypoint set." or ""))
+	self:PrintMessage(string.format(L["%s was looted from %s%s, at %.1f, %.1f.%s"], name, place.name, zone,
+		place.x * 100, place.y * 100, marked and L[" Waypoint set."] or ""))
 	return marked
 end
 

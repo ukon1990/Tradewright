@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local TableMixin = {}
 Tradewright.TableMixin = TableMixin -- methods are spread over the Table*.lua files
 Tradewright.ReusableTables = setmetatable({}, { __mode = "k" }) -- every table, to redraw item names as they load
@@ -500,8 +501,8 @@ function TableMixin:UpdateEmptyState()
 	local loading = empty and self.loadingNote ~= nil
 	self.emptyFrame:SetShown(empty and not loading)
 	self:ShowLoadingState(loading)
-	self.emptyFrame.title:SetText(self.emptyTitle or "Nothing to show")
-	self.emptyFrame.hint:SetText(self.emptyHint or "Change the search or filters.")
+	self.emptyFrame.title:SetText(self.emptyTitle or L["Nothing to show"])
+	self.emptyFrame.hint:SetText(self.emptyHint or L["Change the search or filters."])
 end
 
 function TableMixin:Refresh(opts)

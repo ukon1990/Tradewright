@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local MAX_ROWS = 450
 
 local function isPlaceholderItemLabel(s)
@@ -29,10 +30,10 @@ end
 -- Why a craft row's profit cannot be trusted, or nil.
 local function craftRowWarning(row)
 	if not row.matCost then
-		return "no reagent price"
+		return L["no reagent price"]
 	end
 	if row.qualityReachable == false then
-		return (row.concentrationNeeded or row.concentrationCost) and "needs concentration" or "rank out of reach"
+		return (row.concentrationNeeded or row.concentrationCost) and L["needs concentration"] or L["rank out of reach"]
 	end
 	return nil
 end
@@ -72,16 +73,16 @@ function Tradewright:GetBestCraftEvaluation(row)
 end
 
 local ROI_COLUMN = {
-	id = "roi", label = "Return", justifyH = "RIGHT", width = 54, sortable = true, defaultSort = "desc", optional = true,
-	tooltipTitle = "Return", tooltipText = "Profit divided by reagent cost.",
+	id = "roi", label = L["Return"], justifyH = "RIGHT", width = 54, sortable = true, defaultSort = "desc", optional = true,
+	tooltipTitle = L["Return"], tooltipText = L["Profit divided by reagent cost."],
 	sortValue = function(row) return row.roi or -1e15 end,
 	getText = function(row) return row.roi and string.format("%.0f%%", row.roi) or "-" end,
 }
 
 local function materialsOwnedColumn(pe)
 	return {
-		id = "coverage", label = "Owned", justifyH = "RIGHT", width = 50, sortable = true, defaultSort = "desc", optional = true,
-		tooltipTitle = "Reagents owned", tooltipText = "Share of the best crafter's reagents that your characters already own.",
+		id = "coverage", label = L["Owned"], justifyH = "RIGHT", width = 50, sortable = true, defaultSort = "desc", optional = true,
+		tooltipTitle = L["Reagents owned"], tooltipText = L["Share of the best crafter's reagents that your characters already own."],
 		sortValue = function(row)
 			local evaluation = pe:GetBestCraftEvaluation(row)
 			return evaluation and (evaluation.coverage or 0) or 0
@@ -110,7 +111,7 @@ function Tradewright:GetCraftsColumnDefinitions()
 	return {
 		self:CreateItemColumn({
 			id = "recipe",
-			label = "Item",
+			label = L["Item"],
 			defaultSort = "asc",
 			getItemID = function(row) return row.outputItemID end,
 			getIcon = function(row) return row.outputIcon end,
@@ -118,7 +119,7 @@ function Tradewright:GetCraftsColumnDefinitions()
 			getDetail = function(row) return craftRowDetail(pe, row) end,
 			sortValue = function(row) return row.outputName or "" end,
 		}),
-		money("sale", "Sale, net", "saleNet", 80),
+		money("sale", L["Sale, net"], "saleNet", 80),
 		money("mats", "Reagents", "matCost", 80),
 		money("profit", "Profit", "profit", 86, true),
 		ROI_COLUMN,
@@ -185,8 +186,8 @@ function Tradewright:CreateCraftsTable(panel)
 	local craftsTable = self:CreateReusableTable(panel, {
 		rowHeight = TALL_ROW,
 		footer = true,
-		emptyTitle = "No crafts",
-		emptyHint = "Scan a profession, or change the filters.",
+		emptyTitle = L["No crafts"],
+		emptyHint = L["Scan a profession, or change the filters."],
 		isRowSelected = function(rowData)
 			return rowData and rowData.rowKey ~= nil and rowData.rowKey == ui.craftsSelectedRowKey
 		end,
@@ -293,16 +294,16 @@ end
 --- it again while the check moves on.
 function Tradewright.CraftProfitLoadingNote()
 	local done, total = Tradewright:GetCraftEvalProgress()
-	return done and string.format("Working out craft profit · %d of %d recipes", done, total) or nil
+	return done and string.format(L["Working out craft profit · %d of %d recipes"], done, total) or nil
 end
 
 -- The note under the options row: evaluation progress while recipes update, else the AH cut and price source.
 function Tradewright:GetCraftsOptionsNote()
 	local done, total = self:GetCraftEvalProgress()
 	if done then
-		return self:Colorize(string.format("Updating %d of %d recipes…", done, total), "warning")
+		return self:Colorize(string.format(L["Updating %d of %d recipes…"], done, total), "warning")
 	end
-	return string.format("Auction cut %s · Prices from the last auction house scan", self:DescribeAuctionCut())
+	return string.format(L["Auction cut %s · Prices from the last auction house scan"], self:DescribeAuctionCut())
 end
 
 -- Footer texts: profitable crafts of all shown; how many professions they span and the cooldowns on record.
@@ -315,8 +316,8 @@ function Tradewright:GetCraftsFooterTexts(rows)
 		professions[row.professionName or "?"] = true
 	end
 	local cooldowns = self.GetCooldownSummary and self.MaterialLogic.CooldownFooter(self:GetCooldownSummary())
-	return string.format("%s profitable of %s crafts", self:FormatNumberGrouped(profitable), self:FormatNumberGrouped(#rows)),
-		string.format("%d professions", self:TableCount(professions)) .. (cooldowns and (" · " .. cooldowns) or "")
+	return string.format(L["%s profitable of %s crafts"], self:FormatNumberGrouped(profitable), self:FormatNumberGrouped(#rows)),
+		string.format(L["%d professions"], self:TableCount(professions)) .. (cooldowns and (" · " .. cooldowns) or "")
 end
 
 -- The selected row if it is still shown, else the first row (unless an item-only detail is open).

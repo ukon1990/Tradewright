@@ -1,9 +1,10 @@
 local addonName, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Minimap button: click opens the dashboard, right-click the settings tab, drag moves it round the minimap.
 
 local DEFAULT_ANGLE = 225
-local TOOLTIP_LINES = { { "Click", "Open Tradewright" }, { "Right-click", "Open settings" }, { "Drag", "Move this button" } }
+local TOOLTIP_LINES = { { "Click", L["Open Tradewright"] }, { "Right-click", L["Open settings"] }, { "Drag", L["Move this button"] } }
 
 -- Standard minimap-button layout (same offsets as LibDBIcon): the tracking-border
 -- ring sits in the top-left of its texture, so everything anchors TOPLEFT, not CENTER.

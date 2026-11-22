@@ -1,6 +1,7 @@
 -- The export copy box: the SavedVariables copy, page splitting and the window that shows the package text.
 local addonName, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 --- Persist compressed export package for pickup after /reload.
 function Tradewright:SaveExportToSavedVariables(payload, meta)
 	if type(payload) ~= "string" or payload == "" then
@@ -37,7 +38,7 @@ function Tradewright:CopyBoxBuildFooterText(opts)
 		return opts.unsavedHint
 	end
 	if opts.savedToVariables then
-		return "Also saved for /reload: SavedVariables/Tradewright.lua, TradewrightLastExport"
+		return L["Also saved for /reload: SavedVariables/Tradewright.lua, TradewrightLastExport"]
 	end
 	return ""
 end
@@ -151,15 +152,15 @@ function Tradewright:LayoutCopyFrameScroll(copyFrame, useEnvelopePaging)
 	if not copyFrame or not copyFrame.pageHintStr then
 		return
 	end
-	local intro = "The text is selected. Press Ctrl+C, then paste it where you need it."
+	local intro = L["The text is selected. Press Ctrl+C, then paste it where you need it."]
 	if useEnvelopePaging then
-		intro = intro .. " This package has several pages: copy each page and join them in order."
+		intro = intro .. L[" This package has several pages: copy each page and join them in order."]
 	end
 	copyFrame.pageHintStr:SetText(intro)
 	local pages = copyFrame._numPages or 1
-	copyFrame.metaStr:SetText(string.format("%s bytes%s",
+	copyFrame.metaStr:SetText(string.format(L["%s bytes%s"],
 		self.FormatNumberGrouped and self:FormatNumberGrouped(copyFrame._fullLen or 0) or tostring(copyFrame._fullLen or 0),
-		useEnvelopePaging and pages > 1 and string.format(" · %d pages", pages) or ""))
+		useEnvelopePaging and pages > 1 and string.format(L[" · %d pages"], pages) or ""))
 end
 
 function Tradewright:CopyBoxApplyCurrentPage()
@@ -169,7 +170,7 @@ function Tradewright:CopyBoxApplyCurrentPage()
 		return
 	end
 	if cf._pagingSegmentsPending then
-		cf.editBox:SetText("Preparing paged export…")
+		cf.editBox:SetText(L["Preparing paged export…"])
 		if cf.pageLabel then
 			cf.pageLabel:SetText("…")
 		end
@@ -197,9 +198,9 @@ function Tradewright:CopyBoxApplyCurrentPage()
 	cf.editBox:SetText(body)
 	if cf.pageLabel then
 		if cf._pagingMode == "envelope" and numPages > 1 then
-			cf.pageLabel:SetText(string.format("Page %d of %d", p, numPages))
+			cf.pageLabel:SetText(string.format(L["Page %d of %d"], p, numPages))
 		else
-			cf.pageLabel:SetText("Page 1 of 1")
+			cf.pageLabel:SetText(L["Page 1 of 1"])
 		end
 	end
 	if cf.btnPrev then
@@ -277,7 +278,7 @@ function Tradewright:CreateCopyFrame()
 	f.copyTitle = themedText(f, "GameFontNormalLarge", "gold")
 	f.copyTitle:SetPoint("LEFT", f, "TOPLEFT", pad, headerY - 1)
 	f.copyTitle:SetPoint("RIGHT", f.metaStr, "LEFT", -12, 0)
-	f.copyTitle:SetText("Export")
+	f.copyTitle:SetText(L["Export"])
 	local rule = f:CreateTexture(nil, "BORDER")
 	rule:SetPoint("TOPLEFT", 1, -theme.size.header)
 	rule:SetPoint("TOPRIGHT", -1, -theme.size.header)
@@ -308,7 +309,7 @@ function Tradewright:CreateCopyFrame()
 	actions:SetHeight(theme.size.control)
 	local done = themedButton(actions, "Close", function() f:Hide() end, true)
 	done:SetPoint("RIGHT")
-	local selectAll = themedButton(actions, "Select all", function()
+	local selectAll = themedButton(actions, L["Select all"], function()
 		f.editBox:SetFocus()
 		f.editBox:HighlightText()
 	end)
@@ -425,9 +426,9 @@ function Tradewright:ShowCopyBox(text, opts)
 				copyFrame._numPages = 1
 				self:LayoutCopyFrameScroll(copyFrame, false)
 				copyFrame.editBox:SetText(
-					"Paging failed: "
-						.. tostring(err or "unknown error")
-						.. "\n\nTry exporting a smaller scope (for example one profession or compact auction/inventory data)."
+					L["Paging failed: "]
+						.. tostring(err or L["unknown error"])
+						.. L["\n\nTry exporting a smaller scope (for example one profession or compact auction/inventory data)."]
 				)
 				return
 			end

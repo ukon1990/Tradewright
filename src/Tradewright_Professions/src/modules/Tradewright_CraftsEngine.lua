@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Craft basics the other Craft* files build on: expansion tags, AH cut, output quality ranks (Tradewright.CraftQuality), recommended crafter.
 
 -- Expansion of a profession's skill line, for crafts whose output item has no expansion ID yet.
@@ -174,7 +175,7 @@ function Tradewright:GetCraftRecommendedCrafter(row)
 		return nil, nil
 	end
 	local evaluation = row.perChar and row.perChar[row.bestCharacterKey] or nil
-	local reason = evaluation and evaluation.profit ~= nil and "Best profit" or "Fallback available"
+	local reason = evaluation and evaluation.profit ~= nil and L["Best profit"] or L["Fallback available"]
 	return craftCharacterLabel(self, row.bestCharacterKey), reason
 end
 

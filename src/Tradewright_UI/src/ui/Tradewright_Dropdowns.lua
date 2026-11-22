@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Filter selections and the flat dropdowns that edit them: multi-select, single-select and menu dropdowns.
 
 local function copySelection(selection)
@@ -50,7 +51,7 @@ function Tradewright:GetFilterSelectionSummary(options, selection, allLabel)
 	if #selectedLabels <= 2 then
 		return table.concat(selectedLabels, ", ")
 	end
-	return string.format("%d selected", #selectedLabels)
+	return string.format(L["%d selected"], #selectedLabels)
 end
 
 function Tradewright:NormalizeFilterSelection(selection, options)

@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- The "Reagents" button of the bag window, shown at an open bank: put crafting reagents away in
 -- the bank to free bag space, and take back what the craft queue needs. Nothing moves until the
 -- player clicks a line of the menu; the moves are the bag window's ordinary stack moves.
@@ -37,13 +38,13 @@ end
 local function depositLabel(pe, deposit, stayCount)
 	local _, scanned = pe:GetOwnProfessionReagents()
 	if pe:GetStashOnlyOwnProfessions() and scanned == 0 then
-		return "Scan a profession first, or untick Only reagents my professions use"
+		return L["Scan a profession first, or untick Only reagents my professions use"]
 	end
 	if #deposit == 0 then
-		return "No reagents to deposit"
+		return L["No reagents to deposit"]
 	end
-	local stays = stayCount > 0 and string.format(" (%d stay for the queue)", stayCount) or ""
-	return string.format("Deposit %d %s%s", #deposit, pe:Plural(#deposit, "stack"), stays)
+	local stays = stayCount > 0 and string.format(L[" (%d stay for the queue)"], stayCount) or ""
+	return string.format(L["Deposit %d %s%s"], #deposit, pe:Plural(#deposit, "stack"), stays)
 end
 
 local function addLine(text, onClick)
@@ -70,21 +71,21 @@ local function fillMenu(pe, reopen)
 	local title = UIDropDownMenu_CreateInfo()
 	title.text, title.isTitle, title.notCheckable = "Reagents", true, true
 	UIDropDownMenu_AddButton(title)
-	addChoice("Only reagents my professions use", pe:GetStashOnlyOwnProfessions(), function(checked)
+	addChoice(L["Only reagents my professions use"], pe:GetStashOnlyOwnProfessions(), function(checked)
 		pe:SetStashOnlyOwnProfessions(checked)
 	end, reopen)
-	addChoice("Keep what my craft queue needs", pe:GetStashKeepsQueueNeeds(), function(checked)
+	addChoice(L["Keep what my craft queue needs"], pe:GetStashKeepsQueueNeeds(), function(checked)
 		pe:SetStashKeepsQueueNeeds(checked)
 	end, reopen)
 	local deposit, stayCount = depositPlan(pe)
 	addLine(depositLabel(pe, deposit, stayCount), #deposit > 0 and function() pe:RunBagMoves(deposit, "bank") end or nil)
 	local withdraw = withdrawPlan(pe)
 	if #withdraw > 0 then
-		addLine(string.format("Take %d %s for the craft queue", #withdraw, pe:Plural(#withdraw, "stack")), function()
+		addLine(string.format(L["Take %d %s for the craft queue"], #withdraw, pe:Plural(#withdraw, "stack")), function()
 			pe:RunBagMoves(withdraw, "bags")
 		end)
 	else
-		addLine("Nothing in the bank the craft queue needs")
+		addLine(L["Nothing in the bank the craft queue needs"])
 	end
 end
 
@@ -104,9 +105,9 @@ end
 --- The header's "Reagents" button. It sits left of `rightNeighbour`.
 function Tradewright:CreateBagStashButton(header, rightNeighbour)
 	local pe = self
-	local button = self:CreateButton(header, "Reagents", function(clicked)
+	local button = self:CreateButton(header, L["Reagents"], function(clicked)
 		showMenu(pe, clicked)
-	end, { small = true, tooltip = "Deposit crafting reagents in the bank, or take what the craft queue needs." })
+	end, { small = true, tooltip = L["Deposit crafting reagents in the bank, or take what the craft queue needs."] })
 	button:SetPoint("RIGHT", rightNeighbour, "LEFT", -6, 0)
 	button:Hide()
 	return button

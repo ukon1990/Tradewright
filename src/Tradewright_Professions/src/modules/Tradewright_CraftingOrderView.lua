@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Retail crafting-order view: opens queued orders in Blizzard's order view and adds the queue and paging buttons there.
 
 if not Tradewright.IS_RETAIL then
@@ -74,7 +75,7 @@ end
 
 local function applyOrder(self, pf, orderID, order)
 	if not order or not showOrderInView(pf.OrdersPage, order) then
-		self:PrintMessage(string.format("Could not open crafting order #%s in the orders UI.", tostring(orderID)))
+		self:PrintMessage(string.format(L["Could not open crafting order #%s in the orders UI."], tostring(orderID)))
 		return false
 	end
 	if self._professionCraftPanel then
@@ -99,7 +100,7 @@ function Tradewright:OpenCraftingOrderQueueEntry(entry)
 	entry = type(stored) == "table" and stored or entry
 	local pf = _G.ProfessionsFrame
 	if not pf then
-		self:PrintMessage(string.format("Open Professions to view crafting order #%s.", tostring(orderID)))
+		self:PrintMessage(string.format(L["Open Professions to view crafting order #%s."], tostring(orderID)))
 		return false
 	end
 	if not pf:IsShown() then
@@ -185,7 +186,7 @@ function Tradewright:EnsureCraftingOrderViewActionButtons()
 		local view = getLiveCraftingOrderView()
 		local oid = resolveCurrentQueuedOrderID(view, panel)
 		if not oid then
-			Tradewright:PrintMessage("No crafting order selected to navigate from.")
+			Tradewright:PrintMessage(L["No crafting order selected to navigate from."])
 			return
 		end
 		local nextEntry = Tradewright:GetAdjacentCraftingOrderQueueEntry(oid, delta)
@@ -202,8 +203,8 @@ function Tradewright:EnsureCraftingOrderViewActionButtons()
 	end)
 end
 
-local RECIPE_QUEUE_TIP = "Adds this recipe to the craft queue. Its reagents, Enchanting Vellum included, go in the cart."
-local ORDER_QUEUE_TIP = "Adds this crafting order to the craft queue without starting it. Only the reagents you must supply go in the cart."
+local RECIPE_QUEUE_TIP = L["Adds this recipe to the craft queue. Its reagents, Enchanting Vellum included, go in the cart."]
+local ORDER_QUEUE_TIP = L["Adds this crafting order to the craft queue without starting it. Only the reagents you must supply go in the cart."]
 
 local function setOrderNavShown(panel, showOrderNav, showRecipeNav)
 	if not panel.orderNav then
@@ -298,11 +299,11 @@ local function wireOrderQueueButtons(panel, order)
 		local live = getLiveCraftingOrderView()
 		local o = (live and live.order) or order
 		if o then
-			Tradewright:PrintMessage(string.format("Adding crafting order #%s to the queue…", tostring(o.orderID or "?")))
+			Tradewright:PrintMessage(string.format(L["Adding crafting order #%s to the queue…"], tostring(o.orderID or "?")))
 			Tradewright:AddCraftingOrderToQueue(o)
 			Tradewright:CraftingOrderViewRefreshButtons(getLiveCraftingOrderView(), o)
 		else
-			Tradewright:PrintMessage("Crafting order button clicked, but no live order data was found.")
+			Tradewright:PrintMessage(L["Crafting order button clicked, but no live order data was found."])
 		end
 	end)
 	panel.peRemoveFromQueueBtn:SetScript("OnClick", function()
@@ -330,7 +331,7 @@ local function refreshOrderPaging(self, panel, orderID, inQueue)
 	setPagingButton(panel.peNextOrderBtn, showPaging, queued and idx < total)
 	local status = panel.peQueueStatusText
 	if status and showPaging and idx then
-		status:SetText(string.format("Queue %d/%d", idx, total))
+		status:SetText(string.format(L["Queue %d/%d"], idx, total))
 		status:Show()
 	elseif status then
 		status:Hide()

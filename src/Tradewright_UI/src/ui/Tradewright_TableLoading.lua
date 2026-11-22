@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Loading state of a table whose rows are still being worked out in the background (market
 -- insights, craft profit): grey placeholder rows that pulse, under a line saying what is being
 -- read and how far it got. It replaces the empty-state message, which would wrongly say there is
@@ -97,7 +98,7 @@ function TableMixin:UpdateLoadingNote()
 	if type(note) == "function" then
 		note = note()
 	end
-	self.loadingFrame.note:SetText(note or "Loading…")
+	self.loadingFrame.note:SetText(note or L["Loading…"])
 end
 
 -- Called by UpdateEmptyState: the loading state is built the first time a table needs it.

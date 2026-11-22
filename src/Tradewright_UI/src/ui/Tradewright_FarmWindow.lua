@@ -1,5 +1,6 @@
 local addonName, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Farm window: a small movable window that shows the run in progress. It appears when a run
 -- starts and hides when the run stops; `/twfarm` toggles it.
 
@@ -40,7 +41,7 @@ local function nameDialog(acceptLabel, discardLabel)
 	}
 end
 
-StaticPopupDialogs["TRADEWRIGHT_FARM_SAVE"] = nameDialog("Save farm", "Discard")
+StaticPopupDialogs["TRADEWRIGHT_FARM_SAVE"] = nameDialog(L["Save farm"], "Discard")
 StaticPopupDialogs["TRADEWRIGHT_FARM_RENAME"] = nameDialog("Rename")
 
 --- Asks what to call the run in progress, then saves it, discards it, or (Cancel) lets it run on.
@@ -50,13 +51,13 @@ function Tradewright:AskToSaveFarmRun()
 		return
 	end
 	local summary = self:SummarizeFarmRun(run)
-	local text = string.format("Farm finished: %s in %s, %s an hour.\nSave it as:", self:FormatCopperShort(summary.total),
+	local text = string.format(L["Farm finished: %s in %s, %s an hour.\nSave it as:"], self:FormatCopperShort(summary.total),
 		clock(summary.activeSeconds), self:FormatCopperShort(summary.perHour))
 	StaticPopup_Show("TRADEWRIGHT_FARM_SAVE", text, nil, {
 		name = run.name,
 		onAccept = function(name)
 			local _, saved = self:StopFarmRun(name)
-			self:PrintMessage(string.format("Farm \"%s\" saved.", saved.name))
+			self:PrintMessage(string.format(L["Farm \"%s\" saved."], saved.name))
 		end,
 		onDiscard = function() self:DiscardFarmRun() end,
 	})
@@ -64,7 +65,7 @@ end
 
 --- Asks for a new name for the saved farm `name`; `onRenamed(newName)` runs when it changed.
 function Tradewright:AskToRenameFarm(name, onRenamed)
-	StaticPopup_Show("TRADEWRIGHT_FARM_RENAME", string.format("Rename the farm \"%s\" to:", name), nil, {
+	StaticPopup_Show("TRADEWRIGHT_FARM_RENAME", string.format(L["Rename the farm \"%s\" to:"], name), nil, {
 		name = name,
 		onAccept = function(newName)
 			newName = self:Trim(newName or "")
@@ -99,7 +100,7 @@ local function buildHeader(pe, f)
 	close:SetScript("OnClick", function() f:Hide() end)
 	f.title = pe:CreateText(f, "GameFontNormalLarge", "gold")
 	f.title:SetPoint("LEFT", f, "TOPLEFT", PAD, -(theme.size.header / 2) - 1)
-	f.title:SetText("Farm")
+	f.title:SetText(L["Farm"])
 	f.clock = pe:CreateText(f, "GameFontHighlightSmall", "textMuted", "RIGHT")
 	f.clock:SetPoint("RIGHT", close, "LEFT", -6, 0)
 	f.clock:SetPoint("LEFT", f.title, "RIGHT", 8, 0)
@@ -117,10 +118,10 @@ local function buildBody(pe, f, top)
 	f.facts:SetPoint("TOPLEFT", f.rate, "BOTTOMLEFT", 0, -8)
 	f.facts:SetPoint("TOPRIGHT", f.rate, "BOTTOMRIGHT", 0, -8)
 	f.facts:SetHeight(6 * 16)
-	f.pause = pe:CreateButton(f, "Pause", function() pe:ToggleFarmPause() end)
+	f.pause = pe:CreateButton(f, L["Pause"], function() pe:ToggleFarmPause() end)
 	f.pause:SetPoint("BOTTOMLEFT", PAD, PAD)
 	f.pause:SetWidth(70)
-	f.stop = pe:CreateButton(f, "Stop and save", function() pe:AskToSaveFarmRun() end)
+	f.stop = pe:CreateButton(f, L["Stop and save"], function() pe:AskToSaveFarmRun() end)
 	f.stop:SetPoint("BOTTOMLEFT", f.pause, "BOTTOMRIGHT", 6, 0)
 	f.stop:SetPoint("BOTTOMRIGHT", -PAD, PAD)
 end
@@ -161,8 +162,8 @@ end
 -- Label and value pairs: the value's three parts, then the latest pickups.
 local function factRows(pe, run, summary)
 	local rows = {
-		{ "Auction estimate", pe:FormatCopperShort(summary.auctionValue) },
-		{ "Vendor items", pe:FormatCopperShort(summary.vendorValue + summary.vendorSold) },
+		{ L["Auction estimate"], pe:FormatCopperShort(summary.auctionValue) },
+		{ L["Vendor items"], pe:FormatCopperShort(summary.vendorValue + summary.vendorSold) },
 		{ "Coin", pe:FormatCopperShort(summary.coin) },
 	}
 	for _, pickup in ipairs(run.latest or {}) do
@@ -173,9 +174,9 @@ end
 
 local function pauseNote(run)
 	if run.pausedForIdling then
-		return " · paused, idle"
+		return L[" · paused, idle"]
 	end
-	return run.pausedAt and " · paused" or ""
+	return run.pausedAt and L[" · paused"] or ""
 end
 
 --- Redraw the farm window from the run in progress. Hidden windows are left alone.
@@ -186,20 +187,20 @@ function Tradewright:RefreshFarmWindow()
 		return
 	end
 	if not run then
-		f.name:SetText("No farm running")
+		f.name:SetText(L["No farm running"])
 		f.rate:SetText("-")
 		f.clock:SetText("")
-		f.facts:SetRows({ { "Start one with", "/twfarm start" } })
+		f.facts:SetRows({ { L["Start one with"], L["/twfarm start"] } })
 		f.pause:SetEnabled(false)
 		f.stop:SetEnabled(false)
 		return
 	end
 	local summary = self:SummarizeFarmRun(run)
 	f.name:SetText(run.name)
-	f.rate:SetText(self:FormatCopperShort(summary.perHour) .. " an hour")
+	f.rate:SetText(self:FormatCopperShort(summary.perHour) .. L[" an hour"])
 	f.clock:SetText(clock(summary.activeSeconds) .. pauseNote(run))
 	f.facts:SetRows(factRows(self, run, summary))
-	f.pause:SetText(run.pausedAt and "Resume" or "Pause")
+	f.pause:SetText(run.pausedAt and L["Resume"] or "Pause")
 	f.pause:SetEnabled(true)
 	f.stop:SetEnabled(true)
 end

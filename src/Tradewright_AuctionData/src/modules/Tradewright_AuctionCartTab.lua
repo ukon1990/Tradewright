@@ -1,6 +1,7 @@
 -- The cart tab of the AH panel: summary, search box, buy and remove buttons and the reagent table.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local shared = Tradewright.AuctionShared
 local attachSimpleTooltip = shared.attachSimpleTooltip
 local panelButton = shared.panelButton
@@ -33,7 +34,7 @@ end
 local function buyCheapestCartSelection(panel)
 	local selected = selectedOrFirstCartItemID(panel)
 	if not selected then
-		Tradewright:PrintMessage("Select a cart row first.")
+		Tradewright:PrintMessage(L["Select a cart row first."])
 		return
 	end
 	local rows = Tradewright:FilterAuctionCraftCartRows(select(1, Tradewright:BuildAuctionCraftCartRows()))
@@ -48,7 +49,7 @@ end
 local function removeSelectedCartSources()
 	local selected = Tradewright:GetState().auctionCartSelectedItemID
 	if not selected then
-		Tradewright:PrintMessage("Select a cart row first.")
+		Tradewright:PrintMessage(L["Select a cart row first."])
 		return
 	end
 	local pe = Tradewright
@@ -56,11 +57,11 @@ local function removeSelectedCartSources()
 	local removedOrders = pe.RemoveCraftingOrdersByReagentItem and pe:RemoveCraftingOrdersByReagentItem(selected) or 0
 	if (removedCrafts + removedOrders) > 0 then
 		pe:PrintMessage(string.format(
-			"Removed %d queued crafts and %d crafting orders that needed item #%s.",
+			L["Removed %d queued crafts and %d crafting orders that needed item #%s."],
 			removedCrafts, removedOrders, tostring(selected)
 		))
 	else
-		pe:PrintMessage("Nothing in the queue needs the selected item.")
+		pe:PrintMessage(L["Nothing in the queue needs the selected item."])
 	end
 	pe:GetState().auctionCartSelectedItemID = nil
 	pe:RefreshAuctionHousePanel()
@@ -74,7 +75,7 @@ local function clearCartSources()
 		Tradewright:ClearCraftingOrderQueue()
 	end
 	Tradewright:GetState().auctionCartSelectedItemID = nil
-	Tradewright:PrintMessage("Cart and craft queue cleared.")
+	Tradewright:PrintMessage(L["Cart and craft queue cleared."])
 	Tradewright:RefreshAuctionHousePanel()
 end
 
@@ -106,28 +107,28 @@ local function cartButton(panel, size, text, point, onClick)
 end
 
 local function buildCartButtons(panel)
-	panel.btnCartSearch = cartButton(panel, { 58, 20 }, "Find selected", { "LEFT", panel.cartSearchBox, "RIGHT", 4, 0 }, function()
+	panel.btnCartSearch = cartButton(panel, { 58, 20 }, L["Find selected"], { "LEFT", panel.cartSearchBox, "RIGHT", 4, 0 }, function()
 		searchSelectedCartRow(panel)
 	end)
-	attachSimpleTooltip(panel.btnCartSearch, "Find selected", "Searches the auction house for the selected cart row and updates its price.")
-	panel.btnCartRefresh = cartButton(panel, { 64, 20 }, "Check all", { "LEFT", panel.btnCartSearch, "RIGHT", 4, 0 }, priceAllCartRows)
-	attachSimpleTooltip(panel.btnCartRefresh, "Check all", "Looks up the price of every cart row that still has something to buy.")
-	panel.btnCartBuy = cartButton(panel, { 86, 20 }, "Buy cheapest", { "TOPLEFT", panel.cartSearchBox, "BOTTOMLEFT", 0, -6 }, function()
+	attachSimpleTooltip(panel.btnCartSearch, L["Find selected"], L["Searches the auction house for the selected cart row and updates its price."])
+	panel.btnCartRefresh = cartButton(panel, { 64, 20 }, L["Check all"], { "LEFT", panel.btnCartSearch, "RIGHT", 4, 0 }, priceAllCartRows)
+	attachSimpleTooltip(panel.btnCartRefresh, L["Check all"], L["Looks up the price of every cart row that still has something to buy."])
+	panel.btnCartBuy = cartButton(panel, { 86, 20 }, L["Buy cheapest"], { "TOPLEFT", panel.cartSearchBox, "BOTTOMLEFT", 0, -6 }, function()
 		buyCheapestCartSelection(panel)
 	end)
-	attachSimpleTooltip(panel.btnCartBuy, "Buy cheapest",
-		"Buys the selected row at the cheapest price found.")
-	panel.btnCartRemove = cartButton(panel, { 70, 20 }, "Remove selected", { "LEFT", panel.btnCartBuy, "RIGHT", 4, 0 }, removeSelectedCartSources)
-	attachSimpleTooltip(panel.btnCartRemove, "Remove selected",
-		"Removes the crafts that need the selected item from the queue.")
-	panel.btnCartClear = cartButton(panel, { 56, 20 }, "Clear cart", { "LEFT", panel.btnCartRemove, "RIGHT", 4, 0 }, clearCartSources)
-	attachSimpleTooltip(panel.btnCartClear, "Clear cart", "Empties the craft queue, and the cart with it.")
+	attachSimpleTooltip(panel.btnCartBuy, L["Buy cheapest"],
+		L["Buys the selected row at the cheapest price found."])
+	panel.btnCartRemove = cartButton(panel, { 70, 20 }, L["Remove selected"], { "LEFT", panel.btnCartBuy, "RIGHT", 4, 0 }, removeSelectedCartSources)
+	attachSimpleTooltip(panel.btnCartRemove, L["Remove selected"],
+		L["Removes the crafts that need the selected item from the queue."])
+	panel.btnCartClear = cartButton(panel, { 56, 20 }, L["Clear cart"], { "LEFT", panel.btnCartRemove, "RIGHT", 4, 0 }, clearCartSources)
+	attachSimpleTooltip(panel.btnCartClear, L["Clear cart"], L["Empties the craft queue, and the cart with it."])
 end
 
 local function appendCartMailLines(pe, lines, mailAllocations)
 	for _, alloc in ipairs(type(mailAllocations) == "table" and mailAllocations or {}) do
 		if (tonumber(alloc.mailQuantity) or 0) > 0 then
-			lines[#lines + 1] = { "Mail to " .. tostring(alloc.characterKey), pe:FormatNumberGrouped(alloc.mailQuantity) }
+			lines[#lines + 1] = { L["Mail to "] .. tostring(alloc.characterKey), pe:FormatNumberGrouped(alloc.mailQuantity) }
 		end
 	end
 end
@@ -139,12 +140,12 @@ local function showCartRowTooltip(rowFrame, rowData)
 	local pe = Tradewright
 	local lines = {
 		{ "Need", pe:FormatNumberGrouped(rowData.quantityNeeded or 0) },
-		{ "Have here", pe:FormatNumberGrouped(rowData.quantityOnCharacter or rowData.quantityHave or 0) },
+		{ L["Have here"], pe:FormatNumberGrouped(rowData.quantityOnCharacter or rowData.quantityHave or 0) },
 		{ "Buy", pe:FormatNumberGrouped(rowData.quantityToBuy or 0) },
-		{ "Cost to buy", rowData.estimatedBuyCost and pe:FormatCopperFull(rowData.estimatedBuyCost) or "no price yet" },
+		{ L["Cost to buy"], rowData.estimatedBuyCost and pe:FormatCopperFull(rowData.estimatedBuyCost) or L["no price yet"] },
 	}
 	appendCartMailLines(pe, lines, rowData.mailAllocations)
-	pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, pe:AppendCartSourceLines(lines, rowData, "Click to find it at the auction house"))
+	pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, pe:AppendCartSourceLines(lines, rowData, L["Click to find it at the auction house"]))
 end
 
 local function buildCartTable(self, panel)
@@ -155,8 +156,8 @@ local function buildCartTable(self, panel)
 	panel.cartTable = self:CreateReusableTable(panel.cartTableHost, {
 		rowHeight = 36,
 		footer = true,
-		emptyTitle = "Cart is empty",
-		emptyHint = "Queue crafts to add their reagents here.",
+		emptyTitle = L["Cart is empty"],
+		emptyHint = L["Queue crafts to add their reagents here."],
 		isRowSelected = function(rowData)
 			return rowData and rowData.itemID ~= nil and rowData.itemID == Tradewright:GetState().auctionCartSelectedItemID
 		end,

@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Recipe cooldowns. Read from the client while a profession window is open and kept per character
 -- in `db.characters[characterKey].recipeCooldowns[recipeID] = readyAt` (server time).
 -- A recipe is only known to have a cooldown once the client has reported one for it, so nothing is
@@ -78,7 +79,7 @@ end
 -- The recipe's name as the client knows it (a recipe ID is a spell ID), or a plain stand-in.
 local function recipeName(recipeID)
 	local name = C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(recipeID)
-	return name or (GetSpellInfo and GetSpellInfo(recipeID)) or "A cooldown craft"
+	return name or (GetSpellInfo and GetSpellInfo(recipeID)) or L["A cooldown craft"]
 end
 
 -- One chat line per ready cooldown, said once after login when the setting asks for it.
@@ -87,7 +88,7 @@ local function announceReadyCooldowns(pe)
 		return
 	end
 	for _, ready in ipairs(pe:GetCooldownSummary().ready) do
-		pe:PrintMessage(string.format("%s is off cooldown on %s.", recipeName(ready.recipeID), ready.characterKey))
+		pe:PrintMessage(string.format(L["%s is off cooldown on %s."], recipeName(ready.recipeID), ready.characterKey))
 	end
 end
 

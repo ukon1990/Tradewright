@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 --- Pure helpers for crafting materials: the cheapest way to get one, counts per storage location and
 --- classic reagent slots. No WoW API.
 local MaterialLogic = {}
@@ -150,10 +151,10 @@ end
 function MaterialLogic.CooldownFooter(summary)
 	local parts = {}
 	if #summary.ready > 0 then
-		parts[#parts + 1] = string.format("%d %s ready", #summary.ready, Tradewright:Plural(#summary.ready, "cooldown"))
+		parts[#parts + 1] = string.format(L["%d %s ready"], #summary.ready, Tradewright:Plural(#summary.ready, "cooldown"))
 	end
 	if summary.nextIn then
-		parts[#parts + 1] = "next in " .. MaterialLogic.FormatCooldown(summary.nextIn)
+		parts[#parts + 1] = L["next in "] .. MaterialLogic.FormatCooldown(summary.nextIn)
 	end
 	return #parts > 0 and table.concat(parts, " · ") or nil
 end

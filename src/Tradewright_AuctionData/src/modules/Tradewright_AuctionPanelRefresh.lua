@@ -2,6 +2,7 @@
 -- Panel construction lives in Tradewright_AuctionPanelBuild.lua (EnsureAuctionHousePanel).
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local function formatDurationShort(seconds)
 	return Tradewright:FormatDurationShort(seconds)
 end
@@ -13,10 +14,10 @@ local function setFontColor(fontString, color)
 	fontString:SetTextColor(color.r or 1, color.g or 1, color.b or 1)
 end
 
-local POST_BUTTON_LABELS = { post_all = "Post all", post_profitable = "Post profitable" }
+local POST_BUTTON_LABELS = { post_all = L["Post all"], post_profitable = L["Post profitable"] }
 local SCAN_BUTTONS = { "btnScanCraftPrices", "btnScanAccountInv", "btnScanCraftAndAccount", "btnScanChoice" }
 local CART_ONLY_CONTROLS = { "btnCartSearch", "btnCartRefresh", "btnCartBuy", "btnCartRemove", "btnCartClear", "cartTableHost" }
-local CART_SUMMARY_TEXT = "Reagents for your queued crafts. Buy them on this character; the mailbox panel sends the rest to your other characters."
+local CART_SUMMARY_TEXT = L["Reagents for your queued crafts. Buy them on this character; the mailbox panel sends the rest to your other characters."]
 
 local function showOrHide(frame, shown)
 	if shown then
@@ -45,7 +46,7 @@ local function countKeys(t)
 end
 
 local function queuedHint(queued, idleText)
-	return queued > 0 and string.format("%d prices queued", queued) or idleText
+	return queued > 0 and string.format(L["%d prices queued"], queued) or idleText
 end
 
 local function applyAuctionPanelTheme(panel, theme)
@@ -73,7 +74,7 @@ local function summarizeAuctionCart(pe, cartRows)
 		end
 	end
 	if cart.cost > 0 then
-		cart.costHint = "About " .. pe:FormatCopperShort(cart.cost) .. (cart.costKnown and "" or "+")
+		cart.costHint = L["About "] .. pe:FormatCopperShort(cart.cost) .. (cart.costKnown and "" or "+")
 	end
 	return cart
 end
@@ -163,14 +164,14 @@ end
 
 local function refreshAuctionPanelFooters(panel, scan, rowCount, preFilterCount)
 	if panel.footerText then
-		local footer = scan.fullDumpActive and "Full scan running"
-			or scan.cooldown > 0 and ("Full scan ready in " .. formatDurationShort(scan.cooldown))
-			or "Full scan ready"
-		panel.footerText:SetText(string.format("%s · Last full scan %s", footer, scan.lastFullScanLabel))
+		local footer = scan.fullDumpActive and L["Full scan running"]
+			or scan.cooldown > 0 and (L["Full scan ready in "] .. formatDurationShort(scan.cooldown))
+			or L["Full scan ready"]
+		panel.footerText:SetText(string.format(L["%s · Last full scan %s"], footer, scan.lastFullScanLabel))
 	end
 	if panel.table and panel.table.SetFooterText then
-		panel.table:SetFooterText(string.format("%d of %d items", rowCount, preFilterCount),
-			queuedHint(scan.queued, "Click a row to put it in the sell slot"))
+		panel.table:SetFooterText(string.format(L["%d of %d items"], rowCount, preFilterCount),
+			queuedHint(scan.queued, L["Click a row to put it in the sell slot"]))
 	end
 end
 
@@ -181,7 +182,7 @@ local function fullScanButtonLabel(scan)
 	if scan.cooldown > 0 then
 		return formatDurationShort(scan.cooldown)
 	end
-	return "Full scan"
+	return L["Full scan"]
 end
 
 local function refreshAuctionPanelScanButtons(panel, scan)
@@ -211,7 +212,7 @@ local function refreshAuctionPanelPostButtons(panel, scan)
 	local postReady = isBulkPostReady(scan)
 	for mode, button in pairs({ post_profitable = panel.btnPostProfitable, post_all = panel.btnPostAll }) do
 		local isJob = scan.bulkActive and scan.bulk.mode == mode
-		button:SetText(isJob and "Post next" or POST_BUTTON_LABELS[mode])
+		button:SetText(isJob and L["Post next"] or POST_BUTTON_LABELS[mode])
 		button:SetEnabled(not scan.bulkActive or (isJob and postReady))
 	end
 end
@@ -219,14 +220,14 @@ end
 local function refreshAuctionPanelPauseButtons(panel, scan)
 	if panel.btnPauseBulk then
 		if scan.bulkActive then
-			panel.btnPauseBulk:SetText((scan.bulk.paused == true) and "Resume" or "Pause")
+			panel.btnPauseBulk:SetText((scan.bulk.paused == true) and L["Resume"] or "Pause")
 		end
 		showOrHide(panel.btnPauseBulk, scan.bulkActive)
 	end
 	if panel.btnPauseScan then
 		local shown = scan.running or scan.scanPaused
 		if shown then
-			panel.btnPauseScan:SetText(scan.scanPaused and "Resume" or "Pause")
+			panel.btnPauseScan:SetText(scan.scanPaused and L["Resume"] or "Pause")
 		end
 		showOrHide(panel.btnPauseScan, shown)
 	end
@@ -243,10 +244,10 @@ end
 
 local function fullDumpProgressText(pe, dump)
 	if dump.status == "requesting" then
-		return "Full scan: asking the server…"
+		return L["Full scan: asking the server…"]
 	end
 	local done, total = fullDumpProgress(dump)
-	local label = (tonumber(dump.persistTotal) or 0) > 0 and "Saving" or "Full scan"
+	local label = (tonumber(dump.persistTotal) or 0) > 0 and "Saving" or L["Full scan"]
 	return string.format("%s %s of %s", label, pe:FormatNumberGrouped(math.min(done, total)), pe:FormatNumberGrouped(total))
 end
 
@@ -255,7 +256,7 @@ local function auctionProgressText(pe, scan)
 		return fullDumpProgressText(pe, scan.dump)
 	end
 	if scan.bulkActive then
-		return string.format("Posting %d of %d", math.min(scan.displayDone, scan.displayTotal), scan.displayTotal)
+		return string.format(L["Posting %d of %d"], math.min(scan.displayDone, scan.displayTotal), scan.displayTotal)
 	end
 	if (scan.scanActive or scan.scanPaused) and scan.total > 0 then
 		local verb = scan.scanPaused and "Paused" or "Scanning"
@@ -265,7 +266,7 @@ local function auctionProgressText(pe, scan)
 end
 
 local function bulkFooterText(bulk)
-	return string.format("%s · posted %d, skipped %d, failed %d", tostring(bulk.status or "Posting"),
+	return string.format(L["%s · posted %d, skipped %d, failed %d"], tostring(bulk.status or "Posting"),
 		tonumber(bulk.posted) or 0, tonumber(bulk.skippedDumped) or 0, tonumber(bulk.failed) or 0)
 end
 
@@ -311,7 +312,7 @@ local function refreshAuctionPanelTiming(panel, scan)
 	else
 		local gt = GetTime and GetTime() or 0
 		local elapsed = math.max(0, gt - (tonumber(scan.startedAt) or gt))
-		timing:SetText(string.format("about %s left", scanEtaText(elapsed, scan.done, scan.total)))
+		timing:SetText(string.format(L["about %s left"], scanEtaText(elapsed, scan.done, scan.total)))
 	end
 	timing:Show()
 end
@@ -352,7 +353,7 @@ local function refreshAuctionPanelTabs(pe, panel, activeTab, cart)
 	end
 	if panel.tabCart then
 		styleAuctionPanelTab(pe, panel.tabCart, activeTab == "cart")
-		pe:SetButtonLabel(panel.tabCart, cart.outstanding > 0 and string.format("Cart (%d)", cart.outstanding) or "Cart", true)
+		pe:SetButtonLabel(panel.tabCart, cart.outstanding > 0 and string.format(L["Cart (%d)"], cart.outstanding) or "Cart", true)
 	end
 	if pe.StyleShellButton then
 		pe:StyleShellButton(panel.tabAuctions, activeTab == "auctions")
@@ -362,14 +363,14 @@ end
 local function refreshOwnedAuctionsTab(pe, panel, state, queued)
 	local ownedRows, owned, cut = pe:BuildOwnedAuctionRows()
 	panel.ownedCut = cut
-	panel.ownedSummary:SetText(string.format("Sold %s · %d\nListed %s · %d, %s after cut",
+	panel.ownedSummary:SetText(string.format(L["Sold %s · %d\nListed %s · %d, %s after cut"],
 		pe:FormatCopperShort(owned.soldValue), owned.soldCount,
 		pe:FormatCopperShort(owned.listedValue), owned.listedCount, pe:FormatCopperShort(owned.listedNet)))
 	local cancelable = #pe:GetCancelableUndercutAuctions(ownedRows)
-	pe:SetButtonLabel(panel.btnOwnedCancel, cancelable > 0 and string.format("Cancel undercut (%d)", cancelable) or "Cancel undercut")
+	pe:SetButtonLabel(panel.btnOwnedCancel, cancelable > 0 and string.format(L["Cancel undercut (%d)"], cancelable) or L["Cancel undercut"])
 	panel.btnOwnedCancel:SetEnabled(cancelable > 0 and GetTime() >= (state.auctionNextCancelAt or 0))
 	panel.ownedTable:SetRows(ownedRows)
-	panel.ownedTable:SetFooterText(string.format("%d auctions", #ownedRows), queuedHint(queued, "Click a row to recheck its price"))
+	panel.ownedTable:SetFooterText(string.format(L["%d auctions"], #ownedRows), queuedHint(queued, L["Click a row to recheck its price"]))
 end
 
 -- Price checks and cancels the player asks for while a price scan runs. The scan steps aside for
@@ -453,7 +454,7 @@ local function refreshAuctionCartChrome(pe, panel, onCart, cart, filterText)
 		panel.cartSummary:SetShown(onCart)
 		panel.cartSummary:SetText(CART_SUMMARY_TEXT)
 		if panel.cartTable and panel.cartTable.SetFooterText then
-			panel.cartTable:SetFooterText(string.format("%d items, %s to buy", cart.outstanding,
+			panel.cartTable:SetFooterText(string.format(L["%d items, %s to buy"], cart.outstanding,
 				pe:FormatNumberGrouped(cart.quantity)), cart.costHint)
 		end
 	end
@@ -520,7 +521,7 @@ local function unpricedCartHint(rows)
 	if unpriced == 0 then
 		return ""
 	end
-	return string.format("%d %s no price yet. Press Check all.", unpriced, Tradewright:Plural(unpriced, "item has", "items have"))
+	return string.format(L["%d %s no price yet. Press Check all."], unpriced, Tradewright:Plural(unpriced, "item has", "items have"))
 end
 
 local function refreshAuctionCartButtons(panel, rows, selectedRow)

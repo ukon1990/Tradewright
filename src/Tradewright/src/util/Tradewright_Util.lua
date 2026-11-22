@@ -1,6 +1,7 @@
 -- General helpers: SafeCall, table and API-list utilities, character and recipe keys, and the state watcher.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 function Tradewright:SafeCall(func, ...)
 	if type(func) ~= "function" then
 		return nil
@@ -290,5 +291,5 @@ function Tradewright:DescribeAuctionCut()
 		return text
 	end
 	local measured = measuredAuctionCut(self)
-	return text .. (measured and measured.cut and ", measured" or ", not measured yet")
+	return text .. (measured and measured.cut and L[", measured"] or L[", not measured yet"])
 end

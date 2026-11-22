@@ -1,5 +1,6 @@
 local addonName, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Mail panel: retail always; Forever when send-mail + bag APIs exist.
 if not Tradewright.IS_RETAIL then
 	if not (Tradewright.IS_FOREVER and C_Container and C_Container.GetContainerNumSlots and GetSendMailItem and ClickSendMailItemButton) then
@@ -22,17 +23,17 @@ end
 local function roleText(pe)
 	local seller = pe.GetSellerCharacterKey and pe:GetSellerCharacterKey()
 	if not seller then
-		return "No bank character is set. Choose one in Settings, Mail."
+		return L["No bank character is set. Choose one in Settings, Mail."]
 	elseif seller == pe:GetCharacterKey() then
-		return "This is your bank character. Reagents your queued crafts need go from here to the crafters."
+		return L["This is your bank character. Reagents your queued crafts need go from here to the crafters."]
 	end
-	return "Everything sellable here can go to your bank character, " .. pe:GetMailCharacterLabel(seller) .. "."
+	return L["Everything sellable here can go to your bank character, "] .. pe:GetMailCharacterLabel(seller) .. "."
 end
 
 
 local MAIL_PAD = 12
 local MAIL_ROW = 48
-local ROW_TITLES = { crafts = "Crafted items to ", surplus = "Surplus to " }
+local ROW_TITLES = { crafts = L["Crafted items to "], surplus = L["Surplus to "] }
 
 -- Tooltip lines for a list of items: name in `color`, count in `valueColor`, `suffix` after each name.
 local function addItemLines(pe, items, color, valueColor, suffix)
@@ -51,9 +52,9 @@ local function showDestTooltip(pe, row)
 	local muted = pe:GetTheme().textMuted
 	local danger = pe:GetTheme().danger
 	addItemLines(pe, row.dest.items, muted, { r = 1, g = 1, b = 1 }, "")
-	addItemLines(pe, row.dest.missing, danger, danger, " (not in bags)")
+	addItemLines(pe, row.dest.missing, danger, danger, L[" (not in bags)"])
 	if row.dest.kind == "surplus" then
-		GameTooltip:AddLine("Review… lists every item, what goes and what stays.", muted.r, muted.g, muted.b, true)
+		GameTooltip:AddLine(L["Review… lists every item, what goes and what stays."], muted.r, muted.g, muted.b, true)
 	end
 	GameTooltip:Show()
 end
@@ -62,7 +63,7 @@ end
 local function createMailRow(pe, parent)
 	local row = pe:CreateInset(parent)
 	row:SetHeight(MAIL_ROW - 6)
-	row.send = pe:CreateButton(row, "Send", nil, { small = true })
+	row.send = pe:CreateButton(row, L["Send"], nil, { small = true })
 	row.send:SetPoint("RIGHT", -8, 0)
 	row.name = pe:CreateText(row, "GameFontHighlightSmall")
 	row.name:SetPoint("TOPLEFT", 10, -8)
@@ -90,18 +91,18 @@ local function destTitle(pe, dest)
 	end
 	text = text .. " " .. pe:Colorize("· " .. pe:FormatNumberGrouped(dest.totalQuantity or 0) .. " items", "textMuted")
 	local ready = dest.complete ~= false
-	return text .. " " .. pe:Colorize("· " .. (ready and "ready" or (#dest.missing .. " still missing")), ready and "success" or "warning")
+	return text .. " " .. pe:Colorize("· " .. (ready and "ready" or (#dest.missing .. L[" still missing"])), ready and "success" or "warning")
 end
 
 -- "214 to send · 12 stay · 4 skipped" for the surplus row.
 local function surplusText(pe, sum)
-	local text = sum.send > 0 and (pe:FormatNumberGrouped(sum.send) .. " to send") or "Nothing to send"
+	local text = sum.send > 0 and (pe:FormatNumberGrouped(sum.send) .. L[" to send"]) or L["Nothing to send"]
 	local stay = sum.kept - sum.skipped
 	if stay > 0 then
-		text = text .. string.format(" · %d stay", stay)
+		text = text .. string.format(L[" · %d stay"], stay)
 	end
 	if sum.skipped > 0 then
-		text = text .. string.format(" · %d skipped", sum.skipped)
+		text = text .. string.format(L[" · %d skipped"], sum.skipped)
 	end
 	return text
 end
@@ -113,7 +114,7 @@ local function destItemsText(pe, items)
 		parts[#parts + 1] = string.format("%s × %s", items[j].name or "?", pe:FormatNumberGrouped(items[j].quantity or 0))
 	end
 	if #items > 3 then
-		parts[#parts + 1] = string.format("and %d more", #items - 3)
+		parts[#parts + 1] = string.format(L["and %d more"], #items - 3)
 	end
 	return table.concat(parts, ", ")
 end
@@ -126,7 +127,7 @@ local function fillMailRow(pe, row, dest)
 	row.name:SetText(destTitle(pe, dest))
 	row.items:SetText(surplus and surplusText(pe, dest.summary) or destItemsText(pe, dest.items or {}))
 	local open = surplus and pe:IsMailReviewPanelShown()
-	pe:SetButtonLabel(row.send, open and "Hide review" or (surplus and "Review…" or "Attach"), true)
+	pe:SetButtonLabel(row.send, open and L["Hide review"] or (surplus and "Review…" or "Attach"), true)
 	row.send:SetEnabled(surplus or not pe:EnsureMailSendQueueState().running)
 	row.send:SetScript("OnClick", function()
 		if surplus then
@@ -146,19 +147,19 @@ local function footerText(pe, plan)
 		items = items + dest.totalQuantity
 	end
 	if #ready > 0 then
-		return string.format("%d %s · %s items to attach", #ready, pe:Plural(#ready, "mail"), pe:FormatNumberGrouped(items))
+		return string.format(L["%d %s · %s items to attach"], #ready, pe:Plural(#ready, "mail"), pe:FormatNumberGrouped(items))
 	end
-	return #plan > 0 and "Use Review… to choose what surplus goes" or "No mail pending"
+	return #plan > 0 and L["Use Review… to choose what surplus goes"] or L["No mail pending"]
 end
 
 -- Progress text: a count beside the bar for automatic sends, a prompt for a prepared mail.
 local function progressLabel(panel, queueState, done)
 	if queueState.auto then
 		panel.progressText:SetPoint("RIGHT", panel.progressBar, "LEFT", -8, 0)
-		return string.format("Sending %d of %d", done, queueState.total)
+		return string.format(L["Sending %d of %d"], done, queueState.total)
 	end
 	panel.progressText:SetPoint("RIGHT", panel.progressRow, "RIGHT")
-	return string.format("Mail %d of %d ready: press Send in the mailbox", queueState.index, queueState.total)
+	return string.format(L["Mail %d of %d ready: press Send in the mailbox"], queueState.index, queueState.total)
 end
 
 -- Progress while a queue runs; returns whether one does.
@@ -195,7 +196,7 @@ function Tradewright:CreateMailPanelHeader(panel)
 	self:SkinCloseButton(collapse)
 	collapse:SetScript("OnEnter", function(button)
 		GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
-		GameTooltip:SetText("Collapse the mail panel", 1, 1, 1)
+		GameTooltip:SetText(L["Collapse the mail panel"], 1, 1, 1)
 		GameTooltip:Show()
 	end)
 	collapse:SetScript("OnLeave", GameTooltip_Hide)
@@ -203,7 +204,7 @@ function Tradewright:CreateMailPanelHeader(panel)
 	local title = self:CreateText(panel, "GameFontNormalLarge", "gold")
 	title:SetPoint("LEFT", panel, "TOPLEFT", MAIL_PAD, -(header / 2) - 1)
 	title:SetPoint("RIGHT", collapse, "LEFT", -12, 0)
-	title:SetText("Tradewright mail")
+	title:SetText(L["Tradewright mail"])
 	addRule(panel, 1, -header)
 end
 
@@ -222,9 +223,9 @@ function Tradewright:CreateMailPanelFooter(panel)
 	actions:SetPoint("BOTTOMLEFT", panel.footer, "TOPLEFT", MAIL_PAD - 1, MAIL_PAD)
 	actions:SetPoint("BOTTOMRIGHT", panel.footer, "TOPRIGHT", -(MAIL_PAD - 1), MAIL_PAD)
 	actions:SetHeight(26)
-	panel.cancelBtn = self:CreateButton(actions, "Cancel", function() pe:CancelMailSendQueue() end)
+	panel.cancelBtn = self:CreateButton(actions, L["Cancel"], function() pe:CancelMailSendQueue() end)
 	panel.cancelBtn:SetPoint("RIGHT")
-	panel.sendAllBtn = self:CreateButton(actions, "Attach all", function() pe:StartMailSendAll() end, { primary = true })
+	panel.sendAllBtn = self:CreateButton(actions, L["Attach all"], function() pe:StartMailSendAll() end, { primary = true })
 	panel.sendAllBtn:SetPoint("LEFT")
 	panel.sendAllBtn:SetPoint("RIGHT", panel.cancelBtn, "LEFT", -8, 0)
 	panel.progressRow = CreateFrame("Frame", nil, panel)
@@ -245,7 +246,7 @@ function Tradewright:CreateMailPanelBody(panel)
 	panel.summary = self:CreateParagraph(panel)
 	panel.summary:SetPoint("TOPLEFT", panel, "TOPLEFT", MAIL_PAD, top)
 	panel.summary:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -MAIL_PAD, top)
-	panel.summary:SetText("Reagents in your bags that your queue needs on other characters.")
+	panel.summary:SetText(L["Reagents in your bags that your queue needs on other characters."])
 	local scroll = CreateFrame("ScrollFrame", addonName .. "MailPanelScroll", panel, "UIPanelScrollFrameTemplate")
 	scroll:SetPoint("TOPLEFT", panel.summary, "BOTTOMLEFT", 0, -10)
 	scroll:SetPoint("BOTTOMRIGHT", panel.progressRow, "TOPRIGHT", -14, 10)
@@ -259,7 +260,7 @@ function Tradewright:CreateMailPanelBody(panel)
 	panel.empty = self:CreateEmptyState(panel)
 	panel.empty:SetPoint("TOPLEFT", scroll, "TOPLEFT")
 	panel.empty:SetPoint("BOTTOMRIGHT", scroll, "BOTTOMRIGHT", 14, 0)
-	panel.empty:SetMessage("Nothing to mail", "Your bags hold nothing to send to another character.")
+	panel.empty:SetMessage(L["Nothing to mail"], L["Your bags hold nothing to send to another character."])
 	panel.rows = {}
 end
 

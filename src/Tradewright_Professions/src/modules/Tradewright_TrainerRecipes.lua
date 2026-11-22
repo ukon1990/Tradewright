@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Trainer recipes. The profession scan does not say at which skill a recipe can be learned, what it
 -- costs or who teaches it, but an open trainer window does. What a trainer lists goes to the
 -- sightings store (Tradewright_Sources.lua) with the trainer and where it stands; its services
@@ -86,13 +87,13 @@ function Tradewright:ShowRecipeTrainerWaypoint(recipeName, npcs, sold)
 	local npc = self.NearestPlace and self:NearestPlace(trainerPlaces(npcs))
 	if not npc then
 		self:PrintMessage(string.format(
-			"No trainer has been seen teaching %s. Visit a trainer of this profession once to get directions.", recipeName))
+			L["No trainer has been seen teaching %s. Visit a trainer of this profession once to get directions."], recipeName))
 		return false
 	end
 	local marked = self:SetWaypointTo(npc, npc.name .. " (" .. recipeName .. ")")
 	local zone = npc.zone and npc.zone ~= "" and (" in " .. npc.zone) or ""
-	self:PrintMessage(string.format("%s %s %s%s, at %.1f, %.1f.%s", npc.name, sold and "sells the recipe for" or "teaches",
-		recipeName, zone, npc.x * 100, npc.y * 100, marked and " Waypoint set." or ""))
+	self:PrintMessage(string.format("%s %s %s%s, at %.1f, %.1f.%s", npc.name, sold and L["sells the recipe for"] or "teaches",
+		recipeName, zone, npc.x * 100, npc.y * 100, marked and L[" Waypoint set."] or ""))
 	return marked
 end
 

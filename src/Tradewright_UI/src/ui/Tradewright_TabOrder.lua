@@ -1,5 +1,6 @@
 local Tradewright = select(2, ...)
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 --- A dashboard tab showing one panel, named after `id` ("crafts"): Ensure<Id>Panel builds ui.<id>Panel,
 --- Layout<Id>Panel lays it out again when the theme changes and Refresh<Id>Tab fills it.
 function Tradewright:MakePanelTab(id)
@@ -35,14 +36,14 @@ end
 -- The dashboard tabs, left to right. Each module is looked up (or made) when the tab is first shown.
 -- `shown`, when set, decides whether the tab is offered at all (the Export tab only while export is switched on).
 Tradewright.DASHBOARD_TABS = {
-	{ id = "overview", label = "Overview", module = function() return Tradewright.OverviewTab end },
-	{ id = "opportunities", label = "Opportunities", module = function() return Tradewright.OpportunitiesTab end },
-	{ id = "inventory", label = "Inventory", module = function() return Tradewright:MakePanelTab("inventory") end },
-	{ id = "market", label = "Market", module = function() return Tradewright:MakePanelTab("market") end },
-	{ id = "crafts", label = "Crafts", module = function() return Tradewright:MakePanelTab("crafts") end },
-	{ id = "farming", label = "Farming", module = function() return Tradewright.FarmingTab end },
-	{ id = "export", label = "Export", module = function() return Tradewright.ExportTab end,
+	{ id = "overview", label = L["Overview"], module = function() return Tradewright.OverviewTab end },
+	{ id = "opportunities", label = L["Opportunities"], module = function() return Tradewright.OpportunitiesTab end },
+	{ id = "inventory", label = L["Inventory"], module = function() return Tradewright:MakePanelTab("inventory") end },
+	{ id = "market", label = L["Market"], module = function() return Tradewright:MakePanelTab("market") end },
+	{ id = "crafts", label = L["Crafts"], module = function() return Tradewright:MakePanelTab("crafts") end },
+	{ id = "farming", label = L["Farming"], module = function() return Tradewright.FarmingTab end },
+	{ id = "export", label = L["Export"], module = function() return Tradewright.ExportTab end,
 		shown = function() return Tradewright:IsExportEnabled() end },
-	{ id = "docs", label = "Help", module = function() return Tradewright.DocsTab end },
-	{ id = "settings", label = "Settings", module = function() return Tradewright.SettingsTab end },
+	{ id = "docs", label = L["Help"], module = function() return Tradewright.DocsTab end },
+	{ id = "settings", label = L["Settings"], module = function() return Tradewright.SettingsTab end },
 }

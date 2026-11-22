@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Bag data: reads the carried bags for the bag window, and turns the per-character holdings
 -- of the inventory database (Tradewright_Holdings.lua) into items for the read-only tabs.
 
@@ -93,13 +94,13 @@ local function addMarks(item, marks)
 		local inSet, setNames = C_Container.GetContainerItemEquipmentSetInfo(item.bag, item.slot)
 		item.inSet = inSet == true
 		if item.inSet then
-			item.keywords = item.keywords .. " set " .. tostring(setNames or "")
+			item.keywords = item.keywords .. L[" set "] .. tostring(setNames or "")
 		end
 	end
 	-- Junk is never marked: it is new all the time.
 	if marks.new and item.quality ~= 0 and C_NewItems.IsNewItem(item.bag, item.slot) then
 		item.isNew = true
-		item.keywords = item.keywords .. " new"
+		item.keywords = item.keywords .. L[" new"]
 	end
 end
 

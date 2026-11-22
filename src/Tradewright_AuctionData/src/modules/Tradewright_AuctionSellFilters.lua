@@ -1,6 +1,7 @@
 -- The sell tab's filter widgets: search box, check buttons, class and expansion dropdowns, and their reset.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local shared = Tradewright.AuctionShared
 local panelButton = shared.panelButton
 
@@ -31,16 +32,16 @@ local function buildSellSearchFilters(panel, ui, w)
 	end)
 	panel.searchBox = search
 	w.search = search
-	w.craftedOnly = filterCheckButton(panel, ui, { "LEFT", search, "RIGHT", 6, -1 }, "Crafted only", "ahCraftedOnly")
+	w.craftedOnly = filterCheckButton(panel, ui, { "LEFT", search, "RIGHT", 6, -1 }, L["Crafted only"], "ahCraftedOnly")
 	panel.craftedOnly = w.craftedOnly
-	w.profitableOnly = filterCheckButton(panel, ui, { "LEFT", w.craftedOnly, "RIGHT", 54, 0 }, "Profitable only", "ahProfitableOnly")
+	w.profitableOnly = filterCheckButton(panel, ui, { "LEFT", w.craftedOnly, "RIGHT", 54, 0 }, L["Profitable only"], "ahProfitableOnly")
 	panel.profitableOnly = w.profitableOnly
 end
 
 local function buildClassDropdowns(self, panel, ui, w)
 	ui.ahClassDropdown = self:CreateFilterDropdown(panel, {
-		label = "Class",
-		allLabel = "All classes",
+		label = L["Class"],
+		allLabel = L["All classes"],
 		width = 114,
 		uiKey = "ahClassFilterValues",
 		onChanged = function()
@@ -51,8 +52,8 @@ local function buildClassDropdowns(self, panel, ui, w)
 	ui.ahClassDropdown:SetPoint("TOPLEFT", w.search, "BOTTOMLEFT", 0, -8)
 	panel.classDropdown = ui.ahClassDropdown
 	ui.ahSubclassDropdown = self:CreateFilterDropdown(panel, {
-		label = "Subclass",
-		allLabel = "All subclasses",
+		label = L["Subclass"],
+		allLabel = L["All subclasses"],
 		width = 114,
 		uiKey = "ahSubclassFilterValues",
 		onChanged = function()
@@ -78,9 +79,9 @@ end
 local function buildExpansionDropdown(self, panel, ui)
 	ui.ahExpansionFilterValues = copyBoolMap(self:GetSetting("auction.selectedExpansions", {}))
 	ui.ahExpansionDropdown = self:CreateFilterDropdown(panel, {
-		label = "Expansion",
+		label = L["Expansion"],
 		width = 114,
-		allLabel = "All expansions",
+		allLabel = L["All expansions"],
 		uiKey = "ahExpansionFilterValues",
 		setting = "auction.selectedExpansions",
 		getOptions = function()
@@ -121,7 +122,7 @@ function Tradewright:BuildAuctionSellFilters(panel, ui, w)
 	buildSellSearchFilters(panel, ui, w)
 	buildClassDropdowns(self, panel, ui, w)
 	buildExpansionDropdown(self, panel, ui)
-	w.clearBtn = panelButton(panel, { 52, 18 }, "Reset filters", { "LEFT", w.profitableOnly, "RIGHT", 48, 0 }, function()
+	w.clearBtn = panelButton(panel, { 52, 18 }, L["Reset filters"], { "LEFT", w.profitableOnly, "RIGHT", 48, 0 }, function()
 		resetSellFilters(panel, ui)
 	end)
 	panel.clearBtn = w.clearBtn

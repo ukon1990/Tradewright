@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- The Tradewright page in the game's own Settings window: a button that opens the addon and the most used options.
 
 local function addHeader(frame)
@@ -10,11 +11,11 @@ local function addHeader(frame)
 	subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
 	subtitle:SetWidth(760)
 	subtitle:SetJustifyH("LEFT")
-	subtitle:SetText("Open the Tradewright window. Every option is on its Settings tab; the most used ones are also here.")
+	subtitle:SetText(L["Open the Tradewright window. Every option is on its Settings tab; the most used ones are also here."])
 	local openButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 	openButton:SetSize(180, 24)
 	openButton:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -12)
-	openButton:SetText("Open Tradewright")
+	openButton:SetText(L["Open Tradewright"])
 	openButton:SetScript("OnClick", function()
 		Tradewright:OpenSettingsTab()
 	end)
@@ -44,15 +45,15 @@ local function addSettingCheckbox(anchor, offsetY, spec)
 end
 
 local CHECKBOXES = {
-	{ label = "Show minimap button", setting = "general.showMinimapButton", default = true,
+	{ label = L["Show minimap button"], setting = "general.showMinimapButton", default = true,
 		onChange = function() Tradewright:EnsureMinimapButton() end },
-	{ label = "Also scan specialization trees (for export)", setting = "capture.captureSpecializationTree", default = true },
-	{ label = "Also save detailed recipe results (for export)", setting = "capture.includeRecipeOutputItemData", default = false },
+	{ label = L["Also scan specialization trees (for export)"], setting = "capture.captureSpecializationTree", default = true },
+	{ label = L["Also save detailed recipe results (for export)"], setting = "capture.includeRecipeOutputItemData", default = false },
 }
 
 local function windowScaleText()
 	local scale = Tradewright:GetSetting("appearance.windowScale", 1) or 1
-	return string.format("Window scale: %d%%", math.floor(scale * 100 + 0.5))
+	return string.format(L["Window scale: %d%%"], math.floor(scale * 100 + 0.5))
 end
 
 -- The next window scale option after the current one, wrapping round.

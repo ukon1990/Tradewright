@@ -1,6 +1,7 @@
 -- Layout of the AH side panel: header tabs, control rows, the scan choice and where the active table sits.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local KNOWN_AH_SIDE_PANELS = {
 	"Tradewright_AuctionDataAuctionPanel",
 }
@@ -43,10 +44,10 @@ local AH_ROW_GAP = 8
 
 -- One scan control replaces four buttons: pick what to scan, then press Scan.
 local AUCTION_SCAN_CHOICES = {
-	{ value = "both", label = "My crafts and items" },
-	{ value = "crafts", label = "My crafts" },
-	{ value = "account", label = "My items" },
-	{ value = "shown", label = "Save shown prices" },
+	{ value = "both", label = L["My crafts and items"] },
+	{ value = "crafts", label = L["My crafts"] },
+	{ value = "account", label = L["My items"] },
+	{ value = "shown", label = L["Save shown prices"] },
 }
 
 function Tradewright:RunAuctionPanelScanChoice()
@@ -109,8 +110,8 @@ function Tradewright:BuildAuctionPanelLayout(panel)
 		self:SkinButton(tab)
 		tab:SetHeight(theme.size.controlSmall)
 	end
-	self:SetButtonLabel(panel.tabSell, "Sell", true)
-	self:SetButtonLabel(panel.tabAuctions, "Auctions", true)
+	self:SetButtonLabel(panel.tabSell, L["Sell"], true)
+	self:SetButtonLabel(panel.tabAuctions, L["Auctions"], true)
 	-- Reading order: Sell, Cart, Auctions.
 	panel.tabAuctions:ClearAllPoints()
 	panel.tabAuctions:SetPoint("RIGHT", panel, "TOPRIGHT", -12, -(headerHeight / 2))
@@ -145,16 +146,16 @@ function Tradewright:BuildAuctionPanelLayout(panel)
 	placeIn(panel.sellRow1, panel.btnDumpFull, "RIGHT", panel.sellRow1, "RIGHT")
 	local refresh = panel.sellControls[1]
 	placeIn(panel.sellRow1, refresh, "RIGHT", panel.btnDumpFull, "LEFT", -AH_ROW_GAP)
-	panel.btnScanChoice = self:CreateButton(panel.sellRow1, "Check prices", function()
+	panel.btnScanChoice = self:CreateButton(panel.sellRow1, L["Check prices"], function()
 		pe:RunAuctionPanelScanChoice()
-	end, { tooltip = "Looks up the prices picked on the left. Keep the auction house open until it ends." })
+	end, { tooltip = L["Looks up the prices picked on the left. Keep the auction house open until it ends."] })
 	panel.btnScanChoice:SetPoint("RIGHT", refresh, "LEFT", -AH_ROW_GAP, 0)
 	panel.scanChoice = self:CreateSingleSelectDropdown(panel.sellRow1, {
 		width = 160,
 		getOptions = function() return AUCTION_SCAN_CHOICES end,
 		getValue = function() return pe:GetSetting("auction.panelScanChoice", "both") end,
 		setValue = function(value) pe:SetSetting("auction.panelScanChoice", value) end,
-		tooltip = "Which prices to check",
+		tooltip = L["Which prices to check"],
 	})
 	panel.scanChoice:SetPoint("LEFT", panel.sellRow1, "LEFT", 0, 0)
 	panel.scanChoice:SetPoint("RIGHT", panel.btnScanChoice, "LEFT", -AH_ROW_GAP, 0)
@@ -195,7 +196,7 @@ function Tradewright:BuildAuctionPanelLayout(panel)
 	end
 	placeIn(panel.sellRow3, panel.searchBox, "LEFT", panel.sellRow3, "LEFT", 6)
 	panel.searchBox:SetPoint("RIGHT", filters[#filters], "LEFT", -14, 0)
-	self:AddSearchPlaceholder(panel.searchBox, "Search name or ID")
+	self:AddSearchPlaceholder(panel.searchBox, L["Search name or ID"])
 
 	-- Sell row 4: two filter checkboxes and Reset filters.
 	y = y + AH_ROW + AH_ROW_GAP
@@ -207,7 +208,7 @@ function Tradewright:BuildAuctionPanelLayout(panel)
 	placeIn(panel.sellRow4, panel.profitableOnly, "LEFT", panel.craftedOnly, "RIGHT", (craftedLabel and craftedLabel:GetStringWidth() or 60) + 18)
 	placeIn(panel.sellRow4, panel.clearBtn, "RIGHT", panel.sellRow4, "RIGHT")
 	panel.clearBtn:SetHeight(theme.size.controlSmall)
-	self:SetButtonLabel(panel.clearBtn, "Reset filters", true)
+	self:SetButtonLabel(panel.clearBtn, L["Reset filters"], true)
 
 	panel.sellRows = { panel.sellRow1, panel.sellRow2, panel.sellRow3, panel.sellRow4 }
 	panel.sellTableTop = y + AH_ROW + AH_PAD
@@ -246,7 +247,7 @@ function Tradewright:BuildAuctionPanelLayout(panel)
 	self:SetButtonPrimary(panel.btnCartSearch, true)
 	placeIn(panel.cartRow1, panel.cartSearchBox, "LEFT", panel.cartRow1, "LEFT", 6)
 	panel.cartSearchBox:SetPoint("RIGHT", panel.btnCartSearch, "LEFT", -14, 0)
-	self:AddSearchPlaceholder(panel.cartSearchBox, "Search item, recipe or character")
+	self:AddSearchPlaceholder(panel.cartSearchBox, L["Search item, recipe or character"])
 	panel.cartRow2 = CreateFrame("Frame", nil, panel)
 	panel.cartRow2:SetPoint("BOTTOMLEFT", panel.footer, "TOPLEFT", AH_PAD - 1, AH_ROW_GAP)
 	panel.cartRow2:SetPoint("BOTTOMRIGHT", panel.footer, "TOPRIGHT", -(AH_PAD - 1), AH_ROW_GAP)
@@ -291,7 +292,7 @@ function Tradewright:BuildAuctionPanelLayout(panel)
 		button:SetHeight(theme.size.control)
 	end
 	self:SkinButton(panel.btnPauseScan)
-	self:SetButtonLabel(panel.btnPauseScan, "Pause", true)
+	self:SetButtonLabel(panel.btnPauseScan, L["Pause"], true)
 	self:SkinTree(panel)
 end
 

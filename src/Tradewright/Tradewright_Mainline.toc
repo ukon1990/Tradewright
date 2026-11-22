@@ -10,6 +10,7 @@
 
 Bootstrap.lua
 src\core\Tradewright.lua
+src\core\Tradewright_Locale.lua
 src\util\Tradewright_ForeverLogic.lua
 src\util\Tradewright_AuctionLogic.lua
 src\util\Tradewright_IncomeLogic.lua

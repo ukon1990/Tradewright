@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Builds the Crafts tab rows: evaluates every learned recipe in chunks and caches the result until inputs change.
 
 local schematicMaxQuality = Tradewright.CraftQuality.schematicMaxQuality
@@ -207,8 +208,8 @@ local function finalizeCraftOpportunityRowsFromBuckets(self, settings, byKey, ro
 			bucket.requiredTargetReagentItemID = best.requiredTargetReagentItemID
 			bucket.requiredTargetReagentAuto = best.requiredTargetReagentAuto
 			bucket.sourceRecipeName = bucket.recipeName
-			bucket.freshnessNote = best.concentrationNeeded and "Needs concentration"
-				or (best.qualityReachable == false and "Target rank unreachable" or (stale and "No auction price" or (thin and "Thin AH history" or "OK")))
+			bucket.freshnessNote = best.concentrationNeeded and L["Needs concentration"]
+				or (best.qualityReachable == false and L["Target rank unreachable"] or (stale and L["No auction price"] or (thin and L["Thin AH history"] or "OK")))
 			bucket.confidence = self:ResolveCraftConfidenceState(best, "scan_row")
 			rows[#rows + 1] = bucket
 		end

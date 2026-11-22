@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Pure income helpers: which source a change of gold belongs to, and the per-day totals it
 -- is kept in, and the sales summary of the ledger. No WoW API here, so the offline tests can load this file on its own.
 local IncomeLogic = {}
@@ -303,7 +304,7 @@ end
 -- Adds one sale or miss to its type row; returns the sale's net (0 for a miss).
 local function addTypeEvent(byType, rows, event, classOf)
 	local key, label = classOf(event.itemID)
-	local row = typeRow(byType, rows, key or "?", label or "Unknown type")
+	local row = typeRow(byType, rows, key or "?", label or L["Unknown type"])
 	if event.kind ~= "sell" then
 		row.misses = row.misses + 1
 		return 0

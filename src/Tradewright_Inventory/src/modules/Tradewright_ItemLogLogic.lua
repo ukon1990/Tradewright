@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Pure item-log helpers: what changed in the bags, why, and how the short log is kept. No WoW API
 -- here, so the offline tests can load this file on its own.
 --
@@ -21,11 +22,11 @@ local OUTGOING = {
 }
 
 local LABELS = {
-	crafted = "Crafted", quest = "Quest reward", looted = "Looted", mail_in = "From mail", trade_in = "Traded to you",
-	bought = "Bought from a vendor", auction_in = "Bought at auction", from_bank = "Taken from the bank",
-	from_warband = "Taken from the warband bank", received = "Received",
-	destroyed = "Destroyed", mail_out = "Mailed", trade_out = "Traded away", sold = "Sold to a vendor",
-	listed = "Listed at auction", to_bank = "Moved to the bank", to_warband = "Moved to the warband bank",
+	crafted = "Crafted", quest = L["Quest reward"], looted = "Looted", mail_in = L["From mail"], trade_in = L["Traded to you"],
+	bought = L["Bought from a vendor"], auction_in = L["Bought at auction"], from_bank = L["Taken from the bank"],
+	from_warband = L["Taken from the warband bank"], received = "Received",
+	destroyed = "Destroyed", mail_out = "Mailed", trade_out = L["Traded away"], sold = L["Sold to a vendor"],
+	listed = L["Listed at auction"], to_bank = L["Moved to the bank"], to_warband = L["Moved to the warband bank"],
 }
 
 --- What changed between two { [itemID] = count } tables: { { itemID, delta } }, lowest item ID first.
@@ -100,9 +101,9 @@ end
 --- "Looted", "Mail from Bankey", "Mailed to Bankey".
 function ItemLogLogic.Describe(entry)
 	if entry.who and entry.why == "mail_in" then
-		return "Mail from " .. entry.who
+		return L["Mail from "] .. entry.who
 	elseif entry.who and entry.why == "mail_out" then
-		return "Mailed to " .. entry.who
+		return L["Mailed to "] .. entry.who
 	end
 	return LABELS[entry.why] or "Changed"
 end

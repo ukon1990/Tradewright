@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Time-series chart in the style of Highcharts: faint gridlines on rounded ticks, a 2px line with a
 -- fading area fill, round markers on sparse series, quantity as columns on a right axis, a legend,
 -- and a crosshair that snaps to the nearest point on hover.
@@ -60,7 +61,7 @@ function ChartMixin:InitChart(pe, opts)
 	self.padBottom = tonumber(opts.padBottom) or 20
 	self.pools = {}
 	self.series, self.secondarySeries, self.quantitySeries = {}, {}, {}
-	self.labels = { primary = "Price", secondary = "Craft cost", quantity = "Listed", margin = "Margin" }
+	self.labels = { primary = "Price", secondary = L["Craft cost"], quantity = "Listed", margin = "Margin" }
 	self.yFormatter = opts.yFormatter or function(v)
 		return pe:FormatNumberGrouped(v)
 	end
@@ -68,7 +69,7 @@ function ChartMixin:InitChart(pe, opts)
 		return pe:FormatNumberGrouped(v)
 	end
 	self.tooltipBuilder = opts.tooltipBuilder
-	self.emptyStateText = opts.emptyText or "No data in this range."
+	self.emptyStateText = opts.emptyText or L["No data in this range."]
 	self.colors = { primary = opts.accentColor or self.theme.accent, secondary = self.theme.warning, quantity = self.theme.success }
 	self:CreatePlot(opts)
 	self:CreateHoverMarks()
@@ -291,7 +292,7 @@ function ChartMixin:DrawAverage(average)
 	label:ClearAllPoints()
 	label:SetJustifyH("LEFT")
 	label:SetPoint("BOTTOMLEFT", self.plot, "BOTTOMLEFT", self.padLeft + 4, y + 2)
-	label:SetText("avg " .. self.yFormatter(average))
+	label:SetText(L["avg "] .. self.yFormatter(average))
 end
 
 -- The latest value as a pill above (or below) the last point.
@@ -523,11 +524,11 @@ function ChartMixin:AddPrimaryTooltipLines(tip, primary, index)
 	local average = self.geometry and self.geometry.average
 	if average and average > 0 and #self.series >= 2 then
 		local gap = (primary.value - average) / average * 100
-		tip:AddDoubleLine("Vs range average", signedPercent(gap), muted.r, muted.g, muted.b, 1, 1, 1)
+		tip:AddDoubleLine(L["Vs range average"], signedPercent(gap), muted.r, muted.g, muted.b, 1, 1, 1)
 	end
 	local meta = primary.meta or {}
 	if meta.min and meta.max and meta.max > meta.min then
-		tip:AddDoubleLine("Hour low / high", self.yFormatter(meta.min) .. " / " .. self.yFormatter(meta.max), muted.r, muted.g, muted.b, 1, 1, 1)
+		tip:AddDoubleLine(L["Hour low / high"], self.yFormatter(meta.min) .. " / " .. self.yFormatter(meta.max), muted.r, muted.g, muted.b, 1, 1, 1)
 	end
 end
 
@@ -538,7 +539,7 @@ function ChartMixin:AddChangeTooltipLine(tip, point, previous)
 	local theme, muted = self.theme, self.theme.textMuted
 	local change = (point.value - previous.value) / previous.value * 100
 	local tone = change > 0.5 and theme.success or change < -0.5 and theme.danger or muted
-	tip:AddDoubleLine("Since previous", signedPercent(change), muted.r, muted.g, muted.b, tone.r, tone.g, tone.b)
+	tip:AddDoubleLine(L["Since previous"], signedPercent(change), muted.r, muted.g, muted.b, tone.r, tone.g, tone.b)
 end
 
 function ChartMixin:AddSecondaryTooltipLines(tip, secondary, primary)

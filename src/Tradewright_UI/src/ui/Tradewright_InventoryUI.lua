@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local INV_MAX_ROWS = 550
 
 -- Filter-state field -> the ui key holding that dropdown's selection.
@@ -33,11 +34,11 @@ end
 
 function Tradewright:GetInventoryRoleFilterOptions()
 	return {
-		{ value = "all", label = "All roles" },
-		{ value = "crafted", label = "Crafted" },
-		{ value = "crafting_reagent", label = "Crafting reagent" },
-		{ value = "crafted_reagent", label = "Crafted + reagent" },
-		{ value = "tracked", label = "Other" },
+		{ value = "all", label = L["All roles"] },
+		{ value = "crafted", label = L["Crafted"] },
+		{ value = "crafting_reagent", label = L["Crafting reagent"] },
+		{ value = "crafted_reagent", label = L["Crafted + reagent"] },
+		{ value = "tracked", label = L["Other"] },
 	}
 end
 
@@ -46,7 +47,7 @@ function Tradewright:GetInventoryCharacterFilterOptions()
 	local db = self.db
 	local currentKey = self:GetCharacterKey()
 	local options = {
-		{ value = "all", label = "All characters" },
+		{ value = "all", label = L["All characters"] },
 	}
 	for _, characterKey in ipairs(self:GetDashboardCharacterKeyList(db)) do
 		options[#options + 1] = {
@@ -60,7 +61,7 @@ end
 function Tradewright:GetInventoryTypeFilterOptions(rows)
 	local seen = {}
 	local options = {
-		{ value = "all", label = "All item types" },
+		{ value = "all", label = L["All item types"] },
 	}
 	for _, row in ipairs(rows or {}) do
 		local label = row.itemTypeLabel
@@ -95,9 +96,9 @@ end
 
 -- "12 · 10 bags · 2 bank" (plus warband on retail): how many of the item the shown characters hold, and where.
 function Tradewright:GetInventoryHeldText(rowData)
-	local where = string.format("%s bags · %s bank", self:FormatNumberGrouped(rowData.bags or 0), self:FormatNumberGrouped(rowData.bank or 0))
+	local where = string.format(L["%s bags · %s bank"], self:FormatNumberGrouped(rowData.bags or 0), self:FormatNumberGrouped(rowData.bank or 0))
 	if self.IS_RETAIL and (rowData.warband or 0) > 0 then
-		where = where .. " · " .. self:FormatNumberGrouped(rowData.warband) .. " warband"
+		where = where .. " · " .. self:FormatNumberGrouped(rowData.warband) .. L[" warband"]
 	end
 	return self:FormatNumberGrouped(rowData.total or 0) .. " · " .. where
 end
@@ -107,12 +108,12 @@ function Tradewright:HandleInventoryRowEnter(rowFrame, rowData)
 		return
 	end
 	local lines = {
-		{ "On the shown characters", self:GetInventoryHeldText(rowData) },
+		{ L["On the shown characters"], self:GetInventoryHeldText(rowData) },
 	}
 	for _, holder in ipairs(rowData.holders or {}) do
 		lines[#lines + 1] = { self:GetCharacterNameMarkup(holder.key), self:FormatNumberGrouped(holder.count) }
 	end
-	self:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, "Click for details · Shift-click to link")
+	self:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, L["Click for details · Shift-click to link"])
 end
 
 local GAP = 12
@@ -198,7 +199,7 @@ function Tradewright:InventoryColumnsText()
 			end
 		end
 	end
-	return string.format("Columns %d/%d", visible, total)
+	return string.format(L["Columns %d/%d"], visible, total)
 end
 
 -- One check button per column, then Reset columns.
@@ -221,7 +222,7 @@ function Tradewright:InitializeInventoryColumnsMenu(level)
 		end
 	end
 	local reset = UIDropDownMenu_CreateInfo()
-	reset.text = "Reset columns"
+	reset.text = L["Reset columns"]
 	reset.notCheckable = true
 	reset.func = function()
 		self:SetSetting("inventory.columnOrder", {})
@@ -234,16 +235,16 @@ end
 -- Type, role, (retail) expansion and character filters, right to left after `chain`.
 function Tradewright:CreateInventoryFilterDropdowns(parent, chain)
 	local pe, ui = self, self.ui
-	ui.invTypeDropdown = createFilter(pe, parent, { width = 124, allLabel = "All item types", uiKey = "invTypeFilterValues",
+	ui.invTypeDropdown = createFilter(pe, parent, { width = 124, allLabel = L["All item types"], uiKey = "invTypeFilterValues",
 		getOptions = function() return pe:GetInventoryTypeFilterOptions(ui.invTypeFilterSeedRows or {}) end })
-	ui.invRoleDropdown = createFilter(pe, parent, { width = 116, allLabel = "All roles", uiKey = "invRoleFilterValues",
+	ui.invRoleDropdown = createFilter(pe, parent, { width = 116, allLabel = L["All roles"], uiKey = "invRoleFilterValues",
 		getOptions = function() return pe:GetInventoryRoleFilterOptions() end })
-	ui.invCharacterDropdown = createFilter(pe, parent, { width = 136, allLabel = "All characters", uiKey = "invCharacterFilterValues",
+	ui.invCharacterDropdown = createFilter(pe, parent, { width = 136, allLabel = L["All characters"], uiKey = "invCharacterFilterValues",
 		getOptions = function() return pe:GetInventoryCharacterFilterOptions() end })
 	chain[#chain + 1] = ui.invTypeDropdown
 	chain[#chain + 1] = ui.invRoleDropdown
 	if self.IS_RETAIL then
-		ui.invExpansionDropdown = createFilter(pe, parent, { width = 124, allLabel = "All expansions",
+		ui.invExpansionDropdown = createFilter(pe, parent, { width = 124, allLabel = L["All expansions"],
 			uiKey = "invExpansionFilterValues", setting = "inventory.selectedExpansions",
 			getOptions = function() return pe:GetExpansionFilterOptions() end })
 		chain[#chain + 1] = ui.invExpansionDropdown
@@ -259,9 +260,9 @@ function Tradewright:CreateInventoryToolbar(panel)
 	panel.toolbar:SetPoint("TOPLEFT")
 	panel.toolbar:SetPoint("TOPRIGHT")
 	panel.toolbar:SetHeight(26)
-	panel.refreshButton = self:CreateButton(panel.toolbar, "Refresh", function()
+	panel.refreshButton = self:CreateButton(panel.toolbar, L["Refresh"], function()
 		pe:DashboardRefreshInventory()
-	end, { primary = true, tooltip = "Read bags and bank again on this character." })
+	end, { primary = true, tooltip = L["Read bags and bank again on this character."] })
 	panel.refreshButton:SetPoint("RIGHT")
 	panel.columnsDropdown = self:CreateMenuDropdown(panel.toolbar, {
 		width = 104,
@@ -274,10 +275,10 @@ function Tradewright:CreateInventoryToolbar(panel)
 		getValue = function() return pe:GetInventoryMetricRange() end,
 		setValue = function(value) pe:SetInventoryMetricRange(value) end,
 		onChanged = function() pe:RefreshInventoryTab() end,
-		tooltip = "Time range for averages and charts",
+		tooltip = L["Time range for averages and charts"],
 	})
 	self:CreateInventoryFilterDropdowns(panel.toolbar, { panel.refreshButton, panel.columnsDropdown, panel.rangeDropdown })
-	ui.invSearchBox = self:CreateSearchBox(panel.toolbar, "Search name, ID or type", function()
+	ui.invSearchBox = self:CreateSearchBox(panel.toolbar, L["Search name, ID or type"], function()
 		pe:RefreshInventoryTab()
 	end)
 	ui.invSearchBox:SetPoint("LEFT", panel.toolbar, "LEFT", 6, 0)
@@ -308,9 +309,9 @@ function Tradewright:ResetInventoryFilters()
 end
 
 function Tradewright:GetInventoryLocationFilterOptions()
-	local options = { { value = "bags", label = "In bags" }, { value = "bank", label = "In the bank" } }
+	local options = { { value = "bags", label = L["In bags"] }, { value = "bank", label = L["In the bank"] } }
 	if self.IS_RETAIL then
-		options[#options + 1] = { value = "warband", label = "In the warband bank" }
+		options[#options + 1] = { value = "warband", label = L["In the warband bank"] }
 	end
 	return options
 end
@@ -325,20 +326,20 @@ function Tradewright:CreateInventoryFilterRow(panel)
 	panel.filterRow:SetPoint("TOPLEFT", panel.toolbar, "BOTTOMLEFT", 0, -8)
 	panel.filterRow:SetPoint("TOPRIGHT", panel.toolbar, "BOTTOMRIGHT", 0, -8)
 	panel.filterRow:SetHeight(26)
-	ui.invQualityDropdown = createFilter(pe, panel.filterRow, { width = 128, allLabel = "Any quality", uiKey = "invQualityFilterValues",
+	ui.invQualityDropdown = createFilter(pe, panel.filterRow, { width = 128, allLabel = L["Any quality"], uiKey = "invQualityFilterValues",
 		getOptions = function() return pe:GetQualityFilterOptions() end, onChanged = saveAndRefresh })
 	ui.invQualityDropdown:SetPoint("LEFT")
-	ui.invLocationDropdown = createFilter(pe, panel.filterRow, { width = 136, allLabel = "Bags and bank", uiKey = "invLocationFilterValues",
+	ui.invLocationDropdown = createFilter(pe, panel.filterRow, { width = 136, allLabel = L["Bags and bank"], uiKey = "invLocationFilterValues",
 		getOptions = function() return pe:GetInventoryLocationFilterOptions() end, onChanged = saveAndRefresh })
-	panel.hasPrice = self:CreateCheckbox(panel.filterRow, "Has a price", function(checked)
+	panel.hasPrice = self:CreateCheckbox(panel.filterRow, L["Has a price"], function(checked)
 		ui.invHasPriceOnly = checked
 		saveAndRefresh()
 	end)
-	panel.profitable = self:CreateCheckbox(panel.filterRow, "Profitable only", function(checked)
+	panel.profitable = self:CreateCheckbox(panel.filterRow, L["Profitable only"], function(checked)
 		ui.invProfitableOnly = checked
 		saveAndRefresh()
 	end)
-	panel.resetFilters = self:CreateButton(panel.filterRow, "Reset filters", function() pe:ResetInventoryFilters() end, { small = true })
+	panel.resetFilters = self:CreateButton(panel.filterRow, L["Reset filters"], function() pe:ResetInventoryFilters() end, { small = true })
 	self:ChainRight({ ui.invQualityDropdown, ui.invLocationDropdown, panel.hasPrice, panel.profitable, panel.resetFilters }, 12)
 end
 
@@ -357,8 +358,8 @@ function Tradewright:CreateInventoryTable(panel)
 	local pe, ui = self, self.ui
 	local inventoryTable = self:CreateReusableTable(panel, {
 		footer = true,
-		emptyTitle = "No items",
-		emptyHint = "Press Refresh to read bags and bank, or change the filters.",
+		emptyTitle = L["No items"],
+		emptyHint = L["Press Refresh to read bags and bank, or change the filters."],
 		isRowSelected = function(rowData)
 			return rowData and ui.invSelectedItemID ~= nil and tonumber(rowData.itemID) == ui.invSelectedItemID
 		end,
@@ -416,10 +417,10 @@ end
 function Tradewright:BuildInventoryTabRows(characterOptions)
 	local db, ui = self.db, self.ui
 	local selection = ui.invCharacterFilterValues
-	local characterColumnLabel = self:GetFilterSelectionSummary(characterOptions, selection, "All characters")
+	local characterColumnLabel = self:GetFilterSelectionSummary(characterOptions, selection, L["All characters"])
 	local mergedRoleMap, perCharRoleMaps = self:BuildMergedItemRoleMapForSelection(db, selection)
 	local rows = self:BuildInventoryRowsAggregatedByItem(db, selection, characterColumnLabel, mergedRoleMap)
-	local allCharsLabel = self:GetFilterSelectionSummary(characterOptions, {}, "All characters")
+	local allCharsLabel = self:GetFilterSelectionSummary(characterOptions, {}, L["All characters"])
 	ui.invTypeFilterSeedRows = self:BuildInventoryRowsAggregatedByItem(db, {}, allCharsLabel)
 
 	local metricRange = self:GetInventoryMetricRange()
@@ -487,10 +488,10 @@ function Tradewright:GetInventoryFooterTexts(rows, characterOptions)
 	local storedCharacterCount = math.max(0, #characterOptions - 1)
 	local selectedCharacterCount = self:CountFilterSelection(self.ui.invCharacterFilterValues)
 	local characterSummary = selectedCharacterCount == 0
-		and string.format("all %d characters", storedCharacterCount)
-		or string.format("%d of %d characters", selectedCharacterCount, storedCharacterCount)
-	return string.format("%s items · %s in total · %s", self:FormatNumberGrouped(#rows), self:FormatNumberGrouped(totalQty), characterSummary),
-		string.format("Auction value %s · Craft value %s", self:FormatCopperShort(totalValue), self:FormatCopperShort(totalCraft))
+		and string.format(L["all %d characters"], storedCharacterCount)
+		or string.format(L["%d of %d characters"], selectedCharacterCount, storedCharacterCount)
+	return string.format(L["%s items · %s in total · %s"], self:FormatNumberGrouped(#rows), self:FormatNumberGrouped(totalQty), characterSummary),
+		string.format(L["Auction value %s · Craft value %s"], self:FormatCopperShort(totalValue), self:FormatCopperShort(totalCraft))
 end
 
 function Tradewright:RefreshInventoryTab()

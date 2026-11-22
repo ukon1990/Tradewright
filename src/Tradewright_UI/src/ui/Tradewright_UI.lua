@@ -1,6 +1,7 @@
 local addonName, Tradewright = ...
 
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 Tradewright.ui = Tradewright.ui or {}
 
 function Tradewright:GetDashboardCharacterKeyList(db)
@@ -65,10 +66,10 @@ function Tradewright:FormatScanTimestamp(ts)
 	end
 	local day = date("%Y-%m-%d", ts)
 	if day == date("%Y-%m-%d") then
-		return "today " .. date("%H:%M", ts)
+		return L["today "] .. date("%H:%M", ts)
 	end
 	if day == date("%Y-%m-%d", time() - 86400) then
-		return "yesterday " .. date("%H:%M", ts)
+		return L["yesterday "] .. date("%H:%M", ts)
 	end
 	return date("%Y-%m-%d %H:%M", ts)
 end
@@ -159,7 +160,7 @@ function Tradewright:DashboardRefreshInventory()
 				string.format("characterKey=%s", key),
 				string.format("itemTypesTracked=%s", tostring(data.inventorySnapshot and data.inventorySnapshot.itemTypesTracked)),
 			})
-			self:PrintMessage(string.format("Inventory read for %s.", key))
+			self:PrintMessage(string.format(L["Inventory read for %s."], key))
 			self:NotifyDashboardUpdate(true)
 		end,
 	})
@@ -177,9 +178,9 @@ function Tradewright:RefreshExportProgressPhaseLine(f)
 	end
 	local n = self.EXPORT_PROGRESS_STAGE_COUNT or 2
 	if f.barMode == "gather" then
-		f.phaseStr:SetText(string.format("Step 1 of %d · %s", n, f.gatherPhaseLabel or "Collecting export data"))
+		f.phaseStr:SetText(string.format(L["Step 1 of %d · %s"], n, f.gatherPhaseLabel or L["Collecting export data"]))
 	elseif f.barMode == "encode" and f.phaseBaseText then
-		f.phaseStr:SetText(string.format("Step 2 of %d · %s", n, f.phaseBaseText))
+		f.phaseStr:SetText(string.format(L["Step 2 of %d · %s"], n, f.phaseBaseText))
 	end
 end
 
@@ -245,7 +246,7 @@ function Tradewright:ShowExportProgress(scopeLabel)
 	ui.exportProgressFrame = ui.exportProgressFrame or createExportProgressFrame(self)
 	local f = ui.exportProgressFrame
 	f.scopeLabel = scopeLabel or "export"
-	f.title:SetText("Exporting " .. tostring(f.scopeLabel))
+	f.title:SetText(L["Exporting "] .. tostring(f.scopeLabel))
 	f.indeterminateBar = false
 	f.barMode = "gather"
 	f.gatherStartTime = GetTime()
@@ -254,7 +255,7 @@ function Tradewright:ShowExportProgress(scopeLabel)
 	f.bar:SetMinMaxValues(0, 1)
 	f.bar:SetValue(0)
 	f:Show()
-	self:SetExportProgressPhase("Collecting export data", false)
+	self:SetExportProgressPhase(L["Collecting export data"], false)
 end
 
 --- useStepSuffix: when true, text is a prefix; UpdateExportProgressSteps appends " (N steps)".
@@ -268,7 +269,7 @@ function Tradewright:SetExportProgressPhase(text, useStepSuffix)
 		f.barMode = "encode"
 		f.lastOverall = math.max(f.lastOverall or 0, wG)
 		f.bar:SetValue(f.lastOverall)
-		f.phaseBaseText = text or "Packing the export"
+		f.phaseBaseText = text or L["Packing the export"]
 		self:UpdateExportProgressSteps(0)
 	else
 		f.phaseBaseText = nil

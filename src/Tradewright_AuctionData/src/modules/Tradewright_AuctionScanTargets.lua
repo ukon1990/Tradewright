@@ -1,6 +1,7 @@
 -- Which items the refresh queue should look up: shown crafts, prioritized auto-scan targets and account inventory.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local FL = Tradewright.ForeverLogic
 local shared = Tradewright.AuctionShared
 local normalizeItemID = shared.normalizeItemID
@@ -192,12 +193,12 @@ end
 function Tradewright:QueueAuctionEconomyScan(opts)
 	opts = type(opts) == "table" and opts or {}
 	if self:GetSetting("auction.enabled", true) == false then
-		self:PrintMessage("Auction data is switched off.")
+		self:PrintMessage(L["Auction data is switched off."])
 		return
 	end
 	local ah = _G.AuctionHouseFrame
 	if not ah or not ah.IsShown or not ah:IsShown() then
-		self:PrintMessage("Open the auction house first.")
+		self:PrintMessage(L["Open the auction house first."])
 		return
 	end
 	if not self:CanStartFullAuctionSideActions(true) then
@@ -205,7 +206,7 @@ function Tradewright:QueueAuctionEconomyScan(opts)
 	end
 	local state = self:GetState()
 	if state.auctionRefreshRunning then
-		self:PrintMessage("A price check is already running. Wait for it to finish.")
+		self:PrintMessage(L["A price check is already running. Wait for it to finish."])
 		return
 	end
 	local wantCrafts = opts.crafts == true
@@ -222,11 +223,11 @@ function Tradewright:QueueAuctionEconomyScan(opts)
 	})
 	if #merged == 0 then
 		if wantCrafts and not wantInv then
-			self:PrintMessage("Every craft price is already checked this visit. If recipes are missing, scan your professions first.")
+			self:PrintMessage(L["Every craft price is already checked this visit. If recipes are missing, scan your professions first."])
 		elseif wantInv and not wantCrafts then
-			self:PrintMessage("Every price of your items is already checked this visit.")
+			self:PrintMessage(L["Every price of your items is already checked this visit."])
 		else
-			self:PrintMessage("Every price is already checked this visit.")
+			self:PrintMessage(L["Every price is already checked this visit."])
 		end
 		return
 	end
@@ -241,7 +242,7 @@ function Tradewright:QueueAuctionEconomyScan(opts)
 	state.auctionRefreshQueue = {}
 	state.auctionRefreshQueueOrderCounter = 0
 	self:QueueAuctionScanTargets(merged, { skipSessionSearched = true })
-	self:PrintMessage(string.format("Checking %d prices. Keep the auction house open until it ends.", #merged))
+	self:PrintMessage(string.format(L["Checking %d prices. Keep the auction house open until it ends."], #merged))
 	self:RefreshAuctionHousePanel()
 end
 

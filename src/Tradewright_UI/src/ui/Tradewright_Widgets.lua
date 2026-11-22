@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local function setColor(fontString, color)
 	fontString:SetTextColor(color.r, color.g, color.b)
 end
@@ -154,7 +155,7 @@ function Tradewright:AddSearchPlaceholder(box, placeholder)
 		box:HookScript("OnTextChanged", update)
 		box.UpdatePlaceholder = update
 	end
-	box.placeholder:SetText(placeholder or "Search")
+	box.placeholder:SetText(placeholder or L["Search"])
 	box:UpdatePlaceholder()
 	return box
 end
@@ -317,24 +318,24 @@ end
 function Tradewright:CreateProfessionColumns(withoutExport)
 	local pe = self
 	local columns = {
-		{ id = "name", label = "Profession", width = 120, flex = 1, minWidth = 100,
+		{ id = "name", label = L["Profession"], width = 120, flex = 1, minWidth = 100,
 			getText = function(row) return row.name end },
-		{ id = "skill", label = "Skill", width = 64, justifyH = "RIGHT",
+		{ id = "skill", label = L["Skill"], width = 64, justifyH = "RIGHT",
 			getText = function(row) return string.format("%d/%d", row.skill, row.maxSkill) end },
-		{ id = "recipes", label = "Recipes", width = 64, justifyH = "RIGHT",
+		{ id = "recipes", label = L["Recipes"], width = 64, justifyH = "RIGHT",
 			getText = function(row) return pe:FormatNumberGrouped(row.recipes) end },
 	}
 	if withoutExport then
 		return columns
 	end
-	columns[#columns + 1] = { id = "export", label = "Export", width = 196,
+	columns[#columns + 1] = { id = "export", label = L["Export"], width = 196,
 		createCell = function(rowFrame)
 			local cell = CreateFrame("Frame", nil, rowFrame)
 			cell:SetHeight(22)
-			cell.all = pe:CreateButton(cell, "All", nil, { small = true })
+			cell.all = pe:CreateButton(cell, L["All"], nil, { small = true })
 			cell.all:SetPoint("LEFT", 5, 0)
-			cell.recipes = pe:CreateButton(cell, "Recipes", nil, { small = true })
-			cell.talents = pe:CreateButton(cell, "Talents", nil, { small = true })
+			cell.recipes = pe:CreateButton(cell, L["Recipes"], nil, { small = true })
+			cell.talents = pe:CreateButton(cell, L["Talents"], nil, { small = true })
 			pe:ChainRight({ cell.all, cell.recipes, cell.talents }, 4)
 			return cell
 		end,
@@ -459,7 +460,7 @@ function Tradewright:CreateDetailHeader(parent, onClose, onPopOut)
 	header.icon = self:CreateItemIcon(header, 32)
 	header.icon:SetPoint("LEFT")
 	local right, point, gap = header, "TOPRIGHT", 0 -- buttons and badge line up right to left
-	for _, spec in ipairs({ { "close", "close", onClose }, { "popOut", "window", onPopOut, "Open in item details window" } }) do
+	for _, spec in ipairs({ { "close", "close", onClose }, { "popOut", "window", onPopOut, L["Open in item details window"] } }) do
 		if spec[3] then
 			header[spec[1]] = self:CreateIconButton(header, spec[2], spec[3], spec[4])
 			header[spec[1]]:SetPoint("TOPRIGHT", right, point, gap, 0)
@@ -546,7 +547,11 @@ end
 
 -- Item quality choices for filter dropdowns, coloured like item names.
 function Tradewright:GetQualityFilterOptions()
-	local names = { [0] = "Poor", "Common", "Uncommon", "Rare", "Epic", "Legendary" }
+	-- The game's own quality names, so they match item tooltips in every language.
+	local names = { [0] = L["Poor"], L["Common"], L["Uncommon"], L["Rare"], L["Epic"], L["Legendary"] }
+	for quality = 0, 5 do
+		names[quality] = _G["ITEM_QUALITY" .. quality .. "_DESC"] or names[quality]
+	end
 	local options = {}
 	for quality = 0, 5 do
 		local color = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]

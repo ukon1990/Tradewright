@@ -1,6 +1,7 @@
 -- The cart of reagents to buy for queued crafts: its rows and columns, and purchases credited until the bags catch up.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local AL = Tradewright.AuctionLogic
 local shared = Tradewright.AuctionShared
 local containsText = shared.containsText
@@ -30,7 +31,7 @@ function Tradewright:NoteAuctionCartPurchase(itemID, quantity, source)
 	end
 	entry.credit = (tonumber(entry.credit) or 0) + quantity
 	self:DebugLog("AH", "cart purchase credit", {
-		string.format("itemID=%s qty=%s source=%s baseline=%s credit=%s", tostring(itemID), tostring(quantity),
+		string.format(L["itemID=%s qty=%s source=%s baseline=%s credit=%s"], tostring(itemID), tostring(quantity),
 			tostring(source or "?"), tostring(entry.baseline), tostring(entry.credit)),
 	})
 	return true
@@ -228,12 +229,12 @@ function Tradewright:BuildAuctionCartColumns()
 		}
 	end
 	local have = count("quantityHave", "Have", "quantityOnCharacter")
-	have.tooltipTitle, have.tooltipText = "Have", "On this character."
+	have.tooltipTitle, have.tooltipText = L["Have"], L["On this character."]
 	have.getText = function(row) return pe:FormatNumberGrouped(row and (row.quantityOnCharacter or row.quantityHave) or 0) end
 	return {
 		self:CreateItemColumn({
 			id = "item",
-			label = "Item",
+			label = L["Item"],
 			defaultSort = "asc",
 			minWidth = 110,
 			getItemID = function(row) return row and row.itemID end,
@@ -244,8 +245,8 @@ function Tradewright:BuildAuctionCartColumns()
 		}),
 		have,
 		count("quantityToBuy", "Buy", "quantityToBuy"),
-		pe:MoneyColumn({ id = "estimatedUnitPrice", label = "Each", width = 78, optional = true }),
-		pe:MoneyColumn({ id = "estimatedBuyCost", label = "Cost", width = 78 }),
+		pe:MoneyColumn({ id = "estimatedUnitPrice", label = L["Each"], width = 78, optional = true }),
+		pe:MoneyColumn({ id = "estimatedBuyCost", label = L["Cost"], width = 78 }),
 	}
 end
 
@@ -253,7 +254,7 @@ function Tradewright:OnCommodityPurchased(itemID, quantity)
 	itemID = normalizeItemID(itemID)
 	quantity = math.max(0, math.floor(tonumber(quantity) or 0))
 	self:DebugLog("AH", "event commodity purchased", {
-		string.format("itemID=%s quantity=%s", tostring(itemID), tostring(quantity)),
+		string.format(L["itemID=%s quantity=%s"], tostring(itemID), tostring(quantity)),
 	})
 	local state = self:GetState()
 	local pending = state.auctionCartPendingConfirm

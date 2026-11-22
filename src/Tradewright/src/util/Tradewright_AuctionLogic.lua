@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 --- Pure helpers for the craft cart, the live auction search aggregate, the full scan row fold, own
 --- auctions and the classic sell gate. No WoW API.
 local AuctionLogic = {}
@@ -19,7 +20,7 @@ local function appendSources(target, sources, sourcePrefix)
 		if sourcePrefix and copy.recipeName then
 			copy.recipeName = sourcePrefix .. tostring(copy.recipeName)
 		elseif sourcePrefix and copy.orderID then
-			copy.recipeName = sourcePrefix .. "Order #" .. tostring(copy.orderID)
+			copy.recipeName = sourcePrefix .. L["Order #"] .. tostring(copy.orderID)
 		end
 		target[#target + 1] = copy
 	end
@@ -121,7 +122,7 @@ function AuctionLogic.MergeCartExtras(merged, extras, resolveName)
 end
 
 local function sourceLabel(source)
-	return tostring(source.recipeName or source.outputName or (source.orderID and ("Order #" .. tostring(source.orderID))) or "")
+	return tostring(source.recipeName or source.outputName or (source.orderID and (L["Order #"] .. tostring(source.orderID))) or "")
 end
 
 --- Unique source labels, sorted and joined: text ("—" when none), count.

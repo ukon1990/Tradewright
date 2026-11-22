@@ -12,10 +12,9 @@ end
 
 --- `singular` when `count` is 1, else `plural` (default: `singular .. "s"`). Only the word, not the count.
 function Tradewright:Plural(count, singular, plural)
-	if tonumber(count) == 1 then
-		return singular
-	end
-	return plural or (singular .. "s")
+	local L = self.L
+	local word = tonumber(count) == 1 and singular or plural or (singular .. "s")
+	return L and L[word] or word
 end
 
 local function colorChannel(value)

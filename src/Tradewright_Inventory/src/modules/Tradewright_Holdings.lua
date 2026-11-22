@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Holdings: everything each character carries and banks, and its gold, saved per character in the
 -- inventory database (TradewrightInventoryDB.holdings). Unlike inventorySnapshot, which only
 -- counts items of scanned recipes, this counts every item. The bags module reads it.
@@ -145,7 +146,7 @@ function Tradewright:SaveWarbandHoldings()
 	end
 	self:GetItemHoldings() -- makes sure the database is loaded
 	self.inventoryDb.warbandBank = {
-		name = "Warband bank", bank = countItems(self, bagIDs), bankSeenAt = time(), money = warbandMoney(),
+		name = L["Warband bank"], bank = countItems(self, bagIDs), bankSeenAt = time(), money = warbandMoney(),
 	}
 end
 

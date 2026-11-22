@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local ACCT_KEY = Tradewright.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__"
 
 local OverviewTab = {}
@@ -7,12 +8,12 @@ Tradewright.OverviewTab = OverviewTab
 
 -- Overview views drawn by a dashboard: key, button label, constructor, note shown beside the buttons.
 local DASHBOARD_VIEWS = {
-	{ key = "gold", label = "Gold", create = "CreateGoldDashboard",
-		note = "Usual prices come from your scans · hover a row for details" },
-	{ key = "sales", label = "Sales", create = "CreateSalesDashboard",
-		note = "Sales are added when you collect auction gold from the mailbox · earned is after the auction house cut" },
-	{ key = "income", label = "Income", create = "CreateIncomeDashboard",
-		note = "Every change of gold, by where it came from · hover a row for details" },
+	{ key = "gold", label = L["Gold"], create = "CreateGoldDashboard",
+		note = L["Usual prices come from your scans · hover a row for details"] },
+	{ key = "sales", label = L["Sales"], create = "CreateSalesDashboard",
+		note = L["Sales are added when you collect auction gold from the mailbox · earned is after the auction house cut"] },
+	{ key = "income", label = L["Income"], create = "CreateIncomeDashboard",
+		note = L["Every change of gold, by where it came from · hover a row for details"] },
 }
 
 local GAP = 12
@@ -73,9 +74,9 @@ end
 
 local function createHistoryColumns(pe)
 	return {
-		{ id = "when", label = "Finished", width = 130, getText = function(row) return pe:FormatScanTimestamp(row.finishedAt) end },
-		{ id = "character", label = "Character", width = 120, flex = 1, minWidth = 100, getText = function(row) return row.character end },
-		{ id = "professions", label = "Professions", width = 84, justifyH = "RIGHT", getText = function(row) return tostring(row.count) end },
+		{ id = "when", label = L["Finished"], width = 130, getText = function(row) return pe:FormatScanTimestamp(row.finishedAt) end },
+		{ id = "character", label = L["Character"], width = 120, flex = 1, minWidth = 100, getText = function(row) return row.character end },
+		{ id = "professions", label = L["Professions"], width = 84, justifyH = "RIGHT", getText = function(row) return tostring(row.count) end },
 	}
 end
 
@@ -97,7 +98,7 @@ local function createViewBar(pe, panel)
 	panel.viewBar:SetHeight(22)
 	panel.viewButtons = {}
 	local views = { unpack(DASHBOARD_VIEWS) }
-	views[#views + 1] = { key = "characters", label = "Characters" }
+	views[#views + 1] = { key = "characters", label = L["Characters"] }
 	local previous
 	for _, view in ipairs(views) do
 		local button = pe:CreateButton(panel.viewBar, view.label, function()
@@ -130,9 +131,9 @@ function OverviewTab:CreateCharactersToolbar(panel, host)
 	panel.toolbar:SetPoint("TOPLEFT", panel.statsRow, "BOTTOMLEFT", 0, -GAP)
 	panel.toolbar:SetPoint("TOPRIGHT", panel.statsRow, "BOTTOMRIGHT", 0, -GAP)
 	panel.toolbar:SetHeight(26)
-	panel.scanButton = pe:CreateButton(panel.toolbar, "Scan professions", function() pe:StartScan() end, { primary = true })
+	panel.scanButton = pe:CreateButton(panel.toolbar, L["Scan professions"], function() pe:StartScan() end, { primary = true })
 	panel.scanButton:SetPoint("LEFT")
-	panel.refreshInvButton = pe:CreateButton(panel.toolbar, "Refresh inventory", function() pe:DashboardRefreshInventory() end)
+	panel.refreshInvButton = pe:CreateButton(panel.toolbar, L["Refresh inventory"], function() pe:DashboardRefreshInventory() end)
 	pe:ChainRight({ panel.scanButton, panel.refreshInvButton })
 end
 
@@ -143,7 +144,7 @@ function OverviewTab:CreateCharacterSidebar(panel, host)
 	panel.sidebar:SetPoint("TOPLEFT", panel.toolbar, "BOTTOMLEFT", 0, -GAP)
 	panel.sidebar:SetPoint("BOTTOMLEFT", host, "BOTTOMLEFT", 0, 0)
 	panel.sidebar:SetWidth(SIDEBAR_WIDTH)
-	panel.sidebarTitle = pe:CreateHeading(panel.sidebar, "Characters")
+	panel.sidebarTitle = pe:CreateHeading(panel.sidebar, L["Characters"])
 	panel.sidebarTitle:SetPoint("TOPLEFT")
 	panel.sidebarTitle:SetPoint("TOPRIGHT")
 	panel.characterList = pe:CreateSelectList(panel.sidebar, function(key)
@@ -172,11 +173,11 @@ function OverviewTab:CreateGoldCard(panel)
 	panel.goldInset:SetHeight(GRAPH_HEIGHT + 64)
 	panel.goldRange = pe:CreateText(panel.goldInset, "GameFontHighlightSmall", "textMuted", "RIGHT")
 	panel.goldRange:SetPoint("TOPRIGHT", -10, -12)
-	panel.goldEarned = goldMetricButton(panel.goldInset, "Gold earned", "earned")
+	panel.goldEarned = goldMetricButton(panel.goldInset, L["Gold earned"], "earned")
 	panel.goldEarned:SetPoint("RIGHT", panel.goldRange, "LEFT", -8, 0)
-	panel.goldCurrent = goldMetricButton(panel.goldInset, "Current gold", "balance")
+	panel.goldCurrent = goldMetricButton(panel.goldInset, L["Current gold"], "balance")
 	panel.goldCurrent:SetPoint("RIGHT", panel.goldEarned, "LEFT", 1, 0)
-	panel.goldHeading = pe:CreateHeading(panel.goldInset, "Gold")
+	panel.goldHeading = pe:CreateHeading(panel.goldInset, L["Gold"])
 	panel.goldHeading:SetPoint("TOPLEFT", 10, -10)
 	panel.goldHeading:SetPoint("RIGHT", panel.goldCurrent, "LEFT", -12, 0)
 	panel.goldSummary = pe:CreateText(panel.goldInset, "GameFontHighlightSmall", "textMuted")
@@ -185,7 +186,7 @@ function OverviewTab:CreateGoldCard(panel)
 	panel.goldGraph = pe:CreateTimeSeriesGraph(panel.goldInset, {
 		showTitle = false,
 		plotHeight = GRAPH_HEIGHT - 28,
-		emptyText = "No gold recorded in this range yet.",
+		emptyText = L["No gold recorded in this range yet."],
 	})
 	panel.goldGraph:SetPoint("BOTTOMLEFT", panel.goldInset, "BOTTOMLEFT", 10, 8)
 end
@@ -203,7 +204,7 @@ function OverviewTab:CreateCharacterDetail(panel, host)
 	panel.detailMeta:SetPoint("TOPLEFT", panel.detailTitle, "BOTTOMLEFT", 0, -2)
 	panel.detailMeta:SetPoint("TOPRIGHT", panel.detailTitle, "BOTTOMRIGHT", 0, -2)
 	OverviewTab:CreateGoldCard(panel)
-	panel.listHeading = pe:CreateHeading(panel.detail, "Professions")
+	panel.listHeading = pe:CreateHeading(panel.detail, L["Professions"])
 	panel.listHeading:SetPoint("TOPLEFT", panel.goldInset, "BOTTOMLEFT", 0, -GAP)
 	panel.listHeading:SetPoint("TOPRIGHT", panel.goldInset, "BOTTOMRIGHT", 0, -GAP)
 	panel.listTable = pe:CreateReusableTable(panel.detail, { autoFitToScroll = true })
@@ -259,10 +260,10 @@ end
 local function goldStatDetail(pe, selectedKey, selectedData, characterCount)
 	local gold = selectedKey ~= ACCT_KEY and pe:GetCurrentGoldSummaryForOverview(selectedKey) or nil
 	if gold == nil then
-		return string.format("Across %d %s", characterCount, pe:Plural(characterCount, "character"))
+		return string.format(L["Across %d %s"], characterCount, pe:Plural(characterCount, "character"))
 	end
-	local name = selectedData and selectedData.meta and selectedData.meta.name or "This character"
-	return name .. " has " .. pe:FormatCopperShort(gold)
+	local name = selectedData and selectedData.meta and selectedData.meta.name or L["This character"]
+	return name .. L[" has "] .. pe:FormatCopperShort(gold)
 end
 
 -- Profession scan card: value, detail and tone while a scan runs, or the stored count when idle.
@@ -270,9 +271,9 @@ local function professionScanStat(pe, professionCount)
 	local state = pe:GetState()
 	if state.scanInProgress then
 		local current = state.currentProfession and state.currentProfession.professionName or "starting"
-		return "Scanning", string.format("%s, %d left", tostring(current), #(state.queue or {})), "warning"
+		return "Scanning", string.format(L["%s, %d left"], tostring(current), #(state.queue or {})), "warning"
 	end
-	return "Ready", string.format("%d %s saved", professionCount, pe:Plural(professionCount, "profession")), "success"
+	return "Ready", string.format(L["%d %s saved"], professionCount, pe:Plural(professionCount, "profession")), "success"
 end
 
 function OverviewTab:RefreshStats(panel, selectedKey, selectedData, keys)
@@ -280,17 +281,17 @@ function OverviewTab:RefreshStats(panel, selectedKey, selectedData, keys)
 	local agg = pe.db.aggregate or {}
 	local accountGold = pe:GetCurrentGoldSummaryForOverview(ACCT_KEY)
 	local inv = sumInventory(pe, selectedKey, selectedData)
-	panel.stats.characters:SetValues("Characters", tostring(#keys), "Updated " .. pe:FormatScanTimestamp(agg.updatedAt))
-	panel.stats.gold:SetValues("Gold, all characters", accountGold and accountGold > 0 and pe:FormatCopperShort(accountGold) or "-",
+	panel.stats.characters:SetValues(L["Characters"], tostring(#keys), L["Updated "] .. pe:FormatScanTimestamp(agg.updatedAt))
+	panel.stats.gold:SetValues(L["Gold, all characters"], accountGold and accountGold > 0 and pe:FormatCopperShort(accountGold) or "-",
 		goldStatDetail(pe, selectedKey, selectedData, #keys))
-	panel.stats.itemTypes:SetValues("Different items", pe:FormatNumberGrouped(inv.tracked),
-		string.format("%s in stock, %s items", pe:FormatNumberGrouped(inv.inStock), pe:FormatNumberGrouped(inv.quantity)))
-	panel.stats.professionScan:SetValues("Profession scan", professionScanStat(pe, countProfessions(pe, selectedKey, selectedData)))
+	panel.stats.itemTypes:SetValues(L["Different items"], pe:FormatNumberGrouped(inv.tracked),
+		string.format(L["%s in stock, %s items"], pe:FormatNumberGrouped(inv.inStock), pe:FormatNumberGrouped(inv.quantity)))
+	panel.stats.professionScan:SetValues(L["Profession scan"], professionScanStat(pe, countProfessions(pe, selectedKey, selectedData)))
 end
 
 function OverviewTab:RefreshCharacterList(panel, currentKey, keys)
 	local pe = Tradewright
-	local items = { { key = ACCT_KEY, label = "All characters" } }
+	local items = { { key = ACCT_KEY, label = L["All characters"] } }
 	for _, key in ipairs(keys) do
 		local label = characterName(pe.db.characters[key], key)
 		if key == currentKey then
@@ -317,11 +318,11 @@ local function recentScanRows(db)
 end
 
 function OverviewTab:RefreshAccountDetail(panel, keys)
-	panel.detailTitle:SetText("All characters")
-	panel.detailMeta:SetText(string.format("%d characters saved", #keys))
-	panel.listHeading:SetText("Recent scans")
+	panel.detailTitle:SetText(L["All characters"])
+	panel.detailMeta:SetText(string.format(L["%d characters saved"], #keys))
+	panel.listHeading:SetText(L["Recent scans"])
 	panel.listTable:SetColumns(panel.historyColumns)
-	panel.listTable:SetEmptyText("No scans yet", "Open a profession window and press Scan professions.")
+	panel.listTable:SetEmptyText(L["No scans yet"], L["Open a profession window and press Scan professions."])
 	panel.listTable:SetRows(recentScanRows(Tradewright.db))
 	panel.listTable:Refresh()
 end
@@ -332,15 +333,15 @@ function OverviewTab:RefreshCharacterDetail(panel, selectedKey, selectedData, cu
 	local charData = selectedData or {}
 	local meta = charData.meta or {}
 	panel.detailTitle:SetText(characterName(charData, selectedKey))
-	panel.detailMeta:SetText(string.format("Level %s %s · Professions scanned %s · Inventory read %s",
+	panel.detailMeta:SetText(string.format(L["Level %s %s · Professions scanned %s · Inventory read %s"],
 		tostring(meta.level or "?"), tostring(meta.class or ""),
 		pe:FormatScanTimestamp(charData.scanFinishedAt), pe:FormatScanTimestamp(charData.lastLiveInventoryUpdate)))
-	panel.listHeading:SetText("Professions")
+	panel.listHeading:SetText(L["Professions"])
 
 	local isCurrent = selectedKey == currentKey
 	panel.listTable:SetColumns(panel.professionColumns)
-	panel.listTable:SetEmptyText("No professions saved", isCurrent and "Open a profession window and press Scan professions."
-		or "Log in on this character to scan and refresh it.")
+	panel.listTable:SetEmptyText(L["No professions saved"], isCurrent and L["Open a profession window and press Scan professions."]
+		or L["Log in on this character to scan and refresh it."])
 	panel.listTable:SetRows(pe:BuildProfessionRows(charData))
 	panel.listTable:Refresh()
 end
@@ -354,7 +355,7 @@ function OverviewTab:RefreshDetail(panel, selectedKey, selectedData, currentKey,
 end
 
 local function configureEarnedGraph(pe, graph, theme)
-	graph:SetEmptyText("Two gold readings in this range are needed to chart gold earned.")
+	graph:SetEmptyText(L["Two gold readings in this range are needed to chart gold earned."])
 	graph:SetYFormatter(function(v)
 		local n = tonumber(v) or 0
 		return (n >= 0 and "+" or "-") .. pe:FormatCopperShort(math.abs(n))
@@ -365,13 +366,13 @@ local function configureEarnedGraph(pe, graph, theme)
 		local n = tonumber(pt.value) or 0
 		tip:AddLine((n >= 0 and "+" or "") .. pe:FormatCopperFull(n))
 		if pt.meta and pt.meta.current then
-			tip:AddLine("Balance after " .. pe:FormatCopperFull(pt.meta.current), theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+			tip:AddLine(L["Balance after "] .. pe:FormatCopperFull(pt.meta.current), theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
 		end
 	end)
 end
 
 local function configureBalanceGraph(pe, graph)
-	graph:SetEmptyText("No gold recorded in this range yet.")
+	graph:SetEmptyText(L["No gold recorded in this range yet."])
 	graph:SetYFormatter(function(v)
 		return pe:FormatCopperShort(tonumber(v) or 0)
 	end)
@@ -396,7 +397,7 @@ function OverviewTab:RefreshGold(panel, selectedKey)
 	panel.goldRange:SetText(pe:GetRangeLabel(rangeKey))
 
 	local gold = pe:GetCurrentGoldSummaryForOverview(selectedKey)
-	panel.goldSummary:SetText(gold ~= nil and ("Now " .. pe:FormatCopperFull(gold)) or "No gold recorded for this view yet.")
+	panel.goldSummary:SetText(gold ~= nil and (L["Now "] .. pe:FormatCopperFull(gold)) or L["No gold recorded for this view yet."])
 	graph:SetAccentColor(theme.accent)
 	GOLD_GRAPH_SETUP[mode](pe, graph, theme)
 	graph:SetSeries(pe:GetOverviewWalletGraphSeries(selectedKey, rangeKey, mode))

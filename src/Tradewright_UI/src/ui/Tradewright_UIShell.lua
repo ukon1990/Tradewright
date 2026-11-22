@@ -1,5 +1,6 @@
 local addonName, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local ADDON_FOREGROUND_STRATA = "HIGH"
 local ADDON_BACKGROUND_STRATA = "MEDIUM"
 local ADDON_FOREGROUND_LEVEL = 240
@@ -318,7 +319,7 @@ local function createResizeHandle(frame)
 	end)
 	handle:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
-		GameTooltip:SetText("Drag to resize", 1, 1, 1)
+		GameTooltip:SetText(L["Drag to resize"], 1, 1, 1)
 		GameTooltip:Show()
 	end)
 	handle:SetScript("OnLeave", GameTooltip_Hide)
@@ -451,28 +452,28 @@ function Tradewright:AccountGoldLabel()
 		return ""
 	end
 	local gold = self:GetCurrentGoldSummaryForOverview(self.DASHBOARD_ACCOUNT_KEY or "__PE_ACCOUNT__")
-	return gold and ("Gold on all characters " .. self:FormatCopperShort(gold)) or ""
+	return gold and (L["Gold on all characters "] .. self:FormatCopperShort(gold)) or ""
 end
 
 -- Status bar, left: what is running now, else how fresh the AH prices are.
 function Tradewright:GetShellActivityText()
 	local state = self:GetState()
 	if state.scanInProgress then
-		return "Scanning " .. tostring(state.currentProfession and state.currentProfession.professionName or "professions") .. "…"
+		return L["Scanning "] .. tostring(state.currentProfession and state.currentProfession.professionName or "professions") .. "…"
 	end
 	if not self.GetLastFullAuctionScanAt then
 		return ""
 	end
 	local lastScanAt = self:GetLastFullAuctionScanAt()
-	return lastScanAt and ("Prices from full AH scan " .. self:FormatScanTimestamp(lastScanAt))
-		or "No full AH scan yet · open the auction house to get prices"
+	return lastScanAt and (L["Prices from full AH scan "] .. self:FormatScanTimestamp(lastScanAt))
+		or L["No full AH scan yet · open the auction house to get prices"]
 end
 
 -- Status bar, right: stored characters, and when this character's professions were scanned.
 function Tradewright:GetShellStoredText()
 	local characters = self.db and self.db.characters or {}
 	local stored = self:TableCount(characters)
-	local text = string.format("%d %s saved", stored, self:Plural(stored, "character"))
+	local text = string.format(L["%d %s saved"], stored, self:Plural(stored, "character"))
 	-- Profession scan time only matters when this character has a profession to scan.
 	if #self:GetPlayerProfessions() == 0 then
 		return text
@@ -480,9 +481,9 @@ function Tradewright:GetShellStoredText()
 	local charData = characters[self:GetCharacterKey()]
 	local scannedAt = charData and charData.scanFinishedAt
 	if scannedAt and scannedAt > 0 then
-		return text .. " · Professions scanned " .. self:FormatScanTimestamp(scannedAt)
+		return text .. L[" · Professions scanned "] .. self:FormatScanTimestamp(scannedAt)
 	end
-	return text .. " · Professions not scanned yet"
+	return text .. L[" · Professions not scanned yet"]
 end
 
 function Tradewright:RefreshShellStatus()
@@ -536,7 +537,7 @@ function Tradewright:CallDashboardTabModule(tabId, action, ...)
 	end
 	local ok, err = pcall(method, module, ...)
 	if not ok and self.PrintMessage then
-		self:PrintMessage("Tab '" .. tostring(tabId) .. "' failed to " .. string.lower(action) .. ": " .. tostring(err))
+		self:PrintMessage(L["Tab '"] .. tostring(tabId) .. L["' failed to "] .. string.lower(action) .. ": " .. tostring(err))
 	end
 	return ok
 end

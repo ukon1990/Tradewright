@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Read-only queries over learned recipes and craft rows: item IDs to price, filter options, confidence, row lookup.
 
 local classifyCraftReagentSlot = Tradewright.CraftReagentPlan.classifyCraftReagentSlot
@@ -83,7 +84,7 @@ end
 function Tradewright:GetCraftProfessionFilterOptions()
 	self:InitDB()
 	local seen = {}
-	local opts = { { value = "all", label = "All professions" } }
+	local opts = { { value = "all", label = L["All professions"] } }
 	for _, characterData in pairs(self.db.characters or {}) do
 		for skillLineID, professionData in pairs(characterData.professions or {}) do
 			local sid = tostring(skillLineID)
@@ -110,7 +111,7 @@ end
 
 function Tradewright:GetCraftCategoryFilterOptions(rows)
 	local seen = {}
-	local opts = { { value = "all", label = "All categories" } }
+	local opts = { { value = "all", label = L["All categories"] } }
 	for _, row in ipairs(rows or {}) do
 		local cid = row.categoryID
 		if cid and not seen[cid] then
@@ -120,7 +121,7 @@ function Tradewright:GetCraftCategoryFilterOptions(rows)
 				label = self:ResolveCraftCategoryLabel(row.skillLineID, cid)
 			end
 			if not label or label == "" then
-				label = "Category " .. tostring(cid)
+				label = L["Category "] .. tostring(cid)
 			end
 			opts[#opts + 1] = { value = tostring(cid), label = label }
 		end

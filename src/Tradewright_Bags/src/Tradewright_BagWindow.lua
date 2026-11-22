@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Bag window: header, character tabs, search, category headings with item
 -- slots (or the item log), an optional bag row and a footer. The logged-in character's bags are live, and with the
 -- bank open so are its bank and the warband bank; everything else is a read-only list from the
@@ -14,9 +15,9 @@ local SECTION_GAP = 8
 local MAX_TABS = 6
 local MAX_SCREEN_SHARE = 0.85
 local MODES = Tradewright.BagWindowLayout.modes
-local MODE_TEXT = { bags = "bags", bank = "bank", both = "bags and bank" }
+local MODE_TEXT = { bags = "bags", bank = "bank", both = L["bags and bank"] }
 local EMPTY_TEXT = Tradewright.BagWindowLayout.emptyText
-local LOG_EMPTY_TEXT = "Nothing logged. Items are listed here from now on as they enter or leave this character's bags."
+local LOG_EMPTY_TEXT = L["Nothing logged. Items are listed here from now on as they enter or leave this character's bags."]
 
 local refreshPending = false
 
@@ -78,7 +79,7 @@ local function buildGroups(pe, view, scan)
 	local groups = pe.BagLogic.GroupItems(items)
 	if view.live and scan.firstFree then
 		if #groups == 0 then
-			groups[1] = { key = "free", label = "Empty bags", items = {} }
+			groups[1] = { key = "free", label = L["Empty bags"], items = {} }
 		end
 		groups[#groups].extra = { { free = true, bag = scan.firstFree.bag, slot = scan.firstFree.slot } }
 	end
@@ -95,7 +96,7 @@ local function tabEntries(pe, view)
 	for _, key in ipairs(keys) do
 		entries[#entries + 1] = { key = key, label = characters[key] and characters[key].name or key }
 	end
-	entries[#entries + 1] = { key = "all", label = "All" }
+	entries[#entries + 1] = { key = "all", label = L["All"] }
 	return entries
 end
 
@@ -237,16 +238,16 @@ local function goldText(pe, money)
 	if #rows < 2 then
 		return pe:FormatCopperShort(money)
 	end
-	return string.format("%s  ·  All %s", pe:FormatCopperShort(money), pe:FormatCopperShort(total))
+	return string.format(L["%s  ·  All %s"], pe:FormatCopperShort(money), pe:FormatCopperShort(total))
 end
 
 -- Right of the footer on a read-only tab: when it was seen, and its gold (All: the total).
 local function savedFootText(pe, view, record)
 	if not record then
-		return "All " .. pe:FormatCopperShort(select(2, pe.BagLogic.GoldByCharacter(pe:GetBagHoldings())))
+		return L["All "] .. pe:FormatCopperShort(select(2, pe.BagLogic.GoldByCharacter(pe:GetBagHoldings())))
 	end
 	local seenAt = view.mode == "bank" and record.bankSeenAt or record.seenAt
-	local seen = seenAt and ("Seen " .. pe:FormatShortTime(seenAt)) or "Bank not seen yet"
+	local seen = seenAt and (L["Seen "] .. pe:FormatShortTime(seenAt)) or L["Bank not seen yet"]
 	return record.money and (seen .. "  ·  " .. pe:FormatCopperShort(record.money)) or seen
 end
 
@@ -257,18 +258,18 @@ local function showDropButton(f, full)
 end
 
 local function freeText(totals, full)
-	local free = full and "Bags full" or string.format("%d free", totals.free)
+	local free = full and L["Bags full"] or string.format(L["%d free"], totals.free)
 	if totals.reagentFree > 0 then
-		free = free .. string.format(" · %d in reagent bag", totals.reagentFree)
+		free = free .. string.format(L[" · %d in reagent bag"], totals.reagentFree)
 	end
 	return free
 end
 
 local function refreshLogTexts(pe, f, view, rowCount)
 	local record = pe:GetBagHoldings()[view.tab]
-	f.meta:SetText((record and record.name or view.tab) .. " · item log")
+	f.meta:SetText((record and record.name or view.tab) .. L[" · item log"])
 	local entries = rowCount .. " " .. pe:Plural(rowCount, "entry", "entries")
-	f.footLeft:SetText(string.format("%s · last %d days", entries, pe:GetItemLogLimits().days))
+	f.footLeft:SetText(string.format(L["%s · last %d days"], entries, pe:GetItemLogLimits().days))
 	f.footRight:SetText(view.tab == view.current and goldText(pe, GetMoney()) or "")
 end
 
@@ -281,15 +282,15 @@ local function refreshTexts(pe, f, view, totals, itemCount)
 		return
 	end
 	if view.live then
-		f.meta:SetText(string.format("%d / %d slots", totals.used, totals.slots))
+		f.meta:SetText(string.format(L["%d / %d slots"], totals.used, totals.slots))
 		f.footLeft:SetText(freeText(totals, full))
 		f.footRight:SetText(goldText(pe, GetMoney()))
 		return
 	end
 	local record = pe:GetBagHoldings()[view.tab]
-	local name = view.tab == "all" and "All characters" or (record and record.name or view.tab)
-	f.meta:SetText(name .. " · read-only")
-	f.footLeft:SetText(string.format("%d items · %s", itemCount, MODE_TEXT[view.mode]))
+	local name = view.tab == "all" and L["All characters"] or (record and record.name or view.tab)
+	f.meta:SetText(name .. L[" · read-only"])
+	f.footLeft:SetText(string.format(L["%d items · %s"], itemCount, MODE_TEXT[view.mode]))
 	f.footRight:SetText(savedFootText(pe, view, record))
 end
 

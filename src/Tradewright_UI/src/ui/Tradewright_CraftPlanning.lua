@@ -1,5 +1,6 @@
 local Tradewright = select(2, ...)
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Crafts tab columns for planning: sales a day, how many to make, and recipe cooldowns.
 
 -- A cooldown recipe can be made once when ready and not at all while waiting.
@@ -54,9 +55,9 @@ end
 function Tradewright:AddCraftPlanningColumns(columns)
 	local pe = self
 	columns[#columns + 1] = {
-		id = "sellsPerDay", label = "Sales a day", justifyH = "RIGHT", width = 66, sortable = true, defaultSort = "desc", optional = true,
-		tooltipTitle = "Sales a day, estimated",
-		tooltipText = "From how the listed quantity changes between your scans. It runs high: cancelled and expired auctions count too.",
+		id = "sellsPerDay", label = L["Sales a day"], justifyH = "RIGHT", width = 66, sortable = true, defaultSort = "desc", optional = true,
+		tooltipTitle = L["Sales a day, estimated"],
+		tooltipText = L["From how the listed quantity changes between your scans. It runs high: cancelled and expired auctions count too."],
 		sortValue = function(row) return planFor(pe, row).sellsPerDay or -1 end,
 		getText = function(row)
 			local perDay = planFor(pe, row).sellsPerDay
@@ -64,10 +65,10 @@ function Tradewright:AddCraftPlanningColumns(columns)
 		end,
 	}
 	columns[#columns + 1] = {
-		id = "make", label = "Make", justifyH = "RIGHT", width = 46, sortable = true, defaultSort = "desc",
-		tooltipTitle = "How many to make",
-		tooltipText = "Enough for the chosen days of sales, less what your characters already own. "
-			.. "0 when you have enough or the craft loses gold; - when it is not known to sell.",
+		id = "make", label = L["Make"], justifyH = "RIGHT", width = 46, sortable = true, defaultSort = "desc",
+		tooltipTitle = L["How many to make"],
+		tooltipText = L["Enough for the chosen days of sales, less what your characters already own. "]
+			.. L["0 when you have enough or the craft loses gold; - when it is not known to sell."],
 		sortValue = function(row) return planFor(pe, row).make or -1 end,
 		getText = function(row)
 			local make = planFor(pe, row).make
@@ -75,10 +76,10 @@ function Tradewright:AddCraftPlanningColumns(columns)
 		end,
 	}
 	columns[#columns + 1] = {
-		id = "cooldown", label = "Cooldown", justifyH = "RIGHT", width = 96, sortable = true, defaultSort = "asc", optional = true,
-		tooltipTitle = "Cooldown",
-		tooltipText = "For the best crafter, from the last time that character's profession window was open. "
-			.. "Empty for recipes that have not been seen on cooldown.",
+		id = "cooldown", label = L["Cooldown"], justifyH = "RIGHT", width = 96, sortable = true, defaultSort = "asc", optional = true,
+		tooltipTitle = L["Cooldown"],
+		tooltipText = L["For the best crafter, from the last time that character's profession window was open. "]
+			.. L["Empty for recipes that have not been seen on cooldown."],
 		sortValue = function(row)
 			local cooldown = planFor(pe, row).cooldown
 			return cooldown and cooldown.state ~= "none" and cooldown.secondsLeft or 1e15

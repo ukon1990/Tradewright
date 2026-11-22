@@ -1,6 +1,7 @@
 -- Per-item auction rules (keep in bags, ignore) and the small Keep in bags window.
 local addonName, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local shared = Tradewright.AuctionShared
 local normalizeItemID = shared.normalizeItemID
 local shallowCopy = shared.shallowCopy
@@ -75,12 +76,12 @@ function Tradewright:RefreshAuctionPanelRules()
 	end
 	if panel.btnIgnoreItem then
 		panel.btnIgnoreItem:SetEnabled(selectedItemID ~= nil)
-		panel.btnIgnoreItem:SetText((rowState.ignored == true) and "Unignore" or "Ignore")
+		panel.btnIgnoreItem:SetText((rowState.ignored == true) and L["Unignore"] or "Ignore")
 	end
 	if panel.btnReserveItem then
 		panel.btnReserveItem:SetEnabled(selectedItemID ~= nil)
 		if rowState.reserveQty and rowState.reserveQty > 0 then
-			panel.btnReserveItem:SetText("Keep " .. tostring(rowState.reserveQty))
+			panel.btnReserveItem:SetText(L["Keep "] .. tostring(rowState.reserveQty))
 		else
 			panel.btnReserveItem:SetText("Keep...")
 		end
@@ -93,7 +94,7 @@ end
 function Tradewright:ApplyAuctionReserve(itemID, value)
 	local qty = math.max(0, math.floor(tonumber(value) or 0))
 	self:SetAuctionItemRule(itemID, { reserveQty = qty > 0 and qty or nil })
-	self:DebugLog("AH", "rule reserve set", { string.format("itemID=%d reserveQty=%d", itemID, qty) })
+	self:DebugLog("AH", "rule reserve set", { string.format(L["itemID=%d reserveQty=%d"], itemID, qty) })
 	self:PrimeAuctionPanelRows()
 	self:RefreshAuctionHousePanel()
 end
@@ -121,7 +122,7 @@ function Tradewright:EnsureAuctionReserveWindow()
 	f.title = self:CreateText(f, "GameFontNormalLarge", "gold")
 	f.title:SetPoint("LEFT", f, "TOPLEFT", 12, -(theme.size.header / 2) - 1)
 	f.title:SetPoint("RIGHT", f.close, "LEFT", -12, 0)
-	f.title:SetText("Keep in bags")
+	f.title:SetText(L["Keep in bags"])
 	local rule = f:CreateTexture(nil, "BORDER")
 	rule:SetPoint("TOPLEFT", 1, -theme.size.header)
 	rule:SetPoint("TOPRIGHT", -1, -theme.size.header)
@@ -151,13 +152,13 @@ function Tradewright:EnsureAuctionReserveWindow()
 	end
 	f.input:SetScript("OnEnterPressed", accept)
 	f.input:SetScript("OnEscapePressed", function() f:Hide() end)
-	f.keep = self:CreateButton(f, "Keep", accept, { primary = true })
+	f.keep = self:CreateButton(f, L["Keep"], accept, { primary = true })
 	f.keep:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12, 12)
-	f.cancel = self:CreateButton(f, "Cancel", function() f:Hide() end)
+	f.cancel = self:CreateButton(f, L["Cancel"], function() f:Hide() end)
 	f.cancel:SetPoint("RIGHT", f.keep, "LEFT", -8, 0)
 	f.input:HookScript("OnTextChanged", function()
 		local keepQuantity = tonumber(f.input:GetText()) or 0
-		pe:SetButtonLabel(f.keep, keepQuantity > 0 and ("Keep " .. keepQuantity) or "Remove keep")
+		pe:SetButtonLabel(f.keep, keepQuantity > 0 and (L["Keep "] .. keepQuantity) or L["Remove keep"])
 	end)
 	f:Hide()
 	self._auctionReserveWindow = f
@@ -167,11 +168,11 @@ end
 function Tradewright:ShowAuctionReservePrompt(itemID)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
-		self:PrintMessage("Select an auction row first.")
+		self:PrintMessage(L["Select an auction row first."])
 		return
 	end
 	local current = tonumber((self:GetAuctionItemRule(itemID) or {}).reserveQty) or 0
-	self:ShowKeepPrompt(itemID, "Never post below this many", current, self.ui and self.ui.auctionPanel, function(id, text)
+	self:ShowKeepPrompt(itemID, L["Never post below this many"], current, self.ui and self.ui.auctionPanel, function(id, text)
 		self:ApplyAuctionReserve(id, text)
 	end)
 end

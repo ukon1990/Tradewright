@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Bag row of the bag window: the backpack, the bags and the reagent bag as cells.
 -- Hovering a bag lights its items; dropping a bag swaps it in; right-click lists replacements.
 -- The calls are the ones the game's own bag bar makes, so the game's rules apply.
@@ -13,7 +14,7 @@ local GAP = 4
 local REAGENT_GAP = 8
 local BACKPACK = 0
 local BACKPACK_ICON = "Interface\\Buttons\\Button-Backpack-Up"
-local HINT = "Drop a bag here to swap it in. Right-click to pick one you carry. Drag it off to unequip."
+local HINT = L["Drop a bag here to swap it in. Right-click to pick one you carry. Drag it off to unequip."]
 
 Tradewright.BAG_ROW_HEIGHT = HEADING + GAP + CELL_HEIGHT
 
@@ -46,12 +47,12 @@ local function showPicker(cell)
 	local bags = pe.BagLogic.ReplacementBags(pe:ScanBags().items, cell.isReagent)
 	pickerMenu = pickerMenu or CreateFrame("Frame", "TradewrightBagPickerMenu", UIParent, "UIDropDownMenuTemplate")
 	UIDropDownMenu_Initialize(pickerMenu, function()
-		addMenuButton(#bags > 0 and "Replace with" or "No other bag for this slot in your bags")
+		addMenuButton(#bags > 0 and L["Replace with"] or L["No other bag for this slot in your bags"])
 		for _, item in ipairs(bags) do
 			addMenuButton(item.name, item.icon, function() equipFromBags(item, cell.inventorySlot) end)
 		end
 		if cell.equipped then
-			addMenuButton("Take this bag off", nil, function() PickupBagFromSlot(cell.inventorySlot) end)
+			addMenuButton(L["Take this bag off"], nil, function() PickupBagFromSlot(cell.inventorySlot) end)
 		end
 	end, "MENU")
 	ToggleDropDownMenu(1, nil, pickerMenu, cell, 0, 0)
@@ -133,7 +134,7 @@ local function cellName(info, link)
 	if info.bag == BACKPACK then
 		return "Backpack"
 	end
-	return link and string.match(link, "%[(.-)%]") or (info.isReagent and "No reagent bag" or "Empty")
+	return link and string.match(link, "%[(.-)%]") or (info.isReagent and L["No reagent bag"] or "Empty")
 end
 
 -- The inventory slot a bag is equipped in; the backpack has none.
@@ -159,7 +160,7 @@ function Tradewright:CreateBagRow(parent)
 	local theme = self:GetTheme()
 	local row = CreateFrame("Frame", nil, parent)
 	row:SetHeight(self.BAG_ROW_HEIGHT)
-	row.heading = self:CreateHeading(row, "Equipped bags")
+	row.heading = self:CreateHeading(row, L["Equipped bags"])
 	row.heading:SetPoint("TOPLEFT")
 	row.heading:SetPoint("TOPRIGHT")
 	row.divider = row:CreateTexture(nil, "ARTWORK")

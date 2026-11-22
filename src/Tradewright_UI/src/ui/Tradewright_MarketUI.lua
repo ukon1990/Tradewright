@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local MAX_ROWS = 500
 
 local DETAIL_WIDTH = 288
@@ -10,9 +11,9 @@ local PAD = 10
 local function usualPriceText(pe, rowData)
 	local usual = pe.GetUsualPrice and pe:GetUsualPrice(rowData.storageKey)
 	if not usual then
-		return "Needs scans on 5 days"
+		return L["Needs scans on 5 days"]
 	end
-	return string.format("%s over %d days", pe:FormatCopperFull(usual.usual), usual.days)
+	return string.format(L["%s over %d days"], pe:FormatCopperFull(usual.usual), usual.days)
 end
 
 local function usualRangeText(pe, rowData)
@@ -40,9 +41,9 @@ end
 local function sellsFactText(pe, rowData)
 	local perDay, confidence = sellsPerDay(pe, rowData)
 	if not perDay then
-		return "Needs two scans a day apart or less"
+		return L["Needs two scans a day apart or less"]
 	end
-	return sellsText(perDay) .. (confidence == "few" and " (few sales seen)" or "")
+	return sellsText(perDay) .. (confidence == "few" and L[" (few sales seen)"] or "")
 end
 
 local function supplyFactText(pe, rowData)
@@ -50,12 +51,12 @@ local function supplyFactText(pe, rowData)
 	if not days then
 		return "-"
 	end
-	return days < 1 and "under a day" or string.format("about %d days", math.floor(days + 0.5))
+	return days < 1 and L["under a day"] or string.format(L["about %d days"], math.floor(days + 0.5))
 end
 
 local function sellsColumn(pe)
 	return {
-		id = "sellsPerDay", label = "Sales a day", justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
+		id = "sellsPerDay", label = L["Sales a day"], justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
 		sortValue = function(row) return sellsPerDay(pe, row) or 0 end,
 		getText = function(row)
 			local perDay = sellsPerDay(pe, row)
@@ -74,8 +75,8 @@ local function usualColumns(pe)
 		local usual = usualOf(row)
 		return usual and row.price and (row.price - usual) / usual
 	end
-	return pe:MoneyColumn({ id = "usual", label = "Usual", width = 86, value = usualOf }), {
-		id = "vsUsual", label = "Vs usual", justifyH = "RIGHT", width = 64, sortable = true, defaultSort = "asc",
+	return pe:MoneyColumn({ id = "usual", label = L["Usual"], width = 86, value = usualOf }), {
+		id = "vsUsual", label = L["Vs usual"], justifyH = "RIGHT", width = 64, sortable = true, defaultSort = "asc",
 		sortValue = function(row) return vsUsual(row) or 0 end,
 		getText = function(row) return pe:FormatSignedPercent(vsUsual(row)) end,
 	}
@@ -101,22 +102,22 @@ local function priceGapText(pe, rowData)
 	if not gap then
 		return "-"
 	end
-	return string.format("+%d%% after %s for %s", math.floor(gap.gapPct * 100 + 0.5),
+	return string.format(L["+%d%% after %s for %s"], math.floor(gap.gapPct * 100 + 0.5),
 		pe:FormatNumberGrouped(gap.belowQty), pe:FormatCopperShort(gap.belowCost))
 end
 
-local WEEKDAYS = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" }
+local WEEKDAYS = { L["Mon"], L["Tue"], L["Wed"], L["Thu"], L["Fri"], L["Sat"], L["Sun"] }
 
 -- "Cheapest Wed -6%, dearest Tue +8% (6 weeks)", from the item's own scans.
 local function weekdayText(pe, rowData)
 	local pattern = pe.GetWeekdayPattern and pe:GetWeekdayPattern(rowData.storageKey)
 	if not pattern then
-		return "Not enough scans yet"
+		return L["Not enough scans yet"]
 	end
 	local function part(weekday)
 		return string.format("%s %+d%%", WEEKDAYS[weekday], math.floor(pattern.byDay[weekday] * 100 + 0.5))
 	end
-	return string.format("Cheapest %s, priciest %s (%d weeks)", part(pattern.cheapest), part(pattern.dearest), pattern.weeks)
+	return string.format(L["Cheapest %s, priciest %s (%d weeks)"], part(pattern.cheapest), part(pattern.dearest), pattern.weeks)
 end
 
 -- Key facts of one Market row for the item view.
@@ -124,13 +125,13 @@ local function marketFactRows(pe, rowData)
 	return {
 		{ "Lowest", pe:FormatCopperFull(rowData.price) },
 		{ "Highest", pe:FormatCopperFull(rowData.marketHigh or rowData.price) },
-		{ "Usual price", usualPriceText(pe, rowData) },
-		{ "Usual range", usualRangeText(pe, rowData) },
-		{ "Sales a day, estimated", sellsFactText(pe, rowData) },
-		{ "Listed supply lasts", supplyFactText(pe, rowData) },
-		{ "By weekday", weekdayText(pe, rowData) },
-		{ "Cheapest steps", priceStepsText(pe, rowData) },
-		{ "Biggest price jump", priceGapText(pe, rowData) },
+		{ L["Usual price"], usualPriceText(pe, rowData) },
+		{ L["Usual range"], usualRangeText(pe, rowData) },
+		{ L["Sales a day, estimated"], sellsFactText(pe, rowData) },
+		{ L["Listed supply lasts"], supplyFactText(pe, rowData) },
+		{ L["By weekday"], weekdayText(pe, rowData) },
+		{ L["Cheapest steps"], priceStepsText(pe, rowData) },
+		{ L["Biggest price jump"], priceGapText(pe, rowData) },
 		{ "Quantity", pe:FormatNumberGrouped(rowData.sampleSize or 0) },
 		{ "Listings", (tonumber(rowData.listingCount) or 0) > 0 and pe:FormatNumberGrouped(rowData.listingCount) or "-" },
 		{ "Seen", pe:FormatScanTimestamp(rowData.seenAt) },
@@ -152,18 +153,18 @@ function Tradewright:BuildMarketTableColumns()
 	local usual, vsUsual = usualColumns(pe)
 	return {
 		self:CreateItemColumn({
-			label = "Item", defaultSort = "asc",
+			label = L["Item"], defaultSort = "asc",
 			getItemID = function(row) return row.itemID end,
 			getName = function(row) return pe:GetItemDisplayName(row.itemID) end,
 			sortValue = function(row) return row.name or "" end,
 		}),
-		pe:MoneyColumn({ id = "price", label = "Lowest", width = 86 }),
-		pe:MoneyColumn({ id = "marketHigh", label = "Highest", width = 86, value = function(row) return row.marketHigh or row.price end }),
+		pe:MoneyColumn({ id = "price", label = L["Lowest"], width = 86 }),
+		pe:MoneyColumn({ id = "marketHigh", label = L["Highest"], width = 86, value = function(row) return row.marketHigh or row.price end }),
 		usual, vsUsual, sellsColumn(pe),
 		count("sampleSize", "Qty", "sampleSize", 60),
 		count("listingCount", "Listings", "listingCount", 60, true),
 		{
-			id = "seenAt", label = "Seen", justifyH = "RIGHT", width = 64, sortable = true, defaultSort = "desc", optional = true,
+			id = "seenAt", label = L["Seen"], justifyH = "RIGHT", width = 64, sortable = true, defaultSort = "desc", optional = true,
 			sortValue = function(row) return row.seenAt or 0 end,
 			getText = function(row) return pe:FormatShortTime(row.seenAt) end,
 		},
@@ -210,15 +211,15 @@ end
 local function createHistoryTable(pe, view)
 	view.historyTable = pe:CreateReusableTable(view, {
 		autoFitToScroll = true,
-		emptyTitle = "No history",
-		emptyHint = "Each full scan saves one hour of prices.",
+		emptyTitle = L["No history"],
+		emptyHint = L["Each full scan saves one hour of prices."],
 	})
 	view.historyTable.frame:SetPoint("TOPLEFT", view.graph, "BOTTOMLEFT", 0, -8)
 	view.historyTable.frame:SetPoint("BOTTOMRIGHT", view, "BOTTOMRIGHT", 0, 0)
 	view.historyTable:SetColumns({
-		{ id = "at", label = "Hour", width = 80, flex = 1, minWidth = 60, getText = function(p) return pe:FormatScanTimestamp(p.at) end },
-		{ id = "last", label = "Price", width = 78, justifyH = "RIGHT", getText = function(p) return pe:FormatCopperShort(p.last or p.avg or p.min) end },
-		{ id = "qty", label = "Qty", width = 52, justifyH = "RIGHT", getText = function(p) return pe:FormatNumberGrouped(p.qty or 0) end },
+		{ id = "at", label = L["Hour"], width = 80, flex = 1, minWidth = 60, getText = function(p) return pe:FormatScanTimestamp(p.at) end },
+		{ id = "last", label = L["Price"], width = 78, justifyH = "RIGHT", getText = function(p) return pe:FormatCopperShort(p.last or p.avg or p.min) end },
+		{ id = "qty", label = L["Qty"], width = 52, justifyH = "RIGHT", getText = function(p) return pe:FormatNumberGrouped(p.qty or 0) end },
 	})
 end
 
@@ -245,7 +246,7 @@ function Tradewright:CreateMarketHistoryView(parent, opts)
 	view.graph = self:CreateTimeSeriesGraph(view, {
 		showTitle = false,
 		plotHeight = opts.plotHeight or 96,
-		emptyText = "No price history for this range yet. Run a full scan at the auction house.",
+		emptyText = L["No price history for this range yet. Run a full scan at the auction house."],
 		yFormatter = function(v) return pe:FormatCopperShort(v) end,
 	})
 	view.graph:SetPoint("TOPLEFT", graphHeading, "BOTTOMLEFT", 0, -6)
@@ -258,7 +259,7 @@ function Tradewright:CreateMarketHistoryView(parent, opts)
 	function view:ShowRow(rowData)
 		if self.header then
 			self.header:SetItem(rowData.itemID, rowData.name or pe:GetItemDisplayName(rowData.itemID),
-				string.format("Item %s · %s", tostring(rowData.itemID or "?"), rowData.scope == "commodity" and "commodity" or "item"))
+				string.format(L["Item %s · %s"], tostring(rowData.itemID or "?"), rowData.scope == "commodity" and "commodity" or "item"))
 		end
 		self.facts:SetRows(marketFactRows(pe, rowData))
 		local series, recent = pe:BuildMarketChartSeries(pe:GetMarketHistoryPoints(rowData.storageKey))
@@ -308,16 +309,16 @@ function Tradewright:CreateMarketToolbar(panel)
 	panel.toolbar:SetPoint("TOPRIGHT")
 	panel.toolbar:SetHeight(26)
 	panel.qualityDropdown = self:CreateMarketFilterDropdown(panel.toolbar, "qualities", {
-		width = 128, allLabel = "Any quality", getOptions = function() return pe:GetQualityFilterOptions() end })
+		width = 128, allLabel = L["Any quality"], getOptions = function() return pe:GetQualityFilterOptions() end })
 	panel.qualityDropdown:SetPoint("RIGHT")
-	panel.subclassDropdown = self:CreateMarketFilterDropdown(panel.toolbar, "subclasses", { width = 150, allLabel = "All subclasses" })
-	panel.classDropdown = self:CreateMarketFilterDropdown(panel.toolbar, "classes", { width = 150, allLabel = "All classes",
+	panel.subclassDropdown = self:CreateMarketFilterDropdown(panel.toolbar, "subclasses", { width = 150, allLabel = L["All subclasses"] })
+	panel.classDropdown = self:CreateMarketFilterDropdown(panel.toolbar, "classes", { width = 150, allLabel = L["All classes"],
 		setSelection = function(selection)
 			filters.classes = selection
 			filters.subclasses = {}
 		end })
 	self:ChainLeft({ panel.qualityDropdown, panel.subclassDropdown, panel.classDropdown }, 8)
-	self.ui.marketSearchBox = self:CreateSearchBox(panel.toolbar, "Search the last scan", function()
+	self.ui.marketSearchBox = self:CreateSearchBox(panel.toolbar, L["Search the last scan"], function()
 		pe:RefreshMarketTab()
 	end)
 	self.ui.marketSearchBox:SetPoint("LEFT", 6, 0)
@@ -346,22 +347,22 @@ function Tradewright:CreateMarketFilterRow(panel)
 	row:SetPoint("TOPRIGHT", panel.toolbar, "BOTTOMRIGHT", 0, -8)
 	row:SetHeight(26)
 	panel.filterRow = row
-	panel.ownedOnly = self:CreateCheckbox(row, "Only items I own", function(checked)
+	panel.ownedOnly = self:CreateCheckbox(row, L["Only items I own"], function(checked)
 		filters.ownedOnly = checked
 		pe:OnMarketFilterChanged()
 	end)
 	panel.ownedOnly:SetPoint("LEFT")
 	panel.priceLabel = self:CreateText(row, "GameFontHighlightSmall", "textMuted")
 	panel.priceLabel:SetPoint("LEFT", panel.ownedOnly, "RIGHT", 16, 0)
-	panel.priceLabel:SetText("Lowest price")
-	panel.minGold = self:CreateMarketPriceBox(row, "Min g", "minGold")
+	panel.priceLabel:SetText(L["Lowest price"])
+	panel.minGold = self:CreateMarketPriceBox(row, L["Min g"], "minGold")
 	panel.minGold:SetPoint("LEFT", panel.priceLabel, "RIGHT", 12, 0)
 	panel.priceDash = self:CreateText(row, "GameFontHighlightSmall", "textMuted")
 	panel.priceDash:SetPoint("LEFT", panel.minGold, "RIGHT", 10, 0)
 	panel.priceDash:SetText("to")
-	panel.maxGold = self:CreateMarketPriceBox(row, "Max g", "maxGold")
+	panel.maxGold = self:CreateMarketPriceBox(row, L["Max g"], "maxGold")
 	panel.maxGold:SetPoint("LEFT", panel.priceDash, "RIGHT", 12, 0)
-	panel.resetFilters = self:CreateButton(row, "Reset filters", function() pe:ResetMarketFilters() end, { small = true })
+	panel.resetFilters = self:CreateButton(row, L["Reset filters"], function() pe:ResetMarketFilters() end, { small = true })
 	panel.resetFilters:SetPoint("LEFT", panel.maxGold, "RIGHT", 14, 0)
 	panel.scanBadge = self:CreateBadge(row)
 	panel.scanBadge:SetPoint("RIGHT")
@@ -375,7 +376,7 @@ function Tradewright:CreateMarketDetailCard(panel)
 	panel.detailCard:SetWidth(DETAIL_WIDTH)
 	panel.detailEmpty = self:CreateEmptyState(panel.detailCard)
 	panel.detailEmpty:SetAllPoints()
-	panel.detailEmpty:SetMessage("Select an item", "Click a row to see its prices and hourly history from past scans.")
+	panel.detailEmpty:SetMessage(L["Select an item"], L["Click a row to see its prices and hourly history from past scans."])
 	panel.detailBody = self:CreateMarketHistoryView(panel.detailCard)
 	panel.detailBody:SetPoint("TOPLEFT", PAD, -PAD)
 	panel.detailBody:SetPoint("BOTTOMRIGHT", -PAD, PAD)
@@ -397,8 +398,8 @@ function Tradewright:CreateMarketTable(panel)
 	local pe, ui = self, self.ui
 	local marketTable = self:CreateReusableTable(panel, {
 		footer = true,
-		emptyTitle = "No prices yet",
-		emptyHint = "Open the auction house and run a full scan.",
+		emptyTitle = L["No prices yet"],
+		emptyHint = L["Open the auction house and run a full scan."],
 		isRowSelected = function(rowData)
 			return rowData and rowData.storageKey ~= nil and rowData.storageKey == ui.marketSelectedStorageKey
 		end,
@@ -411,8 +412,8 @@ function Tradewright:CreateMarketTable(panel)
 		end,
 		onRowEnter = function(rowFrame, rowData)
 			pe:ShowItemRowTooltip(rowFrame, rowData and rowData.itemID, {
-				{ "Highest listing", pe:FormatCopperShort(rowData and (rowData.marketHigh or rowData.price)) },
-			}, "Click for history · Shift-click to link")
+				{ L["Highest listing"], pe:FormatCopperShort(rowData and (rowData.marketHigh or rowData.price)) },
+			}, L["Click for history · Shift-click to link"])
 		end,
 		onRowLeave = function() GameTooltip:Hide() end,
 		onRowClick = function(_, rowData, _, tableWidget) pe:OnMarketRowClick(panel, rowData, tableWidget) end,
@@ -581,21 +582,21 @@ end
 function Tradewright:RefreshMarketScanBadge(panel)
 	local lastScanAt = self.GetLastFullAuctionScanAt and self:GetLastFullAuctionScanAt()
 	if lastScanAt then
-		panel.scanBadge:SetBadge("Full scan " .. self:FormatScanTimestamp(lastScanAt), "accent")
+		panel.scanBadge:SetBadge(L["Full scan "] .. self:FormatScanTimestamp(lastScanAt), "accent")
 	else
-		panel.scanBadge:SetBadge("No full scan yet", "warning")
+		panel.scanBadge:SetBadge(L["No full scan yet"], "warning")
 	end
 end
 
 -- Empty-state and footer texts: an empty table means "no prices" before any scan, else "nothing matches".
 function Tradewright:RefreshMarketTableTexts(marketTable, shownCount, totalCount)
 	if totalCount > 0 then
-		marketTable:SetEmptyText("Nothing matches", "Change the search or press Reset filters.")
+		marketTable:SetEmptyText(L["Nothing matches"], L["Change the search or press Reset filters."])
 	else
-		marketTable:SetEmptyText("No prices yet", "Open the auction house and run a full scan.")
+		marketTable:SetEmptyText(L["No prices yet"], L["Open the auction house and run a full scan."])
 	end
-	marketTable:SetFooterText(string.format("%s of %s items", self:FormatNumberGrouped(shownCount), self:FormatNumberGrouped(totalCount)),
-		"Works away from the auction house")
+	marketTable:SetFooterText(string.format(L["%s of %s items"], self:FormatNumberGrouped(shownCount), self:FormatNumberGrouped(totalCount)),
+		L["Works away from the auction house"])
 end
 
 -- The shown row with the selected storage key, or nil when the filters hide it.

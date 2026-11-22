@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Inventory table columns: their definitions, the saved column order and which columns are shown.
 
 -- Fixed column widths: money columns fit a short amount such as "1,240[g] 35[s]".
@@ -59,10 +60,10 @@ end
 
 local function sellsPerDayColumn(pe)
 	return {
-		id = "sellsPerDay", label = "Sales a day", optional = true, justifyH = "RIGHT", width = COL.sellsPerDay, minWidth = 56, flex = 0,
+		id = "sellsPerDay", label = L["Sales a day"], optional = true, justifyH = "RIGHT", width = COL.sellsPerDay, minWidth = 56, flex = 0,
 		sortable = true, defaultSort = "desc", defaultVisible = false,
-		tooltipTitle = "Sales a day, estimated",
-		tooltipText = "From how the listed quantity changes between your scans. It runs high: cancelled and expired auctions count too.",
+		tooltipTitle = L["Sales a day, estimated"],
+		tooltipText = L["From how the listed quantity changes between your scans. It runs high: cancelled and expired auctions count too."],
 		sortValue = function(row) return sellsPerDay(pe, row) or -1 end,
 		getText = function(row)
 			local perDay = sellsPerDay(pe, row)
@@ -73,13 +74,13 @@ end
 
 -- An optional copper column that never shrinks below MONEY_MIN_WIDTH.
 local MONEY_COLUMN_TIPS = {
-	currentAh = "Lowest price in your latest auction house scan.",
-	lastSeen = "The latest price seen in the chosen time range.",
-	avgSeen = "Average of the prices seen in the chosen time range.",
-	avgCraft = "Average reagent cost to craft one, in the chosen time range.",
-	lastCraft = "Reagent cost to craft one at the latest prices.",
-	profitUnit = "What one earns after the auction cut, minus its craft cost.",
-	profitStack = "Profit each, times the quantity you own.",
+	currentAh = L["Lowest price in your latest auction house scan."],
+	lastSeen = L["The latest price seen in the chosen time range."],
+	avgSeen = L["Average of the prices seen in the chosen time range."],
+	avgCraft = L["Average reagent cost to craft one, in the chosen time range."],
+	lastCraft = L["Reagent cost to craft one at the latest prices."],
+	profitUnit = L["What one earns after the auction cut, minus its craft cost."],
+	profitStack = L["Profit each, times the quantity you own."],
 }
 
 function Tradewright:InventoryMoneyColumn(id, label, field, defaultVisible)
@@ -95,7 +96,7 @@ function Tradewright:InventoryStockColumns()
 	local pe = self
 	return {
 		pe:CreateItemColumn({
-			label = "Item",
+			label = L["Item"],
 			defaultSort = "asc",
 			getItemID = function(row) return row.itemID end,
 			getName = function(row) return pe:GetItemDisplayName(row.itemID) .. pe:GetRankMarkup(row.rankIndex) end,
@@ -103,22 +104,22 @@ function Tradewright:InventoryStockColumns()
 			sortValue = function(row) return row.name or "" end,
 		}),
 		{
-			id = "qty", label = "Qty", justifyH = "RIGHT", width = COL.qty, minWidth = 40, flex = 0,
+			id = "qty", label = L["Qty"], justifyH = "RIGHT", width = COL.qty, minWidth = 40, flex = 0,
 			sortable = true, defaultSort = "desc", defaultVisible = true,
 			sortValue = function(row) return row.total or 0 end,
 			getText = function(row) return pe:FormatNumberGrouped(row.total or 0) end,
 		},
 		{
-			id = "holders", label = "Characters", optional = true,
+			id = "holders", label = L["Characters"], optional = true,
 			dropFirst = true, -- first column to go when the window is narrow
-			tooltipTitle = "Characters",
-			tooltipText = "Who holds the item in bags and bank, most first. Hover a row for the full list.",
+			tooltipTitle = L["Characters"],
+			tooltipText = L["Who holds the item in bags and bank, most first. Hover a row for the full list."],
 			width = COL.holders, minWidth = 100, flex = 0, sortable = true, defaultSort = "desc", defaultVisible = true,
 			sortValue = function(row) return #(row.holders or {}) end,
 			getText = function(row) return holdersText(pe, row) end,
 		},
 		{
-			id = "loc", label = "Bags / bank", optional = true, justifyH = "RIGHT", width = COL.loc, minWidth = 56, flex = 0,
+			id = "loc", label = L["Bags / bank"], optional = true, justifyH = "RIGHT", width = COL.loc, minWidth = 56, flex = 0,
 			sortable = true, defaultSort = "desc", defaultVisible = false,
 			compare = function(left, right)
 				return compareTriple({ left.bags, left.bank, left.warband }, { right.bags, right.bank, right.warband })
@@ -131,16 +132,16 @@ end
 function Tradewright:InventoryMarketColumns()
 	local pe = self
 	return {
-		pe:InventoryMoneyColumn("currentAh", "Current AH", "currentAhCopper", true),
-		pe:InventoryMoneyColumn("lastSeen", "Last AH", "lastObservedPrice", false),
-		pe:InventoryMoneyColumn("avgSeen", "Avg AH", "avgObservedPrice", false),
-		pe:InventoryMoneyColumn("avgCraft", "Avg craft", "avgCraftCost", true),
-		pe:InventoryMoneyColumn("lastCraft", "Last craft", "lastCraftCost", false),
-		pe:InventoryMoneyColumn("profitUnit", "Profit each", "profitCopperPerUnit", true),
-		pe:InventoryMoneyColumn("profitStack", "Profit, all", "profitCopperStack", false),
+		pe:InventoryMoneyColumn("currentAh", L["Current AH"], "currentAhCopper", true),
+		pe:InventoryMoneyColumn("lastSeen", L["Last AH"], "lastObservedPrice", false),
+		pe:InventoryMoneyColumn("avgSeen", L["Avg AH"], "avgObservedPrice", false),
+		pe:InventoryMoneyColumn("avgCraft", L["Avg craft"], "avgCraftCost", true),
+		pe:InventoryMoneyColumn("lastCraft", L["Last craft"], "lastCraftCost", false),
+		pe:InventoryMoneyColumn("profitUnit", L["Profit each"], "profitCopperPerUnit", true),
+		pe:InventoryMoneyColumn("profitStack", L["Profit, all"], "profitCopperStack", false),
 		sellsPerDayColumn(pe),
 		{
-			id = "seenAt", label = "Seen", optional = true, justifyH = "RIGHT", width = COL.seenAt, minWidth = 88, flex = 0,
+			id = "seenAt", label = L["Seen"], optional = true, justifyH = "RIGHT", width = COL.seenAt, minWidth = 88, flex = 0,
 			sortable = true, defaultSort = "desc", defaultVisible = false,
 			sortValue = function(row) return row.currentAhAt or 0 end,
 			getText = function(row) return pe:FormatShortTime(row.currentAhAt) end,

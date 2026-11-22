@@ -1,5 +1,6 @@
 local Tradewright = select(2, ...)
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Opportunities tab: one table and side pane, switched between lists (views).
 -- Each view lives in Tradewright_OpportunityViews.lua and supplies its rows, columns and side-pane text.
 
@@ -24,11 +25,11 @@ end
 
 -- Puts the selected row's suggested quantity in the auction house cart; sits above "Open in auction house".
 local function createAddToCartButton(pe, panel, card)
-	local button = pe:CreateButton(card.body, "Add to cart", function()
+	local button = pe:CreateButton(card.body, L["Add to cart"], function()
 		local row = panel.selected
 		if row and pe.AddAuctionCartItem then
 			pe:AddAuctionCartItem(row.itemID, row.buyQty or 1, row.price, currentView(pe).label)
-			card.openHint:SetText(string.format("Added %s to the cart.", pe:FormatNumberGrouped(row.buyQty or 1)))
+			card.openHint:SetText(string.format(L["Added %s to the cart."], pe:FormatNumberGrouped(row.buyQty or 1)))
 		end
 	end)
 	button:SetPoint("BOTTOMLEFT", card.open, "TOPLEFT", 0, 4)
@@ -51,13 +52,13 @@ local function buildDetail(pe, panel)
 	card.facts:SetPoint("TOPLEFT", card.header, "BOTTOMLEFT", 0, -10)
 	card.facts:SetPoint("TOPRIGHT", card.header, "BOTTOMRIGHT", 0, -10)
 	card.facts:SetHeight(10 * 16)
-	card.riskHeading = pe:CreateHeading(card.body, "What could go wrong")
+	card.riskHeading = pe:CreateHeading(card.body, L["What could go wrong"])
 	card.riskHeading:SetPoint("TOPLEFT", card.facts, "BOTTOMLEFT", 0, -10)
 	card.riskHeading:SetPoint("TOPRIGHT", card.facts, "BOTTOMRIGHT", 0, -10)
 	card.risk = pe:CreateParagraph(card.body)
 	card.risk:SetPoint("TOPLEFT", card.riskHeading, "BOTTOMLEFT", 0, -6)
 	card.risk:SetPoint("TOPRIGHT", card.riskHeading, "BOTTOMRIGHT", 0, -6)
-	card.open = pe:CreateButton(card.body, "Open in auction house", function()
+	card.open = pe:CreateButton(card.body, L["Open in auction house"], function()
 		if panel.selected then
 			pe:OpenItemInAuctionHouse(panel.selected.itemID)
 		end
@@ -88,7 +89,7 @@ local function showDetail(pe, panel, row)
 	card.open:SetEnabled(ahOpen == true)
 	-- Only lists of things to buy fill the cart; "Sell now" rows are items the player owns.
 	card.addToCart:SetShown(row.buyQty ~= nil or row.cost ~= nil)
-	card.openHint:SetText(ahOpen and "" or "Open the auction house to go to this item.")
+	card.openHint:SetText(ahOpen and "" or L["Open the auction house to go to this item."])
 end
 
 local function buildTable(pe, panel)
@@ -103,7 +104,7 @@ local function buildTable(pe, panel)
 		end,
 		onRowEnter = function(rowFrame, row)
 			pe:ShowItemRowTooltip(rowFrame, row and row.itemID, currentView(pe).tooltipPairs(pe, row),
-				"Click for the sums · Right-click to open in the auction house · Shift-click to link")
+				L["Click for the sums · Right-click to open in the auction house · Shift-click to link"])
 		end,
 		onRowLeave = function()
 			GameTooltip:Hide()
@@ -223,7 +224,7 @@ function OpportunitiesTab:Refresh()
 	panel.table:SetLoading(not rows and pe.MarketInsightsLoadingNote or nil)
 	if not rows then
 		panel.table:SetRows({})
-		panel.table:SetFooterText("Reading the last scan…", "")
+		panel.table:SetFooterText(L["Reading the last scan…"], "")
 		panel.table:Refresh()
 		return
 	end

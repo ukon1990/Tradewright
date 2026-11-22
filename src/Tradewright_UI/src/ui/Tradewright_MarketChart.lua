@@ -1,13 +1,14 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- The price chart of the Market item view: the last 48 scanned hours, or 14 or 90 days of daily prices
 -- with the usual price drawn as a flat line.
 
 local DAY = 24 * 3600
 local RANGES = {
-	{ id = "d90", label = "90 days", days = 90 },
-	{ id = "d14", label = "14 days", days = 14 },
-	{ id = "hours", label = "48 hours" },
+	{ id = "d90", label = L["90 days"], days = 90 },
+	{ id = "d14", label = L["14 days"], days = 14 },
+	{ id = "hours", label = L["48 hours"] },
 }
 
 local function rangeById(id)
@@ -54,7 +55,7 @@ end
 --- Heading above the Market item chart with its range buttons. Replaces the plain "Hourly price" heading.
 function Tradewright:CreateMarketChartHeading(view)
 	local pe = self
-	local heading = self:CreateHeading(view, "Price history")
+	local heading = self:CreateHeading(view, L["Price history"])
 	heading:SetPoint("TOPLEFT", view.facts, "BOTTOMLEFT", 0, -10)
 	view.rangeButtons = {}
 	local previous
@@ -89,7 +90,7 @@ function Tradewright:ShowMarketChart(view, rowData, hourly)
 	local series = hourly
 	if range.days then
 		series = dailySeries(self, rowData.storageKey, range.days)
-		view.graph:SetSeriesLabels("Daily price", "Usual price", "Listed", "Above usual")
+		view.graph:SetSeriesLabels(L["Daily price"], L["Usual price"], "Listed", L["Above usual"])
 	else
 		view.graph:SetSeriesLabels("Price", "Lowest", "Listed", nil)
 	end

@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Selecting stacks in the bag window. The slots are the game's item buttons and
 -- must keep running the game's own click code, so nothing here touches them: a transparent catcher
 -- lies over the slots while Ctrl or Alt is held, or while something is selected, and takes the
@@ -40,7 +41,7 @@ end
 function Tradewright:ArmBagDestroy(items)
 	local queue, total, refused = self.BagLogic.DestroyQueue(items, auctionPriceOf)
 	if #queue == 0 then
-		self:PrintMessage("Nothing to destroy. " .. self.BAG_DESTROY_KEPT_TEXT)
+		self:PrintMessage(L["Nothing to destroy. "] .. self.BAG_DESTROY_KEPT_TEXT)
 		return
 	end
 	selection = {}
@@ -48,7 +49,7 @@ function Tradewright:ArmBagDestroy(items)
 		selection[self.BagLogic.SlotKey(item.bag, item.slot)] = item.itemID
 	end
 	armed = true
-	self:PrintMessage(string.format("Destroying %d stacks worth %s: click \"Destroy next\" once for each. It cannot be undone.%s",
+	self:PrintMessage(string.format(L["Destroying %d stacks worth %s: click \"Destroy next\" once for each. It cannot be undone.%s"],
 		#queue, self:FormatCopperShort(total), refused > 0 and (" " .. self.BAG_DESTROY_KEPT_TEXT) or ""))
 	self:RefreshBagWindow()
 end
@@ -116,13 +117,13 @@ function Tradewright:CreateBagSelectBar(f)
 	bar:SetHeight(self:GetTheme().size.control)
 	bar.text = self:CreateText(bar, "GameFontHighlightSmall", "gold")
 	bar.text:SetPoint("LEFT", bar, "LEFT", 4, 0)
-	bar.clear = self:CreateButton(bar, "Clear", function() pe:ClearBagSelection() end, { small = true })
+	bar.clear = self:CreateButton(bar, L["Clear"], function() pe:ClearBagSelection() end, { small = true })
 	bar.clear:SetPoint("RIGHT", bar, "RIGHT", 0, 0)
-	bar.actions = self:CreateButton(bar, "Actions", function(button)
+	bar.actions = self:CreateButton(bar, L["Actions"], function(button)
 		pe:ShowBagActionMenu(picked, f.view.place, button)
-	end, { small = true, tooltip = "Move, sell or destroy the selected stacks. Right-clicking a slot opens the same menu." })
+	end, { small = true, tooltip = L["Move, sell or destroy the selected stacks. Right-clicking a slot opens the same menu."] })
 	bar.actions:SetPoint("RIGHT", bar.clear, "LEFT", -GAP, 0)
-	bar.destroy = self:CreateButton(bar, "Destroy next", destroyNext, { small = true })
+	bar.destroy = self:CreateButton(bar, L["Destroy next"], destroyNext, { small = true })
 	bar.destroy:SetPoint("RIGHT", bar.actions, "LEFT", -GAP, 0)
 	bar:Hide()
 	f.catcher = createCatcher(f)
@@ -134,10 +135,10 @@ function Tradewright:RefreshBagSelectBar(bar)
 	local left = armed and #self.BagLogic.DestroyQueue(picked, auctionPriceOf) or 0
 	armed = left > 0
 	bar:SetShown(#picked > 0)
-	bar.text:SetText(string.format("%d selected", #picked))
+	bar.text:SetText(string.format(L["%d selected"], #picked))
 	bar.destroy:SetShown(armed)
 	if armed then
-		self:SetButtonLabel(bar.destroy, string.format("Destroy next (%d left)", left), true)
+		self:SetButtonLabel(bar.destroy, string.format(L["Destroy next (%d left)"], left), true)
 	end
 	return #picked > 0
 end

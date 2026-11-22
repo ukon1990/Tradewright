@@ -82,6 +82,8 @@ Words in text the player sees (labels, tooltips, chat, Help). Code identifiers m
 
 A column tooltip title repeats the column label.
 
+Text the player sees goes through the locale table: `L["Sales a day"]`, with the English text as the key (see `src/Tradewright/src/core/Tradewright_Locale.lua`). Write whole sentences with `%s` / `%d` rather than joining pieces, so a translation can change the word order. Never compare against a translated text or use it as a key: keep an id beside it. Names the game already translates (item quality, expansions, classes) come from the game. Debug output, export errors and slash command syntax stay plain English.
+
 
 ## Comments
 

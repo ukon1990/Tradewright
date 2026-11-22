@@ -1,5 +1,6 @@
 local addonName, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Vendor buy window: opens beside the merchant window when this vendor sells reagents the cart still
 -- needs. Each row has the amount to buy (the missing amount by default) and a Buy button; nothing is
 -- bought without a click.
@@ -42,7 +43,7 @@ local function createRow(pe, f, index)
 	row:SetPoint("RIGHT", -PAD, 0)
 	row.icon = pe:CreateItemIcon(row, 24)
 	row.icon:SetPoint("LEFT")
-	row.buy = pe:CreateButton(row, "Buy", function() buy(pe, row) end, { small = true, width = 48 })
+	row.buy = pe:CreateButton(row, L["Buy"], function() buy(pe, row) end, { small = true, width = 48 })
 	row.buy:SetPoint("RIGHT")
 	row.amount = createAmountBox(pe, row)
 	row.amount:SetPoint("RIGHT", row.buy, "LEFT", -6, 0)
@@ -66,8 +67,8 @@ local function buildChrome(pe, f)
 	close:SetScript("OnClick", function() f:Hide() end)
 	f.title = pe:CreateText(f, "GameFontNormalLarge", "gold")
 	f.title:SetPoint("LEFT", f, "TOPLEFT", PAD, -(header / 2) - 1)
-	f.title:SetText("Reagents sold here")
-	f.buyAll = pe:CreateButton(f, "Buy all", function()
+	f.title:SetText(L["Reagents sold here"])
+	f.buyAll = pe:CreateButton(f, L["Buy all"], function()
 		for _, row in ipairs(f.rows) do
 			if row:IsShown() then
 				buy(pe, row)
@@ -109,8 +110,8 @@ local function fillRow(pe, row, offer)
 	end
 	row.icon:SetItem(offer.itemID, offer.icon)
 	row.name:SetText(offer.name or pe:GetItemDisplayName(offer.itemID))
-	row.detail:SetText(string.format("Need %s · %s each%s", pe:FormatNumberGrouped(offer.need),
-		pe:FormatCopperShort(math.ceil(offer.price)), offer.stock and (" · " .. offer.stock .. " in stock") or ""))
+	row.detail:SetText(string.format(L["Need %s · %s each%s"], pe:FormatNumberGrouped(offer.need),
+		pe:FormatCopperShort(math.ceil(offer.price)), offer.stock and (" · " .. offer.stock .. L[" in stock"]) or ""))
 	-- Keep what the player is typing; otherwise follow the amount still missing.
 	if not row.amount:HasFocus() then
 		row.amount:SetText(tostring(offer.need))
@@ -129,7 +130,7 @@ function Tradewright:RefreshVendorBuyTotal()
 			total = total + amountOf(row) * row.offer.price
 		end
 	end
-	f.total:SetText("Total " .. self:FormatCopperShort(math.ceil(total)))
+	f.total:SetText(L["Total "] .. self:FormatCopperShort(math.ceil(total)))
 	f.buyAll:SetEnabled(total > 0)
 end
 

@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Income (Overview → Income): where gold comes from and where it goes. Headline numbers,
 -- gold in and out per day, one row per source, and the item types that earn at the auction house.
 -- Sources come from the gold-change log, the auction split from sale origins.
@@ -11,7 +12,7 @@ local CHART_HEIGHT = 190
 local TOP_ITEMS = 3
 
 local SOURCE_LABELS = {
-	vendor = "Vendor", quest = "Quests", loot = "Looted coin", auction = "Auction house",
+	vendor = "Vendor", quest = "Quests", loot = L["Looted coin"], auction = L["Auction house"],
 	mail = "Mail", trade = "Trade", other = "Other",
 }
 local ORIGINS = { { "crafted", "Crafted" }, { "resold", "Resold" }, { "farmed", "Farmed" }, { "unknown", "Unknown" } }
@@ -54,35 +55,35 @@ local function sourceColumns(pe)
 	local signed = function(copper) return pe:FormatSignedMoney(copper) end
 	return {
 		textColumn("label", "Source"),
-		pe:MoneyColumn({ id = "gain", label = "In", width = 78 }),
-		pe:MoneyColumn({ id = "spend", label = "Out", width = 78, optional = true }),
-		pe:NumberColumn({ id = "net", label = "Net", width = 84, format = signed }),
-		pe:PercentColumn({ id = "share", label = "Share", width = 52 }),
-		pe:NumberColumn({ id = "perDay", label = "A day", width = 78, format = signed, optional = true }),
+		pe:MoneyColumn({ id = "gain", label = L["In"], width = 78 }),
+		pe:MoneyColumn({ id = "spend", label = L["Out"], width = 78, optional = true }),
+		pe:NumberColumn({ id = "net", label = L["Net"], width = 84, format = signed }),
+		pe:PercentColumn({ id = "share", label = L["Share"], width = 52 }),
+		pe:NumberColumn({ id = "perDay", label = L["A day"], width = 78, format = signed, optional = true }),
 	}
 end
 
 local function typeColumns(pe)
 	return {
-		textColumn("label", "Item type"),
-		pe:NumberColumn({ id = "sales", label = "Sales", width = 46, format = function(n) return pe:FormatNumberGrouped(n) end }),
-		pe:MoneyColumn({ id = "net", label = "Earned", width = 78 }),
-		pe:PercentColumn({ id = "share", label = "Share", width = 52 }),
-		pe:PercentColumn({ id = "sellRate", label = "Sold", width = 46, optional = true }),
+		textColumn("label", L["Item type"]),
+		pe:NumberColumn({ id = "sales", label = L["Sales"], width = 46, format = function(n) return pe:FormatNumberGrouped(n) end }),
+		pe:MoneyColumn({ id = "net", label = L["Earned"], width = 78 }),
+		pe:PercentColumn({ id = "share", label = L["Share"], width = 52 }),
+		pe:PercentColumn({ id = "sellRate", label = L["Sold"], width = 46, optional = true }),
 	}
 end
 
 -- The auction row's tooltip: how its sales split by where the items came from.
 local function sourceTooltip(pe, dash, row)
 	local lines = {
-		{ "Gold in", pe:FormatCopperFull(row.gain) },
-		{ "Gold out", pe:FormatCopperFull(row.spend) },
+		{ L["Gold in"], pe:FormatCopperFull(row.gain) },
+		{ L["Gold out"], pe:FormatCopperFull(row.spend) },
 	}
 	if row.source == "auction" then
 		for _, origin in ipairs(ORIGINS) do
 			local copper = dash.split[origin[1]]
 			if copper and copper > 0 then
-				lines[#lines + 1] = { "Sales, " .. origin[2]:lower(), pe:FormatCopperFull(copper) }
+				lines[#lines + 1] = { L["Sales, "] .. origin[2]:lower(), pe:FormatCopperFull(copper) }
 			end
 		end
 	end
@@ -95,7 +96,7 @@ local function typeTooltip(pe, row)
 		items[#items + 1] = { key = key, net = net }
 	end
 	table.sort(items, function(a, b) return a.net > b.net end)
-	local lines = { { "Sold", string.format("%d sales, %d items", row.sales, row.units) } }
+	local lines = { { "Sold", string.format(L["%d sales, %d items"], row.sales, row.units) } }
 	for index = 1, math.min(TOP_ITEMS, #items) do
 		local key = items[index].key
 		local name = type(key) == "number" and pe:GetItemDisplayName(key) or tostring(key)
@@ -124,7 +125,7 @@ local function createHeader(pe, dash)
 	dash.statsRow:SetPoint("TOPRIGHT")
 	dash.statsRow:SetHeight(STATS_HEIGHT)
 	dash.stats = pe:CreateStats(dash.statsRow, { "earned", "spent", "net", "biggestSource" })
-	dash.chart = pe:CreateDashboardCard(dash, "Gold in and out, per day")
+	dash.chart = pe:CreateDashboardCard(dash, L["Gold in and out, per day"])
 	dash.chart:SetPoint("TOPLEFT", dash.statsRow, "BOTTOMLEFT", 0, -GAP)
 	dash.chart:SetPoint("TOPRIGHT", dash.statsRow, "BOTTOMRIGHT", 0, -GAP)
 	dash.chart:SetHeight(CHART_HEIGHT)
@@ -135,38 +136,38 @@ local function createHeader(pe, dash)
 		width = 150,
 		getChoices = function() return pe:GetInventoryCharacterFilterOptions() end,
 		onChanged = function() dash:Refresh() end,
-		tooltip = "Whose gold to show",
+		tooltip = L["Whose gold to show"],
 	})
 	dash.character:SetPoint("RIGHT", dash.periodButtons[#dash.periodButtons], "LEFT", -8, 0)
 	dash.chart.heading:SetPoint("RIGHT", dash.character, "LEFT", -8, 0)
 	dash.graph = pe:CreateTimeSeriesGraph(dash.chart, {
 		showTitle = false,
 		plotHeight = CHART_HEIGHT - 76,
-		emptyText = "No gold has come in or gone out in this period yet.",
+		emptyText = L["No gold has come in or gone out in this period yet."],
 	})
 	dash.graph:SetPoint("BOTTOMLEFT", dash.chart, "BOTTOMLEFT", PAD, 8)
 	dash.graph:SetYFormatter(function(value) return pe:FormatCopperShort(tonumber(value) or 0) end)
-	dash.graph:SetSeriesLabels("Gold in", "Gold out", nil, "Net")
+	dash.graph:SetSeriesLabels(L["Gold in"], L["Gold out"], nil, "Net")
 end
 
 local function createTables(pe, dash)
 	dash.sources = pe:CreateTableCard(dash, {
-		title = "Where gold comes from",
+		title = L["Where gold comes from"],
 		columns = sourceColumns(pe),
 		table = incomeTableOptions({
 			sortKey = "gain",
-			emptyTitle = "No gold tracked yet",
-			emptyHint = "Gold is tracked from the moment this view was added: sell, loot, quest, collect mail.",
+			emptyTitle = L["No gold tracked yet"],
+			emptyHint = L["Gold is tracked from the moment this view was added: sell, loot, quest, collect mail."],
 			tooltip = function(row) return sourceTooltip(pe, dash, row) end,
 		}),
 	})
 	dash.types = pe:CreateTableCard(dash, {
-		title = "What item types earn",
+		title = L["What item types earn"],
 		columns = typeColumns(pe),
 		table = incomeTableOptions({
 			sortKey = "net",
-			emptyTitle = "No auction sales in this period",
-			emptyHint = "A sale is added when you collect its gold from the mailbox.",
+			emptyTitle = L["No auction sales in this period"],
+			emptyHint = L["A sale is added when you collect its gold from the mailbox."],
 			tooltip = function(row) return typeTooltip(pe, row) end,
 		}),
 	})
@@ -175,15 +176,15 @@ end
 local function refreshStats(pe, dash, summary, rows)
 	local money = function(copper) return pe:FormatCopperShort(copper) end
 	local biggest = rows[1] and rows[1].gain > 0 and rows[1] or nil
-	dash.stats.earned:SetValues("Earned", money(summary.gain), string.format("%s a day", money(summary.gain / dash.spanDays)),
+	dash.stats.earned:SetValues(L["Earned"], money(summary.gain), string.format(L["%s a day"], money(summary.gain / dash.spanDays)),
 		summary.gain > 0 and "success" or nil)
-	dash.stats.spent:SetValues("Spent", money(summary.spend), string.format("%s a day", money(summary.spend / dash.spanDays)))
+	dash.stats.spent:SetValues(L["Spent"], money(summary.spend), string.format(L["%s a day"], money(summary.spend / dash.spanDays)))
 	local net = summary.gain - summary.spend
-	dash.stats.net:SetValues("Net", pe:FormatSignedMoney(net), "Earned minus spent", net >= 0 and "success" or "danger")
+	dash.stats.net:SetValues(L["Net"], pe:FormatSignedMoney(net), L["Earned minus spent"], net >= 0 and "success" or "danger")
 	if biggest then
-		dash.stats.biggestSource:SetValues("Biggest source", biggest.label, string.format("%s of all gold in", pe:FormatPercent(biggest.share)), "gold")
+		dash.stats.biggestSource:SetValues(L["Biggest source"], biggest.label, string.format(L["%s of all gold in"], pe:FormatPercent(biggest.share)), "gold")
 	else
-		dash.stats.biggestSource:SetValues("Biggest source", "-", "Nothing earned in this period")
+		dash.stats.biggestSource:SetValues(L["Biggest source"], "-", L["Nothing earned in this period"])
 	end
 end
 

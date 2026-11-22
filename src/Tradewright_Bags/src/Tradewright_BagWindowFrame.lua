@@ -1,14 +1,15 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Bag window frame: builds the window once (header, tabs, toolbar, scrolling body, footer) and keeps its position.
 
 local FRAME_NAME = "TradewrightBagsWindow"
 local PAD = 12
 local WHEEL_STEP = 40
 local MODES = {
-	{ key = "bags", label = "Bags" }, { key = "bank", label = "Bank" }, { key = "both", label = "Both" }, { key = "log", label = "Log" },
+	{ key = "bags", label = L["Bags"] }, { key = "bank", label = L["Bank"] }, { key = "both", label = L["Both"] }, { key = "log", label = L["Log"] },
 }
-local EMPTY_TEXT = "Nothing saved here yet. The bank is saved when this character opens it."
+local EMPTY_TEXT = L["Nothing saved here yet. The bank is saved when this character opens it."]
 -- Shared with the bag window drawing code.
 Tradewright.BagWindowLayout = { pad = PAD, modes = MODES, emptyText = EMPTY_TEXT }
 
@@ -57,15 +58,15 @@ local function buildHeader(pe, f)
 	addDivider(pe, header, "BOTTOM")
 	f.close = pe:CreateIconButton(header, "close", function() f:Hide() end)
 	f.close:SetPoint("RIGHT", header, "RIGHT", -6, 0)
-	f.rowButton = pe:CreateButton(header, "Equipped bags", function()
+	f.rowButton = pe:CreateButton(header, L["Equipped bags"], function()
 		pe:SetSetting("bags.showBagRow", not pe:GetSetting("bags.showBagRow", false))
 		pe:RefreshBagWindow()
-	end, { small = true, tooltip = "Show your equipped bags, to swap or replace them." })
+	end, { small = true, tooltip = L["Show your equipped bags, to swap or replace them."] })
 	f.rowButton:SetPoint("RIGHT", f.close, "LEFT", -6, 0)
 	f.stashButton = pe:CreateBagStashButton(header, f.rowButton)
 	f.title = pe:CreateText(header, "GameFontNormalLarge", "gold")
 	f.title:SetPoint("LEFT", header, "LEFT", PAD - 1, -1)
-	f.title:SetText("Bags")
+	f.title:SetText(L["Bags"])
 	f.meta = pe:CreateText(header, "GameFontHighlightSmall", "textMuted", "RIGHT")
 	f.meta:SetPoint("RIGHT", f.rowButton, "LEFT", -8, 0)
 	f.meta:SetPoint("LEFT", f.title, "RIGHT", 8, 0)
@@ -95,7 +96,7 @@ local function buildToolbar(pe, f)
 			pe:RefreshBagWindow()
 		end)
 	end
-	f.search = pe:CreateSearchBox(f.toolbar, "Name, type, quality…", function(text)
+	f.search = pe:CreateSearchBox(f.toolbar, L["Name, type, quality…"], function(text)
 		f.view.query = text
 		pe:RefreshBagWindow()
 	end)
@@ -151,12 +152,12 @@ local function showGoldTooltip(owner)
 	local muted, text, gold = theme.textMuted, theme.textPrimary, theme.gold
 	local rows, total = pe.BagLogic.GoldByCharacter(pe:GetBagHoldings())
 	GameTooltip:SetOwner(owner, "ANCHOR_TOPRIGHT")
-	GameTooltip:SetText("Gold", gold.r, gold.g, gold.b)
+	GameTooltip:SetText(L["Gold"], gold.r, gold.g, gold.b)
 	for _, row in ipairs(rows) do
 		GameTooltip:AddDoubleLine(row.name, pe:FormatCopperShort(row.money), muted.r, muted.g, muted.b, text.r, text.g, text.b)
 	end
 	GameTooltip:AddLine(" ")
-	GameTooltip:AddDoubleLine("All characters", pe:FormatCopperShort(total), gold.r, gold.g, gold.b, gold.r, gold.g, gold.b)
+	GameTooltip:AddDoubleLine(L["All characters"], pe:FormatCopperShort(total), gold.r, gold.g, gold.b, gold.r, gold.g, gold.b)
 	GameTooltip:Show()
 end
 

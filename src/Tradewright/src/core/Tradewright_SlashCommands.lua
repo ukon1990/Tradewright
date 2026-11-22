@@ -1,15 +1,16 @@
 -- The /tradewright slash commands, status line, and Export() — the export run that slash and the Export tab start.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Export scope -> what the progress window calls it. Profession slices fill in the profession at %s.
 local EXPORT_SCOPE_LABELS = {
-	account = "account", account_summary = "account summary",
-	professions = "professions (character)", professions_compact = "professions compact",
-	professions_recipes = "professions recipes (character)", professions_talents = "professions talents (character)",
-	inventory = "inventory (character)", inventory_compact = "inventory compact",
-	auction_snapshot = "auction snapshot", auction_history = "auction history", crafting_costs = "crafting costs",
-	spec_catalog = "spec catalog (Midnight bundled)", character_meta = "character meta",
-	profession = "profession (%s)", profession_recipes = "profession recipes (%s)", profession_talents = "profession talents (%s)",
+	account = "account", account_summary = L["account summary"],
+	professions = L["professions (character)"], professions_compact = L["professions compact"],
+	professions_recipes = L["professions recipes (character)"], professions_talents = L["professions talents (character)"],
+	inventory = L["inventory (character)"], inventory_compact = L["inventory compact"],
+	auction_snapshot = L["auction snapshot"], auction_history = L["auction history"], crafting_costs = L["crafting costs"],
+	spec_catalog = L["spec catalog (Midnight bundled)"], character_meta = L["character meta"],
+	profession = L["profession (%s)"], profession_recipes = L["profession recipes (%s)"], profession_talents = L["profession talents (%s)"],
 }
 
 local function exportScopeLabel(scope, identifier)
@@ -20,7 +21,7 @@ end
 function Tradewright:Export(scope, identifier)
 	local st = self:GetState()
 	if st.exportJsonBusy then
-		self:PrintMessage("Export already in progress.")
+		self:PrintMessage(L["Export already in progress."])
 		return
 	end
 
@@ -32,13 +33,13 @@ function Tradewright:Export(scope, identifier)
 	local msGather = debugprofilestop()
 	if not exportData then
 		self:HideExportProgress()
-		self:PrintMessage(err or "Nothing to export.")
+		self:PrintMessage(err or L["Nothing to export."])
 		return
 	end
 
 	local meta = exportData.meta or {}
 	st.exportJsonBusy = true
-	self:SetExportProgressPhase("Packing the export", true)
+	self:SetExportProgressPhase(L["Packing the export"], true)
 	self:UpdateExportProgressSteps(1)
 	debugprofilestart()
 	local payload, encodeErr = self:BuildCompactExportPayload(exportData)
@@ -47,22 +48,22 @@ function Tradewright:Export(scope, identifier)
 	st.exportJsonBusy = false
 
 	if encodeErr or not payload then
-		self:PrintMessage("Package export failed: " .. tostring(encodeErr or "unknown error"))
+		self:PrintMessage(L["Package export failed: "] .. tostring(encodeErr or "unknown error"))
 		if dbg then
-			self:PrintMessage(string.format("Export timing: gather=%.1fms pack=%.1fms (failed)", msGather, msEncode))
+			self:PrintMessage(string.format(L["Export timing: gather=%.1fms pack=%.1fms (failed)"], msGather, msEncode))
 		end
 		return
 	end
 
 	if #payload > self.MAX_EXPORT_BYTES then
-		self:PrintMessage(string.format("Compressed export is %d bytes. Use a smaller scope if needed.", #payload))
+		self:PrintMessage(string.format(L["Compressed export is %d bytes. Use a smaller scope if needed."], #payload))
 	end
 
 	local savedOk = self:SaveExportToSavedVariables(payload, meta)
 	local unsavedHint
 	if not savedOk and #payload > self.MAX_SAVEDEXPORT_BYTES then
-		unsavedHint = string.format("Full compressed export was not saved (over %d byte SavedVariables limit). Try smaller scopes"
-			.. " such as professions_recipes, profession_talents, inventory, or a single profession.", self.MAX_SAVEDEXPORT_BYTES)
+		unsavedHint = string.format(L["Full compressed export was not saved (over %d byte SavedVariables limit). Try smaller scopes"]
+			.. L[" such as professions_recipes, profession_talents, inventory, or a single profession."], self.MAX_SAVEDEXPORT_BYTES)
 	end
 
 	debugprofilestart()
@@ -70,16 +71,16 @@ function Tradewright:Export(scope, identifier)
 	local msUi = debugprofilestop()
 
 	if dbg then
-		self:PrintMessage(string.format("Export timing: gather=%.1fms pack=%.1fms copyUI=%.1fms (package %d bytes)",
+		self:PrintMessage(string.format(L["Export timing: gather=%.1fms pack=%.1fms copyUI=%.1fms (package %d bytes)"],
 			msGather, msEncode, msUi, #payload))
 	end
 
 	local formatLabel = (meta and meta.format) or (type(payload) == "string" and payload:sub(1, 7) == "AHLUA1:" and "AHLUA1") or self.EXPORT_FORMAT or "AHCBOR1"
-	self:PrintMessage(string.format("Exported %s package (%d bytes, %s).", tostring(meta.scope or scope or "character"), #payload, formatLabel))
+	self:PrintMessage(string.format(L["Exported %s package (%d bytes, %s)."], tostring(meta.scope or scope or "character"), #payload, formatLabel))
 	if savedOk then
 		self:PrintMessage("Compressed export queued for SavedVariables — |cffffffff/reload|r or log out to write WTF\\Account\\…\\SavedVariables\\Tradewright.lua (TradewrightLastExport.payload).")
 	elseif #payload > self.MAX_SAVEDEXPORT_BYTES then
-		self:PrintMessage("SavedVariables copy skipped (compressed export still exceeds size limit).")
+		self:PrintMessage(L["SavedVariables copy skipped (compressed export still exceeds size limit)."])
 	end
 end
 
@@ -91,16 +92,16 @@ function Tradewright:PrintStatus()
 
 	if state.scanInProgress then
 		local currentName = state.currentProfession and state.currentProfession.professionName or "pending"
-		self:PrintMessage(string.format("Scanning %s. %d professions left.", currentName, #state.queue))
+		self:PrintMessage(string.format(L["Scanning %s. %d professions left."], currentName, #state.queue))
 		return
 	end
 
 	if not characterData then
-		self:PrintMessage("No saved scan for this character yet.")
+		self:PrintMessage(L["No saved scan for this character yet."])
 		return
 	end
 
-	self:PrintMessage(string.format("Last scan for %s finished at %s with %d professions.",
+	self:PrintMessage(string.format(L["Last scan for %s finished at %s with %d professions."],
 		characterKey,
 		date("%Y-%m-%d %H:%M:%S", characterData.scanFinishedAt or 0),
 		self:TableCount(characterData.professions)))
@@ -131,7 +132,7 @@ local function setInventoryBatchSize(self, arg)
 		return
 	end
 	self:SetSetting("capture.inventorySnapshotBatchSize", math.floor(size))
-	self:PrintMessage(string.format("Inventory snapshot batch size: %d.", self:GetSetting("capture.inventorySnapshotBatchSize", 0)))
+	self:PrintMessage(string.format(L["Inventory snapshot batch size: %d."], self:GetSetting("capture.inventorySnapshotBatchSize", 0)))
 end
 
 -- `/tradewright settings <sub> <arg>` (sub lower-cased) -> handler(self, arg).
@@ -156,13 +157,13 @@ end
 local function printAuctionStatus(self)
 	local enabled = self:GetSetting("auction.enabled", true)
 	local rows = self.BuildAuctionInventoryRows and self:BuildAuctionInventoryRows() or {}
-	self:PrintMessage(string.format("Auction data is %s. %d items in the sell list.", enabled and "on" or "off", #rows))
+	self:PrintMessage(string.format(L["Auction data is %s. %d items in the sell list."], enabled and "on" or "off", #rows))
 	return true
 end
 
 local function setAuctionModuleEnabled(self, enabled)
 	self:SetSetting("auction.enabled", enabled)
-	self:PrintMessage(enabled and "Auction data switched on." or "Auction data switched off.")
+	self:PrintMessage(enabled and L["Auction data switched on."] or L["Auction data switched off."])
 	return true
 end
 
@@ -170,12 +171,12 @@ local function refreshAuctionPrices(self, target)
 	target = string.lower(target)
 	if (target == "crafts" or target == "craft") and self.QueueCraftEconomyAuctionRefresh then
 		self:QueueCraftEconomyAuctionRefresh({})
-		self:PrintMessage("Checking craft prices.")
+		self:PrintMessage(L["Checking craft prices."])
 		return true
 	end
 	if self.BuildAuctionVisibleItemIDs and self.QueueVisibleAuctionRefresh then
 		self:QueueVisibleAuctionRefresh(self:BuildAuctionVisibleItemIDs())
-		self:PrintMessage("Checking the shown prices.")
+		self:PrintMessage(L["Checking the shown prices."])
 		return true
 	end
 	return false
@@ -213,28 +214,28 @@ function Tradewright:RunAuctionDumpSlash(mode)
 	mode = mode ~= "" and mode or "visible"
 	local dump = self:StartAuctionDump(mode) and self:GetState().auctionDump
 	if dump and dump.running == true then
-		self:PrintMessage(mode == "full" and "Full scan started." or "Saving the shown prices.")
+		self:PrintMessage(mode == "full" and L["Full scan started."] or L["Saving the shown prices."])
 	end
 end
 
 local SLASH_HELP_LINES = {
 	"/tw opens the window (/tradewright works too) | /tw scan: scan your professions | /tw status: the last scan"
-		.. " | /tw bags on|off: Tradewright bags | /twfarm start|pause|stop: run a farm | /tw docs: open Help",
+		.. L[" | /tw bags on|off: Tradewright bags | /twfarm start|pause|stop: run a farm | /tw docs: open Help"],
 	"Advanced: /tw debug [on|off|toggle] | /tw settings spectree on|off | recipeoutput on|off | invbatch <n>"
-		.. " | /tw auction status|enable|disable|refresh [crafts]|dump [visible|full] | /tw sources [seal]",
+		.. L[" | /tw auction status|enable|disable|refresh [crafts]|dump [visible|full] | /tw sources [seal]"],
 }
 
 -- Shown in help only while export is switched on; the format itself is described in docs/export-format.md.
 local EXPORT_HELP_LINES = {
 	"Export: /tw export … | /tw full (fresh scan, then full character export) | /tw dev export off",
 	"Export scopes: character | account | account_summary | professions | professions_recipes | professions_talents"
-		.. " | professions_compact | inventory | inventory_compact | auction_snapshot | auction_history | crafting_costs"
-		.. " | spec_catalog | meta | profession <id|name> | profession_recipes <id|name> | profession_talents <id|name>",
+		.. L[" | professions_compact | inventory | inventory_compact | auction_snapshot | auction_history | crafting_costs"]
+		.. L[" | spec_catalog | meta | profession <id|name> | profession_recipes <id|name> | profession_talents <id|name>"],
 }
 
 local EXPORT_USAGE = "Usage: /tw export [character|account|account_summary|professions|professions_recipes"
 	.. "|professions_talents|professions_compact|inventory|inventory_compact|auction_snapshot|auction_history|crafting_costs"
-	.. "|spec_catalog|meta|profession <id|name>|profession_recipes <id|name>|profession_talents <id|name>]"
+	.. L["|spec_catalog|meta|profession <id|name>|profession_recipes <id|name>|profession_talents <id|name>]"]
 
 -- `/tradewright export <arg>` (lower-cased) -> export scope.
 local EXPORT_SCOPE_BY_ARG = {
@@ -280,13 +281,13 @@ end
 
 function Tradewright:SetExportEnabled(enabled)
 	self:SetSetting("developer.export", enabled)
-	self:PrintMessage(enabled and "Export switched on: Export tab and /tw export." or "Export switched off.")
+	self:PrintMessage(enabled and L["Export switched on: Export tab and /tw export."] or L["Export switched off."])
 	if self.ApplyDashboardTabVisibility then
 		self:ApplyDashboardTabVisibility()
 	end
 end
 
-local EXPORT_OFF_HINT = "Export is switched off. Turn it on with /tw dev export on."
+local EXPORT_OFF_HINT = L["Export is switched off. Turn it on with /tw dev export on."]
 
 -- Runs `handler` only while export is switched on.
 local function whenExportEnabled(handler)
@@ -320,18 +321,18 @@ end
 
 local function clearDebugLog(self)
 	self:ClearDebugLog()
-	self:PrintMessage("Persistent debug log cleared.")
+	self:PrintMessage(L["Persistent debug log cleared."])
 end
 
 local function printDebugLogPath(self)
-	self:PrintMessage("Persistent debug log is saved in TradewrightDB.settings.debug.lines and written to"
+	self:PrintMessage(L["Persistent debug log is saved in TradewrightDB.settings.debug.lines and written to"]
 		.. " WTF\\Account\\...\\SavedVariables\\Tradewright.lua on /reload or logout.")
 end
 
 local function printDebugStatus(self)
 	self:InitDB()
 	local count = self.db and self.db.debug and self.db.debug.lines and #self.db.debug.lines or 0
-	self:PrintMessage(string.format("Debug logging: %s. Persistent lines buffered: %d.", self:IsDebugEnabled() and "on" or "off", count))
+	self:PrintMessage(string.format(L["Debug logging: %s. Persistent lines buffered: %d."], self:IsDebugEnabled() and "on" or "off", count))
 end
 
 local function toggleDebug(self)
@@ -404,5 +405,5 @@ function Tradewright:HandleSlash(input)
 		handler(self, rest)
 		return
 	end
-	self:PrintMessage("Unknown command. /tw help lists the commands.")
+	self:PrintMessage(L["Unknown command. /tw help lists the commands."])
 end

@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- The Tradewright block on the game's item tooltips: price and how fresh it is, how it compares
 -- with the usual price, how much is listed and what you own. Shift adds craft profit, who holds
 -- it, your rule, the vendor price, the recipes it is part of, how much of what you posted sold
@@ -212,7 +213,7 @@ local function withSaleRate(pe, pairs, itemID)
 	for i, pair in ipairs(pairs or {}) do
 		out[i] = pair
 	end
-	out[#out + 1] = { "You sold", pe.TooltipLogic.SaleRateText(rate) }
+	out[#out + 1] = { L["You sold"], pe.TooltipLogic.SaleRateText(rate) }
 	return out
 end
 

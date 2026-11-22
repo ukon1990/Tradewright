@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 --- Pure helpers for reagents that vendors sell: what they cost there, who sells them, the nearest
 --- seller and how to buy an amount. No WoW API.
 ---
@@ -9,8 +10,8 @@ local _, Tradewright = ...
 local VendorLogic = {}
 Tradewright.VendorLogic = VendorLogic
 
-local TAILOR, SMITH, ENGINEER = "tailoring and leatherworking suppliers", "blacksmithing suppliers", "engineering suppliers"
-local TRADE, ENCHANT, COOK = "trade goods vendors", "enchanting suppliers", "cooking suppliers"
+local TAILOR, SMITH, ENGINEER = L["tailoring and leatherworking suppliers"], L["blacksmithing suppliers"], L["engineering suppliers"]
+local TRADE, ENCHANT, COOK = L["trade goods vendors"], L["enchanting suppliers"], L["cooking suppliers"]
 
 -- { [itemID] = { price in copper, kind of vendor } }
 VendorLogic.KNOWN = {
@@ -137,7 +138,7 @@ function VendorLogic.Where(info)
 	end
 	local text = first.zone and first.zone ~= "" and (first.name .. " in " .. first.zone) or first.name
 	if #info.sellers > 1 then
-		text = text .. " and " .. (#info.sellers - 1) .. " more"
+		text = text .. L[" and "] .. (#info.sellers - 1) .. L[" more"]
 	end
 	return text
 end

@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Pure item-tooltip helpers: which lines the Tradewright block shows for an item, and who holds
 -- it. No WoW API here, so the offline tests can load this file on its own.
 local TooltipLogic = {}
@@ -35,12 +36,12 @@ end
 function TooltipLogic.AgeText(seconds)
 	seconds = math.max(0, tonumber(seconds) or 0)
 	if seconds < 3600 then
-		return string.format("%d min ago", math.max(1, math.floor(seconds / 60)))
+		return string.format(L["%d min ago"], math.max(1, math.floor(seconds / 60)))
 	end
 	if seconds < 2 * 86400 then
-		return string.format("%d h ago", math.floor(seconds / 3600))
+		return string.format(L["%d h ago"], math.floor(seconds / 3600))
 	end
-	return string.format("%d days ago", math.floor(seconds / 86400))
+	return string.format(L["%d days ago"], math.floor(seconds / 86400))
 end
 
 local function percentText(value)
@@ -104,7 +105,7 @@ end
 local function priceLine(lines, g, f)
 	local unit = g.price or g.estimate
 	if unit then
-		local trend = g.trend and ("  " .. percentText(g.trend) .. " usual") or ""
+		local trend = g.trend and ("  " .. percentText(g.trend) .. L[" usual"]) or ""
 		add(lines, "Price", f.money(unit) .. trend, trendTone(g.trend))
 	end
 end
@@ -127,7 +128,7 @@ local function listedLine(lines, g, f)
 	local value = f.number(g.listed)
 	if g.sellsPerDay then
 		local perDay = g.sellsPerDay >= 10 and f.number(g.sellsPerDay) or string.format("%.1f", g.sellsPerDay)
-		value = value .. SEP .. "~" .. perDay .. " sold/day"
+		value = value .. SEP .. "~" .. perDay .. L[" sold/day"]
 	end
 	add(lines, "Listed", value)
 end
@@ -140,12 +141,12 @@ local function ownedLine(lines, g, f)
 	local parts = { f.number(owned) }
 	local unit = g.price or g.estimate
 	if unit and owned > 0 then
-		parts[#parts + 1] = "worth " .. f.moneyShort(unit * owned)
+		parts[#parts + 1] = L["worth "] .. f.moneyShort(unit * owned)
 	end
 	if listed > 0 then
-		parts[#parts + 1] = f.number(listed) .. " listed"
+		parts[#parts + 1] = f.number(listed) .. L[" listed"]
 	end
-	add(lines, "You own", table.concat(parts, SEP))
+	add(lines, L["You own"], table.concat(parts, SEP))
 end
 
 local function ownerText(owner, f)
@@ -164,7 +165,7 @@ local function ownerLines(lines, g, f)
 		add(lines, owners[i].name, ownerText(owners[i], f))
 	end
 	if #owners > MAX_OWNER_LINES then
-		add(lines, "and " .. (#owners - MAX_OWNER_LINES) .. " more", "")
+		add(lines, L["and "] .. (#owners - MAX_OWNER_LINES) .. L[" more"], "")
 	end
 end
 
@@ -172,10 +173,10 @@ local function craftLines(lines, g, f)
 	if not g.craftCost then
 		return
 	end
-	add(lines, "Craft cost", f.money(g.craftCost))
+	add(lines, L["Craft cost"], f.money(g.craftCost))
 	if g.profit then
 		local value = (g.profit >= 0 and "+" or "") .. f.money(g.profit) .. "  " .. percentText(g.margin or 0)
-		add(lines, "Profit after cut", value, g.profit >= 0 and "success" or "danger")
+		add(lines, L["Profit after cut"], value, g.profit >= 0 and "success" or "danger")
 	end
 end
 
@@ -186,24 +187,24 @@ local function recipeLines(lines, g)
 	end
 	if use.usedCount > 0 then
 		local recipes = use.usedCount .. " " .. Tradewright:Plural(use.usedCount, "recipe")
-		add(lines, "Used in", string.format("%s (%s)", recipes, table.concat(use.professions, ", ")))
+		add(lines, L["Used in"], string.format("%s (%s)", recipes, table.concat(use.professions, ", ")))
 	end
 	if #use.crafters > 0 then
-		add(lines, "Crafted by", table.concat(use.crafters, ", "))
+		add(lines, L["Crafted by"], table.concat(use.crafters, ", "))
 	end
 end
 
 --- "62% of posted" for a sale rate of 0.62 (sold / posted).
 function TooltipLogic.SaleRateText(rate)
-	return string.format("%.0f%% of posted", rate * 100)
+	return string.format(L["%.0f%% of posted"], rate * 100)
 end
 
 local function ownSalesLines(lines, g, f)
 	if g.saleRate then
-		add(lines, "You sold", TooltipLogic.SaleRateText(g.saleRate))
+		add(lines, L["You sold"], TooltipLogic.SaleRateText(g.saleRate))
 	end
 	if g.avgSale and g.avgSale > 0 then
-		add(lines, "Your average sale", f.money(g.avgSale))
+		add(lines, L["Your average sale"], f.money(g.avgSale))
 	end
 end
 
@@ -211,12 +212,12 @@ local function detailLines(lines, g, f)
 	craftLines(lines, g, f)
 	ownerLines(lines, g, f)
 	if g.rule and g.rule.ignore then
-		add(lines, "Rule", "never posted in bulk")
+		add(lines, "Rule", L["never posted in bulk"])
 	elseif g.rule and (tonumber(g.rule.reserveQty) or 0) > 0 then
-		add(lines, "Rule", "keep " .. f.number(g.rule.reserveQty))
+		add(lines, "Rule", L["keep "] .. f.number(g.rule.reserveQty))
 	end
 	if g.vendor and not g.vendorBeatsAh then
-		add(lines, "Vendor pays", f.money(g.vendor))
+		add(lines, L["Vendor pays"], f.money(g.vendor))
 	end
 	recipeLines(lines, g)
 	ownSalesLines(lines, g, f)
@@ -250,7 +251,7 @@ function TooltipLogic.BuildLines(g, opts)
 	listedLine(lines, g, opts)
 	ownedLine(lines, g, opts)
 	if g.vendorBeatsAh then
-		add(lines, "Vendor pays", opts.money(g.vendor) .. SEP .. "more than the AH", "warning")
+		add(lines, L["Vendor pays"], opts.money(g.vendor) .. SEP .. L["more than the AH"], "warning")
 	end
 	if opts.detail then
 		detailLines(lines, g, opts)

@@ -1,10 +1,11 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Building blocks of the dashboard tabs: inset cards, cards holding a table, stat tiles, the period
 -- switch, and dropdowns bound to a setting or to a filter selection.
 
 local PAD = 10
-local PERIODS = { { 7, "7 days" }, { 30, "30 days" }, { 90, "90 days" }, { 0, "All time" } }
+local PERIODS = { { 7, L["7 days"] }, { 30, L["30 days"] }, { 90, L["90 days"] }, { 0, L["All time"] } }
 
 local function hideTooltip()
 	GameTooltip:Hide()

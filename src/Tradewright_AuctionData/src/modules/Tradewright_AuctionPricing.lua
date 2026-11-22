@@ -1,6 +1,7 @@
 -- Prices read from the store: the AH price of an item, reagent and craft cost estimates, and how fresh a scan is.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local shared = Tradewright.AuctionShared
 local normalizeItemID = shared.normalizeItemID
 local shallowCopy = shared.shallowCopy
@@ -63,7 +64,7 @@ function Tradewright:FormatAuctionScanAge(ts)
 	end
 	local sec = math.max(0, Tradewright:Now() - ts)
 	if sec < 120 then
-		return "just now"
+		return L["just now"]
 	end
 	if sec < 86400 then
 		return Tradewright.TooltipLogic.AgeText(sec)
@@ -170,7 +171,7 @@ function Tradewright:ResolveCurrentAuctionPrice(itemID, opts)
 	if nativePrice and nativePrice > 0 then
 		if self:IsDebugEnabled() then
 			self:DebugLog("AH", "ResolveCurrentAuctionPrice", {
-				string.format("itemID=%d source=%s price=%s", itemID, tostring(nativeSource), tostring(nativePrice)),
+				string.format(L["itemID=%d source=%s price=%s"], itemID, tostring(nativeSource), tostring(nativePrice)),
 			})
 		end
 		return nativePrice, nativeSource or "native", nativeSeenAt
@@ -181,7 +182,7 @@ function Tradewright:ResolveCurrentAuctionPrice(itemID, opts)
 		if snapshotPrice and snapshotPrice > 0 then
 			if self:IsDebugEnabled() then
 				self:DebugLog("AH", "ResolveCurrentAuctionPrice", {
-					string.format("itemID=%d source=snapshot price=%s", itemID, tostring(snapshotPrice)),
+					string.format(L["itemID=%d source=snapshot price=%s"], itemID, tostring(snapshotPrice)),
 				})
 			end
 			return snapshotPrice, "snapshot", summary and tonumber(summary.lastSeenAt) or nil
@@ -197,7 +198,7 @@ function Tradewright:ResolveCurrentAuctionPrice(itemID, opts)
 		if fallbackPrice and fallbackPrice > 0 then
 			if self:IsDebugEnabled() then
 				self:DebugLog("AH", "ResolveCurrentAuctionPrice", {
-					string.format("itemID=%d source=fallback(%s) price=%s", itemID, tostring(fallbackSource), tostring(fallbackPrice)),
+					string.format(L["itemID=%d source=fallback(%s) price=%s"], itemID, tostring(fallbackSource), tostring(fallbackPrice)),
 				})
 			end
 			return fallbackPrice, "fallback:" .. tostring(fallbackSource or "market"), Tradewright:Now()

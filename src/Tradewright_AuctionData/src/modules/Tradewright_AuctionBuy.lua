@@ -1,6 +1,7 @@
 -- Finding an item in the open auction house for the player to buy: browse search, result pick and buy quantity.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local shared = Tradewright.AuctionShared
 local normalizeItemID = shared.normalizeItemID
 
@@ -14,7 +15,7 @@ function Tradewright:PauseAuctionScanForManualBuy(reason)
 	if state.auctionRefreshRunning == true and state.auctionRefreshPaused ~= true then
 		state.auctionRefreshPaused = true
 		self:DebugLog("AH", "scan paused for manual buy", {
-			string.format("reason=%s mode=%s itemID=%s", tostring(reason or "manual_buy"), tostring(state.auctionScanMode), tostring(state.auctionActiveItemID)),
+			string.format(L["reason=%s mode=%s itemID=%s"], tostring(reason or "manual_buy"), tostring(state.auctionScanMode), tostring(state.auctionActiveItemID)),
 		})
 		if self.RefreshAuctionHousePanel then
 			self:RefreshAuctionHousePanel()
@@ -166,13 +167,13 @@ function Tradewright:OpenItemInAuctionHouse(itemID)
 	local itemName = desc and desc.name
 	if not itemName or itemName == "" then
 		self:GetItemDisplayName(itemID) -- asks the client to load the item for the next click
-		self:PrintMessage("Item info is still loading. Click again in a moment.")
+		self:PrintMessage(L["Item info is still loading. Click again in a moment."])
 		return false
 	end
 	self:PauseAuctionScanForManualBuy("dashboard_buy")
 	local ok = self:OpenAuctionBrowseSearchForItem(itemID, itemName, 1) or searchClassicAuctionFrame(itemName)
 	if not ok then
-		self:PrintMessage(string.format("Could not search the auction house for %s right now. Try again in a moment.", itemName))
+		self:PrintMessage(string.format(L["Could not search the auction house for %s right now. Try again in a moment."], itemName))
 	end
 	return ok
 end
@@ -217,33 +218,33 @@ function Tradewright:TryBuyAuctionCartRow(row)
 	local itemID = normalizeItemID(row and row.itemID or self:GetState().auctionCartSelectedItemID)
 	local quantity = math.max(1, math.floor(tonumber(row and row.quantityToBuy) or 0))
 	if not itemID or quantity <= 0 then
-		self:PrintMessage("Select a cart row with something left to buy.")
+		self:PrintMessage(L["Select a cart row with something left to buy."])
 		return false
 	end
 	self:GetState().auctionCartSelectedItemID = itemID
 	local function attemptPurchase()
 		local searchAggregate = self:GetLiveAuctionSearchAggregate(itemID, nil)
 		if not searchAggregate then
-			self:PrintMessage("The search for that reagent has no results yet. Try again in a moment.")
+			self:PrintMessage(L["The search for that reagent has no results yet. Try again in a moment."])
 			return false
 		end
 		if searchAggregate.kind ~= "commodity" then
-			self:PrintMessage("Only stackable reagents can be bought from here. The search is open in the auction house.")
+			self:PrintMessage(L["Only stackable reagents can be bought from here. The search is open in the auction house."])
 			return false
 		end
 		if not (C_AuctionHouse and C_AuctionHouse.StartCommoditiesPurchase and C_AuctionHouse.ConfirmCommoditiesPurchase) then
-			self:PrintMessage("Buying from the cart is not available here.")
+			self:PrintMessage(L["Buying from the cart is not available here."])
 			return false
 		end
 		if not pcall(C_AuctionHouse.StartCommoditiesPurchase, itemID, quantity) then
-			self:PrintMessage("Could not start the purchase. Try again.")
+			self:PrintMessage(L["Could not start the purchase. Try again."])
 			return false
 		end
 		if not pcall(C_AuctionHouse.ConfirmCommoditiesPurchase, itemID, quantity) then
-			self:PrintMessage("The purchase was not confirmed. Try again.")
+			self:PrintMessage(L["The purchase was not confirmed. Try again."])
 			return false
 		end
-		self:PrintMessage(string.format("Buying %s × %s.", self:GetItemDisplayName(itemID), self:FormatNumberGrouped(quantity)))
+		self:PrintMessage(string.format(L["Buying %s × %s."], self:GetItemDisplayName(itemID), self:FormatNumberGrouped(quantity)))
 		self:ScheduleAuctionCartPurchaseRefresh()
 		C_Timer.After(SEARCH_AGAIN_AFTER_BUY_SEC, function()
 			Tradewright:SearchAuctionCartRow({ itemID = itemID })

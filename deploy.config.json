@@ -1,6 +1,6 @@
 {
   "source": "src",
-  "exclude": ["tests", "docs", ".agents", ".claude", "*.md", ".*"],
+  "exclude": ["tests", "docs", ".agents", ".claude", "*.md", ".*", "Tradewright_Locale_Template.lua"],
   "include": ["LICENSE*", "COPYING*", "NOTICE*", "THIRD-PARTY-NOTICES*"],
   "retired": [
     "AuctionHelper",

@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Crafts tab details: the selected craft's header, badge, facts and materials, and the row tooltip.
 
 local MAX_TOOLTIP_REAGENTS = 6
@@ -9,19 +10,19 @@ local PAD = LAYOUT.pad
 function Tradewright:GetCraftMaterialColumns()
 	local pe = self
 	return {
-		self:CreateItemColumn({ label = "Reagent", sortable = false,
+		self:CreateItemColumn({ label = L["Reagent"], sortable = false,
 			getItemID = function(slot) return slot.itemID end,
 			getName = function(slot) return pe:GetItemDisplayName(slot.itemID) end }),
-		{ id = "need", label = "Need", width = 38, justifyH = "RIGHT", getText = function(slot) return tostring(slot.need) end },
-		{ id = "have", label = "Have", width = 40, justifyH = "RIGHT", tooltipTitle = "Have", tooltipText = "On all your characters.",
+		{ id = "need", label = L["Need"], width = 38, justifyH = "RIGHT", getText = function(slot) return tostring(slot.need) end },
+		{ id = "have", label = L["Have"], width = 40, justifyH = "RIGHT", tooltipTitle = L["Have"], tooltipText = L["On all your characters."],
 			getText = function(slot)
 				if slot.have == nil then
 					return "-"
 				end
 				return slot.have < slot.need and pe:Colorize(tostring(slot.have), "danger") or tostring(slot.have)
 			end },
-		{ id = "from", label = "From", width = 50, getText = function(slot) return slot.from or "-" end },
-		pe:MoneyColumn({ id = "cost", label = "Cost", width = 70, sortable = false }),
+		{ id = "from", label = L["From"], width = 50, getText = function(slot) return slot.from or "-" end },
+		pe:MoneyColumn({ id = "cost", label = L["Cost"], width = 70, sortable = false }),
 	}
 end
 
@@ -43,13 +44,13 @@ function Tradewright:CreateCraftsDetailActions(panel)
 	self:SkinEditBox(quantity)
 	quantity:SetScript("OnEnterPressed", function(box) box:ClearFocus() end)
 	panel.detailQueueQty = quantity
-	panel.detailQueueRemove = self:CreateButton(panel.detailActions, "Remove", function()
+	panel.detailQueueRemove = self:CreateButton(panel.detailActions, L["Remove"], function()
 		if ui.craftsSelectedRowData then
 			pe:RemoveCraftQueueLinesForOpportunityRow(ui.craftsSelectedRowData)
 		end
 	end)
 	panel.detailQueueRemove:SetPoint("RIGHT")
-	panel.detailQueueAddN = self:CreateButton(panel.detailActions, "Add to queue", function()
+	panel.detailQueueAddN = self:CreateButton(panel.detailActions, L["Add to queue"], function()
 		local count = tonumber(quantity:GetText()) or 1
 		if ui.craftsSelectedRowData and count > 0 then
 			pe:AddCraftWithMaterialCraftsToQueue(ui.craftsSelectedRowData, count)
@@ -66,7 +67,7 @@ function Tradewright:CreateCraftsDetailsView(panel)
 	panel.detailsView:SetPoint("BOTTOMRIGHT", panel.detailCard, "BOTTOMRIGHT", -PAD, PAD)
 	panel.detailsEmpty = self:CreateEmptyState(panel.detailsView)
 	panel.detailsEmpty:SetAllPoints()
-	panel.detailsEmpty:SetMessage("Select a craft", "Click a row to see its reagents and profit.")
+	panel.detailsEmpty:SetMessage(L["Select a craft"], L["Click a row to see its reagents and profit."])
 	panel.detailsBody = CreateFrame("Frame", nil, panel.detailsView)
 	panel.detailsBody:SetAllPoints()
 	panel.detailHeader = self:CreateDetailHeader(panel.detailsBody)
@@ -75,14 +76,14 @@ function Tradewright:CreateCraftsDetailsView(panel)
 	panel.detailFacts = self:CreateKeyValueList(panel.detailsBody)
 	panel.detailFacts:SetPoint("TOPLEFT", panel.detailHeader, "BOTTOMLEFT", 0, -10)
 	panel.detailFacts:SetPoint("TOPRIGHT", panel.detailHeader, "BOTTOMRIGHT", 0, -10)
-	panel.materialsHeading = self:CreateHeading(panel.detailsBody, "Reagents per craft")
+	panel.materialsHeading = self:CreateHeading(panel.detailsBody, L["Reagents per craft"])
 	panel.materialsHeading:SetPoint("TOPLEFT", panel.detailFacts, "BOTTOMLEFT", 0, -10)
 	panel.materialsHeading:SetPoint("TOPRIGHT", panel.detailFacts, "BOTTOMRIGHT", 0, -10)
 	self:CreateCraftsDetailActions(panel)
 	panel.materialsTable = self:CreateReusableTable(panel.detailsBody, {
 		autoFitToScroll = true,
-		emptyTitle = "No reagents",
-		emptyHint = "This recipe has no saved reagents.",
+		emptyTitle = L["No reagents"],
+		emptyHint = L["This recipe has no saved reagents."],
 	})
 	panel.materialsTable.frame:SetPoint("TOPLEFT", panel.materialsHeading, "BOTTOMLEFT", 0, -6)
 	panel.materialsTable.frame:SetPoint("BOTTOMRIGHT", panel.detailActions, "TOPRIGHT", 0, 10)
@@ -101,12 +102,12 @@ function Tradewright:CreateCraftsDetailCard(panel)
 		panel.detailCard:SetClipsChildren(true)
 	end
 	local inner = width - PAD * 2
-	panel.detailsTab = self:CreateButton(panel.detailCard, "Details", function()
+	panel.detailsTab = self:CreateButton(panel.detailCard, L["Details"], function()
 		ui.craftsDetailView = "details"
 		pe:LayoutCraftsPanel(panel)
 	end, { small = true, width = math.floor(inner / 2) + 1 })
 	panel.detailsTab:SetPoint("TOPLEFT", PAD, -PAD)
-	panel.queueTab = self:CreateButton(panel.detailCard, "Queue", function()
+	panel.queueTab = self:CreateButton(panel.detailCard, L["Queue"], function()
 		ui.craftsDetailView = "queue"
 		pe:LayoutCraftsPanel(panel)
 	end, { small = true, width = inner - math.floor(inner / 2) })
@@ -120,17 +121,17 @@ end
 -- Header badge: no price, can craft, out of reach, or how many materials are still missing.
 function Tradewright:CraftBadge(row, evaluation)
 	if not row.matCost then
-		return "No price", "warning"
+		return L["No price"], "warning"
 	elseif row.canCraftNow then
-		return "Can craft", "success"
+		return L["Can craft"], "success"
 	elseif row.qualityReachable == false then
-		return "Out of reach", "warning"
+		return L["Out of reach"], "warning"
 	end
 	local missing = 0
 	for _, slot in ipairs(evaluation.reagentPlan or {}) do
 		missing = missing + math.max(0, tonumber(slot.purchasedQuantity) or 0)
 	end
-	return missing > 0 and ("Missing " .. missing) or "Missing", "danger"
+	return missing > 0 and (L["Missing "] .. missing) or "Missing", "danger"
 end
 
 local function moneyOrDash(pe, copper)
@@ -143,12 +144,12 @@ end
 
 function Tradewright:CraftDetailFacts(row, evaluation)
 	return {
-		{ string.format("Sale after %.3g%% cut", self:GetAuctionCut() * 100), moneyOrDash(self, row.saleNet) },
-		{ "Reagents at market price", moneyOrDash(self, row.matCost) },
-		{ "Profit per craft", self:FormatSignedMoney(row.profit) },
+		{ string.format(L["Sale after %.3g%% cut"], self:GetAuctionCut() * 100), moneyOrDash(self, row.saleNet) },
+		{ L["Reagents at market price"], moneyOrDash(self, row.matCost) },
+		{ L["Profit per craft"], self:FormatSignedMoney(row.profit) },
 		{ "Return", percentOrDash(row.roi) },
-		{ "Reagents you already own", percentOrDash(evaluation.coverage and evaluation.coverage * 100) },
-		{ "Still to buy", moneyOrDash(self, row.outOfPocketMatCost) },
+		{ L["Reagents you already own"], percentOrDash(evaluation.coverage and evaluation.coverage * 100) },
+		{ L["Still to buy"], moneyOrDash(self, row.outOfPocketMatCost) },
 	}
 end
 
@@ -172,7 +173,7 @@ end
 
 -- An item picked elsewhere that is not in the craft list: its name and a hint, nothing else.
 function Tradewright:RenderCraftsItemOnly(panel, itemID)
-	panel.detailHeader:SetItem(itemID, self:GetItemDisplayName(itemID), "Not in the current list. Check the filters.")
+	panel.detailHeader:SetItem(itemID, self:GetItemDisplayName(itemID), L["Not in the current list. Check the filters."])
 	panel.detailHeader.badge:SetBadge(nil)
 	panel.detailFacts:SetRows({})
 	panel.materialsTable:SetRows({})
@@ -182,7 +183,7 @@ end
 function Tradewright:RenderCraftRow(panel, row)
 	local evaluation = self:GetBestCraftEvaluation(row) or {}
 	local crafter = row.bestCharacterKey and self:GetCrafterName(row.bestCharacterKey) or "-"
-	panel.detailHeader:SetItem(row.outputItemID, self:GetCraftRowName(row), (row.professionName or "?") .. " · best crafter " .. crafter, row.outputIcon)
+	panel.detailHeader:SetItem(row.outputItemID, self:GetCraftRowName(row), (row.professionName or "?") .. L[" · best crafter "] .. crafter, row.outputIcon)
 	panel.detailHeader.badge:SetBadge(self:CraftBadge(row, evaluation))
 	panel.detailFacts:SetRows(self:CraftDetailFacts(row, evaluation))
 	panel.materialsTable:SetRows(materialRows(evaluation))
@@ -224,11 +225,11 @@ function Tradewright:ShowCraftRowTooltip(rowFrame, row)
 	local evaluation = self:GetBestCraftEvaluation(row) or {}
 	local lines = {
 		{ "Recipe", row.recipeName or "-" },
-		{ "Best crafter", row.bestCharacterKey and self:GetCrafterName(row.bestCharacterKey) or "-" },
-		{ "Sale, net", moneyOrDash(self, row.saleNet) },
+		{ L["Best crafter"], row.bestCharacterKey and self:GetCrafterName(row.bestCharacterKey) or "-" },
+		{ L["Sale, net"], moneyOrDash(self, row.saleNet) },
 		{ "Reagents", moneyOrDash(self, row.matCost) },
 		{ "Profit", self:FormatSignedMoney(row.profit) },
 	}
 	self:AddReagentTooltipLines(lines, evaluation.reagentPlan or {})
-	self:ShowItemRowTooltip(rowFrame, row.outputItemID, lines, "Click for details · Shift-click to link")
+	self:ShowItemRowTooltip(rowFrame, row.outputItemID, lines, L["Click for details · Shift-click to link"])
 end

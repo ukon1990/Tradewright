@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Starting a craft in the open profession window: find its quantity box and Create button, set the
 -- quantity, and press Create. Used by the queue's Craft button; every craft follows a click.
 
@@ -188,7 +189,7 @@ local function stepCraftingOrder(pe, row, orderID)
 	if button then
 		return clickCreate(button)
 	end
-	pe:PrintMessage(string.format("Crafting order #%d cannot be started or crafted right now.", orderID))
+	pe:PrintMessage(string.format(L["Crafting order #%d cannot be started or crafted right now."], orderID))
 	return false
 end
 

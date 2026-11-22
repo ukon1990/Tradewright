@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Item detail data: recipe links, account totals, crafting and economy snapshots, and the analytics columns of inventory rows.
 
 local isCharacterSelected = Tradewright.ItemHistory.isCharacterSelected
@@ -24,7 +25,7 @@ function Tradewright:GetItemRecipeRelationships(itemID, selectedCharacters)
 					local info = self:RecipeDataInfo(recipeData) or {}
 					local outputs = recipeData.outputs or {}
 					local primaryItemID = self:RecipeOutputsPrimaryItemId(outputs)
-					local recipeName = info.name or ("Recipe #" .. tostring(recipeID))
+					local recipeName = info.name or (L["Recipe #"] .. tostring(recipeID))
 					if tonumber(primaryItemID) == itemID then
 						relationships.producedBy[#relationships.producedBy + 1] = {
 							characterKey = characterKey,

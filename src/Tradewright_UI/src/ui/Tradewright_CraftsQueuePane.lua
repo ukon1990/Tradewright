@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Crafts tab queue pane: the queued crafts, what to buy on this character and where to mail it.
 
 local LAYOUT = Tradewright.CraftsLayout
@@ -29,14 +30,14 @@ end
 function Tradewright:GetCraftQueueColumns()
 	local pe = self
 	return {
-		{ id = "recipe", label = "Recipe", width = 100, flex = 1, minWidth = 80,
+		{ id = "recipe", label = L["Recipe"], width = 100, flex = 1, minWidth = 80,
 			createCell = function(rowFrame) return createRecipeCell(pe, rowFrame) end,
 			updateCell = function(cell, entry)
 				cell.name:SetText(entry.recipeName or "?")
 				cell.detail:SetText(pe:GetCrafterName(entry.characterKey))
 			end },
-		{ id = "qty", label = "Qty", width = 34, justifyH = "RIGHT", getText = function(entry) return tostring(entry.quantity or 0) end },
-		{ id = "profit", label = "Profit", width = 76, justifyH = "RIGHT",
+		{ id = "qty", label = L["Qty"], width = 34, justifyH = "RIGHT", getText = function(entry) return tostring(entry.quantity or 0) end },
+		{ id = "profit", label = L["Profit"], width = 76, justifyH = "RIGHT",
 			getText = function(entry)
 				local profit = entry.snapshot and tonumber(entry.snapshot.profit)
 				return profit and pe:FormatSignedMoney(profit * (tonumber(entry.quantity) or 0)) or "-"
@@ -54,11 +55,11 @@ end
 function Tradewright:GetCraftQueueBuyColumns()
 	local pe = self
 	return {
-		self:CreateItemColumn({ label = "Reagent", sortable = false,
+		self:CreateItemColumn({ label = L["Reagent"], sortable = false,
 			getItemID = function(line) return line.itemID end,
 			getName = function(line) return line.name end }),
-		{ id = "buy", label = "Buy", width = 40, justifyH = "RIGHT", getText = function(line) return pe:FormatNumberGrouped(line.quantityToBuy or 0) end },
-		{ id = "cost", label = "Cost", width = 76, justifyH = "RIGHT",
+		{ id = "buy", label = L["Buy"], width = 40, justifyH = "RIGHT", getText = function(line) return pe:FormatNumberGrouped(line.quantityToBuy or 0) end },
+		{ id = "cost", label = L["Cost"], width = 76, justifyH = "RIGHT",
 			getText = function(line) return line.estimatedBuyCost and pe:FormatCopperShort(line.estimatedBuyCost) or "-" end },
 	}
 end
@@ -81,10 +82,10 @@ function Tradewright:CreateCraftQueueFooter(view)
 	view.footer:SetPoint("BOTTOMLEFT")
 	view.footer:SetPoint("BOTTOMRIGHT")
 	view.footer:SetHeight(26)
-	view.clearButton = self:CreateButton(view.footer, "Clear queue", function() pe:ClearCraftQueue() end)
+	view.clearButton = self:CreateButton(view.footer, L["Clear queue"], function() pe:ClearCraftQueue() end)
 	view.clearButton:SetPoint("RIGHT")
 	view.clearButton:GetFontString():SetTextColor(danger.r, danger.g, danger.b)
-	view.clearOrdersButton = self:CreateButton(view.footer, "Clear orders", function()
+	view.clearOrdersButton = self:CreateButton(view.footer, L["Clear orders"], function()
 		if pe.ClearCraftingOrderQueue then
 			pe:ClearCraftingOrderQueue()
 		end
@@ -94,7 +95,7 @@ function Tradewright:CreateCraftQueueFooter(view)
 	view.hint = self:CreateText(view.footer, "GameFontHighlightSmall", "textMuted")
 	view.hint:SetPoint("LEFT")
 	view.hint:SetPoint("RIGHT", self.IS_RETAIL and view.clearOrdersButton or view.clearButton, "LEFT", -8, 0)
-	view.hint:SetText("Buy from the auction house panel")
+	view.hint:SetText(L["Buy from the auction house panel"])
 end
 
 function Tradewright:CreateCraftsQueueView(parent)
@@ -102,17 +103,17 @@ function Tradewright:CreateCraftsQueueView(parent)
 	view.summary = self:CreateParagraph(view)
 	view.summary:SetPoint("TOPLEFT")
 	view.summary:SetPoint("TOPRIGHT")
-	view.craftHeading, view.craftTable = self:AddCraftQueueSection(view, view.summary, 8, "To craft", {
+	view.craftHeading, view.craftTable = self:AddCraftQueueSection(view, view.summary, 8, L["To craft"], {
 		rowHeight = LAYOUT.tallRow,
-		emptyTitle = "Nothing queued",
-		emptyHint = "Pick a craft and press Add to queue.",
+		emptyTitle = L["Nothing queued"],
+		emptyHint = L["Pick a craft and press Add to queue."],
 	})
 	view.craftTable.frame:SetPoint("TOPRIGHT", view.craftHeading, "BOTTOMRIGHT", 0, -6)
 	view.craftTable:SetColumns(self:GetCraftQueueColumns())
 	view.buyHeading, view.buyTable = self:AddCraftQueueSection(view, view.craftTable.frame, 10, "Cart", {
 		footer = true,
-		emptyTitle = "Nothing to buy",
-		emptyHint = "This character has every reagent the queue needs.",
+		emptyTitle = L["Nothing to buy"],
+		emptyHint = L["This character has every reagent the queue needs."],
 	})
 	view.buyTable:SetColumns(self:GetCraftQueueBuyColumns())
 	self:CreateCraftQueueFooter(view)
@@ -150,23 +151,23 @@ end
 function Tradewright:CraftQueueSummaryText(summary)
 	local lines = summary.lines or {}
 	if #lines == 0 then
-		return "The queue is empty."
+		return L["The queue is empty."]
 	end
 	local crafts = 0
 	for _, entry in ipairs(lines) do
 		crafts = crafts + (tonumber(entry.quantity) or 0)
 	end
 	local profit = summary.totalProfit and self:FormatSignedMoney(summary.totalProfit) or "unknown"
-	return string.format("%d crafts of %d recipes · potential profit %s", crafts, #lines, profit)
+	return string.format(L["%d crafts of %d recipes · potential profit %s"], crafts, #lines, profit)
 end
 
 function Tradewright:RefreshCraftQueueBuyTable(view, summary)
 	local buy, mail = linesToBuy(summary)
-	view.buyHeading:SetText("Cart for " .. self:GetCrafterName(self:GetCharacterKey()))
+	view.buyHeading:SetText(L["Cart for "] .. self:GetCrafterName(self:GetCharacterKey()))
 	view.buyTable:SetRows(buy)
 	view.buyTable:Refresh()
 	local buyCost = summary.totalCurrentCharacterBuyCost
-	view.buyTable:SetFooterText(#mail > 0 and ("Mail: " .. table.concat(mail, ", ")) or nil, buyCost and self:FormatCopperShort(buyCost) or nil)
+	view.buyTable:SetFooterText(#mail > 0 and (L["Mail: "] .. table.concat(mail, ", ")) or nil, buyCost and self:FormatCopperShort(buyCost) or nil)
 end
 
 function Tradewright:RefreshCraftsQueuePanel()
@@ -177,7 +178,7 @@ function Tradewright:RefreshCraftsQueuePanel()
 	local view = panel.queueView
 	local summary = self:BuildCraftQueueSummary()
 	local lines = summary.lines or {}
-	self:SetButtonLabel(panel.queueTab, #lines > 0 and string.format("Queue (%d)", #lines) or "Queue", true)
+	self:SetButtonLabel(panel.queueTab, #lines > 0 and string.format(L["Queue (%d)"], #lines) or "Queue", true)
 	panel.queueTab:SetWidth(LAYOUT.detailWidth - LAYOUT.pad * 2 - panel.detailsTab:GetWidth() + 1)
 	view.summary:SetText(self:CraftQueueSummaryText(summary))
 	for index, entry in ipairs(lines) do

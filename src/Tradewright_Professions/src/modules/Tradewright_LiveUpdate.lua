@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Debounce rapid fires (BAG_UPDATE_DELAYED, etc.). Profession UI list churn uses TRADE_SKILL_LIST_UPDATE
 -- very frequently; we do not run a full merge on that event (only refresh remembered skill line id).
 local LIVE_INV_DEBOUNCE_SEC = 0.45
@@ -33,7 +34,7 @@ end
 function Tradewright:ScheduleLiveInventoryRefresh()
 	if self:LiveUpdatesBlocked() then
 		self:DebugLog("LIVE", "ScheduleLiveInventoryRefresh skipped", {
-			(not self.IS_SUPPORTED and "not supported") or "scanInProgress blocks live inventory",
+			(not self.IS_SUPPORTED and L["not supported"]) or "scanInProgress blocks live inventory",
 		})
 		return
 	end
@@ -101,7 +102,7 @@ end
 function Tradewright:ScheduleLiveProfessionRefresh()
 	if self:LiveUpdatesBlocked() then
 		self:DebugLog("LIVE", "ScheduleLiveProfessionRefresh skipped", {
-			(not self.IS_SUPPORTED and "not supported") or "scanInProgress blocks live profession merge",
+			(not self.IS_SUPPORTED and L["not supported"]) or "scanInProgress blocks live profession merge",
 		})
 		return
 	end
@@ -124,7 +125,7 @@ function Tradewright:ScheduleLiveProfessionRefresh()
 		state.liveProfessionTimer = nil
 		if self:LiveUpdatesBlocked() or self:GetState().pendingScan then
 			self:DebugLog("LIVE", "live profession timer aborted", {
-				string.format("scanInProgress=%s pendingScan=%s", tostring(self:GetState().scanInProgress), tostring(self:GetState().pendingScan)),
+				string.format(L["scanInProgress=%s pendingScan=%s"], tostring(self:GetState().scanInProgress), tostring(self:GetState().pendingScan)),
 			})
 			return
 		end
@@ -211,7 +212,7 @@ function Tradewright:CommitLiveProfessionMergeResult(key, charData, openSkillLin
 
 	self:DebugLog("LIVE", "ApplyLiveProfessionMergeForSkillLineID done", {
 		string.format("characterKey=%s", key),
-		string.format("profession=%s recipeCount=%s", tostring(professionData.professionName), tostring(professionData.recipeCount)),
+		string.format(L["profession=%s recipeCount=%s"], tostring(professionData.professionName), tostring(professionData.recipeCount)),
 		string.format("mode=%s", tostring(opts.mode or "full")),
 		string.format("itemTypesTracked=%s", tostring(charData.inventorySnapshot and charData.inventorySnapshot.itemTypesTracked)),
 	})
@@ -280,7 +281,7 @@ local MERGE_LOG = "ApplyLiveProfessionMergeForSkillLineID"
 local function mergeBlockedOrMissing(self, openSkillLineID)
 	if self:LiveUpdatesBlocked() or self:GetState().pendingScan then
 		self:DebugLog("LIVE", MERGE_LOG .. " skipped", {
-			string.format("blocked=%s pendingScan=%s", tostring(self:LiveUpdatesBlocked()), tostring(self:GetState().pendingScan)),
+			string.format(L["blocked=%s pendingScan=%s"], tostring(self:LiveUpdatesBlocked()), tostring(self:GetState().pendingScan)),
 		})
 		return true
 	end
@@ -303,7 +304,7 @@ local function keepSavedProfession(self, openSkillLineID, existing, fingerprintI
 	-- Avoid wiping good SavedVariables when the UI tears down before recipes are available.
 	if not fingerprintInfo.stable and tonumber(existing.recipeCount) and tonumber(existing.recipeCount) > 0 then
 		self:DebugLog("LIVE", MERGE_LOG .. " skipped (unstable fingerprint, keeping saved)", {
-			string.format("skillLineID=%s savedRecipeCount=%s", tostring(openSkillLineID), tostring(existing.recipeCount)),
+			string.format(L["skillLineID=%s savedRecipeCount=%s"], tostring(openSkillLineID), tostring(existing.recipeCount)),
 		})
 		return true
 	end
@@ -320,11 +321,11 @@ local function chunkedMergeJob(merge, professionData, recipeSpellIDs, fingerprin
 end
 
 local function professionLogLine(merge)
-	return string.format("profession=%s skillLineID=%s", tostring(merge.descriptor.professionName), tostring(merge.openSkillLineID))
+	return string.format(L["profession=%s skillLineID=%s"], tostring(merge.descriptor.professionName), tostring(merge.openSkillLineID))
 end
 
 local function startChunkedFullMerge(self, merge, recipeIDs, filterSnapshot)
-	self:DebugLog("LIVE", MERGE_LOG .. " collecting (chunked full)", { professionLogLine(merge) .. string.format(" recipeCount=%d", #recipeIDs) })
+	self:DebugLog("LIVE", MERGE_LOG .. " collecting (chunked full)", { professionLogLine(merge) .. string.format(L[" recipeCount=%d"], #recipeIDs) })
 	local professionData = self:CreateProfessionDataShell(merge.descriptor, { rebuildSpecs = true })
 	self:RestoreFilters(filterSnapshot)
 	-- Prefer a fingerprint taken under the same filter state used for collection.
@@ -423,7 +424,7 @@ local function incrementalLiveProfessionMerge(self, merge)
 
 	self:DebugLog("LIVE", MERGE_LOG .. " collecting (incremental)", {
 		professionLogLine(merge),
-		string.format("newRecipes=%d pruned=%d needSpecs=%s", #newSpellIDs, pruned, tostring(needSpecs)),
+		string.format(L["newRecipes=%d pruned=%d needSpecs=%s"], #newSpellIDs, pruned, tostring(needSpecs)),
 	})
 	refreshProfessionMetadata(self, merge, needSpecs)
 	if merge.allowChunked and #newSpellIDs > LIVE_SYNC_RECIPE_BUDGET then
@@ -477,7 +478,7 @@ end
 function Tradewright:ApplyLiveOpenProfessionMerge()
 	if self:LiveUpdatesBlocked() or self:GetState().pendingScan then
 		self:DebugLog("LIVE", "ApplyLiveOpenProfessionMerge skipped", {
-			string.format("blocked=%s pendingScan=%s", tostring(self:LiveUpdatesBlocked()), tostring(self:GetState().pendingScan)),
+			string.format(L["blocked=%s pendingScan=%s"], tostring(self:LiveUpdatesBlocked()), tostring(self:GetState().pendingScan)),
 		})
 		return
 	end

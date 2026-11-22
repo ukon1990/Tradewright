@@ -1,6 +1,7 @@
 -- Bulk post from the sell tab: the job of rows to post, one sell-frame item at a time, pause and resume.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local shared = Tradewright.AuctionShared
 local AUCTION_BULK_MIN_INTERVAL = shared.AUCTION_BULK_MIN_INTERVAL
 local normalizeItemID = shared.normalizeItemID
@@ -49,7 +50,7 @@ function Tradewright:MaybeStartDeferredAuctionBulk()
 	end
 	local rows = self:BuildAuctionBulkRows(bulk.mode)
 	if #rows == 0 then
-		self:PrintMessage(bulk.mode == "post_profitable" and "No profitable visible rows to post." or "No visible auction rows to post.")
+		self:PrintMessage(bulk.mode == "post_profitable" and L["No profitable visible rows to post."] or L["No visible auction rows to post."])
 		state.auctionBulk = nil
 		self:RefreshAuctionHousePanel()
 		return
@@ -87,7 +88,7 @@ function Tradewright:FinishAuctionBulkJob()
 	bulk.status = "Completed"
 	bulk.paused = false
 	self:PrintMessage(string.format(
-		"Posting done: %d posted, %d skipped for an unusually low price, %d failed.",
+		L["Posting done: %d posted, %d skipped for an unusually low price, %d failed."],
 		tonumber(bulk.posted) or 0,
 		tonumber(bulk.skippedDumped) or 0,
 		tonumber(bulk.failed) or 0
@@ -113,7 +114,7 @@ function Tradewright:FailAuctionBulkCurrent(reason)
 	bulk.currentSelectionCounted = false
 	bulk.paused = false
 	self:DebugLog("AH", "bulk failed current", {
-		string.format("reason=%s itemID=%s index=%s", tostring(reason), tostring(itemID), tostring(bulk.index)),
+		string.format(L["reason=%s itemID=%s index=%s"], tostring(reason), tostring(itemID), tostring(bulk.index)),
 	})
 	self:RefreshAuctionHousePanel()
 	C_Timer.After(BULK_AFTER_FAILURE_SEC, function()
@@ -151,7 +152,7 @@ function Tradewright:ConfirmAuctionBulkCurrent(source)
 	})
 	bulk.posted = (tonumber(bulk.posted) or 0) + 1
 	bulk.done = math.min(tonumber(bulk.total) or 0, tonumber(bulk.index) or 1)
-	bulk.status = string.format("Confirmed: %s", self:GetItemDisplayName(itemID))
+	bulk.status = string.format(L["Confirmed: %s"], self:GetItemDisplayName(itemID))
 	bulk.index = (tonumber(bulk.index) or 1) + 1
 	bulk.phase = "selecting"
 	bulk.currentItemID = nil
@@ -163,7 +164,7 @@ function Tradewright:ConfirmAuctionBulkCurrent(source)
 		at = GetTime and GetTime() or 0,
 	}
 	self:DebugLog("AH", "bulk confirmed", {
-		string.format("itemID=%d source=%s posted=%d/%d", itemID, tostring(source), tonumber(bulk.posted) or 0, tonumber(bulk.total) or 0),
+		string.format(L["itemID=%d source=%s posted=%d/%d"], itemID, tostring(source), tonumber(bulk.posted) or 0, tonumber(bulk.total) or 0),
 	})
 	self:PrimeAuctionPanelRows()
 	self:RefreshAuctionHousePanel()
@@ -201,13 +202,13 @@ function Tradewright:ProcessAuctionBulkPhase(token)
 		if elapsed >= BULK_CONFIRMATION_TIMEOUT_SEC then
 			bulk.retryCount = (tonumber(bulk.retryCount) or 0) + 1
 			if (tonumber(bulk.retryCount) or 0) >= (tonumber(bulk.maxRetries) or 8) then
-				self:FailAuctionBulkCurrent("Timed out")
+				self:FailAuctionBulkCurrent(L["Timed out"])
 				return
 			end
 			bulk.phase = "selecting"
-			bulk.status = string.format("Timed out, retrying (%d/%d): %s", bulk.retryCount, bulk.maxRetries, self:GetItemDisplayName(bulk.currentItemID))
+			bulk.status = string.format(L["Timed out, retrying (%d/%d): %s"], bulk.retryCount, bulk.maxRetries, self:GetItemDisplayName(bulk.currentItemID))
 			self:DebugLog("AH", "bulk confirmation timeout", {
-				string.format("itemID=%s retry=%d/%d", tostring(bulk.currentItemID), bulk.retryCount, bulk.maxRetries),
+				string.format(L["itemID=%s retry=%d/%d"], tostring(bulk.currentItemID), bulk.retryCount, bulk.maxRetries),
 			})
 			self:RefreshAuctionHousePanel()
 			C_Timer.After(BULK_RETRY_SEC, function()
@@ -240,14 +241,14 @@ function Tradewright:ContinueAuctionBulkPost()
 	if row.isDumpedLow == true then
 		bulk.skippedDumped = (tonumber(bulk.skippedDumped) or 0) + 1
 		bulk.done = math.min(tonumber(bulk.total) or 0, tonumber(bulk.index) or 1)
-		bulk.status = string.format("Skipped, unusually low price: %s", self:GetItemDisplayName(row.itemID))
+		bulk.status = string.format(L["Skipped, unusually low price: %s"], self:GetItemDisplayName(row.itemID))
 		bulk.index = (tonumber(bulk.index) or 1) + 1
 		bulk.phase = "selecting"
 		bulk.currentItemID = nil
 		bulk.retryCount = 0
 		bulk.currentSelectionCounted = false
 		self:DebugLog("AH", "bulk skip dumped", {
-			string.format("itemID=%s index=%s", tostring(row.itemID), tostring(bulk.index)),
+			string.format(L["itemID=%s index=%s"], tostring(row.itemID), tostring(bulk.index)),
 		})
 		self:RefreshAuctionHousePanel()
 		C_Timer.After(BULK_NEXT_STEP_SEC, function()
@@ -255,13 +256,13 @@ function Tradewright:ContinueAuctionBulkPost()
 		end)
 		return
 	end
-	bulk.status = string.format("Selecting: %s", self:GetItemDisplayName(row.itemID))
+	bulk.status = string.format(L["Selecting: %s"], self:GetItemDisplayName(row.itemID))
 	self:DebugLog("AH", "bulk select", {
-		string.format("itemID=%s index=%s/%s retry=%s", tostring(row.itemID), tostring(bulk.index), tostring(bulk.total), tostring(bulk.retryCount or 0)),
+		string.format(L["itemID=%s index=%s/%s retry=%s"], tostring(row.itemID), tostring(bulk.index), tostring(bulk.total), tostring(bulk.retryCount or 0)),
 	})
 	local ok = self:TrySendItemToAuctionSellFrame(row.itemID)
 	if not ok then
-		self:FailAuctionBulkCurrent("Could not select")
+		self:FailAuctionBulkCurrent(L["Could not select"])
 		return
 	end
 	state.auctionActiveItemID = row.itemID
@@ -272,7 +273,7 @@ function Tradewright:ContinueAuctionBulkPost()
 	end
 	bulk.phase = "waiting_button"
 	bulk.token = (tonumber(bulk.token) or 0) + 1
-	bulk.status = string.format("Click Post next: %s", self:GetItemDisplayName(row.itemID))
+	bulk.status = string.format(L["Click Post next: %s"], self:GetItemDisplayName(row.itemID))
 	-- Throttle: "Post next" unlocks a moment after the item lands in the sell frame, which also
 	-- gives Blizzard's price lookup time to fill in the going price.
 	bulk.nextPostAt = GetTime() + AUCTION_BULK_MIN_INTERVAL
@@ -299,7 +300,7 @@ function Tradewright:PostAuctionBulkCurrent()
 	bulk.confirmationStartedAt = nowSec
 	if not self:TryClickAuctionPostButton() then
 		bulk.phase = "waiting_button"
-		bulk.status = string.format("Auction house not ready, click again: %s", name)
+		bulk.status = string.format(L["Auction house not ready, click again: %s"], name)
 		self:RefreshAuctionHousePanel()
 		return
 	end
@@ -307,9 +308,9 @@ function Tradewright:PostAuctionBulkCurrent()
 		return -- already confirmed by the post hook
 	end
 	local token = bulk.token
-	bulk.status = string.format("Waiting for confirmation: %s", name)
+	bulk.status = string.format(L["Waiting for confirmation: %s"], name)
 	self:DebugLog("AH", "bulk click post", {
-		string.format("itemID=%s token=%s", tostring(bulk.currentItemID), tostring(token)),
+		string.format(L["itemID=%s token=%s"], tostring(bulk.currentItemID), tostring(token)),
 	})
 	self:RefreshAuctionHousePanel()
 	C_Timer.After(BULK_CONFIRMATION_POLL_SEC, function()
@@ -325,14 +326,14 @@ function Tradewright:ToggleAuctionBulkPause()
 	end
 	bulk.paused = bulk.paused ~= true
 	if bulk.paused then
-		bulk.status = string.format("Paused: %s", bulk.currentItemID and self:GetItemDisplayName(bulk.currentItemID) or "idle")
+		bulk.status = string.format(L["Paused: %s"], bulk.currentItemID and self:GetItemDisplayName(bulk.currentItemID) or "idle")
 		self:DebugLog("AH", "bulk paused", {
-			string.format("phase=%s itemID=%s", tostring(bulk.phase), tostring(bulk.currentItemID)),
+			string.format(L["phase=%s itemID=%s"], tostring(bulk.phase), tostring(bulk.currentItemID)),
 		})
 	else
-		bulk.status = string.format("Resuming: %s", bulk.currentItemID and self:GetItemDisplayName(bulk.currentItemID) or "next item")
+		bulk.status = string.format(L["Resuming: %s"], bulk.currentItemID and self:GetItemDisplayName(bulk.currentItemID) or L["next item"])
 		self:DebugLog("AH", "bulk resumed", {
-			string.format("phase=%s itemID=%s", tostring(bulk.phase), tostring(bulk.currentItemID)),
+			string.format(L["phase=%s itemID=%s"], tostring(bulk.phase), tostring(bulk.currentItemID)),
 		})
 		if bulk.phase == "waiting_confirmation" then
 			local token = tonumber(bulk.token)
@@ -370,7 +371,7 @@ function Tradewright:ResumeAuctionScanAfterBulkPost()
 	end
 	state.auctionRefreshPaused = false
 	self:DebugLog("AH", "scan resumed after bulk", {
-		string.format("mode=%s itemID=%s index=%s", tostring(state.auctionScanMode), tostring(state.auctionActiveItemID), tostring(state.auctionRefreshIndex)),
+		string.format(L["mode=%s itemID=%s index=%s"], tostring(state.auctionScanMode), tostring(state.auctionActiveItemID), tostring(state.auctionRefreshIndex)),
 	})
 	if state.auctionSearchContext then
 		return true
@@ -396,12 +397,12 @@ function Tradewright:RunAuctionPanelBulkAction(mode)
 	end
 	if state.auctionRefreshRunning == true then
 		if self:PauseAuctionScanForBulkPost() then
-			self:PrintMessage("Price check paused while you post.")
+			self:PrintMessage(L["Price check paused while you post."])
 		end
 	end
 	local rows = self:BuildAuctionBulkRows(mode)
 	if #rows == 0 then
-		self:PrintMessage(mode == "post_profitable" and "No profitable visible rows to post." or "No visible auction rows to post.")
+		self:PrintMessage(mode == "post_profitable" and L["No profitable visible rows to post."] or L["No visible auction rows to post."])
 		self:ResumeAuctionScanAfterBulkPost()
 		return
 	end
@@ -445,7 +446,7 @@ function Tradewright:RunAuctionPanelBulkAction(mode)
 	end
 	if state.auctionSearchContext then
 		state.auctionBulk.awaitingScan = true
-		state.auctionBulk.status = "Finishing the current price check…"
+		state.auctionBulk.status = L["Finishing the current price check…"]
 		self:RefreshAuctionHousePanel()
 		C_Timer.After(BULK_WAIT_FOR_SEARCH_SEC, waitAndStart)
 		return

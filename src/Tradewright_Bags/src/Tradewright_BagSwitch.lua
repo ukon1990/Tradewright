@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- The on/off switch of the bag window. On: the game's bag frames are parked under a
 -- hidden frame and the Tradewright window is shown whenever one of them is open, so the bag key,
 -- merchants and mail keep driving the game's own open/close logic. Off: the frames get their
@@ -105,8 +106,8 @@ end
 function Tradewright:SetBagWindowEnabled(enabled)
 	self:SetSetting("bags.enabled", enabled and true or false)
 	self:ApplyBagTakeover()
-	self:PrintMessage(enabled and "Tradewright bags are on."
-		or "Tradewright bags are off: the game's bags open instead. /tw bags turns them back on.")
+	self:PrintMessage(enabled and L["Tradewright bags are on."]
+		or L["Tradewright bags are off: the game's bags open instead. /tw bags turns them back on."])
 	if self.SettingsTab then
 		self.SettingsTab:Refresh()
 	end

@@ -12,8 +12,9 @@
     "package": "node scripts/package.mjs",
     "migrate:saved-data": "node scripts/migrate-saved-data.mjs",
     "sources:build": "node scripts/build-source-data.mjs",
-    "test": "python3 src/Tradewright/tests/run_tests.py && python3 scripts/lint.py",
+    "test": "python3 src/Tradewright/tests/run_tests.py && python3 scripts/lint.py && python3 scripts/locale-keys.py",
     "lint": "python3 scripts/lint.py",
+    "locale:keys": "python3 scripts/locale-keys.py --list",
     "lint:baseline": "python3 scripts/lint.py --update-baseline"
   }
 }

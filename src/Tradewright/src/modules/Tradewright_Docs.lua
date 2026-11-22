@@ -170,6 +170,11 @@ HOW SURE A ROW IS
 	},
 }
 
+--- The Help topics in the client's language, where a translation has been added.
 function Tradewright:GetDocumentationSections()
-	return self.DOCUMENTATION_SECTIONS
+	local topics = {}
+	for index, topic in ipairs(self.DOCUMENTATION_SECTIONS) do
+		topics[index] = self.LocalizeHelpTopic and self:LocalizeHelpTopic(topic) or topic
+	end
+	return topics
 end

@@ -1,5 +1,6 @@
 local addonName, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 if not Tradewright.IS_RETAIL then
 	return
 end
@@ -205,7 +206,7 @@ function Tradewright:EnsureCraftingOrdersFilterBar()
 	cb1:SetPoint("TOPLEFT", 0, y)
 	local t1 = _G[cb1:GetName() .. "Text"]
 	if t1 then
-		t1:SetText("Hide unlearned recipes")
+		t1:SetText(L["Hide unlearned recipes"])
 	end
 	cb1:SetScript("OnClick", function(self)
 		Tradewright:SetSetting("craftingOrders.hideUnlearned", self:GetChecked() == true)
@@ -215,7 +216,7 @@ function Tradewright:EnsureCraftingOrdersFilterBar()
 	local cb2 = CreateFrame("CheckButton", addonName .. "COPatronKnowledge", f, "UICheckButtonTemplate")
 	local t2 = _G[cb2:GetName() .. "Text"]
 	if t2 then
-		t2:SetText("Only recipes that give knowledge")
+		t2:SetText(L["Only recipes that give knowledge"])
 	end
 	Tradewright:SkinCheckButton(cb1)
 	Tradewright:SkinCheckButton(cb2)
@@ -223,8 +224,8 @@ function Tradewright:EnsureCraftingOrdersFilterBar()
 	cb2:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		local theme = Tradewright:GetTheme()
-		GameTooltip:SetText("Only recipes that give knowledge", 1, 1, 1)
-		GameTooltip:AddLine("Works on the Patron orders tab. Uses the recipe list in the addon's data file; when that list is empty, it does nothing.",
+		GameTooltip:SetText(L["Only recipes that give knowledge"], 1, 1, 1)
+		GameTooltip:AddLine(L["Works on the Patron orders tab. Uses the recipe list in the addon's data file; when that list is empty, it does nothing."],
 			theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, true)
 		GameTooltip:Show()
 	end)

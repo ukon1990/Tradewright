@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local MarketLogic = Tradewright.MarketLogic
 
 -- Market insights for the gold dashboard: deals, movers and supply per scanned item.
@@ -24,7 +25,7 @@ local function resolveBaseline(pe, storageKey, summary)
 	local usual = pe:GetUsualPrice(storageKey)
 	local base = { price = summary.avg7d, low = summary.low7d, high = summary.high7d, refSource = "7-day avg" }
 	if usual then
-		base = { price = usual.usual, low = usual.low, high = usual.high, days = usual.days, refSource = "usual price" }
+		base = { price = usual.usual, low = usual.low, high = usual.high, days = usual.days, refSource = L["usual price"] }
 	end
 	base.ref = base.price
 	if not base.ref then
@@ -133,7 +134,7 @@ end
 --- SetLoading can read it again while the build moves on.
 function Tradewright.MarketInsightsLoadingNote()
 	local progress = Tradewright:GetState().marketInsightsProgress or 0
-	return string.format("Reading auction scans · %d%%", math.floor(progress * 100))
+	return string.format(L["Reading auction scans · %d%%"], math.floor(progress * 100))
 end
 
 -- Every caller that asked while a build ran is told when it ends, not only the one that started it:

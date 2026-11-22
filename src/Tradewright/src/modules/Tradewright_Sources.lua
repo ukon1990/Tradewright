@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- The sightings store: which NPC sells or teaches what, what was looted from where, and where all of
 -- that is. It grows from windows the player opens (vendor, trainer, loot) and is read together with
 -- the data shipped in Tradewright_SourceData.lua. The rules live in Tradewright_SourceLogic.lua.
@@ -174,14 +175,14 @@ end
 function Tradewright:HandleSourcesSlash(rest)
 	local store = savedStore()
 	if string.lower(rest or "") ~= "seal" then
-		self:PrintMessage(string.format("Own sightings: %d NPCs, %d items sold by vendors, %d loot sources in the open count.",
+		self:PrintMessage(string.format(L["Own sightings: %d NPCs, %d items sold by vendors, %d loot sources in the open count."],
 			countKeys(store.npcs), countKeys(store.sold), countKeys(store.tallies[store.epoch] or {})))
 		return
 	end
 	if SourceLogic.Seal(store) then
-		self:PrintMessage("Loot counts so far are closed. Log out or /reload so they are written, then run: npm run sources:build")
+		self:PrintMessage(L["Loot counts so far are closed. Log out or /reload so they are written, then run: npm run sources:build"])
 	else
-		self:PrintMessage("No loot counted since the last seal.")
+		self:PrintMessage(L["No loot counted since the last seal."])
 	end
 end
 

@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 if not Tradewright.IS_RETAIL then
 	return
 end
@@ -294,7 +295,7 @@ local function resolveOrderRecipeName(self, order, recipeID)
 		recipeName = self:GetItemDisplayName(order.itemID)
 	end
 	if not recipeName or recipeName == "" then
-		return "Crafting order"
+		return L["Crafting order"]
 	end
 	return recipeName
 end
@@ -320,12 +321,12 @@ end
 --- Stores the order in the crafting-order queue and mirrors it as a craft queue line. Returns its key.
 function Tradewright:AddCraftingOrderToQueue(order)
 	if type(order) ~= "table" or not order.orderID then
-		self:PrintMessage("Crafting order add failed: missing order data.")
+		self:PrintMessage(L["Crafting order add failed: missing order data."])
 		return nil, "bad_order"
 	end
 	local orderID = tonumber(order.orderID)
 	if not orderID then
-		self:PrintMessage("Crafting order add failed: bad order ID.")
+		self:PrintMessage(L["Crafting order add failed: bad order ID."])
 		return nil, "bad_id"
 	end
 	local key = tostring(orderID)

@@ -1,5 +1,6 @@
 local addonName, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local PROFESSION_PANEL_WATCHER_KEY = "professionCraftPanel"
 
 local function openCraftingOrderPart(pe)
@@ -137,7 +138,7 @@ function Tradewright:UpdateProfessionPanelToggleButton(expanded)
 	local toggle = panel.panelToggleBtn
 	if toggle then
 		toggle:Show()
-		toggle:SetText(expanded and "Hide panel" or "Show panel")
+		toggle:SetText(expanded and L["Hide panel"] or L["Show panel"])
 	end
 	-- The side tab stays hidden: the toggle lives on the profession title bar.
 	if panel.collapseTab then
@@ -265,7 +266,7 @@ local function queueOpenRecipe(amount)
 	local pe = Tradewright
 	local order = pe.GetOpenCraftingOrder and pe:GetOpenCraftingOrder() or nil
 	if order and pe.AddCraftingOrderToQueue then
-		pe:PrintMessage(string.format("Adding crafting order #%s to the queue…", tostring(order.orderID or "?")))
+		pe:PrintMessage(string.format(L["Adding crafting order #%s to the queue…"], tostring(order.orderID or "?")))
 		pe:AddCraftingOrderToQueue(order)
 	elseif pe.QueueOpenProfessionRecipe then
 		pe:QueueOpenProfessionRecipe(amount)
@@ -293,7 +294,7 @@ local function createRecipeSummary(pe, host)
 	host.facts = pe:CreateKeyValueList(host.body)
 	host.facts:SetPoint("TOPLEFT", host.statsRow, "BOTTOMLEFT", 0, -10)
 	host.facts:SetPoint("TOPRIGHT", host.statsRow, "BOTTOMRIGHT", 0, -10)
-	host.materialsHeading = pe:CreateHeading(host.body, "Reagents per craft")
+	host.materialsHeading = pe:CreateHeading(host.body, L["Reagents per craft"])
 	host.materialsHeading:SetPoint("TOPLEFT", host.facts, "BOTTOMLEFT", 0, -10)
 	host.materialsHeading:SetPoint("TOPRIGHT", host.facts, "BOTTOMRIGHT", 0, -10)
 end
@@ -314,13 +315,13 @@ local function createRecipeActions(pe, f, host)
 	host.qty:SetText("1")
 	host.qty:SetScript("OnEnterPressed", function(box) box:ClearFocus() end)
 	pe:SkinEditBox(host.qty)
-	f.addButton = pe:CreateButton(host.actions, "Add to queue", function()
+	f.addButton = pe:CreateButton(host.actions, L["Add to queue"], function()
 		queueOpenRecipe(math.max(1, tonumber(host.qty:GetText()) or 1))
 	end, { primary = true })
 	f.addButton:SetPoint("LEFT", host.qty, "RIGHT", 10, 0)
-	f.scanBtn = pe:CreateButton(host.actions, "Scan", function()
+	f.scanBtn = pe:CreateButton(host.actions, L["Scan"], function()
 		pe:ScanOpenProfession()
-	end, { tooltip = "Store every recipe and reagent of this profession." })
+	end, { tooltip = L["Store every recipe and reagent of this profession."] })
 	f.scanBtn:SetPoint("RIGHT")
 end
 
@@ -328,24 +329,24 @@ local function createRecipeMaterials(pe, host)
 	host.materials = pe:CreateReusableTable(host.body, {
 		autoFitToScroll = true,
 		footer = true,
-		emptyTitle = "No reagents",
-		emptyHint = "This recipe has no saved reagents.",
+		emptyTitle = L["No reagents"],
+		emptyHint = L["This recipe has no saved reagents."],
 	})
 	host.materials.frame:SetPoint("TOPLEFT", host.materialsHeading, "BOTTOMLEFT", 0, -6)
 	host.materials.frame:SetPoint("BOTTOMRIGHT", host.actions, "TOPRIGHT", 0, 10)
 	host.materials:SetColumns({
-		pe:CreateItemColumn({ label = "Reagent", sortable = false,
+		pe:CreateItemColumn({ label = L["Reagent"], sortable = false,
 			getItemID = function(slot) return slot.itemID end,
 			getName = function(slot) return pe:GetItemDisplayName(slot.itemID) end }),
-		{ id = "need", label = "Need", width = 40, justifyH = "RIGHT", getText = function(slot) return tostring(slot.need) end },
-		{ id = "have", label = "Have", width = 46, justifyH = "RIGHT", tooltipTitle = "Have", tooltipText = "On all your characters.",
+		{ id = "need", label = L["Need"], width = 40, justifyH = "RIGHT", getText = function(slot) return tostring(slot.need) end },
+		{ id = "have", label = L["Have"], width = 46, justifyH = "RIGHT", tooltipTitle = L["Have"], tooltipText = L["On all your characters."],
 			getText = function(slot)
 				if slot.have < slot.need then
 					return pe:Colorize(pe:FormatNumberGrouped(slot.have), "danger")
 				end
 				return pe:FormatNumberGrouped(slot.have)
 			end },
-		pe:MoneyColumn({ id = "cost", label = "Cost", width = 76, sortable = false }),
+		pe:MoneyColumn({ id = "cost", label = L["Cost"], width = 76, sortable = false }),
 	})
 end
 
@@ -368,15 +369,15 @@ end
 -- Title bar: the title and the Recipe / Leveling / Queue switch.
 local function createPanelHeader(pe, f)
 	local theme = pe:GetTheme()
-	f.tabQueue = pe:CreateButton(f, "Queue", function()
+	f.tabQueue = pe:CreateButton(f, L["Queue"], function()
 		pe:SetProfessionPanelActiveTab("queue", true)
 	end, { small = true })
 	f.tabQueue:SetPoint("RIGHT", f, "TOPRIGHT", -PAD, -(theme.size.header / 2))
-	f.tabLeveling = pe:CreateButton(f, "Leveling", function()
+	f.tabLeveling = pe:CreateButton(f, L["Leveling"], function()
 		pe:SetProfessionPanelActiveTab("leveling", true)
 	end, { small = true })
 	f.tabLeveling:SetPoint("RIGHT", f.tabQueue, "LEFT", 1, 0)
-	f.tabInfo = pe:CreateButton(f, "Recipe", function()
+	f.tabInfo = pe:CreateButton(f, L["Recipe"], function()
 		pe:SetProfessionPanelActiveTab("info", true)
 	end, { small = true })
 	f.tabInfo:SetPoint("RIGHT", f.tabLeveling, "LEFT", 1, 0)
@@ -412,14 +413,14 @@ end
 local function createPanelToggle(pe, pf)
 	local theme = pe:GetTheme()
 	local panelToggle = CreateFrame("Button", addonName .. "ProfessionPanelToggle", pf, "UIPanelButtonTemplate")
-	panelToggle:SetText("Hide panel")
+	panelToggle:SetText(L["Hide panel"])
 	pe:SkinButton(panelToggle)
 	panelToggle:SetSize(80, theme.size.controlSmall)
 	anchorProfessionPanelToggleButton(panelToggle, pf)
 	panelToggle:HookScript("OnEnter", function(button)
 		GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
-		GameTooltip:SetText("Tradewright panel", 1, 1, 1)
-		GameTooltip:AddLine("Show or hide recipe profit and the craft queue.", theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, true)
+		GameTooltip:SetText(L["Tradewright panel"], 1, 1, 1)
+		GameTooltip:AddLine(L["Show or hide recipe profit and the craft queue."], theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, true)
 		GameTooltip:Show()
 	end)
 	panelToggle:HookScript("OnLeave", GameTooltip_Hide)
@@ -474,9 +475,9 @@ local function missingReagentCount(reagentPlan)
 end
 
 local CONFIDENCE_BADGES = {
-	missing_sale_price = "No price",
-	missing_mat_price = "No price",
-	stale_scan = "Old scan",
+	missing_sale_price = L["No price"],
+	missing_mat_price = L["No price"],
+	stale_scan = L["Old scan"],
 }
 
 -- Status badge label and tone for a recipe evaluation.
@@ -484,12 +485,12 @@ local function recipeBadge(confidence, ev)
 	if CONFIDENCE_BADGES[confidence] then
 		return CONFIDENCE_BADGES[confidence], "warning"
 	elseif ev.canCraftNow then
-		return "Can craft", "success"
+		return L["Can craft"], "success"
 	elseif ev.qualityReachable == false then
-		return (ev.concentrationNeeded or ev.concentrationCost) and "Needs concentration" or "Out of reach", "warning"
+		return (ev.concentrationNeeded or ev.concentrationCost) and L["Needs concentration"] or L["Out of reach"], "warning"
 	end
 	local missing = missingReagentCount(ev.reagentPlan)
-	return missing > 0 and ("Missing " .. missing) or "Missing", "danger"
+	return missing > 0 and (L["Missing "] .. missing) or "Missing", "danger"
 end
 
 local function moneyOrDash(pe, copper, formatter)
@@ -500,15 +501,15 @@ local function recipeFacts(pe, ev)
 	local cut = pe:GetAuctionCut() * 100
 	local facts = {
 		{ "Return", ev.roi and string.format("%.0f%%", ev.roi) or "-" },
-		{ "Reagents you already own", string.format("%.0f%%", (ev.coverage or 0) * 100) },
-		{ "Still to buy", moneyOrDash(pe, ev.outOfPocketMatCost, pe.FormatCopperFull) },
-		{ string.format("Sale before the %.3g%% auction cut", cut), moneyOrDash(pe, ev.saleGross, pe.FormatCopperFull) },
+		{ L["Reagents you already own"], string.format("%.0f%%", (ev.coverage or 0) * 100) },
+		{ L["Still to buy"], moneyOrDash(pe, ev.outOfPocketMatCost, pe.FormatCopperFull) },
+		{ string.format(L["Sale before the %.3g%% auction cut"], cut), moneyOrDash(pe, ev.saleGross, pe.FormatCopperFull) },
 	}
 	if pe.IS_RETAIL and ev.concentrationNeeded then
-		facts[#facts + 1] = { "Concentration needed", pe:FormatNumberGrouped(ev.concentrationNeeded) }
+		facts[#facts + 1] = { L["Concentration needed"], pe:FormatNumberGrouped(ev.concentrationNeeded) }
 	end
 	if ev.requiredTargetReagent and ev.requiredTargetReagentItemID then
-		facts[#facts + 1] = { "Target reagent", pe:GetItemDisplayName(ev.requiredTargetReagentItemID) }
+		facts[#facts + 1] = { L["Target reagent"], pe:GetItemDisplayName(ev.requiredTargetReagentItemID) }
 	end
 	return facts
 end
@@ -529,9 +530,9 @@ local function recipeMaterialRows(pe, reagentPlan)
 end
 
 local function renderRecipeStats(pe, host, ev)
-	host.stats.saleAfterCut:SetValues("Sale after cut", moneyOrDash(pe, ev.saleNet, pe.FormatCopperShort))
-	host.stats.materials:SetValues("Reagents", moneyOrDash(pe, ev.matCost, pe.FormatCopperShort))
-	host.stats.profit:SetValues("Profit", pe:FormatSignedMoney(ev.profit), nil, (tonumber(ev.profit) or 0) < 0 and "danger" or "success")
+	host.stats.saleAfterCut:SetValues(L["Sale after cut"], moneyOrDash(pe, ev.saleNet, pe.FormatCopperShort))
+	host.stats.materials:SetValues(L["Reagents"], moneyOrDash(pe, ev.matCost, pe.FormatCopperShort))
+	host.stats.profit:SetValues(L["Profit"], pe:FormatSignedMoney(ev.profit), nil, (tonumber(ev.profit) or 0) < 0 and "danger" or "success")
 	pe:LayoutEvenRow(host.statsRow, host.stats, 0, 8)
 end
 
@@ -542,33 +543,33 @@ local function renderProfessionRecipe(pe, panel, ctx)
 	host.empty:Hide()
 	host.body:Show()
 	host.header:SetItem(ev.outputItemID, (ev.recipeName or pe:GetItemDisplayName(ev.outputItemID)) .. rankMarkup(ev.qualityIndex),
-		string.format("%s · best crafter %s", tostring(ev.professionName or "?"), tostring(ctx.recommendedCrafterLabel or "-")), ev.outputIcon)
+		string.format(L["%s · best crafter %s"], tostring(ev.professionName or "?"), tostring(ctx.recommendedCrafterLabel or "-")), ev.outputIcon)
 	host.header.badge:SetBadge(recipeBadge(ctx.confidence or "ok", ev))
 	renderRecipeStats(pe, host, ev)
 	host.facts:SetRows(recipeFacts(pe, ev))
 	host.materials:SetRows(recipeMaterialRows(pe, ev.reagentPlan))
 	host.materials:Refresh()
-	host.materials:SetFooterText("Have counts all your characters", ev.matCost and pe:FormatCopperShort(ev.matCost) or nil)
-	panel.footerText:SetText(string.format("%s scanned %s", tostring(ev.professionName or "Profession"), pe:FormatScanTimestamp(ev.scanAt)))
+	host.materials:SetFooterText(L["Have counts all your characters"], ev.matCost and pe:FormatCopperShort(ev.matCost) or nil)
+	panel.footerText:SetText(string.format(L["%s scanned %s"], tostring(ev.professionName or "Profession"), pe:FormatScanTimestamp(ev.scanAt)))
 end
 
 local function renderProfessionEmpty(panel, message)
 	local host = panel.infoHost
 	host.body:Hide()
 	host.empty:Show()
-	host.empty:SetMessage("No recipe to show", message)
+	host.empty:SetMessage(L["No recipe to show"], message)
 	panel.footerText:SetText("")
 end
 
 local REFRESH_THROTTLE_SEC = 0.10
-local SELECT_RECIPE_TEXT = "Select a recipe to see its profit and reagents."
+local SELECT_RECIPE_TEXT = L["Select a recipe to see its profit and reagents."]
 -- What the empty panel says for each reason EvaluateSelectedProfessionRecipe gives.
 local EMPTY_REASON_TEXT = {
-	no_data = "This recipe is not saved yet. Press Scan, or wait for the recipe list to finish loading.",
+	no_data = L["This recipe is not saved yet. Press Scan, or wait for the recipe list to finish loading."],
 	no_recipe = SELECT_RECIPE_TEXT,
-	not_ready = "The profession window is still loading.",
-	no_eval = "Profit for this recipe could not be worked out yet. Select it again or press Scan.",
-	no_profession = "The profession for this recipe could not be found. Press Scan.",
+	not_ready = L["The profession window is still loading."],
+	no_eval = L["Profit for this recipe could not be worked out yet. Select it again or press Scan."],
+	no_profession = L["The profession for this recipe could not be found. Press Scan."],
 }
 
 function Tradewright:RefreshProfessionSideParts(panel)

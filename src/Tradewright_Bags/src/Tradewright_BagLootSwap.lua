@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Loot swap: when loot does not fit because the bags are full, and the loot is worth
 -- more than the cheapest stack carried, a prompt offers to delete that stack and take the loot.
 -- Nothing is deleted without the player clicking Swap.
@@ -62,18 +63,18 @@ local function ensurePrompt(pe)
 	pe:StyleWindow(prompt)
 	prompt.title = pe:CreateText(prompt, "GameFontNormal", "gold")
 	prompt.title:SetPoint("TOPLEFT", PAD, -PAD)
-	prompt.title:SetText("Bags full")
+	prompt.title:SetText(L["Bags full"])
 	prompt.close = pe:CreateIconButton(prompt, "close", hidePrompt)
 	prompt.close:SetPoint("TOPRIGHT", -6, -6)
 	prompt.text = pe:CreateParagraph(prompt, "textPrimary")
 	prompt.text:SetPoint("TOPLEFT", prompt.title, "BOTTOMLEFT", 0, -6)
 	prompt.text:SetPoint("RIGHT", prompt, "RIGHT", -PAD, 0)
-	prompt.swap = pe:CreateButton(prompt, "Swap", onSwap, { primary = true })
+	prompt.swap = pe:CreateButton(prompt, L["Swap"], onSwap, { primary = true })
 	prompt.swap:SetPoint("BOTTOMRIGHT", -PAD, PAD)
 	prompt.note = pe:CreateText(prompt, "GameFontHighlightSmall", "textMuted")
 	prompt.note:SetPoint("LEFT", prompt, "BOTTOMLEFT", PAD, PAD + 13)
 	prompt.note:SetPoint("RIGHT", prompt.swap, "LEFT", -8, 0)
-	prompt.note:SetText("Destroying cannot be undone.")
+	prompt.note:SetText(L["Destroying cannot be undone."])
 	return prompt
 end
 
@@ -81,7 +82,7 @@ local function showPrompt(pe, loot, drop)
 	local f = ensurePrompt(pe)
 	local count = loot.count > 1 and (" x" .. loot.count) or ""
 	f.loot, f.drop = loot, drop
-	f.text:SetText(string.format("Destroy %s to loot %s%s (%s)?", pe:DescribeBagDrop(drop), loot.name, count,
+	f.text:SetText(string.format(L["Destroy %s to loot %s%s (%s)?"], pe:DescribeBagDrop(drop), loot.name, count,
 		pe:FormatCopperShort(loot.value)))
 	f:ClearAllPoints()
 	if LootFrame and LootFrame:IsShown() then

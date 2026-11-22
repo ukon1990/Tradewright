@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Reagent planning: classifies reagent slots, picks the cheapest reagent per slot (Enchanting Vellum for enchants) and prices the plan.
 
 local ENCHANTING_VELLUM_ITEM_ID = 38682
@@ -177,7 +178,7 @@ local function ensureEnchantingVellumInPlan(plan, professionData, recipeData, fo
 			slotClass = "required_target",
 			slotRequired = true,
 			slotOptional = true,
-			slotLabel = "Target item",
+			slotLabel = L["Target item"],
 			synthetic = true,
 			legacyFallback = true,
 			autoSelected = true,

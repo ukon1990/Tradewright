@@ -1,6 +1,7 @@
 -- The player's own auctions: the Auctions tab, undercut checks, deposits and cancelling the most undercut.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local shared = Tradewright.AuctionShared
 local AUCTION_BULK_MIN_INTERVAL = shared.AUCTION_BULK_MIN_INTERVAL
 local attachSimpleTooltip = shared.attachSimpleTooltip
@@ -19,7 +20,7 @@ function Tradewright:OnOwnedAuctionsUpdated()
 	local elapsed = (GetTime and GetTime() or 0) - (tonumber(bulk.confirmationStartedAt) or 0)
 	if elapsed >= 0.20 then
 		self:DebugLog("AH", "owned auctions updated confirm", {
-			string.format("itemID=%s elapsed=%.2f", tostring(bulk.currentItemID), elapsed),
+			string.format(L["itemID=%s elapsed=%.2f"], tostring(bulk.currentItemID), elapsed),
 		})
 		self:ConfirmAuctionBulkCurrent("owned_auctions_updated")
 	end
@@ -89,10 +90,10 @@ function Tradewright:OnAuctionCanceled()
 	end
 end
 
-local OWNED_CANCEL_TIP = "Each click cancels one undercut auction, the most undercut first. "
-	.. "The deposit is not refunded, and the item comes back by mail. Skips auctions with a bid, "
-	.. "and ones where reposting at the lowest price would pay nothing after the cut and deposit."
-local OWNED_CHECK_TIP = "Looks up the current lowest price of every item you have listed, to show which are undercut."
+local OWNED_CANCEL_TIP = L["Each click cancels one undercut auction, the most undercut first. "]
+	.. L["The deposit is not refunded, and the item comes back by mail. Skips auctions with a bid, "]
+	.. L["and ones where reposting at the lowest price would pay nothing after the cut and deposit."]
+local OWNED_CHECK_TIP = L["Looks up the current lowest price of every item you have listed, to show which are undercut."]
 
 local function recheckOwnedAuctionPrices()
 	local ids = {}
@@ -108,32 +109,33 @@ local function buildOwnedButtons(panel)
 	panel.ownedSummary = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	panel.ownedSummary:SetJustifyH("LEFT")
 	panel.btnOwnedCheck = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	panel.btnOwnedCheck:SetText("Check prices")
+	panel.btnOwnedCheck:SetText(L["Check prices"])
 	panel.btnOwnedCheck:SetScript("OnClick", recheckOwnedAuctionPrices)
 	panel.btnOwnedCancel = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-	panel.btnOwnedCancel:SetText("Cancel undercut")
+	panel.btnOwnedCancel:SetText(L["Cancel undercut"])
 	panel.btnOwnedCancel:SetScript("OnClick", function()
 		Tradewright:CancelUndercutHoldingScan()
 	end)
-	attachSimpleTooltip(panel.btnOwnedCancel, "Cancel undercut", OWNED_CANCEL_TIP)
-	attachSimpleTooltip(panel.btnOwnedCheck, "Check prices", OWNED_CHECK_TIP)
+	attachSimpleTooltip(panel.btnOwnedCancel, L["Cancel undercut"], OWNED_CANCEL_TIP)
+	attachSimpleTooltip(panel.btnOwnedCheck, L["Check prices"], OWNED_CHECK_TIP)
 end
 
 local function appendOwnedUndercutLines(pe, lines, rowData)
-	lines[4] = { "Undercut by", string.format("%s each (%d%%)", pe:FormatCopperFull(rowData.undercutBy), math.max(1, math.floor(rowData.undercutPct + 0.5))) }
+	local undercutPercent = math.max(1, math.floor(rowData.undercutPct + 0.5))
+	lines[4] = { L["Undercut by"], string.format(L["%s each (%d%%)"], pe:FormatCopperFull(rowData.undercutBy), undercutPercent) }
 	if pe:GetSetting("auction.repostIncludeDeposit", true) ~= false then
-		lines[#lines + 1] = { "Deposit lost on cancel", rowData.deposit and pe:FormatCopperFull(rowData.deposit) or "unknown, not counted" }
+		lines[#lines + 1] = { L["Deposit lost on cancel"], rowData.deposit and pe:FormatCopperFull(rowData.deposit) or L["unknown, not counted"] }
 	end
-	lines[#lines + 1] = { "If cancelled and reposted at lowest", rowData.repostNet > 0
-		and string.format("%s (%s less)", pe:FormatCopperFull(rowData.repostNet), pe:FormatCopperFull(rowData.net - rowData.repostNet))
-		or "not worth it" }
+	lines[#lines + 1] = { L["If cancelled and reposted at lowest"], rowData.repostNet > 0
+		and string.format(L["%s (%s less)"], pe:FormatCopperFull(rowData.repostNet), pe:FormatCopperFull(rowData.net - rowData.repostNet))
+		or L["not worth it"] }
 end
 
 local function ownedRowTooltipLines(pe, panel, rowData)
 	local lines = {}
 	if not rowData.sold then
-		local cutLabel = string.format("After %.3g%% cut", (panel.ownedCut or pe.DEFAULT_AUCTION_CUT) * 100)
-		lines[1] = { "Lowest price", rowData.marketPrice and pe:FormatCopperFull(rowData.marketPrice) or "not checked this visit" }
+		local cutLabel = string.format(L["After %.3g%% cut"], (panel.ownedCut or pe.DEFAULT_AUCTION_CUT) * 100)
+		lines[1] = { L["Lowest price"], rowData.marketPrice and pe:FormatCopperFull(rowData.marketPrice) or L["not checked this visit"] }
 		lines[2] = { "Scanned", pe:FormatAuctionScanAge(pe:GetItemLastAuctionScanAt(rowData.itemID)) }
 		lines[3] = { cutLabel, pe:FormatCopperFull(rowData.net) }
 		if rowData.undercut then
@@ -148,8 +150,8 @@ local function buildOwnedTable(self, panel)
 	panel.ownedTable = self:CreateReusableTable(panel.ownedTableHost, {
 		rowHeight = 24,
 		footer = true,
-		emptyTitle = "No auctions",
-		emptyHint = "Items you post show up here.",
+		emptyTitle = L["No auctions"],
+		emptyHint = L["Items you post show up here."],
 		maxRows = 200,
 		sortKey = "status",
 		sortAsc = false,
@@ -157,7 +159,7 @@ local function buildOwnedTable(self, panel)
 		onRowEnter = function(rowFrame, rowData)
 			local pe = Tradewright
 			local lines = ownedRowTooltipLines(pe, panel, rowData)
-			pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, not rowData.sold and "Click to recheck its price" or nil)
+			pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, not rowData.sold and L["Click to recheck its price"] or nil)
 		end,
 		onRowLeave = function()
 			GameTooltip:Hide()
@@ -183,7 +185,7 @@ function Tradewright:BuildOwnedAuctionColumns()
 	return {
 		self:CreateItemColumn({
 			id = "item",
-			label = "Item",
+			label = L["Item"],
 			defaultSort = "asc",
 			minWidth = 110,
 			getItemID = function(row) return row and row.itemID end,
@@ -193,11 +195,11 @@ function Tradewright:BuildOwnedAuctionColumns()
 			end,
 			sortValue = function(row) return row and row.itemName end,
 		}),
-		pe:MoneyColumn({ id = "unitPrice", label = "Each", width = 78, optional = true }),
-		pe:MoneyColumn({ id = "value", label = "Total", width = 78 }),
+		pe:MoneyColumn({ id = "unitPrice", label = L["Each"], width = 78, optional = true }),
+		pe:MoneyColumn({ id = "value", label = L["Total"], width = 78 }),
 		{
-			id = "status", label = "Status", width = 104, sortable = true, defaultSort = "desc",
-			tooltipTitle = "Status", tooltipText = "Sold, or how your price compares with the lowest one checked this visit.",
+			id = "status", label = L["Status"], width = 104, sortable = true, defaultSort = "desc",
+			tooltipTitle = L["Status"], tooltipText = L["Sold, or how your price compares with the lowest one checked this visit."],
 			-- Descending: most undercut first, then lowest, unchecked, sold.
 			sortValue = function(row)
 				return row.sold and -1 or (row.undercut and 1 + row.undercutPct) or (row.undercut == false and 0.5) or 0
@@ -208,7 +210,7 @@ function Tradewright:BuildOwnedAuctionColumns()
 				elseif row.canceling then
 					return flagText(pe, "Cancelling", "textMuted")
 				elseif row.undercut then
-					return flagText(pe, string.format("Undercut %d%%", math.max(1, math.floor(row.undercutPct + 0.5))), "danger")
+					return flagText(pe, string.format(L["Undercut %d%%"], math.max(1, math.floor(row.undercutPct + 0.5))), "danger")
 				elseif row.undercut == false then
 					return flagText(pe, "Lowest", "textMuted")
 				end

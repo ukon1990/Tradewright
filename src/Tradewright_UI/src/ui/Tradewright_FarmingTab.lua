@@ -1,5 +1,6 @@
 local Tradewright = select(2, ...)
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Farming tab: saved farms with their gold an hour when run and at today's prices,
 -- and the "What to farm" list from Tradewright_FarmTargets.lua.
 
@@ -12,7 +13,7 @@ local DETAIL_WIDTH = 300
 local ROW_HEIGHT = 24
 local MAX_ITEM_ROWS = 7
 local PERIOD_WIDTH = 120
-local PERIODS = { { value = 7, label = "Last 7 days" }, { value = 30, label = "Last 30 days" }, { value = 0, label = "All runs" } }
+local PERIODS = { { value = 7, label = L["Last 7 days"] }, { value = 30, label = L["Last 30 days"] }, { value = 0, label = L["All runs"] } }
 
 local function duration(seconds)
 	local minutes = math.floor((seconds or 0) / 60 + 0.5)
@@ -25,27 +26,27 @@ end
 local function farmColumns(pe)
 	return {
 		{
-			id = "name", label = "Farm", width = 200, minWidth = 140, flex = 1, sortable = true, defaultSort = "asc",
+			id = "name", label = L["Farm"], width = 200, minWidth = 140, flex = 1, sortable = true, defaultSort = "asc",
 			sortValue = function(row) return row.name end,
 			getText = function(row)
-				return string.format("%s  |cff99a1ab%s · last run %s|r", row.name, row.zone ~= "" and row.zone or "Unknown zone",
+				return string.format(L["%s  |cff99a1ab%s · last run %s|r"], row.name, row.zone ~= "" and row.zone or L["Unknown zone"],
 					pe:FormatScanTimestamp(row.lastRunAt))
 			end,
 		},
 		{
-			id = "runs", label = "Runs", justifyH = "RIGHT", width = 44, sortable = true, defaultSort = "desc",
+			id = "runs", label = L["Runs"], justifyH = "RIGHT", width = 44, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.runs end,
 			getText = function(row) return tostring(row.runs) end,
 		},
 		{
-			id = "time", label = "Time", justifyH = "RIGHT", width = 64, sortable = true, defaultSort = "desc",
+			id = "time", label = L["Time"], justifyH = "RIGHT", width = 64, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.activeSeconds end,
 			getText = function(row) return duration(row.activeSeconds) end,
 		},
-		pe:MoneyColumn({ id = "then", label = "Then", field = "thenPerHour", width = 74 }),
-		pe:MoneyColumn({ id = "now", label = "Now", field = "nowPerHour", width = 74 }),
+		pe:MoneyColumn({ id = "then", label = L["Then"], field = "thenPerHour", width = 74 }),
+		pe:MoneyColumn({ id = "now", label = L["Now"], field = "nowPerHour", width = 74 }),
 		{
-			id = "change", label = "Change", justifyH = "RIGHT", width = 60, sortable = true, defaultSort = "desc",
+			id = "change", label = L["Change"], justifyH = "RIGHT", width = 60, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.changePct or 0 end,
 			getText = function(row) return pe:FormatSignedPercent(row.changePct) end,
 		},
@@ -55,16 +56,16 @@ end
 -- Gold an hour now and then, the shares, then what dropped per hour.
 local function detailRows(pe, row)
 	local rows = {
-		{ "Gold an hour, today's prices", pe:FormatCopperShort(row.nowPerHour) },
-		{ "When you farmed it", pe:FormatCopperShort(row.thenPerHour) },
-		{ "Share from items known to sell", string.format("%d%%", math.floor(row.liquidShare * 100 + 0.5)) },
-		{ "Share from coin and vendor value", string.format("%d%%", math.floor(row.coinShare * 100 + 0.5)) },
+		{ L["Gold an hour, today's prices"], pe:FormatCopperShort(row.nowPerHour) },
+		{ L["When you farmed it"], pe:FormatCopperShort(row.thenPerHour) },
+		{ L["Share from items known to sell"], string.format("%d%%", math.floor(row.liquidShare * 100 + 0.5)) },
+		{ L["Share from coin and vendor value"], string.format("%d%%", math.floor(row.coinShare * 100 + 0.5)) },
 		{ "", "" },
 	}
 	for index = 1, math.min(#row.perHourByItem, MAX_ITEM_ROWS) do
 		local item = row.perHourByItem[index]
 		rows[#rows + 1] = {
-			string.format("%s, %.1f an hour", pe:GetItemDisplayName(item.itemID), item.qtyPerHour),
+			string.format(L["%s, %.1f an hour"], pe:GetItemDisplayName(item.itemID), item.qtyPerHour),
 			pe:FormatCopperShort(item.valuePerHour),
 		}
 	end
@@ -73,14 +74,14 @@ end
 
 -- "Start this farm", Rename and Delete at the bottom of the side pane.
 local function buildDetailButtons(pe, panel, card)
-	card.start = pe:CreateButton(card.body, "Start this farm", function()
+	card.start = pe:CreateButton(card.body, L["Start this farm"], function()
 		if panel.selected then
 			pe:StartFarmRun(panel.selected.name)
 			FarmingTab:Refresh()
 		end
-	end, { tooltip = "Starts a new run under this name. Saving it adds it to this farm's totals. It records loot, not a route." })
+	end, { tooltip = L["Starts a new run under this name. Saving it adds it to this farm's totals. It records loot, not a route."] })
 	card.start:SetPoint("BOTTOMLEFT")
-	card.delete = pe:CreateButton(card.body, "Delete", function()
+	card.delete = pe:CreateButton(card.body, L["Delete"], function()
 		local row = panel.selected
 		if not row then
 			return
@@ -88,7 +89,7 @@ local function buildDetailButtons(pe, panel, card)
 		-- A second click on the same farm confirms.
 		if panel.deleteArmed ~= row.name then
 			panel.deleteArmed = row.name
-			card.delete:SetText("Click again to delete")
+			card.delete:SetText(L["Click again to delete"])
 			return
 		end
 		pe:DeleteFarm(row.name)
@@ -96,7 +97,7 @@ local function buildDetailButtons(pe, panel, card)
 		FarmingTab:Refresh()
 	end)
 	card.delete:SetPoint("BOTTOMRIGHT")
-	card.rename = pe:CreateButton(card.body, "Rename", function()
+	card.rename = pe:CreateButton(card.body, L["Rename"], function()
 		if panel.selected then
 			pe:AskToRenameFarm(panel.selected.name, function(newName)
 				panel.selected.name = newName
@@ -113,7 +114,7 @@ local function buildDetail(pe, panel)
 	card:SetWidth(DETAIL_WIDTH)
 	card.empty = pe:CreateEmptyState(card)
 	card.empty:SetAllPoints()
-	card.empty:SetMessage("Select a farm", "Click a farm to see what dropped and what it is worth today.")
+	card.empty:SetMessage(L["Select a farm"], L["Click a farm to see what dropped and what it is worth today."])
 	card.body = CreateFrame("Frame", nil, card)
 	card.body:SetPoint("TOPLEFT", PAD, -PAD)
 	card.body:SetPoint("BOTTOMRIGHT", -PAD, PAD)
@@ -130,7 +131,7 @@ local function buildDetail(pe, panel)
 	card.note = pe:CreateParagraph(card.body)
 	card.note:SetPoint("TOPLEFT", card.facts, "BOTTOMLEFT", 0, -10)
 	card.note:SetPoint("TOPRIGHT", card.facts, "BOTTOMRIGHT", 0, -10)
-	card.note:SetText("Worth now is the usual price after the cut for items known to sell, and vendor price for the rest.")
+	card.note:SetText(L["Worth now is the usual price after the cut for items known to sell, and vendor price for the rest."])
 	buildDetailButtons(pe, panel, card)
 	return card
 end
@@ -144,9 +145,9 @@ local function showDetail(pe, panel, row)
 		return
 	end
 	card.title:SetText(row.name)
-	card.subtitle:SetText(string.format("%s · %d runs · %s", row.zone ~= "" and row.zone or "Unknown zone", row.runs, duration(row.activeSeconds)))
+	card.subtitle:SetText(string.format(L["%s · %d runs · %s"], row.zone ~= "" and row.zone or L["Unknown zone"], row.runs, duration(row.activeSeconds)))
 	card.facts:SetRows(detailRows(pe, row))
-	card.delete:SetText("Delete")
+	card.delete:SetText(L["Delete"])
 	card.start:SetEnabled(pe:GetCurrentFarmRun() == nil)
 end
 
@@ -159,7 +160,7 @@ local function buildToolbar(pe, panel)
 	panel.status = pe:CreateText(panel.toolbar, "GameFontHighlightSmall", "textMuted")
 	local lastViewButton = pe:BuildFarmViewButtons(panel, function() FarmingTab:Refresh() end)
 	panel.status:SetPoint("LEFT", lastViewButton, "RIGHT", GAP, 0)
-	panel.startButton = pe:CreateButton(panel.toolbar, "Start farm", function()
+	panel.startButton = pe:CreateButton(panel.toolbar, L["Start farm"], function()
 		if pe:GetCurrentFarmRun() then
 			pe:ToggleFarmWindow()
 		else
@@ -183,8 +184,8 @@ local function buildTable(pe, panel)
 		autoFitToScroll = true,
 		sortKey = "now",
 		sortAsc = false,
-		emptyTitle = "No farms yet",
-		emptyHint = "Press Start farm, loot for a while, then stop it from the farm window.",
+		emptyTitle = L["No farms yet"],
+		emptyHint = L["Press Start farm, loot for a while, then stop it from the farm window."],
 		isRowSelected = function(row)
 			return panel.selected ~= nil and row ~= nil and row.name == panel.selected.name
 		end,
@@ -229,17 +230,18 @@ local function refreshStats(pe, panel, rows)
 		end
 		seconds, value, runs = seconds + row.activeSeconds, value + row.valueWhenSaved, runs + row.runs
 	end
-	panel.stats.bestFarm:SetValues("Best farm at today's prices", best and (pe:FormatCopperShort(best.nowPerHour) .. " an hour") or "-", best and best.name or "")
-	panel.stats.farmed:SetValues("Farmed", pe:FormatCopperShort(value), "Worth when saved", "success")
-	panel.stats.timeFarming:SetValues("Time farming", duration(seconds), "Pauses not counted")
-	panel.stats.runs:SetValues("Runs", tostring(runs), string.format("%d farms", #rows))
+	local bestPerHour = best and (pe:FormatCopperShort(best.nowPerHour) .. L[" an hour"]) or "-"
+	panel.stats.bestFarm:SetValues(L["Best farm at today's prices"], bestPerHour, best and best.name or "")
+	panel.stats.farmed:SetValues(L["Farmed"], pe:FormatCopperShort(value), L["Worth when saved"], "success")
+	panel.stats.timeFarming:SetValues(L["Time farming"], duration(seconds), L["Pauses not counted"])
+	panel.stats.runs:SetValues(L["Runs"], tostring(runs), string.format(L["%d farms"], #rows))
 	pe:LayoutEvenRow(panel.statsRow, panel.stats, 0, GAP)
 end
 
 local function refreshStatus(pe, panel)
 	local running = pe:GetCurrentFarmRun()
-	panel.status:SetText(running and ("Farm running: " .. running.name) or "No farm running")
-	panel.startButton:SetText(running and "Show farm window" or "Start farm")
+	panel.status:SetText(running and (L["Farm running: "] .. running.name) or L["No farm running"])
+	panel.startButton:SetText(running and L["Show farm window"] or L["Start farm"])
 end
 
 function FarmingTab:Create(container, uiState)
@@ -268,7 +270,7 @@ function FarmingTab:Refresh() -- luacheck: ignore 212
 	local rows = pe:GetFarmRows(tonumber(pe:GetSetting("farming.periodDays", 0)) or 0)
 	refreshStats(pe, panel, rows)
 	panel.table:SetRows(rows)
-	panel.table:SetFooterText("Gold an hour: Then at the day's prices, Now at today's", string.format("%d farms", #rows))
+	panel.table:SetFooterText(L["Gold an hour: Then at the day's prices, Now at today's"], string.format(L["%d farms"], #rows))
 	panel.table:Refresh()
 	local keep
 	for _, row in ipairs(rows) do

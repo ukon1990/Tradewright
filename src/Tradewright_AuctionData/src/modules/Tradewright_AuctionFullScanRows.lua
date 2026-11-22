@@ -1,6 +1,7 @@
 -- Rows of a full scan: classic browse pages, the visible result list, and saving each observation.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local shared = Tradewright.AuctionShared
 local formatDurationShort = shared.formatDurationShort
 local normalizeItemID = shared.normalizeItemID
@@ -165,17 +166,17 @@ end
 
 function Tradewright:StartClassicFullAuctionDump(existingToken)
 	if not self:CanUseClassicAuctionDump() then
-		self:PrintMessage("A full scan is not possible here.")
+		self:PrintMessage(L["A full scan is not possible here."])
 		return false
 	end
 	if not self:IsAuctionHouseFrameOpen() then
-		self:PrintMessage("Open the auction house before starting a full scan.")
+		self:PrintMessage(L["Open the auction house before starting a full scan."])
 		return false
 	end
 	local state = self:GetState()
 	local cooldownRemaining = self:GetFullAuctionDumpCooldownRemaining()
 	if cooldownRemaining > 0 and not existingToken then
-		self:PrintMessage("Full scan is on cooldown for " .. formatDurationShort(cooldownRemaining) .. ".")
+		self:PrintMessage(L["Full scan is on cooldown for "] .. formatDurationShort(cooldownRemaining) .. ".")
 		self:RefreshAuctionHousePanel()
 		return false
 	end
@@ -203,7 +204,7 @@ function Tradewright:StartClassicFullAuctionDump(existingToken)
 		pageSize = CLASSIC_AH_DUMP_PAGE_SIZE,
 		queryRetries = 0,
 	}
-	self:PrintMessage("Full scan started. Keep the auction house open until it ends.")
+	self:PrintMessage(L["Full scan started. Keep the auction house open until it ends."])
 	self:RefreshAuctionHousePanel()
 	self:QueryClassicAuctionDumpPage(token, 0)
 	return true
@@ -217,12 +218,12 @@ function Tradewright:QueryClassicAuctionDumpPage(token, page, retries)
 	end
 	retries = tonumber(retries) or 0
 	if not self:IsAuctionHouseFrameOpen() then
-		self:FailFullAuctionDump("Auction house closed during the full scan.")
+		self:FailFullAuctionDump(L["Auction house closed during the full scan."])
 		return
 	end
 	if type(CanSendAuctionQuery) == "function" and not CanSendAuctionQuery() then
 		if retries >= CLASSIC_AH_DUMP_QUERY_MAX_RETRIES then
-			self:FailFullAuctionDump("Timed out waiting to query auction listings.")
+			self:FailFullAuctionDump(L["Timed out waiting to query auction listings."])
 			return
 		end
 		dump.status = "waiting_query"
@@ -238,7 +239,7 @@ function Tradewright:QueryClassicAuctionDumpPage(token, page, retries)
 	dump.queryRetries = 0
 	local ok = pcall(QueryAuctionItems, "", nil, nil, dump.page, false, nil, false, false)
 	if not ok then
-		self:FailFullAuctionDump("The auction house did not answer. Try the full scan again.")
+		self:FailFullAuctionDump(L["The auction house did not answer. Try the full scan again."])
 		return
 	end
 	self:RefreshAuctionHousePanel()

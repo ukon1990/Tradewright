@@ -1,6 +1,7 @@
 -- Auction house event handlers: the house opening and closing, search results, posts, sales and bag changes.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local shared = Tradewright.AuctionShared
 local normalizeItemID = shared.normalizeItemID
 local normalizeSearchEventItemID = shared.normalizeSearchEventItemID
@@ -161,7 +162,7 @@ end
 function Tradewright:OnCommoditySearchResultsUpdated(itemID)
 	local state = self:GetState()
 	self:DebugLog("AH", "event commodity results", {
-		string.format("arg=%s selected=%s ctx=%s", tostring(normalizeSearchEventItemID(itemID)),
+		string.format(L["arg=%s selected=%s ctx=%s"], tostring(normalizeSearchEventItemID(itemID)),
 			tostring(state and state.auctionLastSellSelectionItemID), tostring(state and state.auctionSearchContext and state.auctionSearchContext.itemID)),
 	})
 	local ctx = state and state.auctionSearchContext or nil
@@ -179,7 +180,7 @@ end
 function Tradewright:OnItemSearchResultsUpdated(itemKey)
 	local state = self:GetState()
 	self:DebugLog("AH", "event item results", {
-		string.format("arg=%s selected=%s ctx=%s", tostring(normalizeSearchEventItemID(itemKey)),
+		string.format(L["arg=%s selected=%s ctx=%s"], tostring(normalizeSearchEventItemID(itemKey)),
 			tostring(state and state.auctionLastSellSelectionItemID), tostring(state and state.auctionSearchContext and state.auctionSearchContext.itemID)),
 	})
 	local ctx = state and state.auctionSearchContext or nil

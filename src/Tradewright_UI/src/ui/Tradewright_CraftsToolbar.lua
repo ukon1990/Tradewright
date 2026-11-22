@@ -1,17 +1,20 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Crafts tab toolbar: the search and filter row, and the row of pricing options under it.
 
 local PROFIT_CHOICES = {
-	{ value = "all", label = "All crafts" }, { value = "profitable", label = "Profitable" }, { value = "negative", label = "Losing money" },
-	{ value = "missing_price", label = "Missing price" }, { value = "uncraftable", label = "Can't craft now" },
-	{ value = "cooldown", label = "Cooldowns" },
+	{ value = "all", label = L["All crafts"] }, { value = "profitable", label = L["Profitable"] }, { value = "negative", label = L["Losing money"] },
+	{ value = "missing_price", label = L["Missing price"] }, { value = "uncraftable", label = L["Can't craft now"] },
+	{ value = "cooldown", label = L["Cooldowns"] },
 }
 local SOURCE_CHOICES = {
-	{ value = "owned_first", label = "Use what I own" }, { value = "market_only", label = "Buy everything" }, { value = "mixed", label = "Mixed" },
+	{ value = "owned_first", label = L["Use what I own"] }, { value = "market_only", label = L["Buy everything"] }, { value = "mixed", label = L["Mixed"] },
 }
-local BASIS_CHOICES = { { value = "auto", label = "Auto" }, { value = "market", label = "Auction house" }, { value = "ledger", label = "My own sales" } }
-local SCENARIO_CHOICES = { { value = "default", label = "No concentration" }, { value = "concentration", label = "With concentration" } }
+local BASIS_CHOICES = {
+	{ value = "auto", label = L["Auto"] }, { value = "market", label = L["Auction house"] }, { value = "ledger", label = L["My own sales"] },
+}
+local SCENARIO_CHOICES = { { value = "default", label = L["No concentration"] }, { value = "concentration", label = L["With concentration"] } }
 
 local function refreshCrafts(pe)
 	return function() pe:RefreshCraftsTab() end
@@ -77,20 +80,20 @@ function Tradewright:CreateCraftsFilterDropdowns(parent, chain)
 	ui.craftsProfitDropdown = self:CreateSettingDropdown(parent, {
 		setting = "crafts.profitState", default = "all", width = 112, choices = PROFIT_CHOICES, onChanged = refreshCrafts(self),
 	})
-	ui.craftsCategoryDropdown = createFilter(self, parent, { width = 120, allLabel = "All categories",
+	ui.craftsCategoryDropdown = createFilter(self, parent, { width = 120, allLabel = L["All categories"],
 		getOptions = function() return pe:GetCraftCategoryFilterOptions(ui.craftsUnfilteredRows or {}) end,
 		uiKey = "craftsCategoryFilterValues", setting = "crafts.categoryFilter" })
-	ui.craftsProfessionDropdown = createFilter(self, parent, { width = 128, allLabel = "All professions",
+	ui.craftsProfessionDropdown = createFilter(self, parent, { width = 128, allLabel = L["All professions"],
 		getOptions = function() return pe:GetCraftProfessionFilterOptions() end,
 		uiKey = "craftsProfessionFilterValues", setting = "crafts.professionFilter" })
-	ui.craftsCharacterDropdown = createFilter(self, parent, { width = 132, allLabel = "All characters",
+	ui.craftsCharacterDropdown = createFilter(self, parent, { width = 132, allLabel = L["All characters"],
 		getOptions = function() return pe:GetInventoryCharacterFilterOptions() end,
 		uiKey = "craftsCharacterFilterValues", setting = "crafts.characterFilter" })
 	for _, dropdown in ipairs({ ui.craftsProfitDropdown, ui.craftsCategoryDropdown, ui.craftsProfessionDropdown }) do
 		chain[#chain + 1] = dropdown
 	end
 	if self.IS_RETAIL then
-		ui.craftsExpansionDropdown = createFilter(self, parent, { width = 120, allLabel = "All expansions",
+		ui.craftsExpansionDropdown = createFilter(self, parent, { width = 120, allLabel = L["All expansions"],
 			getOptions = function() return pe:GetExpansionFilterOptions() end,
 			uiKey = "craftsExpansionFilterValues", setting = "crafts.selectedExpansions" })
 		chain[#chain + 1] = ui.craftsExpansionDropdown
@@ -106,12 +109,12 @@ function Tradewright:CreateCraftsFilterRow(panel)
 	panel.filters:SetPoint("TOPLEFT")
 	panel.filters:SetPoint("TOPRIGHT")
 	panel.filters:SetHeight(26)
-	panel.refreshButton = self:CreateButton(panel.filters, "Refresh", function() pe:RefreshCraftsTab() end, { primary = true })
+	panel.refreshButton = self:CreateButton(panel.filters, L["Refresh"], function() pe:RefreshCraftsTab() end, { primary = true })
 	panel.refreshButton:SetPoint("RIGHT")
-	ui.craftsClearBtn = self:CreateButton(panel.filters, "Reset", function() pe:ResetCraftsFilters() end,
-		{ tooltip = "Clear the search and every filter." })
+	ui.craftsClearBtn = self:CreateButton(panel.filters, L["Reset"], function() pe:ResetCraftsFilters() end,
+		{ tooltip = L["Clear the search and every filter."] })
 	self:CreateCraftsFilterDropdowns(panel.filters, { panel.refreshButton, ui.craftsClearBtn })
-	ui.craftsSearchBox = self:CreateSearchBox(panel.filters, "Search item or recipe", function()
+	ui.craftsSearchBox = self:CreateSearchBox(panel.filters, L["Search item or recipe"], function()
 		pe:RefreshCraftsTab()
 	end)
 	ui.craftsSearchBox:SetPoint("LEFT", 6, 0)
@@ -123,7 +126,7 @@ function Tradewright:CreateCraftsPriceDropdowns(panel)
 	local pe, ui = self, self.ui
 	panel.sourceDropdown = self:CreateSettingDropdown(panel, {
 		setting = "crafts.reagentSourceMode", default = "owned_first", width = 110, choices = SOURCE_CHOICES,
-		onChanged = refreshCrafts(self), tooltip = "Use what I own: reagents you hold cost nothing. Buy everything: all are priced at the auction house.",
+		onChanged = refreshCrafts(self), tooltip = L["Use what I own: reagents you hold cost nothing. Buy everything: all are priced at the auction house."],
 	})
 	panel.basisDropdown = self:CreateSettingDropdown(panel, {
 		setting = "crafts.costBasis", default = "auto", width = 92, choices = BASIS_CHOICES,
@@ -131,15 +134,15 @@ function Tradewright:CreateCraftsPriceDropdowns(panel)
 			pe:SetSetting("crafts.saleBasis", value == "market" and "market" or value == "ledger" and "ledger" or "auto")
 			pe:RefreshCraftsTab()
 		end,
-		tooltip = "Auction house: prices from your scans. My own sales: what you sold and bought for. Auto: your own where known.",
+		tooltip = L["Auction house: prices from your scans. My own sales: what you sold and bought for. Auto: your own where known."],
 	})
 	panel.craftsRangeDropdown = self:CreateSettingDropdown(panel, {
 		setting = "inventory.metricRange", default = "30d", width = 92, choices = self:GetInventoryMetricRangeOptions(),
-		onChanged = function() pe:RenderCraftsDetails(ui.craftsSelectedRowData) end, tooltip = "Time range for price history",
+		onChanged = function() pe:RenderCraftsDetails(ui.craftsSelectedRowData) end, tooltip = L["Time range for price history"],
 	})
 	local groups = {
 		labelled(self, panel.options, "Reagents", panel.sourceDropdown),
-		labelled(self, panel.options, "Prices from", panel.basisDropdown),
+		labelled(self, panel.options, L["Prices from"], panel.basisDropdown),
 		labelled(self, panel.options, "History", panel.craftsRangeDropdown),
 	}
 	if self.IS_RETAIL then

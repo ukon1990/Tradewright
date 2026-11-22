@@ -1,5 +1,6 @@
 local addonName, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local GAP = 12
 local PAD = 10
 local MODAL_W, MODAL_H = 760, 640
@@ -11,7 +12,7 @@ local function createItemDetailsTitleBar(pe, frame, header)
 	pe:SkinCloseButton(close)
 	local title = pe:CreateText(frame, "GameFontNormalLarge", "gold")
 	title:SetPoint("LEFT", frame, "TOPLEFT", GAP, -(header / 2) - 1)
-	title:SetText("Item details")
+	title:SetText(L["Item details"])
 end
 
 -- The right card: the item's auction listing history, or an empty state without auction data.
@@ -19,7 +20,7 @@ local function createItemDetailsMarketCard(pe, frame)
 	frame.marketCard = pe:CreateInset(frame)
 	frame.marketCard:SetPoint("TOPLEFT", frame.itemPane, "TOPRIGHT", GAP, 0)
 	frame.marketCard:SetPoint("BOTTOMRIGHT", -GAP, GAP)
-	local heading = pe:CreateHeading(frame.marketCard, "Auction house")
+	local heading = pe:CreateHeading(frame.marketCard, L["Auction house"])
 	heading:SetPoint("TOPLEFT", PAD, -PAD)
 	heading:SetPoint("TOPRIGHT", -PAD, -PAD)
 	frame.market = pe:CreateMarketHistoryView(frame.marketCard, { noHeader = true, plotHeight = 120 })
@@ -27,7 +28,7 @@ local function createItemDetailsMarketCard(pe, frame)
 	frame.market:SetPoint("BOTTOMRIGHT", -PAD, PAD)
 	frame.marketEmpty = pe:CreateEmptyState(frame.marketCard)
 	frame.marketEmpty:SetAllPoints()
-	frame.marketEmpty:SetMessage("No auction data", "Scan the auction house to see this item's prices and hourly history.")
+	frame.marketEmpty:SetMessage(L["No auction data"], L["Scan the auction house to see this item's prices and hourly history."])
 end
 
 local function createItemDetailsWindow(pe)

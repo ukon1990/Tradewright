@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Sales ledger (Overview → Sales): what the auction house has paid out. Four headline numbers,
 -- gold earned per day, the items that sell best and the latest auction mails: sold, bought, or
 -- come back unsold. The numbers come from the ledger, which gains an entry whenever an auction's
@@ -12,13 +13,13 @@ local CHART_HEIGHT = 190
 local RECENT_ROWS = 100
 -- What the "Latest" card can list; `amount` gives a row's gold: earned, paid (negative) or none.
 local LATEST_KINDS = {
-	{ key = "sold", label = "Sold", kinds = { sell = true },
+	{ key = "sold", label = L["Sold"], kinds = { sell = true },
 		amount = function(event) return tonumber(event.netCopper) or tonumber(event.totalCopper) or 0 end },
-	{ key = "bought", label = "Bought", kinds = { buy = true },
+	{ key = "bought", label = L["Bought"], kinds = { buy = true },
 		amount = function(event) return -(tonumber(event.totalCopper) or 0) end },
-	{ key = "returned", label = "Came back", kinds = { expired = true, cancelled = true }, amount = function() return nil end },
+	{ key = "returned", label = L["Came back"], kinds = { expired = true, cancelled = true }, amount = function() return nil end },
 }
-local KIND_TEXT = { sell = "Sold", buy = "Bought", expired = "Expired unsold", cancelled = "Cancelled" }
+local KIND_TEXT = { sell = "Sold", buy = "Bought", expired = L["Expired unsold"], cancelled = "Cancelled" }
 
 -- Table options shared by both cards: rows sort high to low on `sortKey`, item rows link on shift-click.
 local function salesTableOptions(pe, sortKey, tooltipPairs)
@@ -26,11 +27,11 @@ local function salesTableOptions(pe, sortKey, tooltipPairs)
 		rowHeight = 24,
 		sortKey = sortKey,
 		sortAsc = false,
-		emptyTitle = "Nothing recorded yet",
-		emptyHint = "An entry is added when you collect an auction's gold or item from the mailbox.",
+		emptyTitle = L["Nothing recorded yet"],
+		emptyHint = L["An entry is added when you collect an auction's gold or item from the mailbox."],
 		onRowEnter = function(rowFrame, row)
 			if row then
-				pe:ShowItemRowTooltip(rowFrame, row.itemID, tooltipPairs(row), row.itemID and "Shift-click to link." or nil)
+				pe:ShowItemRowTooltip(rowFrame, row.itemID, tooltipPairs(row), row.itemID and L["Shift-click to link."] or nil)
 			end
 		end,
 		onRowClick = function(_, row)
@@ -95,13 +96,13 @@ end
 local function itemTooltipPairs(pe, row)
 	local count = function(n) return pe:FormatNumberGrouped(n) end
 	return {
-		{ "Sales", string.format("%s, %s items", count(row.sales), count(row.units)) },
-		{ "Earned after cut", pe:FormatCopperFull(row.net) },
-		{ "Sold for", pe:FormatCopperFull(row.gross) },
-		{ "Sales a week", string.format("%.1f", row.perWeek) },
-		{ "Last sold", pe:FormatScanTimestamp(row.lastAt) },
-		{ "Bought for, each", row.boughtEach and pe:FormatCopperFull(row.boughtEach) or "not bought at auction" },
-		{ "Came from", originText(row.origins or {}) },
+		{ "Sales", string.format(L["%s, %s items"], count(row.sales), count(row.units)) },
+		{ L["Earned after cut"], pe:FormatCopperFull(row.net) },
+		{ L["Sold for"], pe:FormatCopperFull(row.gross) },
+		{ L["Sales a week"], string.format("%.1f", row.perWeek) },
+		{ L["Last sold"], pe:FormatScanTimestamp(row.lastAt) },
+		{ L["Bought for, each"], row.boughtEach and pe:FormatCopperFull(row.boughtEach) or L["not bought at auction"] },
+		{ L["Came from"], originText(row.origins or {}) },
 	}
 end
 
@@ -109,14 +110,14 @@ local function itemsColumns(pe)
 	local count = function(n) return pe:FormatNumberGrouped(n) end
 	return {
 		pe:ItemColumn({ minWidth = 120 }),
-		pe:NumberColumn({ id = "sales", label = "Sales", width = 46, format = count }),
-		pe:PercentColumn({ id = "saleRate", label = "Sold", width = 46, optional = true }),
-		pe:NumberColumn({ id = "units", label = "Units", width = 46, format = count, optional = true }),
-		pe:MoneyColumn({ id = "net", label = "Earned", width = 78 }),
-		pe:MoneyColumn({ id = "avgUnit", label = "Each", width = 70, optional = true }),
-		pe:NumberColumn({ id = "perWeek", label = "A week", width = 56, format = function(n) return string.format("%.1f", n) end }),
-		pe:MoneyColumn({ id = "boughtEach", label = "Bought each", width = 78, optional = true }),
-		pe:NumberColumn({ id = "profitEach", label = "Profit each", width = 78, optional = true,
+		pe:NumberColumn({ id = "sales", label = L["Sales"], width = 46, format = count }),
+		pe:PercentColumn({ id = "saleRate", label = L["Sold"], width = 46, optional = true }),
+		pe:NumberColumn({ id = "units", label = L["Units"], width = 46, format = count, optional = true }),
+		pe:MoneyColumn({ id = "net", label = L["Earned"], width = 78 }),
+		pe:MoneyColumn({ id = "avgUnit", label = L["Each"], width = 70, optional = true }),
+		pe:NumberColumn({ id = "perWeek", label = L["A week"], width = 56, format = function(n) return string.format("%.1f", n) end }),
+		pe:MoneyColumn({ id = "boughtEach", label = L["Bought each"], width = 78, optional = true }),
+		pe:NumberColumn({ id = "profitEach", label = L["Profit each"], width = 78, optional = true,
 			format = function(copper) return pe:FormatSignedMoney(copper) end }),
 	}
 end
@@ -124,20 +125,20 @@ end
 local function recentColumns(pe)
 	return {
 		pe:ItemColumn({ minWidth = 120 }),
-		pe:NumberColumn({ id = "amount", label = "Gold", width = 78,
+		pe:NumberColumn({ id = "amount", label = L["Gold"], width = 78,
 			format = function(copper) return pe:FormatSignedMoney(copper) end }),
-		{ id = "ts", label = "When", justifyH = "RIGHT", width = 104, sortable = true, defaultSort = "desc",
+		{ id = "ts", label = L["When"], justifyH = "RIGHT", width = 104, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.ts end,
 			getText = function(row) return pe:FormatScanTimestamp(row.ts) end },
 	}
 end
 
 local function recentTooltipPairs(pe, row)
-	local lines = { { "What happened", KIND_TEXT[row.kind] } }
+	local lines = { { L["What happened"], KIND_TEXT[row.kind] } }
 	if row.kind == "sell" then
-		lines[#lines + 1] = { "Earned after cut", pe:FormatCopperFull(row.amount) }
-		lines[#lines + 1] = { "Sold for", pe:FormatCopperFull(row.gross) }
-		lines[#lines + 1] = { "Buyer", row.buyer or "several buyers" }
+		lines[#lines + 1] = { L["Earned after cut"], pe:FormatCopperFull(row.amount) }
+		lines[#lines + 1] = { L["Sold for"], pe:FormatCopperFull(row.gross) }
+		lines[#lines + 1] = { "Buyer", row.buyer or L["several buyers"] }
 	elseif row.kind == "buy" then
 		lines[#lines + 1] = { "Paid", pe:FormatCopperFull(row.gross) }
 	end
@@ -184,12 +185,12 @@ function Tradewright:CreateSalesDashboard(parent)
 	dash:CreateChartCard()
 	-- What sells: one row per item, sortable by how much, how many and how often.
 	dash.items = pe:CreateTableCard(dash, {
-		title = "What sells",
+		title = L["What sells"],
 		columns = itemsColumns(pe),
 		table = salesTableOptions(pe, "net", function(row) return itemTooltipPairs(pe, row) end),
 	})
 	dash.recent = pe:CreateTableCard(dash, {
-		title = "Latest",
+		title = L["Latest"],
 		columns = recentColumns(pe),
 		table = salesTableOptions(pe, "ts", function(row) return recentTooltipPairs(pe, row) end),
 	})
@@ -247,7 +248,7 @@ end
 
 function SalesDashboardMixin:CreateChartCard()
 	local pe = self.pe
-	self.chart = pe:CreateDashboardCard(self, "Gold from sales, per day")
+	self.chart = pe:CreateDashboardCard(self, L["Gold from sales, per day"])
 	self.chart:SetPoint("TOPLEFT", self.statsRow, "BOTTOMLEFT", 0, -GAP)
 	self.chart:SetPoint("TOPRIGHT", self.statsRow, "BOTTOMRIGHT", 0, -GAP)
 	self.chart:SetHeight(CHART_HEIGHT)
@@ -255,7 +256,7 @@ function SalesDashboardMixin:CreateChartCard()
 	self.graph = pe:CreateTimeSeriesGraph(self.chart, {
 		showTitle = false,
 		plotHeight = CHART_HEIGHT - 76,
-		emptyText = "No sales in this period yet.",
+		emptyText = L["No sales in this period yet."],
 	})
 	self.graph:SetPoint("BOTTOMLEFT", self.chart, "BOTTOMLEFT", PAD, 8)
 	self.graph:SetYFormatter(function(value) return pe:FormatCopperShort(tonumber(value) or 0) end)
@@ -298,24 +299,24 @@ end
 function SalesDashboardMixin:RefreshTotals(summary)
 	local pe, totals = self.pe, summary.totals
 	local function money(copper) return pe:FormatCopperShort(copper) end
-	self.stats.earned:SetValues("Earned from sales", money(totals.net),
-		string.format("%s a day · %s paid in auction cut", money(totals.net / summary.spanDays), money(totals.gross - totals.net)),
+	self.stats.earned:SetValues(L["Earned from sales"], money(totals.net),
+		string.format(L["%s a day · %s paid in auction cut"], money(totals.net / summary.spanDays), money(totals.gross - totals.net)),
 		totals.net > 0 and "success" or nil)
-	self.stats.sales:SetValues("Sales", pe:FormatNumberGrouped(totals.sales),
-		string.format("%s items, %s different", pe:FormatNumberGrouped(totals.units), pe:FormatNumberGrouped(#summary.items)))
+	self.stats.sales:SetValues(L["Sales"], pe:FormatNumberGrouped(totals.sales),
+		string.format(L["%s items, %s different"], pe:FormatNumberGrouped(totals.units), pe:FormatNumberGrouped(#summary.items)))
 end
 
 function SalesDashboardMixin:RefreshTopItems(items)
 	local pe = self.pe
 	local bestEarner, mostOften = topItems(pe, items)
-	local nothing = "Nothing sold in this period"
+	local nothing = L["Nothing sold in this period"]
 	if bestEarner then
-		self.stats.bestEarner:SetValues("Best earner", bestEarner.name, pe:FormatCopperShort(bestEarner.net) .. " earned", "gold")
-		self.stats.mostOften:SetValues("Sells most often", mostOften.name,
-			string.format("%s sales, %.1f a week", pe:FormatNumberGrouped(mostOften.sales), mostOften.perWeek))
+		self.stats.bestEarner:SetValues(L["Best earner"], bestEarner.name, pe:FormatCopperShort(bestEarner.net) .. L[" earned"], "gold")
+		self.stats.mostOften:SetValues(L["Sells most often"], mostOften.name,
+			string.format(L["%s sales, %.1f a week"], pe:FormatNumberGrouped(mostOften.sales), mostOften.perWeek))
 	else
-		self.stats.bestEarner:SetValues("Best earner", "-", nothing, nil)
-		self.stats.mostOften:SetValues("Sells most often", "-", nothing)
+		self.stats.bestEarner:SetValues(L["Best earner"], "-", nothing, nil)
+		self.stats.mostOften:SetValues(L["Sells most often"], "-", nothing)
 	end
 end
 

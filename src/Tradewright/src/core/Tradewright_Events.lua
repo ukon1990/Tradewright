@@ -1,5 +1,6 @@
 local addonName, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Methods that live in another module (Bags, retail-only files) may be missing; skip them silently.
 local function callOptional(self, method, ...)
 	if self[method] then
@@ -53,7 +54,7 @@ local function onPlayerLogin(self)
 	callOptional(self, "InitCraftingOrdersFilters")
 	callOptional(self, "InitDynamicLayeringHooks")
 	callOptional(self, "InitMailPanelHooks")
-	self:PrintMessage("Loaded. /tw opens the window, /tw help lists the commands.")
+	self:PrintMessage(L["Loaded. /tw opens the window, /tw help lists the commands."])
 end
 
 local PROFESSION_PANEL_REFRESH_DELAY = 0.05

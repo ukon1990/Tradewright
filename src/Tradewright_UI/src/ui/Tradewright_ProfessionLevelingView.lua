@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Leveling view of the profession side panel: the cheapest route from the current skill as a list of
 -- steps, with totals, the choice of what crafted items count for, and a Queue button per step that
 -- puts the step's crafts in the craft queue. Buying happens from the Queue view.
@@ -11,30 +12,30 @@ local STATS_ROW_HEIGHT = 58
 local SECTION_GAP = 10
 
 local GIVE_BACK_OPTIONS = {
-	{ value = "vendor", label = "Sell to vendor" },
-	{ value = "auction", label = "Sell at auction" },
-	{ value = "none", label = "Worth nothing" },
+	{ value = "vendor", label = L["Sell to vendor"] },
+	{ value = "auction", label = L["Sell at auction"] },
+	{ value = "none", label = L["Worth nothing"] },
 }
 local RECIPE_SCOPE_OPTIONS = {
-	{ value = "trainer", label = "Trainer recipes first" },
-	{ value = "all", label = "All recipes" },
-	{ value = "known", label = "Known recipes only" },
+	{ value = "trainer", label = L["Trainer recipes first"] },
+	{ value = "all", label = L["All recipes"] },
+	{ value = "known", label = L["Known recipes only"] },
 }
-local GIVE_BACK_STAT_LABEL = { vendor = "Sold to vendor", auction = "Sold at auction", none = "Crafted items" }
+local GIVE_BACK_STAT_LABEL = { vendor = L["Sold to vendor"], auction = L["Sold at auction"], none = L["Crafted items"] }
 
 -- Title and hint of the empty table, per reason GetLevelingRoute gives for having no route.
 local EMPTY_TEXT = {
-	no_data = { "Profession not scanned yet", "Press Scan on the Recipe view, then come back." },
-	unsupported = { "Not available here", "This game version does not report when recipes stop giving skill." },
-	no_prices = { "No prices for a route yet",
-		"No recipe that can still give skill has a price for all its reagents. Run a full scan at the auction house." },
-	finished = { "Nothing left to level", "None of this profession's recipes can give a skill point any more." },
+	no_data = { L["Profession not scanned yet"], L["Press Scan on the Recipe view, then come back."] },
+	unsupported = { L["Not available here"], L["This game version does not report when recipes stop giving skill."] },
+	no_prices = { L["No prices for a route yet"],
+		L["No recipe that can still give skill has a price for all its reagents. Run a full scan at the auction house."] },
+	finished = { L["Nothing left to level"], L["None of this profession's recipes can give a skill point any more."] },
 }
 
 local function loadingNote()
 	local _, reason, progress = Tradewright:GetOpenProfessionLevelingRoute()
 	if reason == "not_ready" and progress then
-		return string.format("Working out the route · %d of %d recipes priced", progress.done, progress.total)
+		return string.format(L["Working out the route · %d of %d recipes priced"], progress.done, progress.total)
 	end
 	return nil
 end
@@ -46,30 +47,30 @@ end
 
 -- "an unknown creature" stands in until the creature is met with its name showing.
 local function dropSourceName(dropSource)
-	return dropSource.name or "an unknown creature"
+	return dropSource.name or L["an unknown creature"]
 end
 
 -- The skill needed to learn a recipe is only known once a trainer has been seen teaching it; the
 -- trainer's price is in the row's tooltip.
 local function learnSourceText(pe, candidate)
 	if candidate.source == "trainer" then
-		return string.format("trainer, skill %d", candidate.learnSkill or 0)
+		return string.format(L["trainer, skill %d"], candidate.learnSkill or 0)
 	elseif candidate.source == "vendor" then
-		return "vendor, " .. pe:FormatCopperShort(candidate.learnCost or 0)
+		return L["vendor, "] .. pe:FormatCopperShort(candidate.learnCost or 0)
 	elseif candidate.source == "drop" then
-		return "drops from " .. dropSourceName(candidate.dropSource)
+		return L["drops from "] .. dropSourceName(candidate.dropSource)
 	end
-	return "source unknown"
+	return L["source unknown"]
 end
 
 local function craftStepDetail(pe, step, queued, isNextStep)
 	-- "~" for an expected count; the detail line has little room at this panel width.
-	local parts = { string.format(craftCountIsExact(step) and "%d crafts" or "~%d crafts", step.crafts) }
+	local parts = { string.format(craftCountIsExact(step) and L["%d crafts"] or L["~%d crafts"], step.crafts) }
 	if isNextStep then
-		parts[#parts + 1] = "next step"
+		parts[#parts + 1] = L["next step"]
 	end
 	if queued > 0 then
-		parts[#parts + 1] = string.format("%d in queue", queued)
+		parts[#parts + 1] = string.format(L["%d in queue"], queued)
 	end
 	if not step.learned then
 		parts[#parts + 1] = learnSourceText(pe, step.candidate)
@@ -122,11 +123,11 @@ end
 
 local function rankCapRow(route, step, index, isNextStep)
 	local nextRank = route.nextRank
-	local detail = nextRank and string.format("%s · skill %d", nextRank.name, nextRank.skillRequired or 0)
-		or string.format("at a %s trainer", route.professionName or "profession")
+	local detail = nextRank and string.format(L["%s · skill %d"], nextRank.name, nextRank.skillRequired or 0)
+		or string.format(L["at a %s trainer"], route.professionName or "profession")
 	return {
-		_rowIdentity = index, kind = "rankCap", route = route, skillText = tostring(step.skill), name = "Train the next rank",
-		detailText = detail .. (isNextStep and " · next step" or ""),
+		_rowIdentity = index, kind = "rankCap", route = route, skillText = tostring(step.skill), name = L["Train the next rank"],
+		detailText = detail .. (isNextStep and L[" · next step"] or ""),
 		action = "trainer", learnBlockedBy = rankBlockedBy(route),
 	}
 end
@@ -173,7 +174,7 @@ end
 local function actionCell(pe)
 	return function(rowFrame)
 		local cell = CreateFrame("Frame", nil, rowFrame)
-		cell.button = pe:CreateButton(cell, "Queue", nil, { small = true, width = 52 })
+		cell.button = pe:CreateButton(cell, L["Queue"], nil, { small = true, width = 52 })
 		cell.button:SetPoint("RIGHT", -4, 0)
 		cell.badge = pe:CreateBadge(cell)
 		cell.badge:SetPoint("RIGHT", -4, 0)
@@ -183,13 +184,13 @@ end
 
 -- The button of a step by its action: its label and what a click does.
 local ACTION_BUTTON = {
-	queue = { label = "Queue", onClick = function(pe, row)
+	queue = { label = L["Queue"], onClick = function(pe, row)
 		pe:QueueLevelingStep(row.route, row.step)
 	end },
-	learn = { label = "Learn", onClick = function(pe, row)
+	learn = { label = L["Learn"], onClick = function(pe, row)
 		pe:ShowRecipeTrainerWaypoint(row.name, learnPlaces(row.step.candidate))
 	end },
-	trainer = { label = "Trainer", onClick = function(pe, row)
+	trainer = { label = L["Trainer"], onClick = function(pe, row)
 		pe:ShowRecipeTrainerWaypoint(row.route.nextRank.name, row.route.nextRank.trainers)
 	end },
 }
@@ -210,8 +211,8 @@ end
 local function routeColumns(pe)
 	local warning = pe:GetTheme().warning
 	return {
-		{ id = "skill", label = "Skill", width = 58, getText = function(row) return row.skillText end },
-		{ id = "recipe", label = "Recipe", width = 100, flex = 1, minWidth = 90, createCell = stepNameCell(pe),
+		{ id = "skill", label = L["Skill"], width = 58, getText = function(row) return row.skillText end },
+		{ id = "recipe", label = L["Recipe"], width = 100, flex = 1, minWidth = 90, createCell = stepNameCell(pe),
 			updateCell = function(cell, row)
 				cell.name:SetText(row.name)
 				if row.kind == "rankCap" then
@@ -221,7 +222,7 @@ local function routeColumns(pe)
 				end
 				cell.detail:SetText(row.detailText)
 			end },
-		{ id = "cost", label = "Cost", width = 92, justifyH = "RIGHT",
+		{ id = "cost", label = L["Cost"], width = 92, justifyH = "RIGHT",
 			getText = function(row) return row.cost and pe:FormatCopperShort(row.cost) or "" end },
 		{ id = "action", label = "", width = 62, createCell = actionCell(pe),
 			updateCell = function(cell, row) updateActionCell(pe, cell, row) end },
@@ -248,51 +249,51 @@ local function addMaterialLines(pe, candidate)
 			addFactLine(pe, label, "-")
 		end
 	end
-	addMoneyLine(pe, "Reagents per craft", candidate.materialCost)
+	addMoneyLine(pe, L["Reagents per craft"], candidate.materialCost)
 end
 
 -- Under a recipe not learned: where it comes from, and whether Learn can show the way now.
 local LEARN_HINT = {
-	no_trainer = "No trainer or vendor has been seen with it. Recipes show up here once seen at a vendor or in loot.",
-	skill = "Your skill is too low to learn it yet.",
+	no_trainer = L["No trainer or vendor has been seen with it. Recipes show up here once seen at a vendor or in loot."],
+	skill = L["Your skill is too low to learn it yet."],
 }
 
 local function learnText(pe, candidate)
 	if candidate.source == "trainer" then
-		return string.format("Not learned yet. Trainer: %s, needs skill %d.",
+		return string.format(L["Not learned yet. Trainer: %s, needs skill %d."],
 			pe:FormatCopperShort(candidate.learnCost or 0), candidate.learnSkill or 0)
 	elseif candidate.source == "vendor" then
-		return string.format("Not learned yet. A vendor sells the recipe for %s.", pe:FormatCopperShort(candidate.learnCost or 0))
+		return string.format(L["Not learned yet. A vendor sells the recipe for %s."], pe:FormatCopperShort(candidate.learnCost or 0))
 	elseif candidate.source == "drop" then
 		local drop = candidate.dropSource
-		return string.format("Not learned yet. The recipe drops from %s (%d of %d loots).", dropSourceName(drop), drop.held, drop.opened)
+		return string.format(L["Not learned yet. The recipe drops from %s (%d of %d loots)."], dropSourceName(drop), drop.held, drop.opened)
 	end
-	return "Not learned yet. Where it comes from is not known."
+	return L["Not learned yet. Where it comes from is not known."]
 end
 
 local function addLearnLines(pe, row)
 	local candidate, theme = row.step.candidate, pe:GetTheme()
 	GameTooltip:AddLine(learnText(pe, candidate), theme.accent.r, theme.accent.g, theme.accent.b, true)
-	GameTooltip:AddLine(LEARN_HINT[row.learnBlockedBy] or "Press Learn to show the way to the nearest one.",
+	GameTooltip:AddLine(LEARN_HINT[row.learnBlockedBy] or L["Press Learn to show the way to the nearest one."],
 		theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, true)
 end
 
 local function percentText(chance, estimated)
-	return string.format(estimated and "about %d%%" or "%d%%", math.floor(chance * 100 + 0.5))
+	return string.format(estimated and L["about %d%%"] or "%d%%", math.floor(chance * 100 + 0.5))
 end
 
 -- Under a rank step: whether the Trainer button can show the way, or why not.
 local RANK_HINT = {
-	no_trainer = "No trainer has been seen offering this rank. Higher ranks are taught by few trainers; "
-		.. "open one that does and it is remembered.",
-	skill = "Your skill is too low to train this rank yet.",
+	no_trainer = L["No trainer has been seen offering this rank. Higher ranks are taught by few trainers; "]
+		.. L["open one that does and it is remembered."],
+	skill = L["Your skill is too low to train this rank yet."],
 }
 
 -- "Karolek in Orgrimmar" for each trainer seen offering the rank.
 local function addRankTrainerLines(pe, trainers)
 	for trainerName, place in pairs(trainers or {}) do
 		local zone = place.zone and place.zone ~= "" and (" in " .. place.zone) or ""
-		addFactLine(pe, "Taught by", trainerName .. zone)
+		addFactLine(pe, L["Taught by"], trainerName .. zone)
 	end
 end
 
@@ -300,13 +301,13 @@ local function showRankTooltip(pe, rowFrame, row)
 	local nextRank, muted = row.route.nextRank, pe:GetTheme().textMuted
 	GameTooltip:SetOwner(rowFrame, "ANCHOR_LEFT")
 	GameTooltip:SetText(nextRank and nextRank.name or row.name, 1, 0.82, 0)
-	GameTooltip:AddLine(string.format("Your skill stops at %s until you train the next rank.", row.skillText), muted.r, muted.g, muted.b, true)
+	GameTooltip:AddLine(string.format(L["Your skill stops at %s until you train the next rank."], row.skillText), muted.r, muted.g, muted.b, true)
 	if nextRank then
-		addFactLine(pe, "Needs skill", tostring(nextRank.skillRequired or 0))
+		addFactLine(pe, L["Needs skill"], tostring(nextRank.skillRequired or 0))
 		addMoneyLine(pe, "Costs", nextRank.cost or 0)
 		addRankTrainerLines(pe, nextRank.trainers)
 	end
-	GameTooltip:AddLine(RANK_HINT[row.learnBlockedBy] or "Press Trainer to show the way to the nearest one.", muted.r, muted.g, muted.b, true)
+	GameTooltip:AddLine(RANK_HINT[row.learnBlockedBy] or L["Press Trainer to show the way to the nearest one."], muted.r, muted.g, muted.b, true)
 	GameTooltip:Show()
 end
 
@@ -321,19 +322,19 @@ local function showStepTooltip(pe, rowFrame, row)
 	local candidate = step.candidate
 	GameTooltip:SetOwner(rowFrame, "ANCHOR_LEFT")
 	GameTooltip:SetText(row.name, 1, 0.82, 0)
-	GameTooltip:AddLine(string.format("Skill %d to %d · %s", step.fromSkill, step.toSkill, row.detailText), 0.6, 0.63, 0.67, true)
+	GameTooltip:AddLine(string.format(L["Skill %d to %d · %s"], step.fromSkill, step.toSkill, row.detailText), 0.6, 0.63, 0.67, true)
 	addMaterialLines(pe, candidate)
 	if candidate.vendorGiveBack then
-		addMoneyLine(pe, "Sells to a vendor for", candidate.vendorGiveBack)
+		addMoneyLine(pe, L["Sells to a vendor for"], candidate.vendorGiveBack)
 	end
 	if (step.reusedQuantity or 0) > 0 then
-		addMoneyLine(pe, string.format("%d used as a reagent by later steps, saving", step.reusedQuantity), step.reuseValue)
+		addMoneyLine(pe, string.format(L["%d used as a reagent by later steps, saving"], step.reusedQuantity), step.reuseValue)
 	end
-	addFactLine(pe, string.format("Skill-up chance at %d", step.fromSkill),
+	addFactLine(pe, string.format(L["Skill-up chance at %d"], step.fromSkill),
 		percentText(SkillUpLogic.SkillUpChance(candidate.bounds, step.fromSkill), step.estimated))
-	addFactLine(pe, string.format("Skill-up chance at %d", step.toSkill - 1),
+	addFactLine(pe, string.format(L["Skill-up chance at %d"], step.toSkill - 1),
 		percentText(SkillUpLogic.SkillUpChance(candidate.bounds, step.toSkill - 1), step.estimated))
-	addFactLine(pe, "Turns grey at", tostring(candidate.bounds.greyStart))
+	addFactLine(pe, L["Turns grey at"], tostring(candidate.bounds.greyStart))
 	if not step.learned then
 		addLearnLines(pe, row)
 	end
@@ -375,7 +376,7 @@ local function createControls(pe, host, above)
 	controls:SetPoint("TOPRIGHT", above, "BOTTOMRIGHT", 0, -SECTION_GAP)
 	controls:SetHeight(26)
 	host.giveBackDropdown = pe:CreateSingleSelectDropdown(controls, {
-		width = 150, options = GIVE_BACK_OPTIONS, tooltip = "What the items you craft while leveling are worth.",
+		width = 150, options = GIVE_BACK_OPTIONS, tooltip = L["What the items you craft while leveling are worth."],
 		getValue = function() return pe:GetLevelingSettings().giveBackMode end,
 		setValue = function(value) pe:SetSetting("professions.leveling.giveBack", value) end,
 		onChanged = function() refreshPanel(pe) end,
@@ -383,8 +384,8 @@ local function createControls(pe, host, above)
 	host.giveBackDropdown:SetPoint("LEFT")
 	host.recipeScopeDropdown = pe:CreateSingleSelectDropdown(controls, {
 		width = 150, options = RECIPE_SCOPE_OPTIONS,
-		tooltip = "Trainer recipes first: recipes you know and ones a trainer teaches; others only where none of those gives skill. "
-			.. "Trainer recipes are known after you have opened a trainer of this profession.",
+		tooltip = L["Trainer recipes first: recipes you know and ones a trainer teaches; others only where none of those gives skill. "]
+			.. L["Trainer recipes are known after you have opened a trainer of this profession."],
 		getValue = function() return pe:GetLevelingSettings().recipeScope end,
 		setValue = function(value) pe:SetSetting("professions.leveling.recipes", value) end,
 		onChanged = function() refreshPanel(pe) end,
@@ -408,8 +409,8 @@ local function queueRouteUpToTarget(pe, host)
 	end
 	local target = queueTargetSkill(host, route)
 	local added = pe:QueueLevelingRange(route, target)
-	pe:PrintMessage(added > 0 and string.format("Queued %d crafts to reach %s skill %d.", added, route.professionName or "", target)
-		or string.format("The route to skill %d is already in the queue.", target))
+	pe:PrintMessage(added > 0 and string.format(L["Queued %d crafts to reach %s skill %d."], added, route.professionName or "", target)
+		or string.format(L["The route to skill %d is already in the queue."], target))
 end
 
 -- "Queue the route up to skill [150] [Queue]".
@@ -420,7 +421,7 @@ local function createQueueRange(pe, host, above)
 	row:SetHeight(26)
 	local label = pe:CreateText(row, "GameFontHighlightSmall", "textMuted")
 	label:SetPoint("LEFT")
-	label:SetText("Queue the route up to skill")
+	label:SetText(L["Queue the route up to skill"])
 	host.queueToSkillBox = CreateFrame("EditBox", nil, row, "InputBoxTemplate")
 	host.queueToSkillBox:SetSize(40, 22)
 	host.queueToSkillBox:SetPoint("LEFT", label, "RIGHT", 12, 0)
@@ -430,15 +431,15 @@ local function createQueueRange(pe, host, above)
 	host.queueToSkillBox:SetJustifyH("RIGHT")
 	host.queueToSkillBox:SetScript("OnEnterPressed", function(box) box:ClearFocus() end)
 	pe:SkinEditBox(host.queueToSkillBox)
-	host.queueRangeButton = pe:CreateButton(row, "Queue", function() queueRouteUpToTarget(pe, host) end, {
-		tooltip = "Adds every step up to that skill to the craft queue. Recipes you still have to learn are included and marked.",
+	host.queueRangeButton = pe:CreateButton(row, L["Queue"], function() queueRouteUpToTarget(pe, host) end, {
+		tooltip = L["Adds every step up to that skill to the craft queue. Recipes you still have to learn are included and marked."],
 	})
 	host.queueRangeButton:SetPoint("LEFT", host.queueToSkillBox, "RIGHT", 10, 0)
 	return row
 end
 
 local function createRouteTable(pe, host, above)
-	host.heading = pe:CreateHeading(host, "Cheapest route")
+	host.heading = pe:CreateHeading(host, L["Cheapest route"])
 	host.heading:SetPoint("TOPLEFT", above, "BOTTOMLEFT", 0, -SECTION_GAP)
 	host.heading:SetPoint("TOPRIGHT", above, "BOTTOMRIGHT", 0, -SECTION_GAP)
 	host.routeTable = pe:CreateReusableTable(host, {
@@ -484,7 +485,7 @@ local function renderProgressOfRoute(host, route, professionData)
 	local crossesRankCap = rankCap and route.toSkill > rankCap
 	host.professionText:SetText(string.format("%s  %d", professionData.professionName or "", route.fromSkill))
 	host.endSkillText:SetText(tostring(route.toSkill))
-	host.rankCapBadge:SetBadge(crossesRankCap and string.format("Rank cap %d", rankCap) or nil, "warning")
+	host.rankCapBadge:SetBadge(crossesRankCap and string.format(L["Rank cap %d"], rankCap) or nil, "warning")
 	host.skillBar:SetMinMaxValues(0, math.max(1, route.toSkill))
 	host.skillBar:SetValue(route.fromSkill)
 end
@@ -504,10 +505,10 @@ local function renderStats(pe, host, route)
 	local function money(copper)
 		return totals and pe:FormatCopperShort(copper) or "-"
 	end
-	local giveBackText = mode == "none" and "not counted" or money(totals and totals.giveBack)
-	host.stats.materials:SetValues("Reagents", money(totals and totals.materials))
+	local giveBackText = mode == "none" and L["not counted"] or money(totals and totals.giveBack)
+	host.stats.materials:SetValues(L["Reagents"], money(totals and totals.materials))
 	host.stats.giveBack:SetValues(GIVE_BACK_STAT_LABEL[mode] or GIVE_BACK_STAT_LABEL.none, giveBackText)
-	host.stats.net:SetValues("Net cost", money(totals and totals.net), nil, "gold")
+	host.stats.net:SetValues(L["Net cost"], money(totals and totals.net), nil, "gold")
 	pe:LayoutEvenRow(host.statsRow, host.stats, 0, 8)
 end
 
@@ -516,9 +517,9 @@ local function routeFooterTexts(pe, route)
 	if not route then
 		return "", nil
 	end
-	local left = string.format("%d steps", #route.steps)
+	local left = string.format(L["%d steps"], #route.steps)
 	if route.skippedForPrice > 0 then
-		left = left .. string.format(" · %d recipes without a price", route.skippedForPrice)
+		left = left .. string.format(L[" · %d recipes without a price"], route.skippedForPrice)
 	end
 	return left, pe:FormatCopperShort(route.giveBackMode == "none" and route.totals.materials or route.totals.net)
 end

@@ -1,12 +1,13 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Item detail pane beside the inventory table: header, key facts, a history graph and the recipes
 -- that make or use the item.
 
 local DETAIL_WIDTH = 288
 local PAD = 10
 local MAX_RECIPE_ROWS = 6
-local METRICS = { { "market", "Price" }, { "crafting", "Craft cost" }, { "quantity", "Quantity" } }
+local METRICS = { { "market", "Price" }, { "crafting", L["Craft cost"] }, { "quantity", "Quantity" } }
 
 local ItemDetailPaneMixin = {}
 
@@ -42,10 +43,10 @@ function ItemDetailPaneMixin:CreateParts()
 		button.metric = metric[1]
 		self.metricButtons[index] = button
 	end
-	self.graph = pe:CreateTimeSeriesGraph(self, { showTitle = false, plotHeight = 92, emptyText = "No history in this range." })
-	self.madeHeading = pe:CreateHeading(self, "Made by")
+	self.graph = pe:CreateTimeSeriesGraph(self, { showTitle = false, plotHeight = 92, emptyText = L["No history in this range."] })
+	self.madeHeading = pe:CreateHeading(self, L["Made by"])
 	self.madeList = pe:CreateKeyValueList(self)
-	self.usedHeading = pe:CreateHeading(self, "Used in")
+	self.usedHeading = pe:CreateHeading(self, L["Used in"])
 	self.usedList = pe:CreateKeyValueList(self)
 	self.usedEmpty = pe:CreateText(self, "GameFontHighlightSmall", "textMuted")
 	self.madeEmpty = pe:CreateText(self, "GameFontHighlightSmall", "textMuted")
@@ -82,13 +83,13 @@ end
 local function itemKindText(pe, itemID)
 	local desc = pe:ResolveItemDescriptor(itemID) or {}
 	if not desc.itemType then
-		return "Item " .. tostring(itemID)
+		return L["Item "] .. tostring(itemID)
 	end
 	return desc.itemSubType and (desc.itemType .. " · " .. desc.itemSubType) or desc.itemType
 end
 
 local function ownedText(pe, totals)
-	local owned = string.format("%s bags · %s bank", pe:FormatNumberGrouped(totals.bags or 0), pe:FormatNumberGrouped(totals.bank or 0))
+	local owned = string.format(L["%s bags · %s bank"], pe:FormatNumberGrouped(totals.bags or 0), pe:FormatNumberGrouped(totals.bank or 0))
 	if pe.IS_RETAIL and (totals.warband or 0) > 0 then
 		owned = owned .. " · " .. pe:FormatNumberGrouped(totals.warband)
 	end
@@ -100,11 +101,11 @@ function ItemDetailPaneMixin:ShowFacts(itemID, detail)
 	local economy, crafting = detail.economy or {}, detail.crafting or {}
 	self.header:SetItem(itemID, pe:GetItemDisplayName(itemID), itemKindText(pe, itemID), detail.icon)
 	self.facts:SetRows({
-		{ "Auction price", pe:FormatCopperFull(economy.currentMarket) },
-		{ "Average auction price", pe:FormatCopperFull(economy.avgObservedPrice) },
-		{ "Average craft cost", pe:FormatCopperFull(crafting.avgCraftCost) },
+		{ L["Auction price"], pe:FormatCopperFull(economy.currentMarket) },
+		{ L["Average auction price"], pe:FormatCopperFull(economy.avgObservedPrice) },
+		{ L["Average craft cost"], pe:FormatCopperFull(crafting.avgCraftCost) },
 		{ "Owned", ownedText(pe, economy.inventoryTotals or {}) },
-		{ "Price seen", pe:FormatScanTimestamp(economy.currentMarketAt) },
+		{ L["Price seen"], pe:FormatScanTimestamp(economy.currentMarketAt) },
 	})
 end
 
@@ -149,8 +150,8 @@ function ItemDetailPaneMixin:ShowRecipes(crafting)
 			tostring(entry.characterLabel),
 		}
 	end
-	showRecipeRows(self.madeList, self.madeEmpty, madeRows, "No scanned recipe makes this item.")
-	showRecipeRows(self.usedList, self.usedEmpty, usedRows, "No scanned recipe uses this item.")
+	showRecipeRows(self.madeList, self.madeEmpty, madeRows, L["No scanned recipe makes this item."])
+	showRecipeRows(self.usedList, self.usedEmpty, usedRows, L["No scanned recipe uses this item."])
 end
 
 function ItemDetailPaneMixin:ShowItem(itemID, context)

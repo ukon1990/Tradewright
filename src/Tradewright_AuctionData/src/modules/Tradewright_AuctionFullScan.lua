@@ -1,6 +1,7 @@
 -- The full scan: starting it, its cooldown, waiting for the server and saving the replicate list in chunks.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local shared = Tradewright.AuctionShared
 local formatDurationShort = shared.formatDurationShort
 local normalizeItemID = shared.normalizeItemID
@@ -16,7 +17,7 @@ function Tradewright:StopAuctionScanForDump()
 	local wasRunning = state.auctionRefreshRunning == true
 	if wasRunning then
 		self:DebugLog("AH", "scan stopped for dump", {
-			string.format("mode=%s itemID=%s index=%s", tostring(state.auctionScanMode), tostring(state.auctionActiveItemID), tostring(state.auctionRefreshIndex)),
+			string.format(L["mode=%s itemID=%s index=%s"], tostring(state.auctionScanMode), tostring(state.auctionActiveItemID), tostring(state.auctionRefreshIndex)),
 		})
 	end
 	state.auctionSearchToken = (tonumber(state.auctionSearchToken) or 0) + 1
@@ -80,7 +81,7 @@ end
 function Tradewright:CanStartFullAuctionSideActions(announce)
 	if self:IsFullAuctionDumpRunning() then
 		if announce then
-			self:PrintMessage("Full scan in progress. Wait for it to finish before starting another AH scan.")
+			self:PrintMessage(L["Full scan in progress. Wait for it to finish before starting another AH scan."])
 		end
 		return false
 	end
@@ -108,7 +109,7 @@ function Tradewright:FailFullAuctionDump(reason)
 	end
 	-- Prefer classic paging when replicate fails/times out and classic APIs exist.
 	if dump.classic ~= true and self:CanUseClassicAuctionDump() then
-		self:PrintMessage("Full scan unavailable (" .. tostring(reason or "unknown") .. "); reading the auction house page by page instead.")
+		self:PrintMessage(L["Full scan unavailable ("] .. tostring(reason or "unknown") .. L["); reading the auction house page by page instead."])
 		local token = tonumber(dump.token)
 		dump.running = false
 		if self:StartClassicFullAuctionDump(token) then
@@ -121,7 +122,7 @@ function Tradewright:FailFullAuctionDump(reason)
 	dump.status = "failed"
 	dump.error = tostring(reason or "unknown")
 	dump.finishedAt = Tradewright:Now()
-	self:PrintMessage("Full scan failed: " .. tostring(reason or "unknown"))
+	self:PrintMessage(L["Full scan failed: "] .. tostring(reason or "unknown"))
 	self:RefreshAuctionHousePanel()
 end
 
@@ -135,7 +136,7 @@ function Tradewright:FinishFullAuctionDump()
 	dump.status = "complete"
 	dump.finishedAt = Tradewright:Now()
 	self:SetLastFullAuctionScanAt(dump.finishedAt)
-	self:PrintMessage(string.format("Full scan done: %s items priced.", self:FormatNumberGrouped(tonumber(dump.persistTotal) or 0)))
+	self:PrintMessage(string.format(L["Full scan done: %s items priced."], self:FormatNumberGrouped(tonumber(dump.persistTotal) or 0)))
 	self:RefreshAuctionHousePanel()
 	if self.RefreshMarketTab then
 		self:RefreshMarketTab()
@@ -264,8 +265,8 @@ function Tradewright:OnFullAuctionDumpTimeout(token)
 	end
 	local startedAt = tonumber(dump.requestStartedAt) or Tradewright:Now()
 	if not dump.listMarkSettling and (Tradewright:Now() - startedAt) >= FULL_AH_DUMP_REQUEST_TIMEOUT_SEC then
-		self:FailFullAuctionDump("the server did not answer. It allows one full scan every "
-			.. formatDurationShort(FULL_AH_DUMP_COOLDOWN_SEC) .. ", so try again later")
+		self:FailFullAuctionDump(L["the server did not answer. It allows one full scan every "]
+			.. formatDurationShort(FULL_AH_DUMP_COOLDOWN_SEC) .. L[", so try again later"])
 		return
 	end
 	C_Timer.After(FULL_AH_DUMP_REQUEST_POLL_SEC, function()
@@ -309,7 +310,7 @@ local function finishDumpRows(pe, dump)
 	dump.index = nil
 	pe:PrimeAuctionPanelRows()
 	pe:RefreshAuctionHousePanel()
-	pe:PrintMessage(string.format("Shown prices saved: %s.", pe:FormatNumberGrouped(tonumber(dump.persistedCount) or tonumber(dump.total) or 0)))
+	pe:PrintMessage(string.format(L["Shown prices saved: %s."], pe:FormatNumberGrouped(tonumber(dump.persistedCount) or tonumber(dump.total) or 0)))
 end
 
 function Tradewright:ContinueAuctionDump(token)
@@ -365,13 +366,13 @@ function Tradewright:StartAuctionDump(mode)
 	local state = self:GetState()
 	local activeDump = state.auctionDump
 	if activeDump and activeDump.running == true then
-		self:PrintMessage("A scan is already running.")
+		self:PrintMessage(L["A scan is already running."])
 		return false
 	end
 	if mode == "full" then
 		local cooldownRemaining = self:GetFullAuctionDumpCooldownRemaining()
 		if cooldownRemaining > 0 then
-			self:PrintMessage("Full scan is on cooldown for " .. formatDurationShort(cooldownRemaining) .. ".")
+			self:PrintMessage(L["Full scan is on cooldown for "] .. formatDurationShort(cooldownRemaining) .. ".")
 			self:RefreshAuctionHousePanel()
 			return false
 		end
@@ -428,7 +429,7 @@ function Tradewright:StartAuctionDump(mode)
 		state.auctionDump.running = false
 		state.auctionDump.finishedAt = Tradewright:Now()
 		self:RefreshAuctionHousePanel()
-		self:PrintMessage("No shown prices to save.")
+		self:PrintMessage(L["No shown prices to save."])
 		return true
 	end
 	self:RefreshAuctionHousePanel()

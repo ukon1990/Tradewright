@@ -1,12 +1,13 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Acting on one stack or several: move to the bank, the warband bank or the bags,
 -- sell to a vendor, destroy. A move is the same two calls as dragging a stack to a free slot.
 -- Selling uses the item and so runs only while a merchant window is open. One stack per tick.
 
 local STEP_SECONDS = 0.05
 local BACKPACK = 0
-local KEPT_TEXT = "Quest items, bags and rare or better items are never destroyed here."
+local KEPT_TEXT = L["Quest items, bags and rare or better items are never destroyed here."]
 
 local running = false
 local menu
@@ -56,7 +57,7 @@ end
 local function runQueue(queue, step, done)
 	local pe = Tradewright
 	if running then
-		pe:PrintMessage("Still busy with the last bag action.")
+		pe:PrintMessage(L["Still busy with the last bag action."])
 		return
 	end
 	running = true
@@ -91,7 +92,7 @@ function Tradewright:RunBagMoves(items, target)
 		end
 	end, function()
 		if left > 0 then
-			pe:PrintMessage(string.format("No room for %d of the stacks.", left))
+			pe:PrintMessage(string.format(L["No room for %d of the stacks."], left))
 		end
 	end)
 end
@@ -113,7 +114,7 @@ function Tradewright:RunBagSell(items)
 			sold, total = sold + 1, total + item.sellPrice * item.count
 		end
 	end, function()
-		pe:PrintMessage(string.format("Sold %d stacks for %s.", sold, pe:FormatCopperShort(total)))
+		pe:PrintMessage(string.format(L["Sold %d stacks for %s."], sold, pe:FormatCopperShort(total)))
 	end)
 end
 
@@ -142,16 +143,16 @@ function Tradewright:ShowBagActionMenu(items, place, anchor)
 	local targets = self.BagLogic.MoveTargets(place, { bankOpen = self:IsBankOpen(), hasWarband = #self:GetWarbandBagIDs() > 0 })
 	menu = menu or CreateFrame("Frame", "TradewrightBagActionMenu", UIParent, "UIDropDownMenuTemplate")
 	UIDropDownMenu_Initialize(menu, function()
-		addMenuLine(#items == 1 and items[1].name or string.format("%d stacks", #items), nil, true)
+		addMenuLine(#items == 1 and items[1].name or string.format(L["%d stacks"], #items), nil, true)
 		for _, target in ipairs(targets) do
 			addMenuLine(target.label, function() pe:RunBagMoves(items, target.key) end)
 		end
 		if #targets == 0 then
-			addMenuLine("Open the bank to move items")
+			addMenuLine(L["Open the bank to move items"])
 		end
 		-- A vendor only buys from the carried bags.
 		if place == "bags" and pe:IsMerchantOpen() then
-			addMenuLine("Sell to the vendor", function() pe:RunBagSell(items) end)
+			addMenuLine(L["Sell to the vendor"], function() pe:RunBagSell(items) end)
 		end
 		addMenuLine("Destroy…", function() pe:ArmBagDestroy(items) end)
 	end, "MENU")

@@ -1,6 +1,7 @@
 -- The refresh queue: one live AH search at a time for queued items, with timeouts, pause and progress.
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local FL = Tradewright.ForeverLogic
 local shared = Tradewright.AuctionShared
 local normalizeItemID = shared.normalizeItemID
@@ -12,14 +13,14 @@ function Tradewright:SendAuctionPanelSearchQuery(itemID, scanKeyFields)
 	itemID = normalizeItemID(itemID)
 	if not itemID or not C_AuctionHouse then
 		self:DebugLog("AH", "search skipped", {
-			string.format("itemID=%s reason=no_c_auction_house", tostring(itemID)),
+			string.format(L["itemID=%s reason=no_c_auction_house"], tostring(itemID)),
 		})
 		return false
 	end
 	local itemKey = self:MakeAuctionHouseItemKey(itemID, scanKeyFields)
 	if not itemKey then
 		self:DebugLog("AH", "search skipped", {
-			string.format("itemID=%s reason=no_item_key", tostring(itemID)),
+			string.format(L["itemID=%s reason=no_item_key"], tostring(itemID)),
 		})
 		return false
 	end
@@ -31,7 +32,7 @@ function Tradewright:SendAuctionPanelSearchQuery(itemID, scanKeyFields)
 	end
 	if type(queryFunc) ~= "function" then
 		self:DebugLog("AH", "search skipped", {
-			string.format("itemID=%d reason=no_query_func", itemID),
+			string.format(L["itemID=%d reason=no_query_func"], itemID),
 		})
 		return false
 	end
@@ -44,7 +45,7 @@ function Tradewright:SendAuctionPanelSearchQuery(itemID, scanKeyFields)
 		end
 	end
 	self:DebugLog("AH", "search query", {
-		string.format("itemID=%d ok=%s api=%s", itemID, tostring(ok == true), tostring(queryApi)),
+		string.format(L["itemID=%d ok=%s api=%s"], itemID, tostring(ok == true), tostring(queryApi)),
 	})
 	return ok == true
 end
@@ -61,7 +62,7 @@ local function fetchedQuantity(self, itemID, priceState)
 end
 
 local function logFetchedAuctionPrice(self, itemID, priceState, currentPrice)
-	self:DebugLog("AH", "refresh fetched", { string.format("itemID=%d name=%s price=%s qty=%s source=%s", itemID,
+	self:DebugLog("AH", "refresh fetched", { string.format(L["itemID=%d name=%s price=%s qty=%s source=%s"], itemID,
 		tostring(self:GetItemDisplayName(itemID) or "?"), tostring(currentPrice),
 		tostring(fetchedQuantity(self, itemID, priceState) or "?"), tostring(priceState.currentPriceSource or "unknown")) })
 end
@@ -89,7 +90,7 @@ function Tradewright:FinishQueuedAuctionRefreshItem(itemID)
 	local priceState = self:ProcessAuctionRefreshItem(itemID, scanKeyFields)
 	local currentPrice = tonumber(priceState.currentPrice)
 	self:DebugLog("AH", "refresh resolved", {
-		string.format("itemID=%d shown=%s source=%s native=%s fallback=%s", itemID, tostring(currentPrice), tostring(priceState.currentPriceSource), tostring(priceState.nativePrice), tostring(priceState.fallbackPrice)),
+		string.format(L["itemID=%d shown=%s source=%s native=%s fallback=%s"], itemID, tostring(currentPrice), tostring(priceState.currentPriceSource), tostring(priceState.nativePrice), tostring(priceState.fallbackPrice)),
 	})
 	if currentPrice and currentPrice > 0 then
 		logFetchedAuctionPrice(self, itemID, priceState, currentPrice)
@@ -115,7 +116,7 @@ function Tradewright:OnAuctionRefreshSearchTimeout(token)
 		return
 	end
 	self:DebugLog("AH", "search timeout", {
-		string.format("itemID=%s token=%s", tostring(ctx.itemID), tostring(token)),
+		string.format(L["itemID=%s token=%s"], tostring(ctx.itemID), tostring(token)),
 	})
 	self:FinishQueuedAuctionRefreshItem(ctx.itemID)
 end
@@ -166,7 +167,7 @@ function Tradewright:ContinueQueuedAuctionRefresh()
 	end
 	state.auctionActiveItemID = itemID
 	self:DebugLog("AH", "refresh step", {
-		string.format("itemID=%d index=%d/%d", itemID, index, #scanList),
+		string.format(L["itemID=%d index=%d/%d"], itemID, index, #scanList),
 	})
 	self:RecordAuctionTransaction({
 		kind = "visible_refresh",
@@ -204,12 +205,12 @@ function Tradewright:ToggleAuctionRefreshPause()
 	state.auctionRefreshPaused = state.auctionRefreshPaused ~= true
 	if state.auctionRefreshPaused == true then
 		self:DebugLog("AH", "scan paused", {
-			string.format("mode=%s itemID=%s index=%s", tostring(state.auctionScanMode), tostring(state.auctionActiveItemID), tostring(state.auctionRefreshIndex)),
+			string.format(L["mode=%s itemID=%s index=%s"], tostring(state.auctionScanMode), tostring(state.auctionActiveItemID), tostring(state.auctionRefreshIndex)),
 		})
 	else
 		state.auctionRefreshPausedForBulk = false
 		self:DebugLog("AH", "scan resumed", {
-			string.format("mode=%s itemID=%s index=%s", tostring(state.auctionScanMode), tostring(state.auctionActiveItemID), tostring(state.auctionRefreshIndex)),
+			string.format(L["mode=%s itemID=%s index=%s"], tostring(state.auctionScanMode), tostring(state.auctionActiveItemID), tostring(state.auctionRefreshIndex)),
 		})
 		if state.auctionSearchContext then
 			self:RefreshAuctionHousePanel()

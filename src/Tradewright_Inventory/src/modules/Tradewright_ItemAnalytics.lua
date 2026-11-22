@@ -1,5 +1,6 @@
 local _, Tradewright = ...
 
+local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Item history in SavedVariables, `db.itemHistory[tostring(itemID)]`, one bucket per hour keyed by the
 -- hour's start (Unix time). Bucket fields use one-letter keys to keep the file small:
 --   market / crafting buckets (copper per unit):
@@ -207,12 +208,12 @@ end
 
 function Tradewright:GetInventoryMetricRangeOptions()
 	return {
-		{ value = "all", label = "All time" },
-		{ value = "24h", label = "24 hours" },
-		{ value = "7d", label = "7 days" },
-		{ value = "30d", label = "30 days" },
-		{ value = "90d", label = "90 days" },
-		{ value = "1y", label = "1 year" },
+		{ value = "all", label = L["All time"] },
+		{ value = "24h", label = L["24 hours"] },
+		{ value = "7d", label = L["7 days"] },
+		{ value = "30d", label = L["30 days"] },
+		{ value = "90d", label = L["90 days"] },
+		{ value = "1y", label = L["1 year"] },
 	}
 end
 
@@ -220,7 +221,7 @@ end
 function Tradewright:GetRangeLabel(rangeKey)
 	for _, option in ipairs(self:GetInventoryMetricRangeOptions()) do
 		if option.value == rangeKey then
-			return option.value == "all" and option.label or ("Last " .. option.label)
+			return option.value == "all" and option.label or (L["Last "] .. option.label)
 		end
 	end
 	return tostring(rangeKey or "")
