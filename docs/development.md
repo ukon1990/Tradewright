@@ -59,14 +59,19 @@ npm run deploy:local
 npm run package
 ```
 
-builds `dist/Tradewright-<version>.zip`: the six addon folders with the same files a deploy copies (no tests, no docs; licence files included). The version comes from `package.json`; every TOC must carry the same `## Version` (`npm test` checks it).
+builds `dist/Tradewright-<version>.zip`: the six addon folders with the same files a deploy copies (no tests, no docs; licence files included).
+
+The version is kept in `package.json`. `npm run release` writes it into every TOC, and the addon reads it from its TOC when it loads, so it is never typed anywhere else. `npm test` fails when a TOC differs.
 
 To release a version:
 
-1. Set the version in `package.json` and in every TOC, and add its entry at the top of `CHANGELOG.md`.
-2. `npm test`, then smoke test in game on Forever and on retail: loads without errors, full scan, profession scan, Crafts tab, one post and one cancel. Repeat the Crafts tab and a mailbox visit with the client set to another language.
-3. Commit, tag `v<version>` and push the tag. The Release workflow tests, packages and attaches the zip to a GitHub release.
-4. Upload the zip on CurseForge, or let the workflow do it (below).
+1. Add its entry (`## 1.0.1`) at the top of `CHANGELOG.md`. That entry becomes the release notes.
+2. `npm run release -- 1.0.1` sets the version, runs `npm test`, commits the version files with the changelog and creates the tag `v1.0.1`. Other uncommitted work is left alone. Without a version it releases the one `package.json` already has. Nothing is pushed.
+3. Smoke test in game on Forever and on retail: loads without errors, full scan, profession scan, Crafts tab, one post and one cancel. Repeat the Crafts tab and a mailbox visit with the client set to another language.
+4. `git push origin HEAD v1.0.1`. The Release workflow tests, packages and attaches the zip to a GitHub release.
+5. Upload the zip on CurseForge, or let the workflow do it (below).
+
+If the smoke test fails before the push: `git tag -d v1.0.1`, fix, and run the release command again.
 
 One-time CurseForge setup:
 

@@ -37,6 +37,18 @@ export function listAddons() {
     .map((d) => d.name);
 }
 
+/** Every TOC file of every addon, as a full path. */
+export function listTocs() {
+  return listAddons().flatMap((addon) =>
+    fs
+      .readdirSync(path.join(sourceDir, addon))
+      .filter((file) => file.endsWith(".toc"))
+      .map((file) => path.join(sourceDir, addon, file)),
+  );
+}
+
+export const TOC_VERSION = /^## Version:[ \t]*(.*?)[ \t]*$/m;
+
 /** Replace `<intoDir>/<addon>` with the shipped files of that addon. */
 export function copyAddon(addon, intoDir) {
   const from = path.join(sourceDir, addon);

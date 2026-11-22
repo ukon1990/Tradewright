@@ -3,7 +3,10 @@ local _, addonTable = ...
 local Tradewright = _G.Tradewright or addonTable or {}
 _G.Tradewright = Tradewright
 
-Tradewright.VERSION = "1.0.0"
+-- The version is written in one place, the TOC (`npm run release` sets it).
+-- Older clients have the global function instead of C_AddOns.
+local getAddOnMetadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
+Tradewright.VERSION = getAddOnMetadata and getAddOnMetadata("Tradewright", "Version") or "unknown"
 Tradewright.SCHEMA_VERSION = 12
 -- The name players see: window titles, tooltip headers, the chat prefix.
 Tradewright.DISPLAY_NAME = "Tradewright"

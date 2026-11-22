@@ -7,19 +7,16 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { ROOT, copyAddon, listAddons, readJson, sourceDir } from "./addon-files.mjs";
+import { ROOT, TOC_VERSION, copyAddon, listAddons, listTocs, readJson } from "./addon-files.mjs";
 
 const version = readJson("package.json").version;
 const addons = listAddons();
 
-// A zip named 1.0.0 whose TOCs say something else would show the wrong version in game.
+// `npm run release` keeps these equal. A zip named 1.0.0 whose TOCs say something else would show the wrong version in game.
 const wrong = [];
-for (const addon of addons) {
-  for (const file of fs.readdirSync(path.join(sourceDir, addon)).filter((f) => f.endsWith(".toc"))) {
-    const toc = fs.readFileSync(path.join(sourceDir, addon, file), "utf8");
-    const found = toc.match(/^## Version:\s*(.+?)\s*$/m)?.[1];
-    if (found !== version) wrong.push(`${file}: ${found ?? "no version"}`);
-  }
+for (const toc of listTocs()) {
+  const found = fs.readFileSync(toc, "utf8").match(TOC_VERSION)?.[1];
+  if (found !== version) wrong.push(`${path.basename(toc)}: ${found ?? "no version"}`);
 }
 if (wrong.length) {
   console.error(`package.json says ${version}, but:\n  ${wrong.join("\n  ")}`);
