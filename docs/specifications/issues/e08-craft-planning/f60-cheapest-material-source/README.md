@@ -40,7 +40,7 @@ How it differs from the scope, and why:
 - **Vendor prices are unchanged.** The engine already prices vendor-sourced reagents at the vendor; widening that to every reagent needs a check of what `C_Item.GetItemVendorPrice` returns for items no vendor sells.
 - **Works in every material mode except "market only"**, as a setting, not as a new "Cheapest way" mode.
 - **Not done:** the "If you bought every material" line in the detail pane and the row note ("bolts made by …")
-- **Cooldowns:** rows carrying `hasCooldown` are left out of the index; nothing sets that flag until F62.
+- **Cooldowns:** recipes that any character has on record as a cooldown recipe are left out of the index (F62).
 
 Added later, in-game check pending:
 

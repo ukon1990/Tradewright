@@ -1,20 +1,25 @@
 # Tradewright
 
-Tradewright is an auction, profession and inventory helper for World of Warcraft: **WoW Forever** (`Interface 16001`) and retail. It combines auction house prices with your profession recipes to show which crafts make a profit.
+Tradewright is an auction, profession and inventory helper for WoW Forever and retail. It combines auction house prices with your profession recipes to show which crafts make a profit.
 
 ## Features
 
 **Auction house**
 - Full scan that stores prices, with a daily price history and a usual price per item.
-- Market tab to search and sort the last scan, with a price chart per item.
-- Opportunities tab: flips, items listed under vendor price, price gaps and what to sell now.
+- Prices on item tooltips; hold Shift for craft profit and more.
+- Market tab to search the last scan and each item's price history from anywhere, not just at the auction house.
+- Opportunities tab: flips, items listed under vendor price, and what to sell now.
 - Shopping cart for the reagents your queued crafts need.
+- Bulk posting, and undercut checks on your own auctions.
 
 **Professions**
 - Scans your recipes and reagents, and shows cost and profit per craft.
 - Picks the cheapest way to get each material: buy, craft or vendor.
+- Shows which reagents a vendor sells that you still need.
 - Suggests how many to make, and tracks cooldown crafts.
 - Craft queue, and a leveling route for raising a profession skill.
+- Crafting orders (retail): queue patron orders, buy all materials from one shopping list, then craft them in order.
+- Reagent quality (retail): the cheapest reagents that reach the rank you want.
 
 **Inventory and gold**
 - Bags and bank across your characters, with quantity history.
@@ -26,25 +31,10 @@ Tradewright is an auction, profession and inventory helper for World of Warcraft
 - Bags and bank grouped by item category, with your other characters as tabs.
 - Select several items at once to move, bank or mail them.
 - Item log of what entered and left your bags.
+- Full bags: delete the cheapest stack, or swap it for loot that does not fit.
+- Turn it off with `/ah bags` or in Settings.
 
-Good to know:
-
-- Crafting orders, concentration and commodity auto-buy are retail only.
-- Tradewright uses only public game functions and does not automate protected actions.
-- The [backlog](docs/specifications/05-backlog.md) shows what is done, what is still open and what is planned.
-
-## Modules
-
-The pack is split into addons under `src/`, so you can enable only the parts you want.
-
-| Addon | What it does |
-| --- | --- |
-| `Tradewright` | The base that every other module needs. Holds settings and saved data. |
-| `Tradewright_AuctionData` | Scans the auction house and remembers the prices. |
-| `Tradewright_Professions` | Scans your recipes and reagents, and works out craft cost and profit. |
-| `Tradewright_Inventory` | Keeps track of your bags and bank, and keeps a ledger. |
-| `Tradewright_UI` | The main window: dashboard, craft panel and mail tools. |
-| `Tradewright_Bags` (optional) | A bag and bank window grouped by item category, with your other characters as tabs. Turn it off in Settings → Inventory & mail, with `/ah bags`, or by disabling the addon. |
+Tradewright is split into several addons, so you can turn off the parts you don't use.
 
 ## Getting started in game
 
@@ -58,7 +48,11 @@ The pack is split into addons under `src/`, so you can enable only the parts you
 
 Tradewright works on its own. With Questie installed, it can show where vendors you have not visited stand. With TomTom installed, it can use TomTom's arrow when the game's own waypoint is unavailable.
 
-## Documentation
+---
+
+## For developers
+
+The addons live under `src/`. `Tradewright` is the base every other addon needs; `Tradewright_AuctionData`, `Tradewright_Professions`, `Tradewright_Inventory` and `Tradewright_UI` make up the rest of the core, and `Tradewright_Bags` is optional.
 
 - [Development](docs/development.md): setup, tests, lint, and copying the addons into the game.
 - [Backlog and issues](docs/specifications/05-backlog.md)

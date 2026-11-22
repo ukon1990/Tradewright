@@ -34,12 +34,12 @@ Differs from the scope:
 - **ROI stays where it is**; the new columns are added after the existing ones, and `Sells a day` is optional (dropped first when the table is narrow)
 - **Not done:** the footer text, the "N owned, enough for now" row text, the "How many to make" block in the detail pane, and the queue field defaulting to `Make`. Those sit in `Tradewright_CraftsUI.lua`, which is over the file-size limit and may not grow.
 - The "Make enough for" choice is in Settings, not in the Crafts toolbar
-- Cooldown cap: `RestockQuantity` takes a `cap`; nothing passes it until F62
+- Cooldown cap: `RestockQuantity` takes a `cap`, which the Crafts table passes for cooldown recipes (F62)
 
 ## Acceptance criteria
 
 - [x] Sells 8 a day, 2 owned, 0 listed, 1 day → Make 6
-- [x] Sells 35 a day, 60 owned → Make 0 with "enough for now"
+- [ ] Sells 35 a day, 60 owned → Make 0 with "enough for now" (Make shows 0; the row text is not built)
 - [x] Unknown sells a day → Make shows "-" and the queue default stays 1
 - [x] A loss-making craft shows Make 0
 - [x] Changing "Make enough for" updates the column without a reload

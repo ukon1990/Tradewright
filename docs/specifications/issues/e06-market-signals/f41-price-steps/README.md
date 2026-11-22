@@ -28,7 +28,7 @@ A full scan keeps, for each item, its cheapest price levels and how many are lis
 - Item details: "Cheapest steps" (the three cheapest levels) and "Biggest price jump"
 - Setting "Keep the cheapest price steps of each item from a full scan" (on by default); off removes an item's steps at the next scan
 - Still open:
-  - the live single-item search (`GetLiveAuctionSearchAggregate`) does not refresh steps yet
+  - searches for a non-commodity item, and the classic auction frame's single-item search, do not refresh steps
   - a full "Price steps" list (price, quantity, cost so far) in the item details window
 
 Added later, in-game check pending:

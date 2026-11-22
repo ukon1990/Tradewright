@@ -24,9 +24,9 @@ Each item gets "Sells a day, estimated": how many units leave the auction house 
 - The player's own sales per day from the ledger are the floor (`GetSalesSummary`, rebuilt at most once a minute); with no scan estimate they stand alone
 - Tooltip: the "Listed" line ends with "~N sold/day"
 - Docs tab: section "Usual price and sells a day" on how both are made and why sells a day runs high
+- Inventory has an optional `Sells a day` column (`Tradewright_InventoryColumns.lua`), hidden by default; in-game check pending
 - Still open:
   - with price steps (F41): count only the drop at or below the next scan's lowest price
-- Inventory has an optional `Sells a day` column (`Tradewright_InventoryColumns.lua`), hidden by default; in-game check pending
 
 ## Acceptance criteria
 
