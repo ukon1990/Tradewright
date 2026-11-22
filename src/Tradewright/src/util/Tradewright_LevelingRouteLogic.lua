@@ -416,22 +416,64 @@ local function trainerEntry(service, sighting)
 	return { skillRequired = tonumber(service.skillRequired) or 0, cost = tonumber(service.cost) or 0, seenAt = sighting.now, trainers = trainers }
 end
 
+-- Services that are no scanned recipe, kept as rank training (Expert, Artisan) of the profession the
+-- trainer's recipes belong to. Without recipes of exactly one profession there is no telling which
+-- profession a service is for, and nothing is kept.
+local function rankEntries(otherServices, professionsSeen, sighting)
+	local skillLineKey = next(professionsSeen)
+	if not skillLineKey or next(professionsSeen, skillLineKey) then
+		return {}
+	end
+	local ranks = {}
+	for _, service in ipairs(otherServices) do
+		ranks[service.name] = trainerEntry(service, sighting)
+	end
+	return { [skillLineKey] = ranks }
+end
+
 --- What to remember from an open trainer window. `services = { { name, cost, skillRequired } }` as
 --- the trainer lists them; `skillLineByRecipeName` says which profession each known recipe name
---- belongs to. A service that is no scanned recipe (a rank, a class spell) is skipped.
---- `sighting = { now, trainerName, place = { zone, mapID, x, y } }` says who was asked, where and when.
---- Returns `{ [skillLineKey] = { [recipeName] = { skillRequired, cost, seenAt, trainers } } }` with
---- `trainers = { [trainerName] = place }`.
+--- belongs to. `sighting = { now, trainerName, place = { zone, mapID, x, y } }` says who was asked,
+--- where and when. Returns two tables of the same shape,
+--- `{ [skillLineKey] = { [serviceName] = { skillRequired, cost, seenAt, trainers } } }` with
+--- `trainers = { [trainerName] = place }`: the recipes, and the other services of a profession
+--- trainer, which are its rank training. A window without scanned recipes (a class trainer) gives nothing.
 function LevelingRouteLogic.TrainerEntries(services, skillLineByRecipeName, sighting)
-	local entries = {}
+	local recipes, otherServices, professionsSeen = {}, {}, {}
+	sighting = sighting or {}
 	for _, service in ipairs(services or {}) do
 		local skillLineKey = service.name and skillLineByRecipeName[service.name]
 		if skillLineKey then
-			entries[skillLineKey] = entries[skillLineKey] or {}
-			entries[skillLineKey][service.name] = trainerEntry(service, sighting or {})
+			professionsSeen[skillLineKey] = true
+			recipes[skillLineKey] = recipes[skillLineKey] or {}
+			recipes[skillLineKey][service.name] = trainerEntry(service, sighting)
+		elseif service.name then
+			otherServices[#otherServices + 1] = service
 		end
 	end
-	return entries
+	return recipes, rankEntries(otherServices, professionsSeen, sighting)
+end
+
+-- How far apart a profession's ranks are in skill: the caps are 75, 150, 225 and 300.
+LevelingRouteLogic.RANK_STEP = 75
+
+--- The training that lifts a rank cap of `rankCap`, out of the rank services seen at trainers
+--- (`{ [serviceName] = { skillRequired, cost, trainers } }`): `{ name, skillRequired, cost, trainers }`
+--- or nil. A rank is trained at a skill below the cap it lifts and above the cap before it, so that
+--- is the service looked for; a lower rank's training, seen earlier, asks for less.
+function LevelingRouteLogic.NextRankTraining(rankServices, rankCap)
+	local best, bestName
+	for name, service in pairs(rankServices or {}) do
+		local skill = service.skillRequired or 0
+		local liftsThisCap = skill <= rankCap and skill > rankCap - LevelingRouteLogic.RANK_STEP
+		if liftsThisCap and (not best or skill > best.skillRequired) then
+			best, bestName = service, name
+		end
+	end
+	if not best then
+		return nil
+	end
+	return { name = bestName, skillRequired = best.skillRequired, cost = best.cost, trainers = best.trainers }
 end
 
 local function addTrainers(target, trainers)

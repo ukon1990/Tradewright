@@ -234,7 +234,7 @@ end
 -- What is remembered from a trainer
 do
 	local orgrimmar = { zone = "Orgrimmar", mapID = 85, x = 0.6, y = 0.5 }
-	local entries = RL.TrainerEntries({
+	local entries, ranks = RL.TrainerEntries({
 		{ name = "Heavy Armor Kit", cost = 500, skillRequired = 150 },
 		{ name = "Expert Leatherworker", cost = 5000, skillRequired = 125 },
 		{ name = "Frostbolt", cost = 100 },
@@ -243,7 +243,26 @@ do
 	check("Trainer: a scanned recipe is kept with cost, skill and time", kit and kit.cost == 500 and kit.skillRequired == 150 and kit.seenAt == 1000)
 	check("Trainer: who teaches it and where", kit.trainers.Karolek == orgrimmar)
 	check("Trainer: ranks and other spells are skipped", entries["165"]["Expert Leatherworker"] == nil and next(entries, "165") == nil)
-	check("Trainer: nothing listed, nothing kept", next(RL.TrainerEntries({}, {}, { now = 1 })) == nil)
+	check("Trainer: nothing listed, nothing kept", next((RL.TrainerEntries({}, {}, { now = 1 }))) == nil)
+	local expert = ranks["165"] and ranks["165"]["Expert Leatherworker"]
+	check("Trainer: its other services are kept as rank training of that profession",
+		expert and expert.skillRequired == 125 and expert.cost == 5000 and expert.trainers.Karolek == orgrimmar)
+	local _, classRanks = RL.TrainerEntries({ { name = "Frostbolt", cost = 100 } }, { ["Heavy Armor Kit"] = "165" }, { now = 1 })
+	check("Trainer: a window without this character's recipes gives no rank training", next(classRanks) == nil)
+	local _, twoProfessions = RL.TrainerEntries({ { name = "A" }, { name = "B" }, { name = "Rank" } }, { A = "165", B = "197" }, { now = 1 })
+	check("Trainer: recipes of two professions leave the other services unassigned", next(twoProfessions) == nil)
+
+	local seen = {
+		["Journeyman Leatherworker"] = { skillRequired = 50, cost = 500 },
+		["Expert Leatherworker"] = { skillRequired = 125, cost = 5000, trainers = { Karolek = orgrimmar } },
+	}
+	local next150 = RL.NextRankTraining(seen, 150)
+	check("Next rank: the training asked for just below the cap", next150 and next150.name == "Expert Leatherworker"
+		and next150.skillRequired == 125 and next150.trainers.Karolek == orgrimmar)
+	check("Next rank: a lower rank's training does not lift a higher cap", RL.NextRankTraining(seen, 225) == nil)
+	seen["Artisan Leatherworker"] = { skillRequired = 200, cost = 50000 }
+	check("Next rank: Artisan once a trainer was seen offering it", RL.NextRankTraining(seen, 225).name == "Artisan Leatherworker")
+	check("Next rank: nothing seen", RL.NextRankTraining(nil, 150) == nil)
 
 	local thunderBluff = { zone = "Thunder Bluff", mapID = 88, x = 0.4, y = 0.4 }
 	local later = { skillRequired = 150, cost = 450, seenAt = 2000, trainers = { Una = thunderBluff } }

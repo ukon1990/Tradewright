@@ -5,6 +5,8 @@ local _, Tradewright = ...
 -- character, with the trainer's name and where it stands:
 -- `db.characters[characterKey].trainerRecipes[skillLineKey][recipeName] =
 --    { skillRequired, cost, seenAt, trainers = { [trainerName] = { zone, mapID, x, y } } }`.
+-- The trainer's other services are its rank training (Expert, Artisan), kept the same way under
+-- `trainerRanks`.
 -- The leveling route uses it for recipes not learned yet, and to point the way to a trainer.
 -- Only reads the window; buys nothing. A trainer's own filters can hide services, so a recipe that
 -- is absent proves nothing.
@@ -38,13 +40,14 @@ local function listedServices()
 	return services
 end
 
-local function storeTrainerEntries(characterData, entries)
-	characterData.trainerRecipes = characterData.trainerRecipes or {}
-	for skillLineKey, recipes in pairs(entries) do
-		local stored = characterData.trainerRecipes[skillLineKey] or {}
-		characterData.trainerRecipes[skillLineKey] = stored
-		for recipeName, entry in pairs(recipes) do
-			stored[recipeName] = LevelingRouteLogic.MergeTrainerEntry(stored[recipeName], entry)
+-- Merges what one trainer window listed into `characterData[storeName]`, kept per profession.
+local function storeTrainerEntries(characterData, storeName, entries)
+	characterData[storeName] = characterData[storeName] or {}
+	for skillLineKey, services in pairs(entries) do
+		local stored = characterData[storeName][skillLineKey] or {}
+		characterData[storeName][skillLineKey] = stored
+		for serviceName, entry in pairs(services) do
+			stored[serviceName] = LevelingRouteLogic.MergeTrainerEntry(stored[serviceName], entry)
 		end
 	end
 end
@@ -67,11 +70,13 @@ function Tradewright:ReadOpenTrainerRecipes()
 	if not characterData then
 		return
 	end
-	local entries = LevelingRouteLogic.TrainerEntries(listedServices(), skillLineByRecipeName(self, characterData), trainerSighting(self))
-	if not next(entries) then
+	local recipes, ranks = LevelingRouteLogic.TrainerEntries(
+		listedServices(), skillLineByRecipeName(self, characterData), trainerSighting(self))
+	if not next(recipes) then
 		return
 	end
-	storeTrainerEntries(characterData, entries)
+	storeTrainerEntries(characterData, "trainerRecipes", recipes)
+	storeTrainerEntries(characterData, "trainerRanks", ranks)
 	self:InvalidateLevelingRoute()
 end
 
@@ -79,21 +84,36 @@ local function factionOf(characterData)
 	return characterData.meta and characterData.meta.faction
 end
 
---- Trainer recipes of one profession, seen by any character:
---- `{ [recipeName] = { skillRequired, cost, seenAt, trainers } }`. Trainers seen by a character of
---- the other faction are left out: they will not teach this one.
-function Tradewright:GetTrainerRecipes(skillLineID)
-	local characters = self.db and self.db.characters or {}
-	local ownFaction = factionOf(characters[self:GetCharacterKey()] or {})
+-- What any character has seen trainers offer for one profession, from `characterData[storeName]`:
+-- `{ [serviceName] = { skillRequired, cost, seenAt, trainers } }`. Trainers seen by a character of
+-- the other faction are left out: they will not teach this one.
+local function seenAtTrainers(pe, storeName, skillLineID)
+	local characters = pe.db and pe.db.characters or {}
+	local ownFaction = factionOf(characters[pe:GetCharacterKey()] or {})
 	local merged = {}
 	for _, characterData in pairs(characters) do
-		local recipes = characterData.trainerRecipes and characterData.trainerRecipes[tostring(skillLineID)]
+		local services = characterData[storeName] and characterData[storeName][tostring(skillLineID)]
 		local otherFaction = factionOf(characterData) ~= ownFaction
-		for recipeName, entry in pairs(recipes or {}) do
-			merged[recipeName] = LevelingRouteLogic.MergeTrainerEntry(merged[recipeName], entry, otherFaction)
+		for serviceName, entry in pairs(services or {}) do
+			merged[serviceName] = LevelingRouteLogic.MergeTrainerEntry(merged[serviceName], entry, otherFaction)
 		end
 	end
 	return merged
+end
+
+--- Trainer recipes of one profession: `{ [recipeName] = { skillRequired, cost, seenAt, trainers } }`.
+function Tradewright:GetTrainerRecipes(skillLineID)
+	return seenAtTrainers(self, "trainerRecipes", skillLineID)
+end
+
+--- The training that lifts a rank cap of `rankCap` for a profession, when a trainer has been seen
+--- offering it: `{ name, skillRequired, cost, trainers }`, or nil. Higher ranks are taught by few
+--- trainers, so this is what tells the player where to go.
+function Tradewright:GetNextRankTraining(skillLineID, rankCap)
+	if not rankCap then
+		return nil
+	end
+	return LevelingRouteLogic.NextRankTraining(seenAtTrainers(self, "trainerRanks", skillLineID), rankCap)
 end
 
 -- `trainers` as a list of places with the trainer's name on each.

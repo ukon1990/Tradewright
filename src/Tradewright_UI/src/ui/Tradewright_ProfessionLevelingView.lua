@@ -90,11 +90,26 @@ local function learnBlockedBy(route, step)
 	return nil
 end
 
+-- Why the Trainer button of a rank step is off: "no_trainer" (none seen offering the rank), "skill"
+-- (the rank asks for more skill than the player has), or nil when it can show the way.
+local function rankBlockedBy(route)
+	local nextRank = route.nextRank
+	if not (nextRank and next(nextRank.trainers or {})) then
+		return "no_trainer"
+	elseif (nextRank.skillRequired or 0) > route.fromSkill then
+		return "skill"
+	end
+	return nil
+end
+
 local function rankCapRow(route, step, index, isNextStep)
+	local nextRank = route.nextRank
+	local detail = nextRank and string.format("%s · skill %d", nextRank.name, nextRank.skillRequired or 0)
+		or string.format("at a %s trainer", route.professionName or "profession")
 	return {
-		_rowIdentity = index, kind = "rankCap", skillText = tostring(step.skill), name = "Train the next rank",
-		detailText = string.format("at a %s trainer", route.professionName or "profession")
-			.. (isNextStep and " · next step" or ""),
+		_rowIdentity = index, kind = "rankCap", route = route, skillText = tostring(step.skill), name = "Train the next rank",
+		detailText = detail .. (isNextStep and " · next step" or ""),
+		action = "trainer", learnBlockedBy = rankBlockedBy(route),
 	}
 end
 
@@ -155,6 +170,9 @@ local ACTION_BUTTON = {
 	end },
 	learn = { label = "Learn", onClick = function(pe, row)
 		pe:ShowRecipeTrainerWaypoint(row.name, row.step.candidate.trainers)
+	end },
+	trainer = { label = "Trainer", onClick = function(pe, row)
+		pe:ShowRecipeTrainerWaypoint(row.route.nextRank.name, row.route.nextRank.trainers)
 	end },
 }
 
@@ -237,7 +255,39 @@ local function percentText(chance, estimated)
 	return string.format(estimated and "about %d%%" or "%d%%", math.floor(chance * 100 + 0.5))
 end
 
+-- Under a rank step: whether the Trainer button can show the way, or why not.
+local RANK_HINT = {
+	no_trainer = "No trainer has been seen offering this rank. Higher ranks are taught by few trainers; "
+		.. "open one that does and it is remembered.",
+	skill = "Your skill is too low to train this rank yet.",
+}
+
+-- "Karolek in Orgrimmar" for each trainer seen offering the rank.
+local function addRankTrainerLines(pe, trainers)
+	for trainerName, place in pairs(trainers or {}) do
+		local zone = place.zone and place.zone ~= "" and (" in " .. place.zone) or ""
+		addFactLine(pe, "Taught by", trainerName .. zone)
+	end
+end
+
+local function showRankTooltip(pe, rowFrame, row)
+	local nextRank, muted = row.route.nextRank, pe:GetTheme().textMuted
+	GameTooltip:SetOwner(rowFrame, "ANCHOR_LEFT")
+	GameTooltip:SetText(nextRank and nextRank.name or row.name, 1, 0.82, 0)
+	GameTooltip:AddLine(string.format("Your skill stops at %s until you train the next rank.", row.skillText), muted.r, muted.g, muted.b, true)
+	if nextRank then
+		addFactLine(pe, "Needs skill", tostring(nextRank.skillRequired or 0))
+		addMoneyLine(pe, "Costs", nextRank.cost or 0)
+		addRankTrainerLines(pe, nextRank.trainers)
+	end
+	GameTooltip:AddLine(RANK_HINT[row.learnBlockedBy] or "Press Trainer to show the way to the nearest one.", muted.r, muted.g, muted.b, true)
+	GameTooltip:Show()
+end
+
 local function showStepTooltip(pe, rowFrame, row)
+	if row and row.kind == "rankCap" then
+		return showRankTooltip(pe, rowFrame, row)
+	end
 	local step = row and row.step
 	if not step then
 		return

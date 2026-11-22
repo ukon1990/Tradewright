@@ -46,6 +46,8 @@ Implemented, in-game check pending:
 
 - Buyouts in the classic auction house are credited to the shopping lists when the game confirms them (`Tradewright_AuctionClassicBuy.lua`: a hook on `PlaceAuctionBid`, then the "You won an auction for …" system message), and the craft queue's list counts those credits. Unverified in the client: that Forever buys through `PlaceAuctionBid` and sends that message
 
+- Skill and rank cap of the open profession are read from the character's profession list (`GetPlayerProfessions`) each time its route is asked for: on Forever the profession window's fingerprint does not change with skill, so the stored values went stale
+
 Differs from the scope:
 
 - **The route stops at the profession's highest skill.** No game call reports it: per profession the game gives only the current rank's cap. So it is a constant, 300, outside retail (WoW Forever); on retail it is the profession's own cap

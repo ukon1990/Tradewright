@@ -43,6 +43,10 @@ local function newAddon(recipes, skill)
 	function pe:InitDB() end
 	function pe:GetState() return self.state end
 	function pe:GetCharacterKey() return CHARACTER end
+	-- What the game reports for the character's professions; nil skill means "as stored".
+	function pe:GetPlayerProfessions()
+		return { { skillLineID = SKILL_LINE, skillLevel = self.gameSkill, maxSkillLevel = self.gameRankCap } }
+	end
 	function pe:GetSetting(key, default)
 		if self.settings[key] ~= nil then
 			return self.settings[key]
@@ -154,6 +158,23 @@ do
 	check("At the highest skill: finished", reason == "finished")
 end
 
+-- Skill and rank cap follow the game
+do
+	local pe = newAddon({ ["11"] = recipe("Long", 400, true, 100) }, 125)
+	pe.state.liveProfessionSkillLineID = SKILL_LINE
+	pe:GetOpenProfessionLevelingRoute()
+	local stale = pe:GetOpenProfessionLevelingRoute()
+	check("Stored skill and cap are used while the game says nothing else", stale.fromSkill == 125 and stale.rankCap == 150)
+	pe.gameSkill, pe.gameRankCap = 150, 225
+	pe:GetOpenProfessionLevelingRoute()
+	local current = pe:GetOpenProfessionLevelingRoute()
+	check("A skill-up the stored data missed is read from the game", current.fromSkill == 150)
+	check("A new rank moves the rank cap", current.rankCap == 225 and current.steps[1].kind == "craft" and current.steps[2].kind == "rankCap")
+	pe.gameRankCap = 300
+	pe:GetOpenProfessionLevelingRoute()
+	check("A new rank alone, without a skill change, redoes the route", pe:GetOpenProfessionLevelingRoute().rankCap == 300)
+end
+
 -- Stored colours after a skill-up
 do
 	local pe = newAddon({ ["11"] = recipe("Known", 200, true, 100), ["12"] = recipe("Unknown", 240, false, 100) }, 180)
@@ -190,7 +211,15 @@ do
 		and first.action == "queue" and first.cost == route.steps[1].net, first.skillText .. " / " .. first.detailText)
 	check("Colour bounds not yet seen in game: the craft count says about", first.detailText:find("^~%d+ crafts") ~= nil)
 	local cap = pe:LevelingStepRow(route, route.steps[2], 2, false)
-	check("Rank cap row", cap.kind == "rankCap" and cap.skillText == "150" and cap.detailText == "at a Leatherworking trainer" and cap.action == nil)
+	check("Rank cap row", cap.kind == "rankCap" and cap.skillText == "150" and cap.detailText == "at a Leatherworking trainer")
+	check("Rank cap row: no trainer seen offering the rank, Trainer is off", cap.action == "trainer" and cap.learnBlockedBy == "no_trainer")
+	route.nextRank = { name = "Expert Leatherworker", skillRequired = 125, cost = 5000, trainers = { Karolek = { zone = "Orgrimmar" } } }
+	local known = pe:LevelingStepRow(route, route.steps[2], 2, false)
+	check("Rank cap row: names the rank and its skill", known.detailText == "Expert Leatherworker · skill 125")
+	check("Rank cap row: skill below what the rank asks, Trainer is off", known.learnBlockedBy == "skill")
+	route.nextRank.skillRequired = 100
+	check("Rank cap row: skill reached and a trainer known, Trainer is on", pe:LevelingStepRow(route, route.steps[2], 2, false).learnBlockedBy == nil)
+	route.nextRank = nil
 	pe.queued[2000] = route.steps[1].crafts
 	check("Queued in full: Queued", pe:LevelingStepRow(route, route.steps[1], 1, true).action == "queued")
 	pe.queued[2000] = 3

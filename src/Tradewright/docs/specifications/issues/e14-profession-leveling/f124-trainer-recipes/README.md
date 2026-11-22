@@ -28,6 +28,9 @@ Implemented, in-game check pending:
 - Each recipe entry also keeps who teaches it and where (`trainers = { [trainerName] = { zone, mapID, x, y } }`). "Learn" on a route step is a button: it sets a waypoint to the nearest trainer seen teaching the recipe and names it in chat (`ShowRecipeTrainerWaypoint`), with the same nearest-place and waypoint code as vendor reagents (`NearestPlace`, `SetWaypointTo` in `Tradewright_VendorSource.lua`). Trainers seen by a character of the other faction are left out
 - Only trainers the player has opened are known; there is no trainer database behind it
 
+- A profession trainer's services that are no scanned recipe are kept as its rank training (`trainerRanks`, same shape as `trainerRecipes`). `GetNextRankTraining(skillLineID, rankCap)` picks the one that lifts the current cap: the service trained at a skill at most the cap and less than 75 below it (`LevelingRouteLogic.NextRankTraining`). The "Train the next rank" step then names the rank and its skill, has a Trainer button that sets a waypoint to the nearest trainer seen offering it, and a tooltip with skill, cost and trainers. The button is off while no such trainer is known or the skill is too low
+- Unverified in the client: that rank training appears as a trainer service with a skill requirement, and that Forever's ranks are 75 apart
+
 Differs from the scope:
 
 - Stored per character at `characters[characterKey].trainerRecipes[skillLineKey][recipeName]` and merged across characters when read; a new top-level store would have needed a saved-variables mapping change

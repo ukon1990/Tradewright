@@ -122,7 +122,8 @@ end
 local function candidatesKey(self, characterKey, professionData)
 	return table.concat({
 		characterKey, skillLineKey(professionData.skillLineID), tostring(professionData.skillLevel),
-		tostring(professionData.recipeCount), tostring(professionData.liveFingerprint), tostring(levelingState(self).revision),
+		tostring(professionData.maxSkillLevel), tostring(professionData.recipeCount),
+		tostring(professionData.liveFingerprint), tostring(levelingState(self).revision),
 	}, "|")
 end
 
@@ -284,6 +285,7 @@ local function routeFromBuild(self, build)
 		})
 		route.professionName, route.skillLineID, route.characterKey = professionData.professionName, professionData.skillLineID, build.characterKey
 		route.giveBackMode, route.rankCap = settings.giveBackMode, tonumber(professionData.maxSkillLevel)
+		route.nextRank = self.GetNextRankTraining and self:GetNextRankTraining(professionData.skillLineID, route.rankCap) or nil
 		build.routes[routeKey] = route
 		levelingState(self).shownRoute = route
 		if self.TrimLevelingCraftQueue then
@@ -304,7 +306,8 @@ end
 
 --- The leveling route for one character's profession, from its last scan and current prices.
 --- Returns `route` (see `LevelingRouteLogic.BuildRoute`, plus `professionName`, `skillLineID`,
---- `characterKey`, `giveBackMode`, `rankCap`), or `nil, reason, progress`:
+--- `characterKey`, `giveBackMode`, `rankCap`, and `nextRank` when a trainer has been seen offering the
+--- training that lifts the rank cap), or `nil, reason, progress`:
 --- "no_data" (not scanned), "not_ready" (still pricing; `progress = { done, total }`), "unsupported"
 --- (the game reports no grey levels), "no_prices", "finished" (nothing can give skill any more).
 --- While recipes are priced again after a skill-up or new prices, the previous route of the same
@@ -333,6 +336,19 @@ function Tradewright:GetLevelingRoute(characterKey, skillLineID)
 	return route
 end
 
+-- Brings the stored skill and rank cap of one of the logged-in character's professions up to what
+-- the game reports now. The profession window's own events do not always carry a skill-up or a new
+-- rank into the stored data on WoW Forever, which left the route starting from an old skill.
+local function syncSkillFromGame(self, professionData)
+	for _, profession in ipairs(self:GetPlayerProfessions()) do
+		if profession.skillLineID == professionData.skillLineID then
+			professionData.skillLevel = tonumber(profession.skillLevel) or professionData.skillLevel
+			professionData.maxSkillLevel = tonumber(profession.maxSkillLevel) or professionData.maxSkillLevel
+			return
+		end
+	end
+end
+
 --- The route for the profession whose window is open, for the logged-in character.
 function Tradewright:GetOpenProfessionLevelingRoute()
 	self:InitDB()
@@ -340,6 +356,7 @@ function Tradewright:GetOpenProfessionLevelingRoute()
 	if not professionData then
 		return nil, "no_data"
 	end
+	syncSkillFromGame(self, professionData)
 	-- Picks up a skill change, or a recipe learned while the window was closed.
 	self:RefreshRecipeDifficulties(characterData, professionData)
 	return self:GetLevelingRoute(self:GetCharacterKey(), professionData.skillLineID)
