@@ -18,6 +18,7 @@ for _, path in ipairs({
 	"/src/util/Tradewright_ForeverLogic.lua",
 	"/src/util/Tradewright_MarketLogic.lua",
 	"/src/util/Tradewright_FilterLogic.lua",
+	"/src/util/Tradewright_EnchantLogic.lua",
 	"/../Tradewright_UI/src/ui/Tradewright_InventoryUI.lua",
 	"/../Tradewright_Professions/src/modules/Tradewright_CraftReagentPlan.lua",
 	"/../Tradewright_Professions/src/modules/Tradewright_CraftQueries.lua",

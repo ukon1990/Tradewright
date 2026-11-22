@@ -44,9 +44,27 @@ function Tradewright:ScheduleRefreshProfessionCraftEconomyPanel(delaySeconds)
 	end)
 end
 
+-- The first rank of a recipe that has ranks (separate spells linked by previousRecipeID). The
+-- profession window lists a ranked recipe under its first rank and shows the highest known rank
+-- when that one is opened; opening any other rank selects nothing.
+local function firstRankRecipeID(recipeID)
+	local getInfo = C_TradeSkillUI.GetRecipeInfo
+	-- No recipe has more than a few ranks; the bound only guards against a link that loops.
+	for _ = 1, 10 do
+		local info = getInfo and getInfo(recipeID)
+		local previousID = info and tonumber(info.previousRecipeID)
+		if not previousID then
+			break
+		end
+		recipeID = previousID
+	end
+	return recipeID
+end
+
 -- Selects a recipe in the open profession window. On Forever the crafting page is told directly:
 -- C_TradeSkillUI.OpenRecipe alone returns without selecting anything there.
 local function selectProfessionRecipe(recipeID)
+	recipeID = firstRankRecipeID(recipeID)
 	local page = not Tradewright.IS_RETAIL and _G.ProfessionsFrame and _G.ProfessionsFrame.CraftingPage
 	local info = C_TradeSkillUI.GetRecipeInfo and C_TradeSkillUI.GetRecipeInfo(recipeID)
 	if page and info and type(page.SelectRecipe) == "function" and pcall(page.SelectRecipe, page, info) then

@@ -23,6 +23,7 @@
 | Release | `scripts/package.mjs`, `scripts/addon-files.mjs`, `.github/workflows/release.yml`, `CHANGELOG.md` | `npm run package` builds the release zip with the files a deploy copies; steps in `docs/development.md#release` |
 | Saved-data move | `scripts/migrate-saved-data.mjs` | One-time: carries saved data from the old name (AuctionHelper) over to Tradewright |
 | Shipped sightings | `scripts/build-source-data.mjs` (+ `.lua`), `npm run sources:build` | Builds sealed sightings from saved data into `Tradewright_SourceData.lua`; in game first: `/tradewright sources seal`, then log out |
+| Enchant scrolls | `scripts/build-enchant-scroll-data.mjs`, `npm run enchants:build` | Builds `Tradewright_EnchantScrollData.lua` (enchant spell → the scroll it makes on a vellum) from the game's SpellEffect table; rerun after a patch adds enchants |
 
 ## Repo layout
 

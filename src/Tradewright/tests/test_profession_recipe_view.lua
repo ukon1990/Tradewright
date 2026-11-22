@@ -199,6 +199,26 @@ do
 	check("Signature: unsupported client", pe:GetProfessionCraftOperationSignature() == nil)
 end
 
+-- Showing a recipe that has ranks: the profession window lists it under its first rank
+do
+	local pe = newAddon(true, {})
+	local RANK_ONE, RANK_TWO, UNRANKED = 190868, 190994, 500
+	local previousRank = { [RANK_TWO] = RANK_ONE }
+	local opened = {}
+	rawset(_G, "C_Timer", { After = function() end })
+	rawset(_G, "C_TradeSkillUI", {
+		GetRecipeInfo = function(recipeID) return { recipeID = recipeID, previousRecipeID = previousRank[recipeID] } end,
+		OpenRecipe = function(recipeID) opened[#opened + 1] = recipeID end,
+	})
+	pe:JumpToProfessionRecipe(RANK_TWO)
+	check("Jump: a higher rank opens the first rank", opened[1] == RANK_ONE, opened[1])
+	pe:JumpToProfessionRecipe(UNRANKED)
+	check("Jump: a recipe without ranks opens as it is", opened[2] == UNRANKED, opened[2])
+	previousRank[RANK_ONE] = RANK_TWO
+	pe:JumpToProfessionRecipe(RANK_TWO)
+	check("Jump: ranks that link in a circle still open a recipe", opened[3] ~= nil)
+end
+
 if failed > 0 then
 	print(string.format("%d check(s) failed", failed))
 	os.exit(1)

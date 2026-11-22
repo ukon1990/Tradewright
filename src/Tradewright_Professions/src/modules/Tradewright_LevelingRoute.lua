@@ -187,7 +187,8 @@ local function recipesWithSkillLeft(self, professionData, scope)
 	local skill = scope.fromSkill or 0
 	local work, anyGreyLevel = {}, false
 	for recipeKey, recipeData in pairs(professionData.recipes or {}) do
-		local info = recipeInScope(self, scope, recipeData) and self:RecipeDataInfo(recipeData)
+		local usable = recipeInScope(self, scope, recipeData) and not self:IsReplacedRecipeRank(professionData, recipeData)
+		local info = usable and self:RecipeDataInfo(recipeData)
 		local greyLevel = info and tonumber(info.maxTrivialLevel)
 		if greyLevel then
 			anyGreyLevel = true

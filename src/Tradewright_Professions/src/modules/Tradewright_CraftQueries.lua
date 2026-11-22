@@ -38,7 +38,7 @@ function Tradewright:BuildCraftEconomyItemIDs(opts)
 						local slots = self:RecipeDataSlots(recipeData)
 						if type(slots) == "table" then
 							for _, slot in ipairs(slots) do
-								local slotClass = classifyCraftReagentSlot(professionData, recipeData, slot)
+								local slotClass = classifyCraftReagentSlot(recipeData, slot)
 								local include = false
 								if slotClass == "mandatory_base" or slotClass == "required_target" then
 									include = true

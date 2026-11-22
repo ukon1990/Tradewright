@@ -217,6 +217,19 @@ function Tradewright:FindStoredRecipe(professionData, recipeIDOrSpellID)
 	return nil, nil
 end
 
+--- Whether a learned recipe has been replaced by a higher rank the player also knows (the three
+--- ranks of a Legion recipe are separate spells). The profession window lists only the highest known
+--- rank, so a replaced one can neither be opened nor crafted there.
+function Tradewright:IsReplacedRecipeRank(professionData, recipeData)
+	local info = self:RecipeDataInfo(recipeData)
+	if not info or info.learned ~= true or not info.nextRecipeID then
+		return false
+	end
+	local _, nextRank = self:FindStoredRecipe(professionData, info.nextRecipeID)
+	local nextInfo = self:RecipeDataInfo(nextRank)
+	return nextInfo ~= nil and nextInfo.learned == true
+end
+
 function Tradewright:RecipeDataSlots(recipeData)
 	if not recipeData then
 		return nil

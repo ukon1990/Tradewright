@@ -26,6 +26,7 @@ function pe:RecipeDataSlots(recipeData) return recipeData.slots end
 function pe:GetRecipeSpellID(recipeData) return recipeData.recipeSpellID end
 for _, file in ipairs({
 	"/Tradewright/src/util/Tradewright_MaterialLogic.lua",
+	"/Tradewright/src/util/Tradewright_EnchantLogic.lua",
 	"/Tradewright/src/core/Tradewright_ProfessionScan.lua",
 	"/Tradewright_Professions/src/modules/Tradewright_CraftReagentPlan.lua",
 }) do
@@ -62,10 +63,10 @@ do
 	local recipeData = savedRecipe(true)
 	pe:PrepareSalvageRecipe(recipeData)
 	local prices = { [COPPER_ORE] = 40, [TIN_ORE] = 25 }
-	local plan = pe:PickCheapestReagentsPerSlot(recipeData, { professionName = "Jewelcrafting" }, function(itemID) return prices[itemID] end)
+	local plan = pe:PickCheapestReagentsPerSlot(recipeData, function(itemID) return prices[itemID] end)
 	check("Plan: one line, the cheapest item with a price, for what one craft destroys",
 		#plan == 1 and plan[1].itemID == TIN_ORE and plan[1].quantityRequired == 5, plan[1] and plan[1].itemID)
-	plan = pe:PickCheapestReagentsPerSlot(recipeData, { professionName = "Jewelcrafting" }, function() return nil end)
+	plan = pe:PickCheapestReagentsPerSlot(recipeData, function() return nil end)
 	check("Plan: no price known still names an item, so the cart can list it", #plan == 1 and plan[1].itemID == COPPER_ORE)
 end
 

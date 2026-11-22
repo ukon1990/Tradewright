@@ -108,7 +108,7 @@ end
 
 local function addTargetQualitySlot(planState, slot)
 	local qty = tonumber(slot.quantityRequired) or 0
-	local slotClass = classifyCraftReagentSlot(planState.professionData, planState.recipeData, slot)
+	local slotClass = classifyCraftReagentSlot(planState.recipeData, slot)
 	local override = planState.overrideBySlot[tostring(slot.slotIndex)]
 	if planState.forceVellum and slotClass == "required_target" then
 		override = nil
@@ -126,7 +126,7 @@ end
 --- Split slots into quality-choice slots (unpinned basic mats) and a static plan (targets, overrides).
 local function collectTargetQualitySlots(planState, slots)
 	planState.overrideBySlot = buildPlanIndexBySlot(planState.opts.reagentPlanOverride)
-	planState.enchantRecipe = craftIsEnchantRecipe(planState.professionData, planState.recipeData)
+	planState.enchantRecipe = craftIsEnchantRecipe(planState.recipeData)
 	planState.forceVellum = planState.enchantRecipe and planState.opts.forceEnchantingVellum == true
 	planState.qualitySlots, planState.staticPlan, planState.totalWeight = {}, {}, 0
 	for _, slot in ipairs(slots) do
@@ -224,12 +224,12 @@ end
 
 function Tradewright:PickCheapestReagentsPerSlotForTargetQuality(recipeData, professionData, unitPriceFn, targetQualityIndex, opts)
 	opts = opts or {}
-	local basePlan = self:PickCheapestReagentsPerSlot(recipeData, professionData, unitPriceFn, opts)
+	local basePlan = self:PickCheapestReagentsPerSlot(recipeData, unitPriceFn, opts)
 	local crafting = recipeData and recipeData.crafting or nil
 	local maxQ = schematicMaxQuality(recipeData)
 	local currentQ = reachableQualityIndex(crafting, maxQ)
 	targetQualityIndex = math.max(1, math.min(maxQ, tonumber(targetQualityIndex) or currentQ))
-	local forceVellumFinalize = craftIsEnchantRecipe(professionData, recipeData) and opts.forceEnchantingVellum == true
+	local forceVellumFinalize = craftIsEnchantRecipe(recipeData) and opts.forceEnchantingVellum == true
 	local plan, reachable = basePlan, targetQualityIndex == currentQ
 	if targetQualityIndex > currentQ then
 		plan, reachable = planForHigherTargetQuality(self, {
@@ -237,5 +237,5 @@ function Tradewright:PickCheapestReagentsPerSlotForTargetQuality(recipeData, pro
 			crafting = crafting, maxQ = maxQ, targetQualityIndex = targetQualityIndex, basePlan = basePlan,
 		})
 	end
-	return ensureEnchantingVellumInPlan(plan, professionData, recipeData, forceVellumFinalize), reachable
+	return ensureEnchantingVellumInPlan(plan, recipeData, forceVellumFinalize), reachable
 end

@@ -100,3 +100,13 @@ The addon records vendors, trainers and loot sources as you play. To build what 
 ```bash
 npm run sources:build
 ```
+
+## Enchant scrolls
+
+An enchant makes no item of its own; the addon values it as the scroll it makes on an Enchanting Vellum. Which scroll that is comes from a shipped list, built from the game's own `SpellEffect` table (downloaded from wago.tools). Rebuild it when a patch adds enchants:
+
+```bash
+npm run enchants:build
+```
+
+Enchants with crafting quality (Dragonflight and later) are not in the list; the game reports their scrolls as recipe outputs.

@@ -5,30 +5,12 @@ local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return
 
 local ENCHANTING_VELLUM_ITEM_ID = 38682
 
-local function containsText(haystack, needle)
-	return string.find(string.lower(tostring(haystack or "")), needle, 1, true) ~= nil
-end
-
-local function craftIsEnchantRecipe(professionData, recipeData)
+-- An enchant makes no item of its own; for sale it goes on a vellum (see Tradewright_EnchantLogic.lua).
+local function craftIsEnchantRecipe(recipeData)
 	local outs = recipeData and recipeData.outputs
-	local recipeType = tonumber(outs and outs.recipeType)
-	if Enum and Enum.TradeskillRecipeType and recipeType == tonumber(Enum.TradeskillRecipeType.Enchant) then
-		return true
-	end
-	-- Fallback: some clients/scans store Enchant as recipeType 3 without a reliable Enum match.
-	if recipeType == 3 then
-		local info = Tradewright:RecipeDataInfo(recipeData)
-		local recipeName = string.lower(tostring(info and info.name or ""))
-		if string.find(recipeName, "enchant", 1, true) ~= nil then
-			return true
-		end
-	end
-	if containsText(professionData and professionData.professionName, "enchant") then
-		local info = Tradewright:RecipeDataInfo(recipeData)
-		local recipeName = string.lower(tostring(info and info.name or ""))
-		return string.find(recipeName, "enchant", 1, true) ~= nil
-	end
-	return false
+	local enchantRecipeType = Enum and Enum.TradeskillRecipeType and Enum.TradeskillRecipeType.Enchant
+	return Tradewright.EnchantLogic.IsEnchantRecipe(outs and outs.recipeType, enchantRecipeType,
+		Tradewright.ENCHANT_SCROLL_DATA, Tradewright:GetRecipeSpellID(recipeData))
 end
 
 local function buildPlanIndexBySlot(plan)
@@ -60,7 +42,7 @@ local function reagentPlanContainsLiveSelection(plan)
 	return false
 end
 
-local function classifyCraftReagentSlot(professionData, recipeData, slot)
+local function classifyCraftReagentSlot(recipeData, slot)
 	local qty = tonumber(slot and slot.quantityRequired) or 0
 	if qty <= 0 then
 		return nil
@@ -80,7 +62,7 @@ local function classifyCraftReagentSlot(professionData, recipeData, slot)
 
 	if slot and slot.required == true then
 		-- Enchant recipes mark some non-basic slots required; treat as target only when not basic.
-		if craftIsEnchantRecipe(professionData, recipeData) then
+		if craftIsEnchantRecipe(recipeData) then
 			return "required_target"
 		end
 		return "required_target"
@@ -88,14 +70,14 @@ local function classifyCraftReagentSlot(professionData, recipeData, slot)
 
 	if slot and slot.optional == true then
 		-- Enchanting vellum/gear slots are usually optional in the schematic.
-		if craftIsEnchantRecipe(professionData, recipeData) then
+		if craftIsEnchantRecipe(recipeData) then
 			return "required_target"
 		end
 		return "optional"
 	end
 
 	-- Enchant recipes with an unlabeled non-basic/non-finishing slot: treat as target.
-	if craftIsEnchantRecipe(professionData, recipeData) then
+	if craftIsEnchantRecipe(recipeData) then
 		return "required_target"
 	end
 
@@ -152,8 +134,8 @@ end
 
 --- Ensure enchant recipes include Enchanting Vellum as the target reagent.
 --- When forceReplace is true, only replace existing required_target entries (not finishing slots).
-local function ensureEnchantingVellumInPlan(plan, professionData, recipeData, forceReplace)
-	if not craftIsEnchantRecipe(professionData, recipeData) then
+local function ensureEnchantingVellumInPlan(plan, recipeData, forceReplace)
+	if not craftIsEnchantRecipe(recipeData) then
 		return plan
 	end
 	plan = plan or {}
@@ -208,33 +190,40 @@ local function extractOutputItemIDFromApiResult(outputData)
 	return nil
 end
 
---- Resolve a craftable output item ID when schematic/scan data has none (common for enchants).
-local function resolveCraftOutputItemID(self, recipeID, recipeData, opts)
-	opts = opts or {}
-	recipeID = tonumber(recipeID) or tonumber(self:GetRecipeSpellID(recipeData))
-	if not recipeID or not C_TradeSkillUI or not C_TradeSkillUI.GetRecipeOutputItemData then
+-- The scroll the game reports for an enchant with a vellum as its reagent, or for a recipe as it is.
+local function outputItemIDFromGame(recipeID, withVellum)
+	if not C_TradeSkillUI or not C_TradeSkillUI.GetRecipeOutputItemData then
 		return nil
 	end
-
-	local attempts = {}
-	-- Prefer vellum allocation for enchant recipes so Blizzard returns the scroll item.
-	if opts.forceEnchantingVellum or craftIsEnchantRecipe(opts.professionData, recipeData) then
-		attempts[#attempts + 1] = {
-			{ itemID = ENCHANTING_VELLUM_ITEM_ID, quantity = 1 },
-		}
+	local attempts = { {} }
+	if withVellum then
+		table.insert(attempts, 1, { { reagent = { itemID = ENCHANTING_VELLUM_ITEM_ID }, quantity = 1 } })
 	end
-	attempts[#attempts + 1] = {}
-
 	for _, reagents in ipairs(attempts) do
+		-- The call raises on reagents a client does not accept; that is the same as no answer.
 		local ok, outputData = pcall(C_TradeSkillUI.GetRecipeOutputItemData, recipeID, reagents)
-		if ok then
-			local id = extractOutputItemIDFromApiResult(outputData)
-			if id then
-				return id
-			end
+		local id = ok and extractOutputItemIDFromApiResult(outputData)
+		if id then
+			return id
 		end
 	end
 	return nil
+end
+
+--- The item a recipe makes when its scan data names none, which is the case for enchants: the
+--- scroll from the shipped list, else what the game reports (enchants newer than the list).
+local function resolveCraftOutputItemID(self, recipeID, recipeData, opts)
+	opts = opts or {}
+	local spellID = tonumber(self:GetRecipeSpellID(recipeData)) or tonumber(recipeID)
+	local scrollItemID = Tradewright.EnchantLogic.ScrollItemID(Tradewright.ENCHANT_SCROLL_DATA, spellID)
+	if scrollItemID then
+		return scrollItemID
+	end
+	recipeID = tonumber(recipeID) or spellID
+	if not recipeID then
+		return nil
+	end
+	return outputItemIDFromGame(recipeID, opts.forceEnchantingVellum or craftIsEnchantRecipe(recipeData))
 end
 
 local function cloneReagentPlan(plan)
@@ -265,7 +254,7 @@ local function reagentSlotIncluded(qty, slotClass, slot, override)
 end
 
 --- Build a baseline reagent plan from slot metadata and optional live selections.
-function Tradewright:PickCheapestReagentsPerSlot(recipeData, professionData, unitPriceFn, opts)
+function Tradewright:PickCheapestReagentsPerSlot(recipeData, unitPriceFn, opts)
 	local slots = self:RecipeDataSlots(recipeData)
 	local plan = {}
 	opts = opts or {}
@@ -274,12 +263,12 @@ function Tradewright:PickCheapestReagentsPerSlot(recipeData, professionData, uni
 	end
 
 	local overrideBySlot = buildPlanIndexBySlot(opts.reagentPlanOverride)
-	local enchantRecipe = craftIsEnchantRecipe(professionData, recipeData)
+	local enchantRecipe = craftIsEnchantRecipe(recipeData)
 	local forceVellum = enchantRecipe and opts.forceEnchantingVellum == true
 
 	for _, slot in ipairs(slots) do
 		local qty = tonumber(slot.quantityRequired) or 0
-		local slotClass = classifyCraftReagentSlot(professionData, recipeData, slot)
+		local slotClass = classifyCraftReagentSlot(recipeData, slot)
 		local override = overrideBySlot[tostring(slot.slotIndex)]
 		if forceVellum and slotClass == "required_target" then
 			-- Shopping/queue: ignore live gear target and always plan for vellum.
@@ -313,7 +302,7 @@ function Tradewright:PickCheapestReagentsPerSlot(recipeData, professionData, uni
 	end
 
 	if enchantRecipe then
-		ensureEnchantingVellumInPlan(plan, professionData, recipeData, forceVellum)
+		ensureEnchantingVellumInPlan(plan, recipeData, forceVellum)
 	end
 	return plan
 end

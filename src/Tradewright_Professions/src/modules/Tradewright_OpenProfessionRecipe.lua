@@ -88,7 +88,7 @@ function Tradewright:BuildLiveSelectedReagentPlanForOpenRecipe(recipeData)
 						itemID = itemID,
 						quantityRequired = qty,
 						slotIndex = slotIndex,
-						slotClass = classifyCraftReagentSlot(nil, recipeData, slot),
+						slotClass = classifyCraftReagentSlot(recipeData, slot),
 						liveSelected = true,
 					}
 				end
@@ -396,8 +396,8 @@ function Tradewright:BuildProfessionRecipeQueueContext(recipeID, opts)
 	end
 
 	-- Shopping always assumes vellum for enchants, whichever eval the plan came from.
-	if craftIsEnchantRecipe(professionData, recipeData) and type(eval.reagentPlan) == "table" then
-		ensureEnchantingVellumInPlan(eval.reagentPlan, professionData, recipeData, true)
+	if craftIsEnchantRecipe(recipeData) and type(eval.reagentPlan) == "table" then
+		ensureEnchantingVellumInPlan(eval.reagentPlan, recipeData, true)
 		eval.requiredTargetReagent = true
 		eval.requiredTargetReagentItemID = ENCHANTING_VELLUM_ITEM_ID
 		eval.requiredTargetReagentAuto = true

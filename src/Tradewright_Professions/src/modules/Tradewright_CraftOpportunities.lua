@@ -59,14 +59,19 @@ end
 
 local CRAFT_EVAL_CHUNK = 85
 
+-- A recipe the player knows and the profession window still lists.
+local function recipeCanBeCrafted(self, professionData, recipeData)
+	local info = self:RecipeDataInfo(recipeData)
+	return info ~= nil and info.learned ~= false and not self:IsReplacedRecipeRank(professionData, recipeData)
+end
+
 local function collectCraftEvalWorkList(self)
 	local list = {}
 	for characterKey, characterData in pairs(self.db.characters or {}) do
 		for _, professionData in pairs(characterData.professions or {}) do
 			for rid, recipeData in pairs(professionData.recipes or {}) do
 				local recipeID = tonumber(rid) or rid
-				local info = self:RecipeDataInfo(recipeData)
-				if info and info.learned ~= false then
+				if recipeCanBeCrafted(self, professionData, recipeData) then
 					list[#list + 1] = { characterKey, professionData, recipeID, recipeData }
 				end
 			end

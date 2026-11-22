@@ -42,7 +42,6 @@ local function craftedItemID(self, evaluation)
 	local itemID = select(1, outputItemForQuality(evaluation.recipeData, evaluation.qualityIndex))
 	return itemID or resolveCraftOutputItemID(self, evaluation.recipeID, evaluation.recipeData, {
 		forceEnchantingVellum = evaluation.opts.forceEnchantingVellum == true,
-		professionData = evaluation.professionData,
 	})
 end
 
@@ -147,7 +146,7 @@ local function resolveCraftEvalPlan(self, evaluation)
 		return nil
 	end
 	if forceVellum then
-		ensureEnchantingVellumInPlan(plan, evaluation.professionData, evaluation.recipeData, true)
+		ensureEnchantingVellumInPlan(plan, evaluation.recipeData, true)
 	end
 	evaluation.plan, evaluation.qualityReachable = plan, qualityReachable
 	evaluation.usesRequiredTarget = reagentPlanHasRequiredTarget(plan)

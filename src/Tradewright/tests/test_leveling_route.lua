@@ -48,6 +48,8 @@ local function newAddon(recipes, skill)
 	pe.db = { characters = { [CHARACTER] = { professions = { [tostring(SKILL_LINE)] = {
 		professionName = "Leatherworking", skillLineID = SKILL_LINE, skillLevel = skill, maxSkillLevel = 150, recipes = recipes,
 	} } } } }
+	-- The real recipe readers; what follows replaces the parts that need the game.
+	loadInto(pe, root .. "/src/util/Tradewright_Util.lua")
 	function pe:InitDB() end
 	function pe:GetState() return self.state end
 	function pe:GetCharacterKey() return CHARACTER end
@@ -61,8 +63,6 @@ local function newAddon(recipes, skill)
 		end
 		return default
 	end
-	function pe:RecipeDataInfo(recipeData) return recipeData.info end
-	function pe:GetRecipeSpellID(recipeData) return recipeData.recipeSpellID end
 	function pe:GetItemVendorSellCopper() return 40 end
 	function pe:GetRecipeSource() return nil end
 	function pe:EvaluateCraftScenario(_, _, _, recipeData)
@@ -182,6 +182,25 @@ do
 	check("Forever: the route stops at 300 though the recipe stays orange", routeFor(newAddon(recipes, 100)).toSkill == 300)
 	local retail = newAddon(recipes, 100)
 	retail.IS_RETAIL = true
+-- Ranks of one recipe (separate spells; the profession window lists the highest known)
+do
+	local function ranked(greyLevel, learned, materialCost, nextSpellID)
+		local recipeData = recipe("Word of Mastery", greyLevel, learned, materialCost)
+		recipeData.info.nextRecipeID = nextSpellID
+		return recipeData
+	end
+	local rankOne, rankTwo, rankThree = ranked(140, true, 50, 1410), ranked(141, true, 300, 1420), ranked(142, false, 10, nil)
+	-- Stored under another key than the spell, as scanned recipes are.
+	local pe = newAddon({ ["1"] = rankOne, ["2"] = rankTwo, ["3"] = rankThree }, 100)
+	pe.settings["professions.leveling.recipes"] = "known"
+	local route = routeFor(pe)
+	check("Ranks: a rank replaced by a known higher one is left out, though cheaper",
+		#route.steps == 1 and route.steps[1].recipeID == pe:GetRecipeSpellID(rankTwo), route.steps[1] and route.steps[1].recipeID)
+	local professionData = pe.db.characters[CHARACTER].professions[tostring(SKILL_LINE)]
+	check("Ranks: the highest known rank is not replaced by one still to learn",
+		not pe:IsReplacedRecipeRank(professionData, rankTwo) and pe:IsReplacedRecipeRank(professionData, rankOne))
+end
+
 	local retailRoute = routeFor(retail)
 	check("Retail has no ranks: the profession's own cap is the highest skill, with no rank step",
 		retailRoute.toSkill == 150 and #retailRoute.steps == 1)
