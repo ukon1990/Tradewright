@@ -1,0 +1,42 @@
+## Interface: 120000, 120001
+## AllowLoadGameType: standard
+## Title: Tradewright
+## Notes: Shared runtime, migration, settings, and compact export services for Tradewright modules
+## Author: Ukon1990
+## Version: 2.0.0
+## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator
+## SavedVariables: TradewrightDB, TradewrightMigrationDB, TradewrightLastExport, ProfessionExporterDB, ProfessionExporterLastExport
+
+Bootstrap.lua
+src\core\Tradewright.lua
+src\util\Tradewright_ForeverLogic.lua
+src\util\Tradewright_AuctionLogic.lua
+src\util\Tradewright_IncomeLogic.lua
+src\util\Tradewright_MailLogic.lua
+src\util\Tradewright_MarketSignals.lua
+src\util\Tradewright_MarketLogic.lua
+src\util\Tradewright_FlipLogic.lua
+src\util\Tradewright_MaterialLogic.lua
+src\util\Tradewright_ReagentStashLogic.lua
+src\util\Tradewright_VendorLogic.lua
+src\util\Tradewright_SkillUpLogic.lua
+src\util\Tradewright_LevelingRouteLogic.lua
+src\util\Tradewright_FarmLogic.lua
+src\util\Tradewright_WeekdayPattern.lua
+src\util\Tradewright_TooltipLogic.lua
+src\util\Tradewright_FilterLogic.lua
+src\util\Tradewright_ChartLogic.lua
+src\core\Tradewright_Data.lua
+src\core\Tradewright_ProfessionSpecTree.lua
+src\core\Tradewright_ProfessionScan.lua
+src\core\Tradewright_ExportBuild.lua
+src\core\Tradewright_CopyBox.lua
+src\core\Tradewright_SlashCommands.lua
+src\core\Tradewright_DataInit.lua
+src\util\Tradewright_CoreHelpers.lua
+src\util\Tradewright_Util.lua
+src\util\Tradewright_JsonCodec.lua
+src\util\Tradewright_ItemInfo.lua
+src\ui\Tradewright_Theme.lua
+src\modules\Tradewright_Docs.lua
+src\core\Tradewright_Events.lua

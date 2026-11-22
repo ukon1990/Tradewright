@@ -1,0 +1,47 @@
+## Interface: 120000, 120001
+## AllowLoadGameType: standard
+## Title: Tradewright Professions
+## Notes: Profession scan, crafting, and profession data storage for Tradewright
+## Author: Ukon1990
+## Version: 2.0.0
+## Dependencies: Tradewright
+## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator
+## SavedVariables: TradewrightProfessionsDB
+
+Bootstrap.lua
+src\modules\Tradewright_SpecCatalog.lua
+src\data\spec_catalog\midnight\Tradewright_SpecCatalog_Midnight_Alchemy.lua
+src\data\spec_catalog\midnight\Tradewright_SpecCatalog_Midnight_Blacksmithing.lua
+src\data\spec_catalog\midnight\Tradewright_SpecCatalog_Midnight_Enchanting.lua
+src\data\spec_catalog\midnight\Tradewright_SpecCatalog_Midnight_Engineering.lua
+src\data\spec_catalog\midnight\Tradewright_SpecCatalog_Midnight_Inscription.lua
+src\data\spec_catalog\midnight\Tradewright_SpecCatalog_Midnight_Jewelcrafting.lua
+src\data\spec_catalog\midnight\Tradewright_SpecCatalog_Midnight_Leatherworking.lua
+src\data\spec_catalog\midnight\Tradewright_SpecCatalog_Midnight_Tailoring.lua
+src\data\Tradewright_CraftingOrdersPatronKnowledgeData.lua
+src\modules\Tradewright_Integrations.lua
+src\modules\Tradewright_MaterialCost.lua
+src\modules\Tradewright_ItemTooltip.lua
+src\modules\Tradewright_Debug.lua
+src\modules\Tradewright_Cooldowns.lua
+src\modules\Tradewright_MaterialSource.lua
+src\modules\Tradewright_CraftsEngine.lua
+src\modules\Tradewright_CraftCategories.lua
+src\modules\Tradewright_CraftReagentPlan.lua
+src\modules\Tradewright_CraftTargetQuality.lua
+src\modules\Tradewright_CraftConcentration.lua
+src\modules\Tradewright_CraftEvaluation.lua
+src\modules\Tradewright_CraftOpportunities.lua
+src\modules\Tradewright_CraftQueries.lua
+src\modules\Tradewright_LevelingRoute.lua
+src\modules\Tradewright_TrainerRecipes.lua
+src\modules\Tradewright_OpenProfessionRecipe.lua
+src\modules\Tradewright_CraftDetailText.lua
+src\modules\Tradewright_OrderReagents.lua
+src\modules\Tradewright_CraftingOrdersMaterials.lua
+src\modules\Tradewright_CraftingOrderMenus.lua
+src\modules\Tradewright_CraftingOrderView.lua
+src\modules\Tradewright_CraftingOrdersUI.lua
+src\modules\Tradewright_Scan.lua
+src\modules\Tradewright_ProfessionFingerprint.lua
+src\modules\Tradewright_LiveUpdate.lua

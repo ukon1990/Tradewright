@@ -1,15 +1,15 @@
 {
-  "name": "auction-helper",
+  "name": "tradewright",
   "version": "2.0.0",
   "private": true,
-  "description": "AuctionHelper World of Warcraft addon pack (Forever + retail)",
+  "description": "Tradewright World of Warcraft addon pack (Forever + retail)",
   "type": "module",
   "scripts": {
     "deploy": "node scripts/deploy.mjs",
     "deploy:forever": "node scripts/deploy.mjs forever",
     "deploy:retail": "node scripts/deploy.mjs retail",
     "deploy:dry": "node scripts/deploy.mjs --dry-run",
-    "test": "python3 src/AuctionHelper/tests/run_tests.py && python3 scripts/lint.py",
+    "test": "python3 src/Tradewright/tests/run_tests.py && python3 scripts/lint.py",
     "lint": "python3 scripts/lint.py",
     "lint:baseline": "python3 scripts/lint.py --update-baseline"
   }

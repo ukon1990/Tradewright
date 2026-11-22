@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Code-quality gate for AuctionHelper (ratchet against scripts/lint-baseline.json).
+"""Code-quality gate for Tradewright (ratchet against scripts/lint-baseline.json).
 
 Checks:
   * luacheck (config: .luacheckrc) over all of src/  -> per-file warning counts

@@ -1,9 +1,9 @@
 ---
 name: wow-addon-issue-work
-description: Implement an AuctionHelper issue from src/AuctionHelper/docs/specifications/issues — plan slices, implement, review against focus files, verify with tests and in-game checks.
+description: Implement a Tradewright issue from src/Tradewright/docs/specifications/issues — plan slices, implement, review against focus files, verify with tests and in-game checks.
 ---
 
-# Issue work (AuctionHelper)
+# Issue work (Tradewright)
 
 **Start with:** [wow-addon-issue-planning](../wow-addon-issue-planning/SKILL.md) when filing follow-ups.
 
@@ -34,8 +34,8 @@ Lint needs `luacheck` on PATH (`sudo pacman -S luacheck`, or `luarocks install l
 
 In-game checklist (as applicable):
 
-- All five AuctionHelper* modules enabled; no load errors
-- `/ah` (or `/auctionhelper`) opens the dashboard
+- All five Tradewright* modules enabled; no load errors
+- `/ah` (or `/tradewright`) opens the dashboard
 - Full AH dump with house open → prices in snapshot / crafts
 - Profession Scan → recipes + reagents stored
 - Crafts tab shows profit from AH snapshot

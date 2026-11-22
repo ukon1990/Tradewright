@@ -1,0 +1,41 @@
+## Interface: 16001, 16002, 16100, 16200
+## AllowLoadGameType: camelot
+## Title: Tradewright Auction Data
+## Notes: Auction storage and auction-house integrations for Tradewright
+## Author: Ukon1990
+## Version: 2.0.0
+## Dependencies: Tradewright
+## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator, Questie, QuestieDB
+## SavedVariables: TradewrightAuctionDB
+
+Bootstrap.lua
+src\modules\Tradewright_AuctionShared.lua
+src\modules\Tradewright_AuctionItemKeys.lua
+src\modules\Tradewright_AuctionBags.lua
+src\modules\Tradewright_AuctionLiveSearch.lua
+src\modules\Tradewright_AuctionPanelPrices.lua
+src\modules\Tradewright_AuctionRefreshQueue.lua
+src\modules\Tradewright_AuctionScanTargets.lua
+src\modules\Tradewright_AuctionBulk.lua
+src\modules\Tradewright_AuctionSellFrame.lua
+src\modules\Tradewright_AuctionStore.lua
+src\modules\Tradewright_AuctionPricing.lua
+src\modules\Tradewright_AuctionItemRules.lua
+src\modules\Tradewright_AuctionCart.lua
+src\modules\Tradewright_AuctionClassicBuy.lua
+src\modules\Tradewright_AuctionCartTab.lua
+src\modules\Tradewright_AuctionBuy.lua
+src\modules\Tradewright_AuctionOwned.lua
+src\modules\Tradewright_AuctionPanelLayout.lua
+src\modules\Tradewright_AuctionSellTab.lua
+src\modules\Tradewright_AuctionFullScan.lua
+src\modules\Tradewright_AuctionFullScanRows.lua
+src\modules\Tradewright_AuctionEvents.lua
+src\modules\Tradewright_AuctionPanelRefresh.lua
+src\modules\Tradewright_AuctionPanelBuild.lua
+src\modules\Tradewright_AuctionSellFilters.lua
+src\modules\Tradewright_PriceSteps.lua
+src\modules\Tradewright_PriceHistory.lua
+src\modules\Tradewright_MarketInsights.lua
+src\modules\Tradewright_Opportunities.lua
+src\modules\Tradewright_VendorSource.lua

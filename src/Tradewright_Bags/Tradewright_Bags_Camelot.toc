@@ -1,0 +1,25 @@
+## Interface: 16001, 16002, 16100, 16200
+## AllowLoadGameType: camelot
+## Title: Tradewright Bags
+## Notes: Optional bag window for Tradewright: items grouped by category, other characters as tabs
+## Author: Ukon1990
+## Version: 2.0.0
+## Dependencies: Tradewright, Tradewright_AuctionData, Tradewright_Professions, Tradewright_Inventory, Tradewright_UI
+## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator
+## SavedVariables: TradewrightBagsDB
+
+Bootstrap.lua
+src\Tradewright_BagLogic.lua
+src\Tradewright_BagData.lua
+src\Tradewright_BagSwitch.lua
+src\Tradewright_BagButtons.lua
+src\Tradewright_BagDrop.lua
+src\Tradewright_BagLootSwap.lua
+src\Tradewright_BagRow.lua
+src\Tradewright_BagBank.lua
+src\Tradewright_BagActions.lua
+src\Tradewright_BagSelect.lua
+src\Tradewright_BagStash.lua
+src\Tradewright_BagLog.lua
+src\Tradewright_BagWindowFrame.lua
+src\Tradewright_BagWindow.lua

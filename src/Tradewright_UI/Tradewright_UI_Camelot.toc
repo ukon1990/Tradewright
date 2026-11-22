@@ -1,0 +1,58 @@
+## Interface: 16001, 16002, 16100, 16200
+## AllowLoadGameType: camelot
+## Title: Tradewright UI
+## Notes: Main interface for Tradewright modules
+## Author: Ukon1990
+## Version: 2.0.0
+## Dependencies: Tradewright, Tradewright_AuctionData, Tradewright_Professions, Tradewright_Inventory
+## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator
+
+Bootstrap.lua
+src\ui\Tradewright_Widgets.lua
+src\ui\Tradewright_Dropdowns.lua
+src\ui\Tradewright_Chart.lua
+src\ui\Tradewright_ItemDetailGraph.lua
+src\ui\Tradewright_Table.lua
+src\ui\Tradewright_TableHeader.lua
+src\ui\Tradewright_TableLayout.lua
+src\ui\Tradewright_TablePager.lua
+src\ui\Tradewright_TableLoading.lua
+src\ui\Tradewright_Columns.lua
+src\ui\Tradewright_DashboardWidgets.lua
+src\ui\Tradewright_InventoryColumns.lua
+src\ui\Tradewright_ItemDetailPane.lua
+src\ui\Tradewright_UI.lua
+src\ui\Tradewright_InventoryUI.lua
+src\ui\Tradewright_CraftsUI.lua
+src\ui\Tradewright_CraftsQueuePane.lua
+src\ui\Tradewright_CraftsDetails.lua
+src\ui\Tradewright_CraftsToolbar.lua
+src\ui\Tradewright_CraftPlanning.lua
+src\ui\Tradewright_ProfessionCraftPanel.lua
+src\ui\Tradewright_ProfessionCraftAction.lua
+src\ui\Tradewright_ProfessionQueueView.lua
+src\ui\Tradewright_ProfessionLevelingView.lua
+src\ui\Tradewright_MailPanel.lua
+src\ui\Tradewright_MailSendQueue.lua
+src\ui\Tradewright_MailReviewPanel.lua
+src\ui\Tradewright_GoldDashboard.lua
+src\ui\Tradewright_SalesDashboard.lua
+src\ui\Tradewright_IncomeDashboard.lua
+src\ui\Tradewright_OverviewTab.lua
+src\ui\Tradewright_MarketUI.lua
+src\ui\Tradewright_ItemDetailsWindow.lua
+src\ui\Tradewright_MarketChart.lua
+src\ui\Tradewright_OpportunityHelp.lua
+src\ui\Tradewright_OpportunityViews.lua
+src\ui\Tradewright_OpportunitiesTab.lua
+src\ui\Tradewright_ExportTab.lua
+src\ui\Tradewright_DocsTab.lua
+src\ui\Tradewright_SettingsTab.lua
+src\ui\Tradewright_TabOrder.lua
+src\ui\Tradewright_VendorBuyWindow.lua
+src\ui\Tradewright_FarmWindow.lua
+src\ui\Tradewright_FarmTargets.lua
+src\ui\Tradewright_FarmingTab.lua
+src\ui\Tradewright_UIShell.lua
+src\ui\Tradewright_MinimapButton.lua
+src\ui\Tradewright_BlizzardSettings.lua

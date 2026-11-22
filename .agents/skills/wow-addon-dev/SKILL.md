@@ -1,9 +1,9 @@
 ---
 name: wow-addon-dev
-description: WoW Forever addon development basics for AuctionHelper — TOC camelot flavor, SavedVariables, Forever vs retail flags, protected API / ToS, reload vs restart.
+description: WoW Forever addon development basics for Tradewright — TOC camelot flavor, SavedVariables, Forever vs retail flags, protected API / ToS, reload vs restart.
 ---
 
-# WoW addon development (AuctionHelper)
+# WoW addon development (Tradewright)
 
 ## Client
 
@@ -13,7 +13,7 @@ description: WoW Forever addon development basics for AuctionHelper — TOC came
 
 ## TOC & load order
 
-- Five core addons: `AuctionHelper`, `AuctionHelper_AuctionData`, `AuctionHelper_Professions`, `AuctionHelper_Inventory`, `AuctionHelper_UI`, plus the optional `AuctionHelper_Bags` (bag window; loads last).
+- Five core addons: `Tradewright`, `Tradewright_AuctionData`, `Tradewright_Professions`, `Tradewright_Inventory`, `Tradewright_UI`, plus the optional `Tradewright_Bags` (bag window; loads last).
 - List every `.lua` in each TOC (all four flavor variants). **New files need a full client restart**; `/reload` only reloads files already in the TOC.
 - `Blizzard_Professions` is **OptionalDeps** so auction modules still load if it is disabled.
 
@@ -36,11 +36,11 @@ Keep Midnight-only hooks on `IS_RETAIL` (crafting orders UI/materials, concentra
 
 | Global | Addon |
 | --- | --- |
-| `AuctionHelperDB`, `AuctionHelperMigrationDB`, `AuctionHelperLastExport` | Core |
-| `AuctionHelperAuctionDB` | AuctionData |
-| `AuctionHelperProfessionsDB` | Professions |
-| `AuctionHelperInventoryDB` | Inventory |
-| `AuctionHelperBagsDB` | Bags (legacy; adopted into `AuctionHelperInventoryDB.holdings` and cleared on login) |
+| `TradewrightDB`, `TradewrightMigrationDB`, `TradewrightLastExport` | Core |
+| `TradewrightAuctionDB` | AuctionData |
+| `TradewrightProfessionsDB` | Professions |
+| `TradewrightInventoryDB` | Inventory |
+| `TradewrightBagsDB` | Bags (legacy; adopted into `TradewrightInventoryDB.holdings` and cleared on login) |
 
 ## Globals & lint
 

@@ -1,0 +1,29 @@
+## Interface: 120000, 120001
+## AllowLoadGameType: standard
+## Title: Tradewright Inventory
+## Notes: Inventory, warehousing, and historical value storage for Tradewright
+## Author: Ukon1990
+## Version: 2.0.0
+## Dependencies: Tradewright, Tradewright_Professions
+## OptionalDeps: Blizzard_Professions, TradeSkillMaster, Auctionator
+## SavedVariables: TradewrightInventoryDB
+
+Bootstrap.lua
+src\modules\Tradewright_Ledger.lua
+src\modules\Tradewright_Income.lua
+src\modules\Tradewright_Farm.lua
+src\modules\Tradewright_CraftQueue.lua
+src\modules\Tradewright_CraftQueueSummary.lua
+src\modules\Tradewright_CraftQueueOrders.lua
+src\modules\Tradewright_ReagentStash.lua
+src\modules\Tradewright_LevelingQueue.lua
+src\modules\Tradewright_MailPlans.lua
+src\modules\Tradewright_Holdings.lua
+src\modules\Tradewright_ItemLogLogic.lua
+src\modules\Tradewright_ItemLog.lua
+src\modules\Tradewright_Inventory.lua
+src\modules\Tradewright_InventoryTable.lua
+src\modules\Tradewright_ItemAnalytics.lua
+src\modules\Tradewright_ItemDetail.lua
+src\modules\Tradewright_QuantityHistory.lua
+src\modules\Tradewright_WalletHistory.lua

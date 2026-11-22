@@ -1,6 +1,6 @@
-# AuctionHelper
+# Tradewright
 
-Auction, profession and inventory helper addons for World of Warcraft: **WoW Forever** (`Interface 16001`) and retail. The pack is five addons under `src/` (core, AuctionData, Professions, Inventory, UI) plus an optional sixth, `AuctionHelper_Bags`: a bag window grouped by item category, with your other characters as tabs. Turn it off in Settings → Inventory & mail, with `/ah bags`, or by disabling the addon.
+Auction, profession and inventory helper addons for World of Warcraft: **WoW Forever** (`Interface 16001`) and retail. The pack is five addons under `src/` (core, AuctionData, Professions, Inventory, UI) plus an optional sixth, `Tradewright_Bags`: a bag window grouped by item category, with your other characters as tabs. Turn it off in Settings → Inventory & mail, with `/ah bags`, or by disabling the addon.
 
 Rules for contributors and agents: see [AGENTS.md](AGENTS.md).
 
@@ -53,4 +53,4 @@ npm run deploy:dry
 npm run deploy
 ```
 
-`deploy:forever` and `deploy:retail` deploy a single target. In game, `/reload` picks up changed files. New `.lua` files or TOC changes need a full client restart. `/ah` (or `/auctionhelper`) opens the UI.
+`deploy:forever` and `deploy:retail` deploy a single target. In game, `/reload` picks up changed files. New `.lua` files or TOC changes need a full client restart. `/ah` (or `/tradewright`) opens the UI.

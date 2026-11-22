@@ -1,4 +1,4 @@
--- luacheck config for AuctionHelper. Run through `npm run lint` (scripts/lint.py),
+-- luacheck config for Tradewright. Run through `npm run lint` (scripts/lint.py),
 -- which compares results against scripts/lint-baseline.json (ratchet).
 -- New WoW API used in code? Add it to read_globals below (alphabetical).
 
@@ -17,18 +17,18 @@ ignore = {
 
 -- Globals the addon owns and writes: SavedVariables (see TOCs) and slash commands.
 globals = {
-	"AuctionHelperAuctionDB",
-	"AuctionHelperBagsDB",
-	"AuctionHelperDB",
-	"AuctionHelperInventoryDB",
-	"AuctionHelperLastExport",
-	"AuctionHelperMigrationDB",
-	"AuctionHelperProfessionsDB",
+	"TradewrightAuctionDB",
+	"TradewrightBagsDB",
+	"TradewrightDB",
+	"TradewrightInventoryDB",
+	"TradewrightLastExport",
+	"TradewrightMigrationDB",
+	"TradewrightProfessionsDB",
 	"ProfessionExporterDB",
 	"ProfessionExporterLastExport",
 	"SLASH_AHFARM1",
-	"SLASH_AUCTIONHELPER1",
-	"SLASH_AUCTIONHELPER2",
+	"SLASH_TRADEWRIGHT1",
+	"SLASH_TRADEWRIGHT2",
 	"SlashCmdList",
 	"UISpecialFrames",
 }
@@ -214,4 +214,4 @@ read_globals = {
 }
 
 -- Generated recipe/spec data: long table rows are fine.
-files["src/AuctionHelper_Professions/src/data/"] = { max_line_length = false }
+files["src/Tradewright_Professions/src/data/"] = { max_line_length = false }

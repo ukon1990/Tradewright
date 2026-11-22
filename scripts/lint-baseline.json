@@ -1,41 +1,41 @@
 {
  "luacheck": {
-  "src/AuctionHelper/src/core/AuctionHelper_SlashCommands.lua": {
+  "src/Tradewright/src/core/Tradewright_SlashCommands.lua": {
    "W631": 1
   },
-  "src/AuctionHelper/src/modules/AuctionHelper_Docs.lua": {
+  "src/Tradewright/src/modules/Tradewright_Docs.lua": {
    "W631": 19
   },
-  "src/AuctionHelper/tests/test_forever_logic.lua": {
+  "src/Tradewright/tests/test_forever_logic.lua": {
    "W421": 2,
    "W631": 1
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionRefreshQueue.lua": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionRefreshQueue.lua": {
    "W631": 1
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionScanTargets.lua": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionScanTargets.lua": {
    "W631": 1
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_Scan.lua": {
+  "src/Tradewright_Professions/src/modules/Tradewright_Scan.lua": {
    "W631": 1
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_SpecCatalog.lua": {
+  "src/Tradewright_Professions/src/modules/Tradewright_SpecCatalog.lua": {
    "W431": 1,
    "W542": 1
   },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_Table.lua": {
+  "src/Tradewright_UI/src/ui/Tradewright_Table.lua": {
    "W631": 1
   }
  },
  "files": {},
  "functions": {
-  "src/AuctionHelper/src/core/AuctionHelper_CopyBox.lua": {
-   "AuctionHelper:ComputeCopyBoxPagingSegmentsYielding": {
+  "src/Tradewright/src/core/Tradewright_CopyBox.lua": {
+   "Tradewright:ComputeCopyBoxPagingSegmentsYielding": {
     "lines": [
      48
     ]
    },
-   "AuctionHelper:CopyBoxApplyCurrentPage": {
+   "Tradewright:CopyBoxApplyCurrentPage": {
     "lines": [
      52
     ],
@@ -43,27 +43,27 @@
      22
     ]
    },
-   "AuctionHelper:CreateCopyFrame": {
+   "Tradewright:CreateCopyFrame": {
     "lines": [
      104
     ]
    },
-   "AuctionHelper:LayoutCopyFrameScroll": {
+   "Tradewright:LayoutCopyFrameScroll": {
     "ccn": [
      12
     ]
    },
-   "AuctionHelper:RunComputeCopyBoxPagingAsync": {
+   "Tradewright:RunComputeCopyBoxPagingAsync": {
     "lines": [
      42
     ]
    },
-   "AuctionHelper:SaveExportToSavedVariables": {
+   "Tradewright:SaveExportToSavedVariables": {
     "ccn": [
      20
     ]
    },
-   "AuctionHelper:ShowCopyBox": {
+   "Tradewright:ShowCopyBox": {
     "lines": [
      100
     ],
@@ -72,8 +72,8 @@
     ]
    }
   },
-  "src/AuctionHelper/src/core/AuctionHelper_Data.lua": {
-   "AuctionHelper:BuildAggregate": {
+  "src/Tradewright/src/core/Tradewright_Data.lua": {
+   "Tradewright:BuildAggregate": {
     "lines": [
      125
     ],
@@ -81,37 +81,37 @@
      32
     ]
    },
-   "AuctionHelper:BuildMaxQualityRequiredReagentInfo": {
+   "Tradewright:BuildMaxQualityRequiredReagentInfo": {
     "ccn": [
      15
     ]
    },
-   "AuctionHelper:CollectRecipeCategories": {
+   "Tradewright:CollectRecipeCategories": {
     "lines": [
      45
     ]
    },
-   "AuctionHelper:DescribeOperationInfo": {
+   "Tradewright:DescribeOperationInfo": {
     "ccn": [
      11
     ]
    },
-   "AuctionHelper:DescribeRecipeOutput": {
+   "Tradewright:DescribeRecipeOutput": {
     "ccn": [
      20
     ]
    },
-   "AuctionHelper:PatchAggregateInventorySummaryForCharacter": {
+   "Tradewright:PatchAggregateInventorySummaryForCharacter": {
     "ccn": [
      12
     ]
    },
-   "AuctionHelper:RestoreFilters": {
+   "Tradewright:RestoreFilters": {
     "ccn": [
      14
     ]
    },
-   "AuctionHelper:SnapshotFilters": {
+   "Tradewright:SnapshotFilters": {
     "ccn": [
      11
     ]
@@ -122,45 +122,45 @@
     ]
    }
   },
-  "src/AuctionHelper/src/core/AuctionHelper_ExportBuild.lua": {
-   "AuctionHelper:BuildCompactAuctionHistoryExport": {
+  "src/Tradewright/src/core/Tradewright_ExportBuild.lua": {
+   "Tradewright:BuildCompactAuctionHistoryExport": {
     "ccn": [
      22
     ]
    },
-   "AuctionHelper:BuildCompactAuctionSnapshotExport": {
+   "Tradewright:BuildCompactAuctionSnapshotExport": {
     "ccn": [
      12
     ]
    },
-   "AuctionHelper:BuildCompactExportPayload": {
+   "Tradewright:BuildCompactExportPayload": {
     "ccn": [
      27
     ]
    },
-   "AuctionHelper:BuildCompactInventorySnapshot": {
+   "Tradewright:BuildCompactInventorySnapshot": {
     "ccn": [
      13
     ]
    },
-   "AuctionHelper:BuildCompactRecipeRecord": {
+   "Tradewright:BuildCompactRecipeRecord": {
     "ccn": [
      24
     ]
    },
-   "AuctionHelper:GetCompactCharacterHeader": {
+   "Tradewright:GetCompactCharacterHeader": {
     "ccn": [
      23
     ]
    },
-   "AuctionHelper:ProfessionExportSliceProfession": {
+   "Tradewright:ProfessionExportSliceProfession": {
     "ccn": [
      13
     ]
    }
   },
-  "src/AuctionHelper/src/core/AuctionHelper_ProfessionScan.lua": {
-   "AuctionHelper:CollectClassicRecipeReagentSlots": {
+  "src/Tradewright/src/core/Tradewright_ProfessionScan.lua": {
+   "Tradewright:CollectClassicRecipeReagentSlots": {
     "lines": [
      96
     ],
@@ -168,7 +168,7 @@
      36
     ]
    },
-   "AuctionHelper:CollectCurrentProfessionData": {
+   "Tradewright:CollectCurrentProfessionData": {
     "lines": [
      43
     ],
@@ -176,12 +176,12 @@
      17
     ]
    },
-   "AuctionHelper:CollectRecipeData": {
+   "Tradewright:CollectRecipeData": {
     "ccn": [
      16
     ]
    },
-   "AuctionHelper:CreateProfessionDataShell": {
+   "Tradewright:CreateProfessionDataShell": {
     "lines": [
      45
     ],
@@ -195,13 +195,13 @@
     ]
    }
   },
-  "src/AuctionHelper/src/core/AuctionHelper_ProfessionSpecTree.lua": {
-   "AuctionHelper:CollectSpecializationTreesForProfession": {
+  "src/Tradewright/src/core/Tradewright_ProfessionSpecTree.lua": {
+   "Tradewright:CollectSpecializationTreesForProfession": {
     "lines": [
      43
     ]
    },
-   "AuctionHelper:FinalizeSpecializationTabGraph": {
+   "Tradewright:FinalizeSpecializationTabGraph": {
     "lines": [
      69
     ],
@@ -209,12 +209,12 @@
      18
     ]
    },
-   "AuctionHelper:PickPrimarySpecializationSkillLineID": {
+   "Tradewright:PickPrimarySpecializationSkillLineID": {
     "ccn": [
      20
     ]
    },
-   "AuctionHelper:ResolveProfessionSpecSkillLineIDs": {
+   "Tradewright:ResolveProfessionSpecSkillLineIDs": {
     "lines": [
      49
     ],
@@ -223,8 +223,8 @@
     ]
    }
   },
-  "src/AuctionHelper/src/core/AuctionHelper_SlashCommands.lua": {
-   "AuctionHelper:Export": {
+  "src/Tradewright/src/core/Tradewright_SlashCommands.lua": {
+   "Tradewright:Export": {
     "lines": [
      65
     ],
@@ -233,18 +233,18 @@
     ]
    }
   },
-  "src/AuctionHelper/src/ui/AuctionHelper_Theme.lua": {
-   "AuctionHelper:AddSurface": {
+  "src/Tradewright/src/ui/Tradewright_Theme.lua": {
+   "Tradewright:AddSurface": {
     "ccn": [
      11
     ]
    },
-   "AuctionHelper:SkinCheckButton": {
+   "Tradewright:SkinCheckButton": {
     "ccn": [
      12
     ]
    },
-   "AuctionHelper:SkinTree": {
+   "Tradewright:SkinTree": {
     "ccn": [
      15
     ]
@@ -255,7 +255,7 @@
     ]
    }
   },
-  "src/AuctionHelper/src/util/AuctionHelper_AuctionLogic.lua": {
+  "src/Tradewright/src/util/Tradewright_AuctionLogic.lua": {
    "AuctionLogic.AggregateClassicAuctionRow": {
     "ccn": [
      18
@@ -267,7 +267,7 @@
     ]
    }
   },
-  "src/AuctionHelper/src/util/AuctionHelper_ForeverLogic.lua": {
+  "src/Tradewright/src/util/Tradewright_ForeverLogic.lua": {
    "ForeverLogic.RepairAuctionStorageKeys": {
     "lines": [
      49
@@ -290,7 +290,7 @@
     ]
    }
   },
-  "src/AuctionHelper/src/util/AuctionHelper_IncomeLogic.lua": {
+  "src/Tradewright/src/util/Tradewright_IncomeLogic.lua": {
    "IncomeLogic.SummarizeSales": {
     "lines": [
      42
@@ -300,8 +300,8 @@
     ]
    }
   },
-  "src/AuctionHelper/src/util/AuctionHelper_ItemInfo.lua": {
-   "AuctionHelper:ItemDescriptorFromID": {
+  "src/Tradewright/src/util/Tradewright_ItemInfo.lua": {
+   "Tradewright:ItemDescriptorFromID": {
     "lines": [
      42
     ],
@@ -310,8 +310,8 @@
     ]
    }
   },
-  "src/AuctionHelper/src/util/AuctionHelper_JsonCodec.lua": {
-   "AuctionHelper:RunEncodeJsonAsync": {
+  "src/Tradewright/src/util/Tradewright_JsonCodec.lua": {
+   "Tradewright:RunEncodeJsonAsync": {
     "lines": [
      53
     ]
@@ -325,7 +325,7 @@
     ]
    }
   },
-  "src/AuctionHelper/src/util/AuctionHelper_MailLogic.lua": {
+  "src/Tradewright/src/util/Tradewright_MailLogic.lua": {
    "MailLogic.BuildMailPlan": {
     "ccn": [
      18
@@ -337,7 +337,7 @@
     ]
    }
   },
-  "src/AuctionHelper/src/util/AuctionHelper_MarketLogic.lua": {
+  "src/Tradewright/src/util/Tradewright_MarketLogic.lua": {
    "MarketLogic.BuildMarketBrowserRows": {
     "lines": [
      49
@@ -377,13 +377,13 @@
     ]
    }
   },
-  "src/AuctionHelper/src/util/AuctionHelper_Util.lua": {
-   "AuctionHelper:FindProfessionByIdentifier": {
+  "src/Tradewright/src/util/Tradewright_Util.lua": {
+   "Tradewright:FindProfessionByIdentifier": {
     "ccn": [
      11
     ]
    },
-   "AuctionHelper:SanitizeValue": {
+   "Tradewright:SanitizeValue": {
     "lines": [
      44
     ],
@@ -392,8 +392,8 @@
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionBags.lua": {
-   "AuctionHelper:BuildAuctionInventoryRows": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionBags.lua": {
+   "Tradewright:BuildAuctionInventoryRows": {
     "lines": [
      76
     ],
@@ -401,24 +401,24 @@
      35
     ]
    },
-   "AuctionHelper:GetAuctionRowProtectionState": {
+   "Tradewright:GetAuctionRowProtectionState": {
     "ccn": [
      18
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionBulk.lua": {
-   "AuctionHelper:BuildAuctionBulkRows": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionBulk.lua": {
+   "Tradewright:BuildAuctionBulkRows": {
     "ccn": [
      16
     ]
    },
-   "AuctionHelper:ConfirmAuctionBulkCurrent": {
+   "Tradewright:ConfirmAuctionBulkCurrent": {
     "ccn": [
      12
     ]
    },
-   "AuctionHelper:ContinueAuctionBulkPost": {
+   "Tradewright:ContinueAuctionBulkPost": {
     "lines": [
      59
     ],
@@ -426,12 +426,12 @@
      19
     ]
    },
-   "AuctionHelper:ProcessAuctionBulkPhase": {
+   "Tradewright:ProcessAuctionBulkPhase": {
     "ccn": [
      14
     ]
    },
-   "AuctionHelper:RunAuctionPanelBulkAction": {
+   "Tradewright:RunAuctionPanelBulkAction": {
     "lines": [
      73
     ],
@@ -440,8 +440,8 @@
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionBuy.lua": {
-   "AuctionHelper:OpenAuctionBrowseSearchForItem": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionBuy.lua": {
+   "Tradewright:OpenAuctionBrowseSearchForItem": {
     "lines": [
      42
     ],
@@ -449,58 +449,58 @@
      21
     ]
    },
-   "AuctionHelper:SearchAuctionCartRow": {
+   "Tradewright:SearchAuctionCartRow": {
     "ccn": [
      13
     ]
    },
-   "AuctionHelper:TryBuyAuctionCartRow": {
+   "Tradewright:TryBuyAuctionCartRow": {
     "lines": [
      48
     ]
    },
-   "AuctionHelper:TryPrefillAuctionBuyQuantity": {
+   "Tradewright:TryPrefillAuctionBuyQuantity": {
     "ccn": [
      18
     ]
    },
-   "AuctionHelper:TrySelectPendingAuctionBrowseResult": {
+   "Tradewright:TrySelectPendingAuctionBrowseResult": {
     "ccn": [
      16
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionCart.lua": {
-   "AuctionHelper:FilterAuctionCraftCartRows": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionCart.lua": {
+   "Tradewright:FilterAuctionCraftCartRows": {
     "ccn": [
      12
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionEvents.lua": {
-   "AuctionHelper:OnAuctionHouseAuctionCreated": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionEvents.lua": {
+   "Tradewright:OnAuctionHouseAuctionCreated": {
     "ccn": [
      14
     ]
    },
-   "AuctionHelper:OnAuctionHouseClosed": {
+   "Tradewright:OnAuctionHouseClosed": {
     "lines": [
      42
     ]
    },
-   "AuctionHelper:OnCommoditySearchResultsUpdated": {
+   "Tradewright:OnCommoditySearchResultsUpdated": {
     "ccn": [
      11
     ]
    },
-   "AuctionHelper:OnItemSearchResultsUpdated": {
+   "Tradewright:OnItemSearchResultsUpdated": {
     "ccn": [
      11
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionFullScan.lua": {
-   "AuctionHelper:ContinueAuctionDump": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionFullScan.lua": {
+   "Tradewright:ContinueAuctionDump": {
     "lines": [
      47
     ],
@@ -508,22 +508,22 @@
      19
     ]
    },
-   "AuctionHelper:OnFullAuctionDumpTimeout": {
+   "Tradewright:OnFullAuctionDumpTimeout": {
     "ccn": [
      13
     ]
    },
-   "AuctionHelper:PersistFullAuctionDumpChunk": {
+   "Tradewright:PersistFullAuctionDumpChunk": {
     "ccn": [
      16
     ]
    },
-   "AuctionHelper:ProcessFullAuctionDumpChunk": {
+   "Tradewright:ProcessFullAuctionDumpChunk": {
     "ccn": [
      13
     ]
    },
-   "AuctionHelper:StartAuctionDump": {
+   "Tradewright:StartAuctionDump": {
     "lines": [
      77
     ],
@@ -531,14 +531,14 @@
      12
     ]
    },
-   "AuctionHelper:TrimFullDumpMarketHistory": {
+   "Tradewright:TrimFullDumpMarketHistory": {
     "ccn": [
      15
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionFullScanRows.lua": {
-   "AuctionHelper:CollectVisibleAuctionDumpRows": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionFullScanRows.lua": {
+   "Tradewright:CollectVisibleAuctionDumpRows": {
     "lines": [
      70
     ],
@@ -546,12 +546,12 @@
      16
     ]
    },
-   "AuctionHelper:IsAuctionDumpAhOriginPrice": {
+   "Tradewright:IsAuctionDumpAhOriginPrice": {
     "ccn": [
      18
     ]
    },
-   "AuctionHelper:OnAuctionItemListUpdate": {
+   "Tradewright:OnAuctionItemListUpdate": {
     "lines": [
      51
     ],
@@ -559,77 +559,77 @@
      20
     ]
    },
-   "AuctionHelper:PersistAuctionDumpObservation": {
+   "Tradewright:PersistAuctionDumpObservation": {
     "ccn": [
      13
     ]
    },
-   "AuctionHelper:QueryClassicAuctionDumpPage": {
+   "Tradewright:QueryClassicAuctionDumpPage": {
     "ccn": [
      13
     ]
    },
-   "AuctionHelper:ResolveDumpItemCommodity": {
+   "Tradewright:ResolveDumpItemCommodity": {
     "ccn": [
      11
     ]
    },
-   "AuctionHelper:StartClassicFullAuctionDump": {
+   "Tradewright:StartClassicFullAuctionDump": {
     "lines": [
      45
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionItemKeys.lua": {
-   "AuctionHelper:MakeAuctionHouseItemKey": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionItemKeys.lua": {
+   "Tradewright:MakeAuctionHouseItemKey": {
     "ccn": [
      11
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionItemRules.lua": {
-   "AuctionHelper:EnsureAuctionReserveWindow": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionItemRules.lua": {
+   "Tradewright:EnsureAuctionReserveWindow": {
     "lines": [
      63
     ]
    },
-   "AuctionHelper:RefreshAuctionPanelRules": {
+   "Tradewright:RefreshAuctionPanelRules": {
     "ccn": [
      14
     ]
    },
-   "AuctionHelper:SetAuctionItemRule": {
+   "Tradewright:SetAuctionItemRule": {
     "ccn": [
      13
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionLiveSearch.lua": {
-   "AuctionHelper:ApplyLiveAggregateToNativePrice": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionLiveSearch.lua": {
+   "Tradewright:ApplyLiveAggregateToNativePrice": {
     "ccn": [
      11
     ]
    },
-   "AuctionHelper:RecordLiveAuctionObservationsFromAggregate": {
+   "Tradewright:RecordLiveAuctionObservationsFromAggregate": {
     "ccn": [
      13
     ]
    },
-   "AuctionHelper:SaveBrowseResultsToScanEntries": {
+   "Tradewright:SaveBrowseResultsToScanEntries": {
     "ccn": [
      13
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionOwned.lua": {
-   "AuctionHelper:BuildOwnedAuctionRows": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionOwned.lua": {
+   "Tradewright:BuildOwnedAuctionRows": {
     "ccn": [
      20
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionPanelLayout.lua": {
-   "AuctionHelper:BuildAuctionPanelLayout": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionPanelLayout.lua": {
+   "Tradewright:BuildAuctionPanelLayout": {
     "lines": [
      213
     ],
@@ -643,8 +643,8 @@
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionPanelPrices.lua": {
-   "AuctionHelper:BuildAuctionPanelPriceState": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionPanelPrices.lua": {
+   "Tradewright:BuildAuctionPanelPriceState": {
     "lines": [
      42
     ],
@@ -652,24 +652,24 @@
      13
     ]
    },
-   "AuctionHelper:GetAuctionDisplayProfessionQualityRank": {
+   "Tradewright:GetAuctionDisplayProfessionQualityRank": {
     "ccn": [
      26
     ]
    },
-   "AuctionHelper:GetAuctionPanelPersonalSaleRate": {
+   "Tradewright:GetAuctionPanelPersonalSaleRate": {
     "ccn": [
      18
     ]
    },
-   "AuctionHelper:UpdateAuctionPanelRowPrice": {
+   "Tradewright:UpdateAuctionPanelRowPrice": {
     "ccn": [
      13
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionPricing.lua": {
-   "AuctionHelper:GetItemEconomySummary": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionPricing.lua": {
+   "Tradewright:GetItemEconomySummary": {
     "lines": [
      48
     ],
@@ -677,7 +677,7 @@
      33
     ]
    },
-   "AuctionHelper:ResolveCurrentAuctionPrice": {
+   "Tradewright:ResolveCurrentAuctionPrice": {
     "lines": [
      60
     ],
@@ -686,8 +686,8 @@
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionRefreshQueue.lua": {
-   "AuctionHelper:ContinueQueuedAuctionRefresh": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionRefreshQueue.lua": {
+   "Tradewright:ContinueQueuedAuctionRefresh": {
     "lines": [
      75
     ],
@@ -695,17 +695,17 @@
      19
     ]
    },
-   "AuctionHelper:FinishQueuedAuctionRefreshItem": {
+   "Tradewright:FinishQueuedAuctionRefreshItem": {
     "ccn": [
      12
     ]
    },
-   "AuctionHelper:QueueAuctionScanTargets": {
+   "Tradewright:QueueAuctionScanTargets": {
     "ccn": [
      14
     ]
    },
-   "AuctionHelper:RunQueuedAuctionRefresh": {
+   "Tradewright:RunQueuedAuctionRefresh": {
     "lines": [
      57
     ],
@@ -713,19 +713,19 @@
      17
     ]
    },
-   "AuctionHelper:SendAuctionPanelSearchQuery": {
+   "Tradewright:SendAuctionPanelSearchQuery": {
     "ccn": [
      11
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionScanTargets.lua": {
-   "AuctionHelper:BuildAccountTradableInventoryAuctionTargets": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionScanTargets.lua": {
+   "Tradewright:BuildAccountTradableInventoryAuctionTargets": {
     "ccn": [
      14
     ]
    },
-   "AuctionHelper:BuildPrioritizedAuctionAutoScanTargets": {
+   "Tradewright:BuildPrioritizedAuctionAutoScanTargets": {
     "lines": [
      74
     ],
@@ -733,12 +733,12 @@
      19
     ]
    },
-   "AuctionHelper:BuildVisibleCraftsTabAuctionTargets": {
+   "Tradewright:BuildVisibleCraftsTabAuctionTargets": {
     "ccn": [
      26
     ]
    },
-   "AuctionHelper:QueueAuctionEconomyScan": {
+   "Tradewright:QueueAuctionEconomyScan": {
     "lines": [
      56
     ],
@@ -746,7 +746,7 @@
      24
     ]
    },
-   "AuctionHelper:QueueVisibleCraftsTabAuctionRefresh": {
+   "Tradewright:QueueVisibleCraftsTabAuctionRefresh": {
     "lines": [
      41
     ],
@@ -754,7 +754,7 @@
      13
     ]
    },
-   "AuctionHelper:StartAuctionRoiEnrichment": {
+   "Tradewright:StartAuctionRoiEnrichment": {
     "lines": [
      66
     ]
@@ -765,8 +765,8 @@
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionSellFrame.lua": {
-   "AuctionHelper:TrySendItemToAuctionSellFrame": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionSellFrame.lua": {
+   "Tradewright:TrySendItemToAuctionSellFrame": {
     "lines": [
      89
     ],
@@ -775,37 +775,37 @@
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionSellTab.lua": {
-   "AuctionHelper:BuildAuctionPanelColumns": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionSellTab.lua": {
+   "Tradewright:BuildAuctionPanelColumns": {
     "lines": [
      88
     ]
    },
-   "AuctionHelper:BuildAuctionPanelColumns/sortValue": {
+   "Tradewright:BuildAuctionPanelColumns/sortValue": {
     "ccn": [
      11
     ]
    },
-   "AuctionHelper:FilterAuctionPanelRows": {
+   "Tradewright:FilterAuctionPanelRows": {
     "ccn": [
      28
     ]
    },
-   "AuctionHelper:GetAuctionSubclassFilterOptions": {
+   "Tradewright:GetAuctionSubclassFilterOptions": {
     "ccn": [
      11
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionShared.lua": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionShared.lua": {
    "normalizeItemID": {
     "ccn": [
      12
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_AuctionStore.lua": {
-   "AuctionHelper:GetAuctionHistoryQuantitySeriesForItem": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionStore.lua": {
+   "Tradewright:GetAuctionHistoryQuantitySeriesForItem": {
     "lines": [
      46
     ],
@@ -813,17 +813,17 @@
      22
     ]
    },
-   "AuctionHelper:InitAuctionDB": {
+   "Tradewright:InitAuctionDB": {
     "ccn": [
      31
     ]
    },
-   "AuctionHelper:RecordAuctionObservation": {
+   "Tradewright:RecordAuctionObservation": {
     "ccn": [
      12
     ]
    },
-   "AuctionHelper:TrimAuctionHistory": {
+   "Tradewright:TrimAuctionHistory": {
     "lines": [
      63
     ],
@@ -831,14 +831,14 @@
      34
     ]
    },
-   "AuctionHelper:UpdateAuctionHistoryFromObservation": {
+   "Tradewright:UpdateAuctionHistoryFromObservation": {
     "ccn": [
      16
     ]
    }
   },
-  "src/AuctionHelper_AuctionData/src/modules/AuctionHelper_MarketInsights.lua": {
-   "AuctionHelper:GetRecipeMaterialSet": {
+  "src/Tradewright_AuctionData/src/modules/Tradewright_MarketInsights.lua": {
+   "Tradewright:GetRecipeMaterialSet": {
     "ccn": [
      18
     ]
@@ -860,8 +860,8 @@
     ]
    }
   },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_CraftQueue.lua": {
-   "AuctionHelper:AddCraftToQueue": {
+  "src/Tradewright_Inventory/src/modules/Tradewright_CraftQueue.lua": {
+   "Tradewright:AddCraftToQueue": {
     "lines": [
      79
     ],
@@ -869,12 +869,12 @@
      22
     ]
    },
-   "AuctionHelper:BuildReagentMailAllocations": {
+   "Tradewright:BuildReagentMailAllocations": {
     "ccn": [
      14
     ]
    },
-   "AuctionHelper:BuildShoppingMailSendPlan": {
+   "Tradewright:BuildShoppingMailSendPlan": {
     "lines": [
      45
     ],
@@ -882,12 +882,12 @@
      19
     ]
    },
-   "AuctionHelper:FormatMailAllocationsShort": {
+   "Tradewright:FormatMailAllocationsShort": {
     "ccn": [
      11
     ]
    },
-   "AuctionHelper:GetCharacterItemTotal": {
+   "Tradewright:GetCharacterItemTotal": {
     "ccn": [
      16
     ]
@@ -901,8 +901,8 @@
     ]
    }
   },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_Inventory.lua": {
-   "AuctionHelper:CollectTrackedItemIdsFromCharacterData": {
+  "src/Tradewright_Inventory/src/modules/Tradewright_Inventory.lua": {
+   "Tradewright:CollectTrackedItemIdsFromCharacterData": {
     "lines": [
      44
     ],
@@ -910,7 +910,7 @@
      14
     ]
    },
-   "AuctionHelper:GetItemCountByLocation": {
+   "Tradewright:GetItemCountByLocation": {
     "lines": [
      46
     ],
@@ -918,12 +918,12 @@
      16
     ]
    },
-   "AuctionHelper:GetOwnedActiveAuctionQuantityForItem": {
+   "Tradewright:GetOwnedActiveAuctionQuantityForItem": {
     "ccn": [
      17
     ]
    },
-   "AuctionHelper:UpdateInventorySnapshot": {
+   "Tradewright:UpdateInventorySnapshot": {
     "lines": [
      51
     ],
@@ -931,7 +931,7 @@
      12
     ]
    },
-   "AuctionHelper:_InventorySnapshotProcessChunk": {
+   "Tradewright:_InventorySnapshotProcessChunk": {
     "lines": [
      56
     ],
@@ -940,13 +940,13 @@
     ]
    }
   },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_InventoryTable.lua": {
-   "AuctionHelper:BuildInventoryRowFromSnapshot": {
+  "src/Tradewright_Inventory/src/modules/Tradewright_InventoryTable.lua": {
+   "Tradewright:BuildInventoryRowFromSnapshot": {
     "ccn": [
      17
     ]
    },
-   "AuctionHelper:BuildInventoryRowsAggregatedByItem": {
+   "Tradewright:BuildInventoryRowsAggregatedByItem": {
     "lines": [
      64
     ],
@@ -954,12 +954,12 @@
      35
     ]
    },
-   "AuctionHelper:BuildInventoryRowsForCharacter": {
+   "Tradewright:BuildInventoryRowsForCharacter": {
     "ccn": [
      14
     ]
    },
-   "AuctionHelper:BuildItemRoleMap": {
+   "Tradewright:BuildItemRoleMap": {
     "lines": [
      53
     ],
@@ -967,12 +967,12 @@
      16
     ]
    },
-   "AuctionHelper:BuildMergedItemRoleMapForSelection": {
+   "Tradewright:BuildMergedItemRoleMapForSelection": {
     "ccn": [
      12
     ]
    },
-   "AuctionHelper:FindBestRecipeForOutputItem": {
+   "Tradewright:FindBestRecipeForOutputItem": {
     "lines": [
      48
     ],
@@ -981,13 +981,13 @@
     ]
    }
   },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemAnalytics.lua": {
-   "AuctionHelper:BuildOutputItemQualityRankIndex": {
+  "src/Tradewright_Inventory/src/modules/Tradewright_ItemAnalytics.lua": {
+   "Tradewright:BuildOutputItemQualityRankIndex": {
     "ccn": [
      20
     ]
    },
-   "AuctionHelper:CompactItemHistoryStorage": {
+   "Tradewright:CompactItemHistoryStorage": {
     "lines": [
      61
     ],
@@ -995,17 +995,17 @@
      35
     ]
    },
-   "AuctionHelper:GetItemCraftQualityRank": {
+   "Tradewright:GetItemCraftQualityRank": {
     "ccn": [
      16
     ]
    },
-   "AuctionHelper:GetItemDisplayProfessionQualityRank": {
+   "Tradewright:GetItemDisplayProfessionQualityRank": {
     "ccn": [
      14
     ]
    },
-   "AuctionHelper:RecordItemHistoryObservation": {
+   "Tradewright:RecordItemHistoryObservation": {
     "ccn": [
      23
     ]
@@ -1021,18 +1021,18 @@
     ]
    }
   },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_ItemDetail.lua": {
-   "AuctionHelper:BuildInventoryItemTotals": {
+  "src/Tradewright_Inventory/src/modules/Tradewright_ItemDetail.lua": {
+   "Tradewright:BuildInventoryItemTotals": {
     "ccn": [
      15
     ]
    },
-   "AuctionHelper:BuildItemEconomySnapshot": {
+   "Tradewright:BuildItemEconomySnapshot": {
     "ccn": [
      12
     ]
    },
-   "AuctionHelper:GetItemRecipeRelationships": {
+   "Tradewright:GetItemRecipeRelationships": {
     "lines": [
      61
     ],
@@ -1041,32 +1041,32 @@
     ]
    }
   },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_Ledger.lua": {
-   "AuctionHelper:InitLedger": {
+  "src/Tradewright_Inventory/src/modules/Tradewright_Ledger.lua": {
+   "Tradewright:InitLedger": {
     "ccn": [
      11
     ]
    },
-   "AuctionHelper:LedgerAppendEvent": {
+   "Tradewright:LedgerAppendEvent": {
     "ccn": [
      15
     ]
    },
-   "AuctionHelper:OnMailInboxUpdate": {
+   "Tradewright:OnMailInboxUpdate": {
     "ccn": [
      11
     ]
    }
   },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_MailPlans.lua": {
+  "src/Tradewright_Inventory/src/modules/Tradewright_MailPlans.lua": {
    "heldQuantities": {
     "ccn": [
      12
     ]
    }
   },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_QuantityHistory.lua": {
-   "AuctionHelper:RecordItemQuantityObservation": {
+  "src/Tradewright_Inventory/src/modules/Tradewright_QuantityHistory.lua": {
+   "Tradewright:RecordItemQuantityObservation": {
     "lines": [
      42
     ],
@@ -1075,8 +1075,8 @@
     ]
    }
   },
-  "src/AuctionHelper_Inventory/src/modules/AuctionHelper_WalletHistory.lua": {
-   "AuctionHelper:BuildAccountWalletBalanceSeries": {
+  "src/Tradewright_Inventory/src/modules/Tradewright_WalletHistory.lua": {
+   "Tradewright:BuildAccountWalletBalanceSeries": {
     "lines": [
      44
     ],
@@ -1084,19 +1084,19 @@
      17
     ]
    },
-   "AuctionHelper:GetCurrentGoldSummaryForOverview": {
+   "Tradewright:GetCurrentGoldSummaryForOverview": {
     "lines": [
      43
     ]
    },
-   "AuctionHelper:RecordWalletObservation": {
+   "Tradewright:RecordWalletObservation": {
     "ccn": [
      16
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftCategories.lua": {
-   "AuctionHelper:ResolveCraftCategoryLabel": {
+  "src/Tradewright_Professions/src/modules/Tradewright_CraftCategories.lua": {
+   "Tradewright:ResolveCraftCategoryLabel": {
     "ccn": [
      11
     ]
@@ -1107,8 +1107,8 @@
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftOpportunities.lua": {
-   "AuctionHelper:BuildCraftOpportunityRows": {
+  "src/Tradewright_Professions/src/modules/Tradewright_CraftOpportunities.lua": {
+   "Tradewright:BuildCraftOpportunityRows": {
     "lines": [
      45
     ],
@@ -1116,7 +1116,7 @@
      15
     ]
    },
-   "AuctionHelper:CraftEvalProcessNextChunk": {
+   "Tradewright:CraftEvalProcessNextChunk": {
     "lines": [
      55
     ],
@@ -1146,8 +1146,8 @@
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftQueries.lua": {
-   "AuctionHelper:BuildCraftEconomyItemIDs": {
+  "src/Tradewright_Professions/src/modules/Tradewright_CraftQueries.lua": {
+   "Tradewright:BuildCraftEconomyItemIDs": {
     "lines": [
      58
     ],
@@ -1156,8 +1156,8 @@
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftReagentPlan.lua": {
-   "AuctionHelper:ComputeMatCostForReagentPlan": {
+  "src/Tradewright_Professions/src/modules/Tradewright_CraftReagentPlan.lua": {
+   "Tradewright:ComputeMatCostForReagentPlan": {
     "lines": [
      54
     ],
@@ -1165,7 +1165,7 @@
      22
     ]
    },
-   "AuctionHelper:PickCheapestReagentsPerSlot": {
+   "Tradewright:PickCheapestReagentsPerSlot": {
     "lines": [
      52
     ],
@@ -1173,7 +1173,7 @@
      29
     ]
    },
-   "AuctionHelper:ProfessionRecipeIsVendorSourced": {
+   "Tradewright:ProfessionRecipeIsVendorSourced": {
     "ccn": [
      13
     ]
@@ -1207,14 +1207,14 @@
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftTargetQuality.lua": {
+  "src/Tradewright_Professions/src/modules/Tradewright_CraftTargetQuality.lua": {
    "buildBestReagentChoicesPerSlot": {
     "ccn": [
      19
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrderMenus.lua": {
+  "src/Tradewright_Professions/src/modules/Tradewright_CraftingOrderMenus.lua": {
    "ensureCrafterOrderListContextMenuHook": {
     "lines": [
      43
@@ -1226,20 +1226,20 @@
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrderView.lua": {
-   "AuctionHelper:CraftingOrderViewRefreshButtons": {
+  "src/Tradewright_Professions/src/modules/Tradewright_CraftingOrderView.lua": {
+   "Tradewright:CraftingOrderViewRefreshButtons": {
     "ccn": [
      14
     ]
    },
-   "AuctionHelper:HookLiveCraftingOrderView": {
+   "Tradewright:HookLiveCraftingOrderView": {
     "lines": [
      43
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersMaterials.lua": {
-   "AuctionHelper:RemoveCraftingOrdersByReagentItem": {
+  "src/Tradewright_Professions/src/modules/Tradewright_CraftingOrdersMaterials.lua": {
+   "Tradewright:RemoveCraftingOrdersByReagentItem": {
     "ccn": [
      11
     ]
@@ -1268,18 +1268,18 @@
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftingOrdersUI.lua": {
-   "AuctionHelper:CraftingOrdersRecipeShouldShow": {
+  "src/Tradewright_Professions/src/modules/Tradewright_CraftingOrdersUI.lua": {
+   "Tradewright:CraftingOrdersRecipeShouldShow": {
     "ccn": [
      11
     ]
    },
-   "AuctionHelper:EnsureCraftingOrdersFilterBar": {
+   "Tradewright:EnsureCraftingOrdersFilterBar": {
     "lines": [
      62
     ]
    },
-   "AuctionHelper:OnCraftingOrdersGenerateDataProvider": {
+   "Tradewright:OnCraftingOrdersGenerateDataProvider": {
     "ccn": [
      12
     ]
@@ -1295,13 +1295,13 @@
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_CraftsEngine.lua": {
-   "AuctionHelper:BuildAccountItemInventoryTotals": {
+  "src/Tradewright_Professions/src/modules/Tradewright_CraftsEngine.lua": {
+   "Tradewright:BuildAccountItemInventoryTotals": {
     "ccn": [
      11
     ]
    },
-   "AuctionHelper:GetCraftExpansionTag": {
+   "Tradewright:GetCraftExpansionTag": {
     "ccn": [
      26
     ]
@@ -1317,13 +1317,13 @@
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_Integrations.lua": {
-   "AuctionHelper:GetMarketEstimateCopper": {
+  "src/Tradewright_Professions/src/modules/Tradewright_Integrations.lua": {
+   "Tradewright:GetMarketEstimateCopper": {
     "ccn": [
      17
     ]
    },
-   "AuctionHelper:GetTSMCustomPriceCopper": {
+   "Tradewright:GetTSMCustomPriceCopper": {
     "ccn": [
      11
     ]
@@ -1334,13 +1334,13 @@
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_LiveUpdate.lua": {
-   "AuctionHelper:ApplyLiveProfessionMergeForSkillLineID": {
+  "src/Tradewright_Professions/src/modules/Tradewright_LiveUpdate.lua": {
+   "Tradewright:ApplyLiveProfessionMergeForSkillLineID": {
     "ccn": [
      15
     ]
    },
-   "AuctionHelper:ApplyLiveProfessionMergeOnWindowClose": {
+   "Tradewright:ApplyLiveProfessionMergeOnWindowClose": {
     "lines": [
      60
     ],
@@ -1348,24 +1348,24 @@
      20
     ]
    },
-   "AuctionHelper:ScheduleLiveInventoryRefresh": {
+   "Tradewright:ScheduleLiveInventoryRefresh": {
     "lines": [
      50
     ]
    },
-   "AuctionHelper:StartChunkedRecipeMergeJob": {
+   "Tradewright:StartChunkedRecipeMergeJob": {
     "lines": [
      56
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_MaterialCost.lua": {
-   "AuctionHelper:ApplyEconomyToAggregatedInventoryRow": {
+  "src/Tradewright_Professions/src/modules/Tradewright_MaterialCost.lua": {
+   "Tradewright:ApplyEconomyToAggregatedInventoryRow": {
     "ccn": [
      12
     ]
    },
-   "AuctionHelper:ApplyEconomyToInventoryRow": {
+   "Tradewright:ApplyEconomyToInventoryRow": {
     "lines": [
      41
     ],
@@ -1373,24 +1373,24 @@
      15
     ]
    },
-   "AuctionHelper:EstimateBestMatCostPerUnitAmongSelection": {
+   "Tradewright:EstimateBestMatCostPerUnitAmongSelection": {
     "ccn": [
      14
     ]
    },
-   "AuctionHelper:EstimateMatCostPerUnitForItem": {
+   "Tradewright:EstimateMatCostPerUnitForItem": {
     "lines": [
      42
     ]
    },
-   "AuctionHelper:EstimateRecipeMatCostCopper": {
+   "Tradewright:EstimateRecipeMatCostCopper": {
     "ccn": [
      15
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_OpenProfessionRecipe.lua": {
-   "AuctionHelper:BuildLiveSelectedReagentPlanForOpenRecipe": {
+  "src/Tradewright_Professions/src/modules/Tradewright_OpenProfessionRecipe.lua": {
+   "Tradewright:BuildLiveSelectedReagentPlanForOpenRecipe": {
     "lines": [
      45
     ],
@@ -1398,7 +1398,7 @@
      22
     ]
    },
-   "AuctionHelper:BuildProfessionRecipeQueueContext": {
+   "Tradewright:BuildProfessionRecipeQueueContext": {
     "lines": [
      100
     ],
@@ -1406,7 +1406,7 @@
      26
     ]
    },
-   "AuctionHelper:EvaluateSelectedProfessionRecipe": {
+   "Tradewright:EvaluateSelectedProfessionRecipe": {
     "lines": [
      63
     ],
@@ -1414,27 +1414,27 @@
      12
     ]
    },
-   "AuctionHelper:GetLiveOrScannedRecipeDataForOpenProfession": {
+   "Tradewright:GetLiveOrScannedRecipeDataForOpenProfession": {
     "ccn": [
      19
     ]
    },
-   "AuctionHelper:GetOpenProfessionRecipeID": {
+   "Tradewright:GetOpenProfessionRecipeID": {
     "ccn": [
      23
     ]
    },
-   "AuctionHelper:GetOpenProfessionSchematicForm": {
+   "Tradewright:GetOpenProfessionSchematicForm": {
     "ccn": [
      16
     ]
    },
-   "AuctionHelper:GetProfessionDescriptorForOpenRecipe": {
+   "Tradewright:GetProfessionDescriptorForOpenRecipe": {
     "ccn": [
      16
     ]
    },
-   "AuctionHelper:QueueOpenProfessionRecipe": {
+   "Tradewright:QueueOpenProfessionRecipe": {
     "lines": [
      42
     ],
@@ -1443,8 +1443,8 @@
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_ProfessionFingerprint.lua": {
-   "AuctionHelper:BuildOpenProfessionQuickFingerprint": {
+  "src/Tradewright_Professions/src/modules/Tradewright_ProfessionFingerprint.lua": {
+   "Tradewright:BuildOpenProfessionQuickFingerprint": {
     "lines": [
      57
     ],
@@ -1453,13 +1453,13 @@
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_Scan.lua": {
-   "AuctionHelper:FinishScan": {
+  "src/Tradewright_Professions/src/modules/Tradewright_Scan.lua": {
+   "Tradewright:FinishScan": {
     "lines": [
      46
     ]
    },
-   "AuctionHelper:ScanOpenProfession": {
+   "Tradewright:ScanOpenProfession": {
     "lines": [
      49
     ],
@@ -1467,39 +1467,39 @@
      20
     ]
    },
-   "AuctionHelper:TryScanCurrentProfession": {
+   "Tradewright:TryScanCurrentProfession": {
     "lines": [
      63
     ]
    },
-   "AuctionHelper:TryScanCurrentProfession/<anon>": {
+   "Tradewright:TryScanCurrentProfession/<anon>": {
     "lines": [
      42
     ]
    }
   },
-  "src/AuctionHelper_Professions/src/modules/AuctionHelper_SpecCatalog.lua": {
-   "AuctionHelper:AddSpecStatTotals": {
+  "src/Tradewright_Professions/src/modules/Tradewright_SpecCatalog.lua": {
+   "Tradewright:AddSpecStatTotals": {
     "ccn": [
      12
     ]
    },
-   "AuctionHelper:AttachSpecCatalogMetadata": {
+   "Tradewright:AttachSpecCatalogMetadata": {
     "ccn": [
      12
     ]
    },
-   "AuctionHelper:BuildSpecNodeGroupsForRecipe": {
+   "Tradewright:BuildSpecNodeGroupsForRecipe": {
     "ccn": [
      12
     ]
    },
-   "AuctionHelper:BuildSpecNodeRanksFromSpecializationTree": {
+   "Tradewright:BuildSpecNodeRanksFromSpecializationTree": {
     "lines": [
      56
     ]
    },
-   "AuctionHelper:ComputeSpecStatsForBaseNode": {
+   "Tradewright:ComputeSpecStatsForBaseNode": {
     "lines": [
      48
     ],
@@ -1513,8 +1513,8 @@
     ]
    }
   },
-  "src/AuctionHelper_UI/src/ui/AuctionHelper_ItemDetailGraph.lua": {
-   "AuctionHelper:ApplyItemDetailTimeSeriesGraph": {
+  "src/Tradewright_UI/src/ui/Tradewright_ItemDetailGraph.lua": {
+   "Tradewright:ApplyItemDetailTimeSeriesGraph": {
     "lines": [
      194
     ],
