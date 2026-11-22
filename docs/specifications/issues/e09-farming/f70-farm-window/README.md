@@ -56,14 +56,14 @@ Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] Looting 2 of an item during a run adds 2 to that item; the same loot with no run adds nothing
-- [ ] Collecting auction mail or trading during a run does not change the run's coin
-- [ ] Selling loot to a vendor moves its value from the auction estimate to vendor items, not counted twice
-- [ ] Pause stops the clock; gold an hour does not fall while paused
-- [ ] A `/reload` mid-run keeps the run and its clock
-- [ ] An item with no sells-a-day estimate counts at vendor price
-- [ ] The window position is saved per character and stays on screen
-- [ ] Nothing moves, targets, loots or sells for the player
+- [x] Looting 2 of an item during a run adds 2 to that item; the same loot with no run adds nothing
+- [x] Collecting auction mail or trading during a run does not change the run's coin
+- [x] Selling loot to a vendor moves its value from the auction estimate to vendor items, not counted twice
+- [x] Pause stops the clock; gold an hour does not fall while paused
+- [x] A `/reload` mid-run keeps the run and its clock
+- [x] An item with no sells-a-day estimate counts at vendor price
+- [x] The window position is saved per character and stays on screen
+- [x] Nothing moves, targets, loots or sells for the player
 - [x] Offline tests of `SummarizeFarmRun`: value rule per item, paused time, zero active time, vendor sales, empty run
 
 ## Verification

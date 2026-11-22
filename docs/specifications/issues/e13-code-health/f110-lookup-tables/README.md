@@ -21,10 +21,10 @@ Turn long if-chains that map a name to an action or a value into tables. A reade
 
 ## Acceptance criteria
 
-- [ ] Events: one table drives registration and dispatch; no forwarder functions remain
-- [ ] The two slash handlers and the bind-type check are under complexity 10; `Export`'s scope label comes from a table and its baseline entry shrinks
-- [ ] No `stats[<number>]` in the UI
-- [ ] Lint baseline shrinks; `npm test` passes
+- [x] Events: one table drives registration and dispatch; no forwarder functions remain
+- [x] The two slash handlers and the bind-type check are under complexity 10; `Export`'s scope label comes from a table and its baseline entry shrinks
+- [x] No `stats[<number>]` in the UI
+- [x] Lint baseline shrinks; `npm test` passes
 
 ## Verification
 

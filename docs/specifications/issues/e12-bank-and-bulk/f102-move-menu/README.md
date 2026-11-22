@@ -17,10 +17,10 @@ A menu on an item: move it to the bank, the warband bank or the bags, whichever 
 
 ## Acceptance criteria
 
-- [ ] Alt-right-click on a bag item at a banker offers "Move to bank" (and "Move to warband bank" on retail)
-- [ ] On a bank item it offers "Move to bags" (and the other bank on retail)
-- [ ] Away from a banker the menu says there is nowhere to move to
-- [ ] A full target moves what fits and says how many stacks stayed
+- [x] Alt-right-click on a bag item at a banker offers "Move to bank" (and "Move to warband bank" on retail)
+- [x] On a bank item it offers "Move to bags" (and the other bank on retail)
+- [x] Away from a banker the menu says there is nowhere to move to
+- [x] A full target moves what fits and says how many stacks stayed
 
 ## Verification
 

@@ -20,9 +20,9 @@ Make `Tradewright_ForeverLogic.lua` the only place that turns an item key or an 
 
 ## Acceptance criteria
 
-- [ ] One item-key serializer and one snapshot normalizer in the codebase
-- [ ] Tests pin the stored formats; an existing SavedVariables file still loads its prices
-- [ ] Lint baseline shrinks; `npm test` passes
+- [x] One item-key serializer and one snapshot normalizer in the codebase
+- [x] Tests pin the stored formats; an existing SavedVariables file still loads its prices
+- [x] Lint baseline shrinks; `npm test` passes
 
 ## Verification
 

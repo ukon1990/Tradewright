@@ -23,10 +23,10 @@ Call the addon object by the addon's name. Every `ProfessionExporter` identifier
 
 ## Acceptance criteria
 
-- [ ] `grep -rn ProfessionExporter src` finds only the legacy saved-variable names, the migration and its test
-- [ ] Lint counts are unchanged by the rename (356 functions, 14 files)
-- [ ] The legacy import has a test and a removal note
-- [ ] `npm test` passes
+- [x] `grep -rn ProfessionExporter src` finds only the legacy saved-variable names, the migration and its test
+- [x] Lint counts are unchanged by the rename (356 functions, 14 files)
+- [x] The legacy import has a test and a removal note
+- [x] `npm test` passes
 
 ## Verification
 

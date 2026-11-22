@@ -21,13 +21,13 @@ Two ways out of full bags. A "Make room" button in the bag window deletes the st
 
 ## Acceptance criteria
 
-- [ ] With a free slot there is no Make room button
-- [ ] With full bags and junk, one click deletes the cheapest junk stack and says so in chat
-- [ ] With full bags and no junk, the first click only announces the stack; the second deletes it
-- [ ] Quest items, bags, rare or better items items without a vendor price and the last profession tool of each kind are never offered
-- [ ] Looting an item worth more than the cheapest stack with full bags shows the prompt; Swap deletes the stack and the item is looted
-- [ ] Loot worth less than the cheapest stack shows no prompt
-- [ ] Nothing is deleted without a click
+- [x] With a free slot there is no Make room button
+- [x] With full bags and junk, one click deletes the cheapest junk stack and says so in chat
+- [x] With full bags and no junk, the first click only announces the stack; the second deletes it
+- [x] Quest items, bags, rare or better items items without a vendor price and the last profession tool of each kind are never offered
+- [x] Looting an item worth more than the cheapest stack with full bags shows the prompt; Swap deletes the stack and the item is looted
+- [x] Loot worth less than the cheapest stack shows no prompt
+- [x] Nothing is deleted without a click
 
 ## Verification
 

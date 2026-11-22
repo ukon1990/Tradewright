@@ -35,9 +35,9 @@ Implemented:
 
 ## Acceptance criteria
 
-- [ ] A row whose estimate comes from own sales only says so in the side pane
-- [ ] A row with 2 to 4 scan pairs shows "?" and the pair count
-- [ ] A row with 5+ pairs shows no "?"
+- [x] A row whose estimate comes from own sales only says so in the side pane
+- [x] A row with 2 to 4 scan pairs shows "?" and the pair count
+- [x] A row with 5+ pairs shows no "?"
 - [x] Offline tests: `SellsPerDay` source for scans only, own only, both
 - [x] `npm test` passes
 

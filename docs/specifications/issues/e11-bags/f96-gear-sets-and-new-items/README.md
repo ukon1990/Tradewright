@@ -19,11 +19,11 @@ Gear in the bag window is split into "Gear in a set" and "Gear not in a set", so
 
 ## Acceptance criteria
 
-- [ ] With saved sets, bag gear shows under two headings; gear in no set is under "Gear not in a set"
-- [ ] With no saved sets, or the setting off, there is one Gear heading
-- [ ] A freshly looted non-junk item has the gold corner until it is hovered
-- [ ] Junk is never marked
-- [ ] Searching a set's name or "new" lights the matching items
+- [x] With saved sets, bag gear shows under two headings; gear in no set is under "Gear not in a set"
+- [x] With no saved sets, or the setting off, there is one Gear heading
+- [x] A freshly looted non-junk item has the gold corner until it is hovered
+- [x] Junk is never marked
+- [x] Searching a set's name or "new" lights the matching items
 
 ## Verification
 

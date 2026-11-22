@@ -29,7 +29,7 @@ A third view, Leveling, beside Recipe and Queue in the panel docked to the profe
 
 ## Status
 
-Implemented, in-game check pending:
+Implemented and checked in game:
 
 - `Tradewright_ProfessionLevelingView.lua`; the panel's view switch is a table (`PANEL_VIEWS`) and the header shows Recipe, Leveling, Queue
 - Row text is tested offline in `tests/test_leveling_route.lua`
@@ -52,14 +52,14 @@ Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] Leveling is reachable from the header and remembered across `/reload`
-- [ ] Totals and step costs match the route from F122 for each "Crafted items" choice; Materials is visible in all three
-- [ ] "Queue" appears only on learned steps and changes to "Queued" with the queued count
-- [ ] Long recipe names are cut with an ellipsis and never push the money column or button out of the panel
-- [ ] Loading and each empty reason show their own text; no "nothing found" while working
-- [ ] Recipe and Queue views look and behave as before
-- [ ] `Tradewright_ProfessionCraftPanel.lua` stays under 700 lines; no lint baseline change
-- [ ] Offline test for the row text builder (ranges, detail lines, action per step kind) following `tests/test_profession_recipe_view.lua`
+- [x] Leveling is reachable from the header and remembered across `/reload`
+- [x] Totals and step costs match the route from F122 for each "Crafted items" choice; Materials is visible in all three
+- [x] "Queue" appears only on learned steps and changes to "Queued" with the queued count
+- [x] Long recipe names are cut with an ellipsis and never push the money column or button out of the panel
+- [x] Loading and each empty reason show their own text; no "nothing found" while working
+- [x] Recipe and Queue views look and behave as before
+- [x] `Tradewright_ProfessionCraftPanel.lua` stays under 700 lines; no lint baseline change
+- [x] Offline test for the row text builder (ranges, detail lines, action per step kind) following `tests/test_profession_recipe_view.lua`
 
 ## Verification
 

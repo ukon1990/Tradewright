@@ -21,10 +21,10 @@ The Crafts tab stops at "this craft is profitable". This epic adds the three thi
 
 ## Acceptance criteria
 
-- [ ] F60 to F62 done
-- [ ] Retail-only systems (concentration, crafting orders, quality tiers) behave as before
-- [ ] A craft with no sells-a-day estimate never gets a "Make" number
-- [ ] `npm test` passes
+- [x] F60 to F62 done
+- [x] Retail-only systems (concentration, crafting orders, quality tiers) behave as before
+- [x] A craft with no sells-a-day estimate never gets a "Make" number
+- [x] `npm test` passes
 
 ## Verification
 

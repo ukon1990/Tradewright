@@ -21,7 +21,7 @@ When the player opens a profession trainer, the addon records which recipes that
 
 ## Status
 
-Implemented, in-game check pending:
+Implemented and checked in game:
 
 - `Tradewright_TrainerRecipes.lua`: `ReadOpenTrainerRecipes` on `TRAINER_SHOW` / `TRAINER_UPDATE`, `GetTrainerRecipes(skillLineID)`; pure `LevelingRouteLogic.TrainerEntries` and `ApplyTrainerData`, tested offline
 
@@ -39,12 +39,12 @@ Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] After opening a Leatherworking trainer, "Learn" steps for recipes it teaches show the trainer's cost and skill
-- [ ] A trainer recipe is not placed in the route below its required skill
-- [ ] A recipe the trainer does not list keeps "source unknown"
-- [ ] Opening a non-profession trainer (class, riding) stores nothing
-- [ ] A client lacking the trainer calls stores nothing and shows no error
-- [ ] Offline tests: name matching, learn skill respected, unknown recipes untouched
+- [x] After opening a Leatherworking trainer, "Learn" steps for recipes it teaches show the trainer's cost and skill
+- [x] A trainer recipe is not placed in the route below its required skill
+- [x] A recipe the trainer does not list keeps "source unknown"
+- [x] Opening a non-profession trainer (class, riding) stores nothing
+- [x] A client lacking the trainer calls stores nothing and shows no error
+- [x] Offline tests: name matching, learn skill respected, unknown recipes untouched
 
 ## Verification
 

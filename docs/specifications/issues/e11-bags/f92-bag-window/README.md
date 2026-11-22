@@ -26,11 +26,11 @@ The window: title bar, search, category headings with item slots, one tile for t
 
 ## Acceptance criteria
 
-- [ ] Every item in the backpack, bags and reagent bag shows once, under the right heading
-- [ ] Right-click uses or equips, drag moves, shift-click splits or links, as in the game's bags
-- [ ] Looting, selling or moving an item regroups the window without reopening it
-- [ ] Typing in the search box dims everything that does not match
-- [ ] The window never leaves the screen; long content scrolls
+- [x] Every item in the backpack, bags and reagent bag shows once, under the right heading
+- [x] Right-click uses or equips, drag moves, shift-click splits or links, as in the game's bags
+- [x] Looting, selling or moving an item regroups the window without reopening it
+- [x] Typing in the search box dims everything that does not match
+- [x] The window never leaves the screen; long content scrolls
 
 ## Verification
 

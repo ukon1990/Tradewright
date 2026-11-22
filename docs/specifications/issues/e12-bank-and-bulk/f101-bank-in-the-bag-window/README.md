@@ -20,12 +20,12 @@ At a banker, the Bank view of the logged-in character is live: use, drag, split 
 
 ## Acceptance criteria
 
-- [ ] Opening the bank shows the bag window on Bank, with the bank's items under category headings
-- [ ] Right-clicking a bank item moves it to the bags; right-clicking a bag item in the Bags view deposits it
-- [ ] Away from a banker, the Bank view is the saved list as before
-- [ ] Closing the bag window ends the bank session
-- [ ] Setting off: the game's bank window is visible again at once
-- [ ] Forever shows no warband tab
+- [x] Opening the bank shows the bag window on Bank, with the bank's items under category headings
+- [x] Right-clicking a bank item moves it to the bags; right-clicking a bag item in the Bags view deposits it
+- [x] Away from a banker, the Bank view is the saved list as before
+- [x] Closing the bag window ends the bank session
+- [x] Setting off: the game's bank window is visible again at once
+- [x] Forever shows no warband tab
 
 ## Verification
 

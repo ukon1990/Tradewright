@@ -20,11 +20,11 @@ At an open bank the bag window's header shows a "Reagents" button. Its menu hold
 
 ## Acceptance criteria
 
-- [ ] With both boxes ticked, only reagents of scanned recipes go, and the queue's materials stay
-- [ ] With the second box off everything matching goes, the reagent bag included
-- [ ] With the first box off every gem, reagent and trade good goes
-- [ ] The button is hidden away from a banker
-- [ ] Offline test covers the selection rules
+- [x] With both boxes ticked, only reagents of scanned recipes go, and the queue's materials stay
+- [x] With the second box off everything matching goes, the reagent bag included
+- [x] With the first box off every gem, reagent and trade good goes
+- [x] The button is hidden away from a banker
+- [x] Offline test covers the selection rules
 
 ## Verification
 

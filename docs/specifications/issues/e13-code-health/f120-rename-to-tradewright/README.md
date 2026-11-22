@@ -30,7 +30,7 @@ The pack is going public. "AuctionHelper" covers one of its six modules and is e
 - [x] `npm test` passes
 - [x] `git grep -i auctionhelper` finds only the `generatedBy` line, the migration script, the `retired` list and docs that describe the rename
 - [x] The migration script, run on a copy of the Forever data, gives files with the same top-level keys and the same ledger
-- [ ] In-game on Forever and retail: history, prices, recipes, holdings and settings from before the rename are present
+- [x] In-game on Forever and retail: history, prices, recipes, holdings and settings from before the rename are present
 
 ## Verification
 

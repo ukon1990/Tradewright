@@ -22,13 +22,13 @@ A Log view in the bag window, next to Bags and Bank: a short list of the items t
 
 ## Acceptance criteria
 
-- [ ] Looting an item adds "+N item · Looted"
-- [ ] Taking an item from a mail adds "Mail from <sender>"
-- [ ] Selling to a vendor, mailing, listing at auction, destroying and bank moves each add a line with the right reason
-- [ ] On retail a move to or from the warband bank is named as such
-- [ ] Drinking a potion or equipping an item adds nothing
-- [ ] The log never holds more than 500 entries or entries older than the setting
-- [ ] Another character's tab shows that character's log
+- [x] Looting an item adds "+N item · Looted"
+- [x] Taking an item from a mail adds "Mail from <sender>"
+- [x] Selling to a vendor, mailing, listing at auction, destroying and bank moves each add a line with the right reason
+- [x] On retail a move to or from the warband bank is named as such
+- [x] Drinking a potion or equipping an item adds nothing
+- [x] The log never holds more than 500 entries or entries older than the setting
+- [x] Another character's tab shows that character's log
 
 ## Verification
 

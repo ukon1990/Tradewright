@@ -20,7 +20,7 @@ Vendors, trainers and loot are written to the sightings store as the player meet
 
 ## Status
 
-Implemented, in-game check pending. Unverified on Forever:
+Implemented and checked in game. Unverified on Forever:
 
 - `GetLootSourceInfo`, `IsFishingLoot`, `LOOT_READY`, and that `UnitGUID` has the `Creature-0-…-<id>-…` form
 - That spell ids 8613, 2575 and 2366 exist, so a gathering cast can be told by name. Without them a corpse's second loot window still counts as gathering
@@ -29,9 +29,9 @@ Implemented, in-game check pending. Unverified on Forever:
 
 ## Acceptance criteria
 
-- [ ] Opening a vendor, a trainer, a corpse, a node and a fishing catch each leaves a record
-- [ ] Grey junk and gear leave none
-- [ ] A client lacking a loot call records nothing and shows no error
+- [x] Opening a vendor, a trainer, a corpse, a node and a fishing catch each leaves a record
+- [x] Grey junk and gear leave none
+- [x] A client lacking a loot call records nothing and shows no error
 
 ## Verification
 

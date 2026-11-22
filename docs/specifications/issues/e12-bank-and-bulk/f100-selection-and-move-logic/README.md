@@ -19,11 +19,11 @@ The rules behind selecting and bulk actions as pure functions in `BagLogic`, tes
 
 ## Acceptance criteria
 
-- [ ] Toggling a stack twice leaves the selection empty
-- [ ] A selected stack whose slot now holds another item is pruned
-- [ ] No move target without an open bank; no warband target without warband tabs
-- [ ] More stacks than free slots: the rest is reported, not planned
-- [ ] Quest items, bags and rare or better items never enter the destroy queue
+- [x] Toggling a stack twice leaves the selection empty
+- [x] A selected stack whose slot now holds another item is pruned
+- [x] No move target without an open bank; no warband target without warband tabs
+- [x] More stacks than free slots: the rest is reported, not planned
+- [x] Quest items, bags and rare or better items never enter the destroy queue
 
 ## Verification
 

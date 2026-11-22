@@ -51,13 +51,13 @@ Still open:
 
 ## Acceptance criteria
 
-- [ ] The tab opens from `/ah` with the auction house closed
-- [ ] A cheap item with no sells-a-day estimate is not listed
-- [ ] `Buy` never exceeds the units listed under the limit price nor the share of a day's sales
-- [ ] Profit equals the side pane's sums for the selected row, to the copper
-- [ ] Changing a setting re-filters the list without a reload
-- [ ] With price steps turned off the list still works and `Buy` shows "-"
-- [ ] "Open in auction house" shows the item's buy page; nothing is bought
+- [x] The tab opens from `/ah` with the auction house closed
+- [x] A cheap item with no sells-a-day estimate is not listed
+- [x] `Buy` never exceeds the units listed under the limit price nor the share of a day's sales
+- [x] Profit equals the side pane's sums for the selected row, to the copper
+- [x] Changing a setting re-filters the list without a reload
+- [x] With price steps turned off the list still works and `Buy` shows "-"
+- [x] "Open in auction house" shows the item's buy page; nothing is bought
 - [x] Offline tests of `BuildFlipRows`: discount edge, profit floor, turnover cap, missing steps, missing sells a day, flags, sort order
 
 ## Verification

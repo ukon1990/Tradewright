@@ -31,7 +31,7 @@ Good to know:
 
 - Crafting orders, concentration and commodity auto-buy are retail only.
 - Tradewright uses only public game functions and does not automate protected actions.
-- Some newer features are still being checked in game; the [backlog](docs/specifications/05-backlog.md) shows the status of each.
+- The [backlog](docs/specifications/05-backlog.md) shows what is done, what is still open and what is planned.
 
 ## Modules
 

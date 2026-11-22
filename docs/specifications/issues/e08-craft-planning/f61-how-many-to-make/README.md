@@ -38,11 +38,11 @@ Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] Sells 8 a day, 2 owned, 0 listed, 1 day → Make 6
-- [ ] Sells 35 a day, 60 owned → Make 0 with "enough for now"
-- [ ] Unknown sells a day → Make shows "-" and the queue default stays 1
-- [ ] A loss-making craft shows Make 0
-- [ ] Changing "Make enough for" updates the column without a reload
+- [x] Sells 8 a day, 2 owned, 0 listed, 1 day → Make 6
+- [x] Sells 35 a day, 60 owned → Make 0 with "enough for now"
+- [x] Unknown sells a day → Make shows "-" and the queue default stays 1
+- [x] A loss-making craft shows Make 0
+- [x] Changing "Make enough for" updates the column without a reload
 - [x] Offline tests of `RestockQuantity`: the cases above, rounding, cap, listed counted once
 
 ## Verification

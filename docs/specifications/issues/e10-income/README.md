@@ -21,12 +21,12 @@ Show where gold comes from and where it goes. Every change to the character's go
 
 ## Acceptance criteria
 
-- [ ] F80 to F82 done
-- [ ] Every new calculation is a pure function in `Tradewright_IncomeLogic.lua` with offline tests
-- [ ] Gold whose source cannot be told apart is counted under Other, never dropped and never counted twice
-- [ ] Saved data written before this epic still loads
-- [ ] Retail and Forever both work
-- [ ] `npm test` passes
+- [x] F80 to F82 done
+- [x] Every new calculation is a pure function in `Tradewright_IncomeLogic.lua` with offline tests
+- [x] Gold whose source cannot be told apart is counted under Other, never dropped and never counted twice
+- [x] Saved data written before this epic still loads
+- [x] Retail and Forever both work
+- [x] `npm test` passes
 
 ## Verification
 

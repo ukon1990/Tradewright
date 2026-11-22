@@ -23,11 +23,11 @@
 
 ## Acceptance criteria
 
-- [ ] Module enabled and switch on: the bag key opens and closes the Tradewright window; the game's bag frames are not visible
-- [ ] Opening a merchant or the mailbox opens the window; closing them closes it, as the game does with its own bags
-- [ ] Switch off (checkbox, `/ah bags`, title bar right-click): the game's bags open instead, without `/reload`
-- [ ] Module disabled in the AddOns list: no Bags group in Settings, nothing else changes
-- [ ] Escape closes the window
+- [x] Module enabled and switch on: the bag key opens and closes the Tradewright window; the game's bag frames are not visible
+- [x] Opening a merchant or the mailbox opens the window; closing them closes it, as the game does with its own bags
+- [x] Switch off (checkbox, `/ah bags`, title bar right-click): the game's bags open instead, without `/reload`
+- [x] Module disabled in the AddOns list: no Bags group in Settings, nothing else changes
+- [x] Escape closes the window
 
 ## Verification
 

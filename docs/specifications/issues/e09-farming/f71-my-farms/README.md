@@ -43,10 +43,10 @@ Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] Saving a run under a new name creates a farm; saving under an existing name adds a run to it
-- [ ] After a scan that raises an item's usual price, that farm's Now rises and Then stays
-- [ ] A farm with one 5-minute run shows "1" under Runs and its short time, not hidden
-- [ ] The per-item rows add up to the farm's gold an hour
+- [x] Saving a run under a new name creates a farm; saving under an existing name adds a run to it
+- [x] After a scan that raises an item's usual price, that farm's Now rises and Then stays
+- [x] A farm with one 5-minute run shows "1" under Runs and its short time, not hidden
+- [x] The per-item rows add up to the farm's gold an hour
 - [ ] Rename keeps the runs; Delete asks first and removes them
 - [x] Offline tests of `SummarizeFarm`: several runs, re-valuing up and down, shares, a farm with no priced items
 

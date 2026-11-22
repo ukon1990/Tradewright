@@ -37,9 +37,9 @@ Redundant wrappers or no-ops (inline the callers, then delete):
 
 ## Acceptance criteria
 
-- [ ] Every listed item is deleted, or kept with the reason noted in the commit message
-- [ ] Lint baseline shrinks; the new baseline is committed
-- [ ] `npm test` passes; no Lua error on load on Forever and retail
+- [x] Every listed item is deleted, or kept with the reason noted in the commit message
+- [x] Lint baseline shrinks; the new baseline is committed
+- [x] `npm test` passes; no Lua error on load on Forever and retail
 
 ## Verification
 

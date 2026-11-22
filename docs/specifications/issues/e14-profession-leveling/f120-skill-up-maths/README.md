@@ -22,7 +22,7 @@ Pure functions that say, for a recipe and a skill level, which colour the recipe
 
 ## Status
 
-Implemented, in-game check pending:
+Implemented and checked in game:
 
 - `Tradewright_SkillUpLogic.lua` with `DifficultyName`, `DifficultyBounds`, `DifficultyAt`, `SkillUpChance`, `RecordObservation`; offline tests in `tests/test_skill_up_logic.lua`
 - The green start is taken as halfway between the yellow start and the grey level, so the yellow start is the only unknown; an observation is `{ yellowStartMin, yellowStartMax }`
@@ -31,12 +31,12 @@ Implemented, in-game check pending:
 
 ## Acceptance criteria
 
-- [ ] Chance is 1 below the yellow start, 0 at and above the grey level, and falls linearly between
-- [ ] Bounds built only from a grey level are flagged estimated
-- [ ] An observation inside the estimated span moves the bound and never produces yellow after green or green after grey
-- [ ] Observations that contradict each other (stale data) keep the newest and do not error
-- [ ] The client's values 0, 1, 2, 3 map to optimal, medium, easy, trivial
-- [ ] Offline tests cover the above
+- [x] Chance is 1 below the yellow start, 0 at and above the grey level, and falls linearly between
+- [x] Bounds built only from a grey level are flagged estimated
+- [x] An observation inside the estimated span moves the bound and never produces yellow after green or green after grey
+- [x] Observations that contradict each other (stale data) keep the newest and do not error
+- [x] The client's values 0, 1, 2, 3 map to optimal, medium, easy, trivial
+- [x] Offline tests cover the above
 
 ## Verification
 

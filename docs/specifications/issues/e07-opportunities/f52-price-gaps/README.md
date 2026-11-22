@@ -42,10 +42,10 @@ Differs from the scope:
 ## Acceptance criteria
 
 - [x] Steps 2g 80s ×3, 2g 95s ×4, 3g 10s ×2, 4g 10s ×22 give Buy 9, To clear 26g 40s, Next price 4g 10s
-- [ ] An item whose next price is far above its usual range is not listed
-- [ ] An item without a sells-a-day estimate is not listed
-- [ ] Gain subtracts the cut and one deposit
-- [ ] The risk line and the "Risky" badge are always visible on this list
+- [x] An item whose next price is far above its usual range is not listed
+- [x] An item without a sells-a-day estimate is not listed
+- [x] Gain subtracts the cut and one deposit
+- [x] The risk line and the "Risky" badge are always visible on this list
 - [x] Offline tests of `BuildGapRows`: the example above, cost limit, turnover floor, usual-range guard, single-level items
 
 ## Verification

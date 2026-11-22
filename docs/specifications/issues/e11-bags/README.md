@@ -4,7 +4,7 @@
 
 A sixth, optional addon, `Tradewright_Bags`, replaces the game's bag window with one in the Tradewright look. Items are grouped by what they are (gear, consumables, food and drink, trade goods, quest, other, junk), not by the bag they sit in. Other characters are tabs. Equipped bags, the reagent bag included, can still be swapped from a bag row. One checkbox turns it off again, at once.
 
-Designs: [Tradewright Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnSs5), section "Proposed, not built yet: bags module".
+Designs: [Tradewright Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnSs5), section "Bags module".
 
 ## Context
 
@@ -28,10 +28,10 @@ Designs: [Tradewright Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnSs5
 
 ## Acceptance criteria
 
-- [ ] F90 to F95 done
-- [ ] With the module disabled in the AddOns list, or the checkbox off, the game's bags (or another bag addon) open as before
-- [ ] No protected call is made by addon code; items are used through the game's item button template
-- [ ] Retail and Forever both load the module; `npm test` passes
+- [x] F90 to F95 done
+- [x] With the module disabled in the AddOns list, or the checkbox off, the game's bags (or another bag addon) open as before
+- [x] No protected call is made by addon code; items are used through the game's item button template
+- [x] Retail and Forever both load the module; `npm test` passes
 
 ## Verification
 

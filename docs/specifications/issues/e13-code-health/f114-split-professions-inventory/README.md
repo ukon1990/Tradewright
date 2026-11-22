@@ -23,10 +23,10 @@ Split the big Professions and Inventory files along the seams the audit found, s
 
 ## Acceptance criteria
 
-- [ ] No file in `Tradewright_Professions` or `Tradewright_Inventory` is over 700 lines; new files are under 500
-- [ ] Each new file starts with one sentence saying what it is for
-- [ ] All four TOCs list the same files (`npm test` checks)
-- [ ] Lint baseline shrinks; `npm test` passes
+- [x] No file in `Tradewright_Professions` or `Tradewright_Inventory` is over 700 lines; new files are under 500
+- [x] Each new file starts with one sentence saying what it is for
+- [x] All four TOCs list the same files (`npm test` checks)
+- [x] Lint baseline shrinks; `npm test` passes
 
 ## Verification
 

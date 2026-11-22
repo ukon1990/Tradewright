@@ -27,7 +27,7 @@ Pure functions that turn a list of priced recipes into the cheapest leveling rou
 
 ## Status
 
-Implemented, in-game check pending:
+Implemented and checked in game:
 
 - `Tradewright_LevelingRouteLogic.lua` with `BuildRoute`, `GiveBack`, `QueueEntry`, `QueueAdjustment`, `ApplyTrainerData`, `TrainerEntries`; offline tests in `tests/test_leveling_route_logic.lua`
 - Run against the saved Forever scan with flat prices: Leatherworking 122 → 340 in 14 steps from 514 recipes in about 23 ms
@@ -43,15 +43,15 @@ Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] With two recipes usable over the same range, the cheaper per skill point wins at every point
-- [ ] A recipe that is cheaper per craft but yellow loses to a dearer orange one when its cost per point is higher
-- [ ] Changing the give-back mode changes the chosen recipe when the vendor or auction value tips the comparison
-- [ ] `learnedOnly` removes every recipe not learned
-- [ ] A recipe with a learn cost above its saving is not used
-- [ ] Rank-cap step appears at the cap and not when the route ends below it
-- [ ] Recipes without prices are counted, not silently dropped
-- [ ] `QueueAdjustment` shrinks after a skill-up that came early and grows after an unlucky run
-- [ ] Offline tests cover the above
+- [x] With two recipes usable over the same range, the cheaper per skill point wins at every point
+- [x] A recipe that is cheaper per craft but yellow loses to a dearer orange one when its cost per point is higher
+- [x] Changing the give-back mode changes the chosen recipe when the vendor or auction value tips the comparison
+- [x] `learnedOnly` removes every recipe not learned
+- [x] A recipe with a learn cost above its saving is not used
+- [x] Rank-cap step appears at the cap and not when the route ends below it
+- [x] Recipes without prices are counted, not silently dropped
+- [x] `QueueAdjustment` shrinks after a skill-up that came early and grows after an unlucky run
+- [x] Offline tests cover the above
 
 ## Verification
 

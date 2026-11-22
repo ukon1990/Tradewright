@@ -18,17 +18,17 @@ The leveling route and reagent tooltips say where a recipe or reagent comes from
 
 ## Status
 
-Implemented, in-game check pending. Differs from the scope:
+Implemented and checked in game. Differs from the scope:
 
 - The skill needed to use a recipe item is not known, so a vendor recipe keeps the estimated skill and Learn is never off for skill
 - Nodes and chests have no name in the loot window; the tooltip names the zone instead
 
 ## Acceptance criteria
 
-- [ ] A vendor-sold recipe is routed like a trainer recipe and shows its price
-- [ ] A looted recipe names the NPC
-- [ ] A reagent with only drop sightings gets a waypoint
-- [ ] Offline tests for the route's handling of vendor and drop sources
+- [x] A vendor-sold recipe is routed like a trainer recipe and shows its price
+- [x] A looted recipe names the NPC
+- [x] A reagent with only drop sightings gets a waypoint
+- [x] Offline tests for the route's handling of vendor and drop sources
 
 ## Verification
 

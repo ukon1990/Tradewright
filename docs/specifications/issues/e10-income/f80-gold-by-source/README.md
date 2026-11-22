@@ -32,15 +32,15 @@ Every change to the character's gold is filed as gold in or gold out under one s
 
 ## Acceptance criteria
 
-- [ ] Selling an item to a vendor adds its price to Vendor in, and writes one `vendor` ledger event
-- [ ] Repairing adds to Vendor out
-- [ ] A quest that pays 1g adds 1g to Quests in
-- [ ] Looting coin adds to Loot in
-- [ ] Taking auction sale gold adds to Auction house in; taking gold a player mailed adds to Mail in
-- [ ] Posting an auction adds the deposit to Auction house out
-- [ ] Logging in, or a `/reload`, adds nothing
-- [ ] The days of each source add up to the change in the balance over the same days
-- [ ] Offline tests: each source rule, overlapping windows (mailbox and merchant never both open; the latest event wins), baseline after login, dropping old days
+- [x] Selling an item to a vendor adds its price to Vendor in, and writes one `vendor` ledger event
+- [x] Repairing adds to Vendor out
+- [x] A quest that pays 1g adds 1g to Quests in
+- [x] Looting coin adds to Loot in
+- [x] Taking auction sale gold adds to Auction house in; taking gold a player mailed adds to Mail in
+- [x] Posting an auction adds the deposit to Auction house out
+- [x] Logging in, or a `/reload`, adds nothing
+- [x] The days of each source add up to the change in the balance over the same days
+- [x] Offline tests: each source rule, overlapping windows (mailbox and merchant never both open; the latest event wins), baseline after login, dropping old days
 
 ## Verification
 

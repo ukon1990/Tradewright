@@ -28,9 +28,9 @@ Break the long UI builder functions into named parts and split the UI files that
 
 ## Acceptance criteria
 
-- [ ] No UI file over 700 lines; no UI function over 40 lines or complexity 10 except entries left in the baseline with a reason
-- [ ] `BagWindow.lua` under 500 lines
-- [ ] Lint baseline shrinks; `npm test` passes
+- [x] No UI file over 700 lines; no UI function over 40 lines or complexity 10 except entries left in the baseline with a reason
+- [x] `BagWindow.lua` under 500 lines
+- [x] Lint baseline shrinks; `npm test` passes
 
 ## Verification
 

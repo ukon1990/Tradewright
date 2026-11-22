@@ -33,11 +33,11 @@ A full scan keeps, for each item, its cheapest price levels and how many are lis
 
 ## Acceptance criteria
 
-- [ ] After a full scan an item with several prices has up to 8 steps, cheapest first, and the first step equals the stored lowest price
-- [ ] An item listed at one price has one step holding its full quantity (offline test passes; in-game check pending)
-- [ ] A scan of 18,000 items stays chunked and takes no noticeably longer than before
-- [ ] Saved data from before this feature loads; items without steps show "-" where steps are needed
-- [ ] Turning the setting off stops storing steps and nothing errors
+- [x] After a full scan an item with several prices has up to 8 steps, cheapest first, and the first step equals the stored lowest price
+- [x] An item listed at one price has one step holding its full quantity (offline test passes)
+- [x] A scan of 18,000 items stays chunked and takes no noticeably longer than before
+- [x] Saved data from before this feature loads; items without steps show "-" where steps are needed
+- [x] Turning the setting off stops storing steps and nothing errors
 - [x] Offline tests: merge of equal prices, more than 8 levels, stacks priced per unit, cost to clear, average fill beyond the kept steps, largest gap, single level
 
 ## Verification

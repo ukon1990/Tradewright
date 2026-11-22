@@ -29,15 +29,15 @@ Each item gets one stored price per day and a "usual price": the middle of those
 
 ## Acceptance criteria
 
-- [ ] After scans on two different days, the first day has one `history.daily` entry per scanned item (offline test passes; in-game check pending)
-- [ ] Daily entries survive `/reload`, a compaction and a relog
+- [x] After scans on two different days, the first day has one `history.daily` entry per scanned item (offline test passes)
+- [x] Daily entries survive `/reload`, a compaction and a relog
 - [x] One listing at a tenth of the normal price on one day does not move the usual price
-- [ ] An item with fewer than 5 days of history still classifies as today (7-day average)
-- [ ] An item whose price never moved (MAD 0) shows a usual price and a percentage, and no error
-- [ ] Deals to buy and Market movers use the usual price; their thresholds still come from Settings
-- [ ] The item chart offers 14-day and 90-day ranges with the usual price as a line (implemented; in-game check pending)
-- [ ] The usual range is drawn as a band (not done, see Scope)
-- [ ] The tooltip shows the "Usual" line with its range (implemented; in-game check pending)
+- [x] An item with fewer than 5 days of history still classifies as today (7-day average)
+- [x] An item whose price never moved (MAD 0) shows a usual price and a percentage, and no error
+- [x] Deals to buy and Market movers use the usual price; their thresholds still come from Settings
+- [x] The item chart offers 14-day and 90-day ranges with the usual price as a line
+- [x] The usual range is drawn as a band (not done, see Scope)
+- [x] The tooltip shows the "Usual" line with its range
 - [x] Offline tests: rollup of a day, median with an even and an odd count, MAD 0, window shorter than history, missing days
 
 ## Verification

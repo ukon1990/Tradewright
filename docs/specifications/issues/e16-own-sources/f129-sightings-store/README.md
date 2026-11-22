@@ -24,7 +24,7 @@ One account-wide store for everything seen about NPCs, nodes and what they sell,
 
 ## Status
 
-Implemented, in-game check pending. Differs from the scope:
+Implemented and checked in game. Differs from the scope:
 
 - Places are stored without a zone name; readers name the zone from the map id
 - An NPC's `faction` is the faction of the characters that met it ("Horde", "Alliance", "both"); vendors are now filtered by it as trainers were
@@ -32,9 +32,9 @@ Implemented, in-game check pending. Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] Vendors and trainers known before the update are still known after it
-- [ ] A mob looted any number of times holds at most 12 places per map
-- [ ] Offline tests: GUID parsing, place cap and grid, tally sums, move of name-keyed data, name key replaced by id key
+- [x] Vendors and trainers known before the update are still known after it
+- [x] A mob looted any number of times holds at most 12 places per map
+- [x] Offline tests: GUID parsing, place cap and grid, tally sums, move of name-keyed data, name key replaced by id key
 
 ## Verification
 

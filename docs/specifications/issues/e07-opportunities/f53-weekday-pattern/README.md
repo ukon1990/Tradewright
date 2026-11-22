@@ -38,10 +38,10 @@ Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] An item with 6 weeks of daily prices that are 10% higher every Tuesday shows Tuesday near +10% and names it dearest
-- [ ] An item with random daily prices shows the "not enough" line, not a pattern
-- [ ] An item with 2 weeks of history shows the "not enough" line
-- [ ] No weekday pattern is shipped with the addon; nothing appears for an item without its own history
+- [x] An item with 6 weeks of daily prices that are 10% higher every Tuesday shows Tuesday near +10% and names it dearest
+- [x] An item with random daily prices shows the "not enough" line, not a pattern
+- [x] An item with 2 weeks of history shows the "not enough" line
+- [x] No weekday pattern is shipped with the addon; nothing appears for an item without its own history
 - [x] Offline tests: planted weekly pattern, noise only, short history, missing weekdays, a level shift in the middle of the window
 
 ## Verification

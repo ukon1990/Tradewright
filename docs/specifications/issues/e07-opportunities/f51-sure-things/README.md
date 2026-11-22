@@ -37,10 +37,10 @@ Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] An item listed at 1s with a vendor price of 2s 50c appears with the right quantity and gain
-- [ ] An item with no vendor price never appears
-- [ ] Gain is not reduced by the auction cut
-- [ ] The list refreshes after a new scan and after item info loads
+- [x] An item listed at 1s with a vendor price of 2s 50c appears with the right quantity and gain
+- [x] An item with no vendor price never appears
+- [x] Gain is not reduced by the auction cut
+- [x] The list refreshes after a new scan and after item info loads
 - [x] Offline tests: several steps under vendor price, step exactly at vendor price (excluded), missing vendor price, gain floor
 
 ## Verification

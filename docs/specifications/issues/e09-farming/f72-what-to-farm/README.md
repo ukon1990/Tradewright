@@ -45,12 +45,12 @@ Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] An item with a usual price of 48s that sells 400 a day shows 192g traded a day
-- [ ] An item looted in two farms names the one with the higher rate
-- [ ] An item never looted in a run shows the "not looted" text and no rate
-- [ ] An item without a sells-a-day estimate is not listed
-- [ ] "My recipes use it" keeps only materials of recipes your characters know
-- [ ] No source or rate appears that did not come from the player's saved runs
+- [x] An item with a usual price of 48s that sells 400 a day shows 192g traded a day
+- [x] An item looted in two farms names the one with the higher rate
+- [x] An item never looted in a run shows the "not looted" text and no rate
+- [x] An item without a sells-a-day estimate is not listed
+- [x] "My recipes use it" keeps only materials of recipes your characters know
+- [x] No source or rate appears that did not come from the player's saved runs
 - [x] Offline tests of `BuildFarmTargets`: ranking, best source, never looted, filters, missing turnover
 
 ## Verification

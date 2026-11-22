@@ -35,7 +35,7 @@ Make the code maintainable by a human: a developer new to a file can read it, un
 
 - [x] F105 to F119 done
 - [x] No feature grows `scripts/lint-baseline.json`; every feature that touches baselined code shrinks it and commits the new baseline
-- [ ] Behaviour is unchanged on Forever and retail, apart from the bugs F106 fixes
+- [x] Behaviour is unchanged on Forever and retail, apart from the bugs F106 fixes
 - [x] Every feature passed a review against the three focus files and the question "could a developer new to this file change it safely?"
 
 ## Verification
@@ -46,7 +46,7 @@ npm test
 
 In-game after each feature that moves code (full client restart when a `.lua` file is added): `/ah` opens; full AH dump with the house open fills prices; profession Scan stores recipes; Crafts tab shows profit; bag window opens.
 
-Status: `npm test` passes after F119 and the alias cleanup. The in-game checks above are still pending (full client restart needed: files were added and removed).
+Status: `npm test` passes after F119 and the alias cleanup, and the in-game checks above are done.
 
 ## Dependencies
 

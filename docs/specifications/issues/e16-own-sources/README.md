@@ -30,12 +30,12 @@ Size is bounded: at most 12 places per NPC or node per map on a 2 % grid, loot k
 
 ## Acceptance criteria
 
-- [ ] F128 to F132 done
-- [ ] No code reads `TSM_API` or `Auctionator`; no TOC lists them
-- [ ] With Questie disabled, a reagent sold by a visited vendor still gets a waypoint
-- [ ] A recipe seen at a vendor or looted no longer reads "source unknown" in the leveling route
-- [ ] After shipping collected data, the saved store holds no fact the shipped file states
-- [ ] `npm test` passes
+- [x] F128 to F132 done
+- [x] No code reads `TSM_API` or `Auctionator`; no TOC lists them
+- [x] With Questie disabled, a reagent sold by a visited vendor still gets a waypoint
+- [x] A recipe seen at a vendor or looted no longer reads "source unknown" in the leveling route
+- [x] After shipping collected data, the saved store holds no fact the shipped file states
+- [x] `npm test` passes
 
 ## Verification
 

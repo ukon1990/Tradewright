@@ -29,7 +29,7 @@ Builds the route for a character's profession from the stored scan and current p
 
 ## Status
 
-Implemented, in-game check pending:
+Implemented and checked in game:
 
 - `Tradewright_LevelingRoute.lua` (Professions): `GetLevelingRoute`, `GetOpenProfessionLevelingRoute`, `GetLevelingSettings`, `InvalidateLevelingRoute`, `RefreshRecipeDifficulties`; recipes are priced 60 per frame
 - `Tradewright_LevelingQueue.lua` (Inventory, because `Tradewright_CraftQueue.lua` is at the file-size limit): `QueueLevelingStep`, `TrimLevelingCraftQueue`, `GetLevelingQueuedQuantity`, `HasLevelingCraftQueueLines`
@@ -62,14 +62,14 @@ Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] A route is returned for a scanned crafting profession with prices; each reason above is returned in its case
-- [ ] After a skill-up with the profession window open, stored colours match the game's without a full scan
-- [ ] Observations survive `/reload` and narrow the estimates the next time the route is built
-- [ ] Queueing a step adds exactly its crafts; the Queue view's shopping list shows its materials
-- [ ] A skill-up that came early lowers the queued count; a craft the player queued by hand for the same recipe is not lowered
-- [ ] Building the route does not freeze the game on a profession with 600 recipes
-- [ ] Retail: crafting orders, concentration and quality tiers behave as before
-- [ ] Offline tests for the candidate builder's cost fields and the reason selection, with stubbed pricing
+- [x] A route is returned for a scanned crafting profession with prices; each reason above is returned in its case
+- [x] After a skill-up with the profession window open, stored colours match the game's without a full scan
+- [x] Observations survive `/reload` and narrow the estimates the next time the route is built
+- [x] Queueing a step adds exactly its crafts; the Queue view's shopping list shows its materials
+- [x] A skill-up that came early lowers the queued count; a craft the player queued by hand for the same recipe is not lowered
+- [x] Building the route does not freeze the game on a profession with 600 recipes
+- [x] Retail: crafting orders, concentration and quality tiers behave as before
+- [x] Offline tests for the candidate builder's cost fields and the reason selection, with stubbed pricing
 
 ## Verification
 

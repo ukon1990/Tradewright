@@ -22,11 +22,11 @@ Remove comments that add nothing, fix the ones that are wrong, and add the few t
 
 ## Acceptance criteria
 
-- [ ] No Lua comment cites a feature or epic id, and a new one fails `npm run lint`; the baseline gets no new entries
-- [ ] `Docs.lua` describes the export format the addon actually writes
-- [ ] The SavedVariable short keys are explained in one place
-- [ ] No mixed indentation in the touched files
-- [ ] `npm test` passes
+- [x] No Lua comment cites a feature or epic id, and a new one fails `npm run lint`; the baseline gets no new entries
+- [x] `Docs.lua` describes the export format the addon actually writes
+- [x] The SavedVariable short keys are explained in one place
+- [x] No mixed indentation in the touched files
+- [x] `npm test` passes
 
 ## Verification
 

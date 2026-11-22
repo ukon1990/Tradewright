@@ -23,11 +23,11 @@ The decisions of the bag window as pure functions: which category an item belong
 
 ## Acceptance criteria
 
-- [ ] Weapons and armor group as Gear; food as Food and drink; other consumables as Consumables; reagents, trade goods and gems as Trade goods
-- [ ] A quest item is Quest whatever its quality; any other poor quality item is Junk
-- [ ] Layout wraps at the column count and returns the full height
-- [ ] Reagent bag slots are not counted as free normal slots
-- [ ] Offline tests cover every function above
+- [x] Weapons and armor group as Gear; food as Food and drink; other consumables as Consumables; reagents, trade goods and gems as Trade goods
+- [x] A quest item is Quest whatever its quality; any other poor quality item is Junk
+- [x] Layout wraps at the column count and returns the full height
+- [x] Reagent bag slots are not counted as free normal slots
+- [x] Offline tests cover every function above
 
 ## Verification
 

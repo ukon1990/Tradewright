@@ -23,11 +23,11 @@ The bag window also becomes the bank window: at a banker the Bank view is live, 
 
 ## Acceptance criteria
 
-- [ ] F100 to F104 done
-- [ ] With "Use Tradewright for the bank" off, the game's bank window opens as before, without `/reload`
-- [ ] Right-click, drag, split and shift-click on an item behave as in E11 when nothing is selected
-- [ ] Nothing is deleted or sold without a click; nothing is used by addon code outside a merchant window
-- [ ] Retail and Forever both load the module; `npm test` passes
+- [x] F100 to F104 done
+- [x] With "Use Tradewright for the bank" off, the game's bank window opens as before, without `/reload`
+- [x] Right-click, drag, split and shift-click on an item behave as in E11 when nothing is selected
+- [x] Nothing is deleted or sold without a click; nothing is used by addon code outside a merchant window
+- [x] Retail and Forever both load the module; `npm test` passes
 
 ## Verification
 

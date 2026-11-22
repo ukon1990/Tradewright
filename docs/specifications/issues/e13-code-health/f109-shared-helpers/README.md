@@ -22,9 +22,9 @@ Replace the small non-UI helpers that were copied from file to file with one sha
 
 ## Acceptance criteria
 
-- [ ] No local copy of any listed helper remains (`grep` shows one definition each)
-- [ ] Tests cover the pure helpers' edge cases (empty string, count 0 and 1, method throws, field missing)
-- [ ] Lint baseline shrinks; `npm test` passes
+- [x] No local copy of any listed helper remains (`grep` shows one definition each)
+- [x] Tests cover the pure helpers' edge cases (empty string, count 0 and 1, method throws, field missing)
+- [x] Lint baseline shrinks; `npm test` passes
 
 ## Verification
 

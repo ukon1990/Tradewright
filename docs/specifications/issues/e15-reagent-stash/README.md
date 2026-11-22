@@ -29,10 +29,10 @@ Decisions taken with the user:
 
 ## Acceptance criteria
 
-- [ ] F125 to F127 done
-- [ ] Nothing moves or is mailed without a click
-- [ ] The pack loads and works without `Tradewright_Bags`; only the bank actions are missing
-- [ ] Retail and Forever both load; `npm test` passes
+- [x] F125 to F127 done
+- [x] Nothing moves or is mailed without a click
+- [x] The pack loads and works without `Tradewright_Bags`; only the bank actions are missing
+- [x] Retail and Forever both load; `npm test` passes
 
 ## Verification
 

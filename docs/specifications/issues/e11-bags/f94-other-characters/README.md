@@ -23,11 +23,11 @@ Each character you have logged in with is a tab. Another character's tab is a re
 
 ## Acceptance criteria
 
-- [ ] After logging in on two characters, each has a tab on the other
-- [ ] An alt's tab shows the same counts that character had in its bags at logout
-- [ ] Bank counts appear after that character has opened its bank once
-- [ ] The All tab's count of an item equals the sum over the characters
-- [ ] Nothing on a read-only tab can be dragged or used
+- [x] After logging in on two characters, each has a tab on the other
+- [x] An alt's tab shows the same counts that character had in its bags at logout
+- [x] Bank counts appear after that character has opened its bank once
+- [x] The All tab's count of an item equals the sum over the characters
+- [x] Nothing on a read-only tab can be dragged or used
 
 ## Verification
 

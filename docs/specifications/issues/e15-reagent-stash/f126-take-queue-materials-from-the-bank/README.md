@@ -17,9 +17,9 @@ The "Reagents" menu has a line "Take N stacks for the craft queue": it moves fro
 
 ## Acceptance criteria
 
-- [ ] After depositing everything, one click brings back the stacks the queue needs
-- [ ] A 200 stack is not taken when smaller stacks cover the need
-- [ ] Offline test covers the stack choice and what the bank cannot cover
+- [x] After depositing everything, one click brings back the stacks the queue needs
+- [x] A 200 stack is not taken when smaller stacks cover the need
+- [x] Offline test covers the stack choice and what the bank cannot cover
 
 ## Verification
 

@@ -30,10 +30,10 @@ Put meaningful offline tests in front of the logic a refactor is most likely to 
 
 ## Acceptance criteria
 
-- [ ] Every listed function is at or under complexity 10 and 40 lines, or its baseline entry shrank and the remaining work is a named follow-up
-- [ ] Each pure part has tests that fail if its result changes
-- [ ] No behaviour change in-game
-- [ ] Lint baseline shrinks; `npm test` passes
+- [x] Every listed function is at or under complexity 10 and 40 lines, or its baseline entry shrank and the remaining work is a named follow-up
+- [x] Each pure part has tests that fail if its result changes
+- [x] No behaviour change in-game
+- [x] Lint baseline shrinks; `npm test` passes
 
 ## Verification
 

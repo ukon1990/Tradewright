@@ -21,14 +21,14 @@ Prices come from the pack's own auction scans only. The TradeSkillMaster and Auc
 
 ## Status
 
-Implemented, in-game check pending.
+Implemented and checked in game.
 
 ## Acceptance criteria
 
-- [ ] `grep -r "TSM\|Auctionator" src --include=*.lua --include=*.toc` finds nothing
-- [ ] An unscanned item shows no price and no error
-- [ ] Settings show no price-source options
-- [ ] `npm test` passes
+- [x] `grep -r "TSM\|Auctionator" src --include=*.lua --include=*.toc` finds nothing
+- [x] An unscanned item shows no price and no error
+- [x] Settings show no price-source options
+- [x] `npm test` passes
 
 ## Verification
 

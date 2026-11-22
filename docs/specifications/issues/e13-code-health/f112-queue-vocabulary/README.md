@@ -21,11 +21,11 @@ The craft queue is called CraftQueue, WorkQueue, WorkOrderQueue, ShoppingQueue a
 
 ## Acceptance criteria
 
-- [ ] One name for the queue in code; the glossary line in `focus/code-quality.md` names it
-- [ ] Crafting-order queue code does not load on Forever
-- [ ] `CraftQueue.lua` is under 700 lines; the touched functions meet the limits
-- [ ] Existing queues in SavedVariables survive
-- [ ] Lint baseline shrinks; `npm test` passes
+- [x] One name for the queue in code; the glossary line in `focus/code-quality.md` names it
+- [x] Crafting-order queue code does not load on Forever
+- [x] `CraftQueue.lua` is under 700 lines; the touched functions meet the limits
+- [x] Existing queues in SavedVariables survive
+- [x] Lint baseline shrinks; `npm test` passes
 
 ## Verification
 

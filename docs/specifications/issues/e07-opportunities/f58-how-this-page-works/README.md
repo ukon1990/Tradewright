@@ -39,10 +39,10 @@ Not done: a "Settings" button in the side pane; the text names "Settings, Opport
 
 ## Acceptance criteria
 
-- [ ] Flips empty because of the profit floor names the profit step and the setting, not "scan on more days"
-- [ ] Flips empty because no item has 5 days says how many days the best item has
-- [ ] Each of the four lists shows its own "How this list works" with no row selected
-- [ ] The funnel numbers add up: each step is at most the one before it
+- [x] Flips empty because of the profit floor names the profit step and the setting, not "scan on more days"
+- [x] Flips empty because no item has 5 days says how many days the best item has
+- [x] Each of the four lists shows its own "How this list works" with no row selected
+- [x] The funnel numbers add up: each step is at most the one before it
 - [x] Offline tests: flip drop reasons, flip funnel, first empty step (the other lists' counts are plain loops in the WoW-side code)
 - [x] `npm test` passes; no file over 700 lines
 

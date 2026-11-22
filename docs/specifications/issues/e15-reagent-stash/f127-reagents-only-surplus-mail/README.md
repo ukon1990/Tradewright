@@ -18,9 +18,9 @@ The mailbox's surplus review gets a tick box "Only crafting reagents". While tic
 
 ## Acceptance criteria
 
-- [ ] Ticked: the Prepare button counts only reagents; other rows read "Not a reagent"
-- [ ] Unticked or after reopening the mailbox: the surplus is as before
-- [ ] Queue needs and keep amounts still hold reagents back
+- [x] Ticked: the Prepare button counts only reagents; other rows read "Not a reagent"
+- [x] Unticked or after reopening the mailbox: the surplus is as before
+- [x] Queue needs and keep amounts still hold reagents back
 
 ## Verification
 

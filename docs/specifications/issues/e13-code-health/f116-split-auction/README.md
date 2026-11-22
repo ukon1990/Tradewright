@@ -22,9 +22,9 @@ Split the largest legacy file into files with one job each. This is the largest 
 
 ## Acceptance criteria
 
-- [ ] `Tradewright_Auction.lua` is gone or under 500 lines; no new file over 500
-- [ ] Every `state.auction*` key is declared in one place
-- [ ] Lint baseline shrinks; `npm test` passes
+- [x] `Tradewright_Auction.lua` is gone or under 500 lines; no new file over 500
+- [x] Every `state.auction*` key is declared in one place
+- [x] Lint baseline shrinks; `npm test` passes
 
 ## Verification
 

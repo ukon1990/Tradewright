@@ -18,7 +18,7 @@ Collected sightings can be built into a data file that ships with the addon. Rea
 
 ## Status
 
-Implemented, in-game check pending. Differs from the scope:
+Implemented and checked in game. Differs from the scope:
 
 - The shipped file has the same shape as the saved store (not a compact positional form), so one set of readers serves both
 - The merge runs in `scripts/build-source-data.lua` with `SourceLogic.ShipStore`; the `.mjs` only finds the saved files
@@ -26,10 +26,10 @@ Implemented, in-game check pending. Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] After build, deploy and login the saved store is smaller and every lookup answers as before
-- [ ] Another collector's tallies are kept and added to the shipped ones
-- [ ] Building twice from the same saved data changes nothing
-- [ ] Offline tests: merge order, prune by equality, prune by epoch for own and foreign ids
+- [x] After build, deploy and login the saved store is smaller and every lookup answers as before
+- [x] Another collector's tallies are kept and added to the shipped ones
+- [x] Building twice from the same saved data changes nothing
+- [x] Offline tests: merge order, prune by equality, prune by epoch for own and foreign ids
 
 ## Verification
 

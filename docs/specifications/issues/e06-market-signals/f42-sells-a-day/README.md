@@ -35,7 +35,7 @@ Each item gets "Sells a day, estimated": how many units leave the auction house 
 - [x] Scans 3 days apart add nothing
 - [x] An item with one scan shows "-" for sells a day
 - [x] An item you sold 10 of per day never shows less than 10 (offline test)
-- [ ] The word "estimated" appears wherever the figure is explained (details, tooltip, Docs)
+- [x] The word "estimated" appears wherever the figure is explained (details, tooltip, Docs)
 - [x] Offline tests: restock between scans, long gap, pair across midnight, confidence levels, own-sales floor, days of supply with perDay 0 or nil
 - [ ] Offline test with price steps (after F41)
 

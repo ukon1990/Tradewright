@@ -45,13 +45,13 @@ How it differs from the scope, and why:
 ## Acceptance criteria
 
 - [ ] A bag needing 5 bolts, where a bolt costs 60s to buy and 52s to craft, prices the bolts at 52s each and shows From: Craft
-- [ ] A vendor-sold thread is priced at the vendor price even when listed dearer at the auction house
-- [ ] A cooldown-made material is never priced through its recipe
-- [ ] Two recipes that reference each other do not hang; both fall back to buy
-- [ ] With the setting off, costs match today's behaviour
+- [x] A vendor-sold thread is priced at the vendor price even when listed dearer at the auction house
+- [x] A cooldown-made material is never priced through its recipe
+- [x] Two recipes that reference each other do not hang; both fall back to buy
+- [x] With the setting off, costs match today's behaviour
 - [ ] Queueing the bag queues the bolts for the right character
 - [x] Offline tests of `CheapestSource` and `UnitCostIndex`: each source winning, tie, missing prices, cooldown skip, output quantity
-- [ ] Nested crafts price through after two evaluations (in-game check)
+- [x] Nested crafts price through after two evaluations (in-game check)
 
 ## Verification
 

@@ -42,11 +42,11 @@ Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] Using a cooldown recipe and rescanning shows "cooldown in …" with the client's time
-- [ ] The time counts down across `/reload` and a relog without a new scan
-- [ ] Another character's cooldown shows from that character's last scan and flips to ready when its time passes
-- [ ] A recipe without a cooldown shows nothing
-- [ ] A client lacking both cooldown calls shows no cooldown text and no error
+- [x] Using a cooldown recipe and rescanning shows "cooldown in …" with the client's time
+- [x] The time counts down across `/reload` and a relog without a new scan
+- [x] Another character's cooldown shows from that character's last scan and flips to ready when its time passes
+- [x] A recipe without a cooldown shows nothing
+- [x] A client lacking both cooldown calls shows no cooldown text and no error
 - [x] Offline tests: ready, waiting, no cooldown, time in the past, time text, Make cap
 - [ ] Best use among recipes that share a cooldown (not implemented)
 

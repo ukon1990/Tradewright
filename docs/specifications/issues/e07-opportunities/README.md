@@ -26,12 +26,12 @@ One tab that answers "what should I buy or sell right now": flips priced after f
 
 ## Acceptance criteria
 
-- [ ] F50 to F58 done
-- [ ] Every profit shown is after the auction cut in use (F43) and names the quantity it assumes
-- [ ] An item with no sells-a-day estimate is never ranked as if it sold
-- [ ] Nothing is bought, bid on, posted or cancelled without the player's click on the game's own button
-- [ ] The Gold view cards and the tab show the same rows for the same list
-- [ ] `npm test` passes
+- [x] F50 to F58 done
+- [x] Every profit shown is after the auction cut in use (F43) and names the quantity it assumes
+- [x] An item with no sells-a-day estimate is never ranked as if it sold
+- [x] Nothing is bought, bid on, posted or cancelled without the player's click on the game's own button
+- [x] The Gold view cards and the tab show the same rows for the same list
+- [x] `npm test` passes
 
 ## Verification
 

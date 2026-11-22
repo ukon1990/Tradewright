@@ -35,13 +35,13 @@ Decisions taken with the user:
 
 ## Acceptance criteria
 
-- [ ] F120 to F124 done
-- [ ] With a profession scan and auction prices, the Leveling view shows a route from the current skill, with materials and net totals
-- [ ] The route is redone after a skill-up and after new prices, without a manual scan
-- [ ] A known-recipe step can be queued; its materials show in the Queue view's shopping list and the auction cart
-- [ ] Recipe and Queue views behave as before
-- [ ] A client whose recipes carry no grey level shows a clear "not available" message and no error
-- [ ] `npm test` passes
+- [x] F120 to F124 done
+- [x] With a profession scan and auction prices, the Leveling view shows a route from the current skill, with materials and net totals
+- [x] The route is redone after a skill-up and after new prices, without a manual scan
+- [x] A known-recipe step can be queued; its materials show in the Queue view's shopping list and the auction cart
+- [x] Recipe and Queue views behave as before
+- [x] A client whose recipes carry no grey level shows a clear "not available" message and no error
+- [x] `npm test` passes
 
 ## Verification
 

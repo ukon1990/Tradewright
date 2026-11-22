@@ -39,11 +39,11 @@ Early rows need `GetEarlyUsualPrice` in `Tradewright_PriceHistory.lua`; without 
 
 ## Acceptance criteria
 
-- [ ] With 3 scan days, the coverage card says how many items have a usual price and that 5 days are needed
-- [ ] With the setting off, no row under 5 days appears anywhere
-- [ ] With it on, a 3-day item that meets the other rules appears in Flips marked Early, with the warning in the side pane
-- [ ] Early rows are left out of the stat totals and counted on the second line
-- [ ] The Market tab, chart and farm targets still need 5 days
+- [x] With 3 scan days, the coverage card says how many items have a usual price and that 5 days are needed
+- [x] With the setting off, no row under 5 days appears anywhere
+- [x] With it on, a 3-day item that meets the other rules appears in Flips marked Early, with the warning in the side pane
+- [x] Early rows are left out of the stat totals and counted on the second line
+- [x] The Market tab, chart and farm targets still need 5 days
 - [x] Offline tests: the coverage counts; early flag copied onto rows; totals without early rows
 - [x] `npm test` passes
 

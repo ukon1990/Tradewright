@@ -22,11 +22,11 @@ Write down the rule every other E13 feature follows: code must be maintainable b
 
 ## Acceptance criteria
 
-- [ ] The rule opens both `AGENTS.md` hard rules and `focus/code-quality.md`
-- [ ] Naming, Comments and Tests sections exist with concrete good and bad examples from this repo
-- [ ] The reviewer role in `wow-addon-issue-work` checks human readability
-- [ ] No change to `scripts/lint-baseline.json`
-- [ ] `npm test` passes
+- [x] The rule opens both `AGENTS.md` hard rules and `focus/code-quality.md`
+- [x] Naming, Comments and Tests sections exist with concrete good and bad examples from this repo
+- [x] The reviewer role in `wow-addon-issue-work` checks human readability
+- [x] No change to `scripts/lint-baseline.json`
+- [x] `npm test` passes
 
 ## Verification
 

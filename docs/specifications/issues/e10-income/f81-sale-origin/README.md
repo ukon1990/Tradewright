@@ -20,13 +20,13 @@ Each auction sale is labelled crafted, resold, farmed or unknown, from what the 
 
 ## Acceptance criteria
 
-- [ ] Crafting 5 of an item adds 5 crafted to that item and day, on retail and on Forever
-- [ ] Selling 5 of an item crafted earlier labels the sale crafted
-- [ ] An item bought then sold is labelled resold (with F44); without F44, unknown
-- [ ] An item looted then sold is labelled farmed
-- [ ] A sale of 10 where 6 were crafted and 4 looted splits 6 / 4
-- [ ] A sale with nothing before it is unknown
-- [ ] Offline tests: oldest-first matching, split sales, items sold more often than they were made, no events
+- [x] Crafting 5 of an item adds 5 crafted to that item and day, on retail and on Forever
+- [x] Selling 5 of an item crafted earlier labels the sale crafted
+- [x] An item bought then sold is labelled resold (with F44); without F44, unknown
+- [x] An item looted then sold is labelled farmed
+- [x] A sale of 10 where 6 were crafted and 4 looted splits 6 / 4
+- [x] A sale with nothing before it is unknown
+- [x] Offline tests: oldest-first matching, split sales, items sold more often than they were made, no events
 
 ## Verification
 

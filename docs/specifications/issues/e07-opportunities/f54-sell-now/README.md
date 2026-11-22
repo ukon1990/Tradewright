@@ -35,10 +35,10 @@ Differs from the scope:
 
 ## Acceptance criteria
 
-- [ ] An owned item priced 20% above usual with a sells-a-day estimate is listed with the right worth
-- [ ] An owned item above usual with no sells-a-day estimate is not listed
-- [ ] The card and the list show the same top rows
-- [ ] The "Stock value" stat is unchanged by this feature
+- [x] An owned item priced 20% above usual with a sells-a-day estimate is listed with the right worth
+- [x] An owned item above usual with no sells-a-day estimate is not listed
+- [x] The card and the list show the same top rows
+- [x] The "Stock value" stat is unchanged by this feature
 - [x] Offline tests of `BuildSellNowRows`: premium edge, unknown turnover, no usual price, worth after the cut, sort order
 
 ## Verification

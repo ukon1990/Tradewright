@@ -21,11 +21,11 @@ Fix the defects the audit found, each with a regression test where the logic can
 
 ## Acceptance criteria
 
-- [ ] `/ah auction dump` prints "completed" only after the dump ends; no "started" or "completed" line when the dump refuses to start
-- [ ] On Forever no commodity purchase API is called, even if the cart's buy handler is invoked directly
-- [ ] One clock across AuctionData
-- [ ] No baselined function grows; `HandleAuctionSlash`'s baseline entry shrinks
-- [ ] `npm test` passes
+- [x] `/ah auction dump` prints "completed" only after the dump ends; no "started" or "completed" line when the dump refuses to start
+- [x] On Forever no commodity purchase API is called, even if the cart's buy handler is invoked directly
+- [x] One clock across AuctionData
+- [x] No baselined function grows; `HandleAuctionSlash`'s baseline entry shrinks
+- [x] `npm test` passes
 
 ## Verification
 

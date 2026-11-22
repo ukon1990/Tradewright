@@ -18,8 +18,8 @@ Let the player act on what the dashboard finds without retyping item names. Whil
 
 ## Acceptance criteria
 
-- [ ] F30 done
-- [ ] Nothing is bought or posted without the player's own click on the auction house button
+- [x] F30 done
+- [x] Nothing is bought or posted without the player's own click on the auction house button
 - [x] `npm test` passes
 
 ## Verification

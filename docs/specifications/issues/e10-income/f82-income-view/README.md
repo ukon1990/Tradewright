@@ -27,13 +27,13 @@ An Income sub-tab in Overview shows earned, spent and net gold, which sources br
 
 ## Acceptance criteria
 
-- [ ] The sources in the table add up to the stat row's Earned and Spent
-- [ ] Switching the period changes every number and the chart
-- [ ] A Heavy Hide sale shows under Trade Goods → Leather
-- [ ] Without F44, Sell rate shows "-" and nothing else breaks
-- [ ] The Auction house tooltip splits the period's auction sales by origin
-- [ ] Choosing one character shows only that character's gold
-- [ ] Offline tests: income summary, source rows, sales split, item-type rows, empty data
+- [x] The sources in the table add up to the stat row's Earned and Spent
+- [x] Switching the period changes every number and the chart
+- [x] A Heavy Hide sale shows under Trade Goods → Leather
+- [x] Without F44, Sell rate shows "-" and nothing else breaks
+- [x] The Auction house tooltip splits the period's auction sales by origin
+- [x] Choosing one character shows only that character's gold
+- [x] Offline tests: income summary, source rows, sales split, item-type rows, empty data
 
 ## Verification
 

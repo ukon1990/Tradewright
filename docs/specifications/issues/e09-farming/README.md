@@ -21,11 +21,11 @@ Measure what a farm really earns and use it to choose the next one. A farm windo
 
 ## Acceptance criteria
 
-- [ ] F70 to F72 done
-- [ ] A farm's value always shows its three parts: coin, vendor items, auction estimate
-- [ ] No gold-per-hour number ships with the addon; every figure comes from the player's own runs
-- [ ] No drop table, node map or route ships with the addon
-- [ ] `npm test` passes
+- [x] F70 to F72 done
+- [x] A farm's value always shows its three parts: coin, vendor items, auction estimate
+- [x] No gold-per-hour number ships with the addon; every figure comes from the player's own runs
+- [x] No drop table, node map or route ships with the addon
+- [x] `npm test` passes
 
 ## Verification
 

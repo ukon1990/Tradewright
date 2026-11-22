@@ -20,10 +20,10 @@ Replace the UI building blocks that were copied between dashboards and tabs with
 
 ## Acceptance criteria
 
-- [ ] One definition of each helper
-- [ ] The three tab adapters are one call each; the files are gone from all four TOCs
-- [ ] No touched function takes more than 5 parameters
-- [ ] Lint baseline shrinks; `npm test` passes
+- [x] One definition of each helper
+- [x] The three tab adapters are one call each; the files are gone from all four TOCs
+- [x] No touched function takes more than 5 parameters
+- [x] Lint baseline shrinks; `npm test` passes
 
 ## Verification
 

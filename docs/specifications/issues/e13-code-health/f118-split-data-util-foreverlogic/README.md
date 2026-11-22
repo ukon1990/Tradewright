@@ -21,9 +21,9 @@ Split the three core files that mix several jobs, so a reader finds the professi
 
 ## Acceptance criteria
 
-- [ ] No file in `src/Tradewright/src` over 700 lines; new files under 500
-- [ ] `ForeverLogic` holds client flags, storage keys and export encoding only
-- [ ] Lint baseline shrinks; `npm test` passes
+- [x] No file in `src/Tradewright/src` over 700 lines; new files under 500
+- [x] `ForeverLogic` holds client flags, storage keys and export encoding only
+- [x] Lint baseline shrinks; `npm test` passes
 
 ## Verification
 

@@ -19,11 +19,11 @@ A "Bag row" button opens a row with the backpack, the four bags and the reagent 
 
 ## Acceptance criteria
 
-- [ ] The row shows the backpack, four bag slots and the reagent bag slot, empty slots included
-- [ ] Hovering a bag dims every slot that is not in it
-- [ ] Dropping a larger bag on a slot swaps it in, as on the game's bag bar
-- [ ] Choosing a bag from the right-click menu equips it in that slot
-- [ ] The row stays open or closed across sessions
+- [x] The row shows the backpack, four bag slots and the reagent bag slot, empty slots included
+- [x] Hovering a bag dims every slot that is not in it
+- [x] Dropping a larger bag on a slot swaps it in, as on the game's bag bar
+- [x] Choosing a bag from the right-click menu equips it in that slot
+- [x] The row stays open or closed across sessions
 
 ## Verification
 

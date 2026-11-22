@@ -30,13 +30,13 @@ While the auction house is open, clicking a row in **Deals to buy** or **Market 
 ## Acceptance criteria
 
 - [x] Auction house open: clicking a deal shows that item's buy page (now right click)
-- [ ] Left click on a deal, mover or owned item opens the item details window with the price history
-- [ ] Works for a stackable item (commodity buy page) and for a piece of gear (item buy list)
-- [ ] Auction house closed: right click opens the Market tab, as before
-- [ ] Shift-click still links the item in chat
-- [ ] A running full scan is paused, not broken, and the dashboard says so
-- [ ] Nothing is bought: the player still clicks Buy Now
-- [ ] After the search, the deal's price, Listed quantity and "seen" time match the auction house
+- [x] Left click on a deal, mover or owned item opens the item details window with the price history
+- [x] Works for a stackable item (commodity buy page) and for a piece of gear (item buy list)
+- [x] Auction house closed: right click opens the Market tab, as before
+- [x] Shift-click still links the item in chat
+- [x] A running full scan is paused, not broken, and the dashboard says so
+- [x] Nothing is bought: the player still clicks Buy Now
+- [x] After the search, the deal's price, Listed quantity and "seen" time match the auction house
 - [x] Offline test of `ResolveDealRowClick`
 - [x] Offline test of `LiveSearchDiffers`
 

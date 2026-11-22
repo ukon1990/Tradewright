@@ -19,11 +19,11 @@ Act on the selection: move it to the bank, warband bank or bags, sell it to a ve
 
 ## Acceptance criteria
 
-- [ ] Selecting stacks at a banker and choosing a target moves them all, one after another
-- [ ] Sell is offered only at a merchant and sells every selected stack that has a vendor price
-- [ ] Destroy never deletes on the first click, and one stack per later click
-- [ ] A refused stack stays in the bags and in the selection
-- [ ] Closing the merchant mid-run stops the selling
+- [x] Selecting stacks at a banker and choosing a target moves them all, one after another
+- [x] Sell is offered only at a merchant and sells every selected stack that has a vendor price
+- [x] Destroy never deletes on the first click, and one stack per later click
+- [x] A refused stack stays in the bags and in the selection
+- [x] Closing the merchant mid-run stops the selling
 
 ## Verification
 

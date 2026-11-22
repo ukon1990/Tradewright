@@ -24,11 +24,11 @@ Give every list in the addon better numbers to work from: a usual price that one
 
 ## Acceptance criteria
 
-- [ ] F40 to F44 done
-- [ ] Every new calculation is a pure function in `Tradewright_ForeverLogic.lua` with offline tests
-- [ ] Saved data written before this epic still loads; missing fields read as "not known", never as zero
-- [ ] Retail and Forever both work; nothing here depends on TSM or Auctionator
-- [ ] `npm test` passes
+- [x] F40 to F44 done
+- [x] Every new calculation is a pure function in `Tradewright_ForeverLogic.lua` with offline tests
+- [x] Saved data written before this epic still loads; missing fields read as "not known", never as zero
+- [x] Retail and Forever both work; nothing here depends on TSM or Auctionator
+- [x] `npm test` passes
 
 ## Verification
 

@@ -29,10 +29,10 @@ No stats or footer text names the floor yet, so nothing else changed.
 
 ## Acceptance criteria
 
-- [ ] With 25s selected, a flip worth 30s shows and one worth 20s does not
-- [ ] A player who had picked 10g keeps 10g after the update
-- [ ] A fresh install starts at 1g
-- [ ] Changing the setting re-filters the list without a reload
+- [x] With 25s selected, a flip worth 30s shows and one worth 20s does not
+- [x] A player who had picked 10g keeps 10g after the update
+- [x] A fresh install starts at 1g
+- [x] Changing the setting re-filters the list without a reload
 - [x] Offline test: the profit floor at a copper value under 1g
 - [x] `npm test` passes
 

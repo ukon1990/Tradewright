@@ -17,11 +17,11 @@ Ctrl-click selects items in a live view. While something is selected the window 
 
 ## Acceptance criteria
 
-- [ ] Ctrl-click toggles an item; the bar appears with the first and goes with the last
-- [ ] With a selection, a plain click toggles and right-click opens the menu
-- [ ] With no selection and no modifier held, slots behave exactly as before
-- [ ] Read-only views cannot select
-- [ ] A selected stack that is moved, sold or used drops out of the selection
+- [x] Ctrl-click toggles an item; the bar appears with the first and goes with the last
+- [x] With a selection, a plain click toggles and right-click opens the menu
+- [x] With no selection and no modifier held, slots behave exactly as before
+- [x] Read-only views cannot select
+- [x] A selected stack that is moved, sold or used drops out of the selection
 
 ## Verification
 
