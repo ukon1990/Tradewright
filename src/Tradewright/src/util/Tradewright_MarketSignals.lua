@@ -39,6 +39,26 @@ function MarketSignals.DayStart(ts)
 	return math.floor((tonumber(ts) or 0) / DAY) * DAY
 end
 
+--- How many different days have a saved price for any item in `dailyByItem`
+--- (`auction.history.daily`: item -> day -> entry). Counting stops at `limit`, when given.
+function MarketSignals.CountHistoryDays(dailyByItem, limit)
+	local seen, count = {}, 0
+	for _, byDay in pairs(dailyByItem or {}) do
+		for dayKey in pairs(byDay) do
+			-- A day is a number when written and may come back as a string from older saved data.
+			local day = tonumber(dayKey)
+			if day and not seen[day] then
+				seen[day] = true
+				count = count + 1
+				if limit and count >= limit then
+					return count
+				end
+			end
+		end
+	end
+	return count
+end
+
 local function positive(value)
 	local n = tonumber(value)
 	if n and n > 0 then

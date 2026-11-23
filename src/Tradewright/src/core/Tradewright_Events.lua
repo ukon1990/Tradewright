@@ -54,7 +54,12 @@ local function onPlayerLogin(self)
 	callOptional(self, "InitCraftingOrdersFilters")
 	callOptional(self, "InitDynamicLayeringHooks")
 	callOptional(self, "InitMailPanelHooks")
-	self:PrintMessage(L["Loaded. /tw opens the window, /tw help lists the commands."])
+	-- Without a full scan every price is missing, so the first step matters more than the commands.
+	if self.GetLastFullAuctionScanAt and not self:GetLastFullAuctionScanAt() then
+		self:PrintMessage(L["No prices yet. Open the auction house and press Full scan."])
+	else
+		self:PrintMessage(L["Loaded. /tw opens the window, /tw help lists the commands."])
+	end
 end
 
 local PROFESSION_PANEL_REFRESH_DELAY = 0.05

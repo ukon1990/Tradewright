@@ -30,7 +30,8 @@ local function addButtonTooltip(button, label, tooltip)
 	button:HookScript("OnLeave", GameTooltip_Hide)
 end
 
--- A 26px flat button sized to its label (or `opts.width`); `opts.small` is 22px, `opts.primary` gold.
+-- A 26px flat button sized to its label (or `opts.width`); `opts.small` is 22px, `opts.primary` gold,
+-- `opts.solid` gold-filled.
 function Tradewright:CreateButton(parent, label, onClick, opts)
 	opts = opts or {}
 	local sizes = self:GetTheme().size
@@ -44,6 +45,9 @@ function Tradewright:CreateButton(parent, label, onClick, opts)
 	button:SetSize(opts.width or (math.ceil(button:GetFontString():GetStringWidth()) + padding), height)
 	if opts.primary then
 		self:SetButtonPrimary(button, true)
+	end
+	if opts.solid then
+		self:SetButtonSolid(button, true)
 	end
 	if onClick then
 		button:SetScript("OnClick", onClick)

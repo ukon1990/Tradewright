@@ -96,6 +96,7 @@
 | [f132-shipped-source-data](issues/e16-own-sources/f132-shipped-source-data/README.md) | Shipped source data without duplicates | done |
 | [e17-scan-flow](issues/e17-scan-flow/README.md) | Scan flow: the right scan at the right time | open |
 | [f133-suggest-full-scan](issues/e17-scan-flow/f133-suggest-full-scan/README.md) | Suggest the full scan instead of a long item scan | open |
+| [f139-get-started](issues/e17-scan-flow/f139-get-started/README.md) | Get started steps and Full scan as the main button | open |
 | [e18-salvage-value](issues/e18-salvage-value/README.md) | Value of disenchanting, prospecting and milling | open |
 | [f134-cheapest-salvage-input](issues/e18-salvage-value/f134-cheapest-salvage-input/README.md) | Cheapest input for prospecting and milling | open |
 | [f135-yield-maths](issues/e18-salvage-value/f135-yield-maths/README.md) | Yield maths | done |

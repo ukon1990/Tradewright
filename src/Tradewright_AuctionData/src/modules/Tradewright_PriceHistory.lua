@@ -63,6 +63,28 @@ function Tradewright:RollupDailyAuctionHistory()
 	self:TrimPriceSteps()
 end
 
+--- On how many different days the player has scanned prices, counted up to `limit`: the finished
+--- days in daily history, plus today once a full scan ran today (today is rolled up tomorrow).
+--- Walking every item's history is slow with little history, so the answer is kept until a new
+--- day is rolled up or another full scan ends.
+function Tradewright:GetScanDayCount(limit)
+	local auction = self:InitAuctionDB()
+	if not auction then
+		return 0
+	end
+	local state = self:GetState()
+	local lastFullScanAt = self:GetLastFullAuctionScanAt()
+	local cacheKey = string.format("%s:%s:%s", tostring(auction.history.dailyThrough), tostring(lastFullScanAt), tostring(limit))
+	if state.scanDayCountKey ~= cacheKey then
+		local days = self.MarketSignals.CountHistoryDays(auction.history.daily, limit)
+		if lastFullScanAt and lastFullScanAt >= self.MarketSignals.DayStart(Tradewright:Now()) then
+			days = days + 1
+		end
+		state.scanDayCount, state.scanDayCountKey = days, cacheKey
+	end
+	return state.scanDayCount
+end
+
 local function dailyHistory(pe, storageKey)
 	local auction = pe:InitAuctionDB()
 	local daily = auction and auction.history.daily

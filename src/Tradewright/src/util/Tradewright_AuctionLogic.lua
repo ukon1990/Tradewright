@@ -330,6 +330,22 @@ function AuctionLogic.PlanScanOnOpen(status)
 	return { queueBulk = not leaveForFullScan, highlightFullScan = leaveForFullScan }
 end
 
+-- A full scan saves one price per item and hour, so prices this old can be improved by another one.
+AuctionLogic.FULL_SCAN_PRICE_FRESH_SEC = 3600
+
+--- Whether the Full scan button should stand out: a full scan can start now and would bring
+--- something new. `status` is `{ active, cooldown, lastFullScanAt, now, waiting }`: `lastFullScanAt`
+--- is nil before the first full scan, `waiting` counts the prices left for a full scan on opening.
+function AuctionLogic.FullScanStandsOut(status)
+	if status.active or (status.cooldown or 0) > 0 then
+		return false
+	end
+	local lastFullScanAt = status.lastFullScanAt
+	return lastFullScanAt == nil
+		or status.now - lastFullScanAt > AuctionLogic.FULL_SCAN_PRICE_FRESH_SEC
+		or (status.waiting or 0) > 0
+end
+
 --- The item name in the game's "You won an auction for %s" system message, or nil when `message` is
 --- something else. `wonFormat` is the client's own text for it, so this works in any language.
 function AuctionLogic.WonAuctionItemName(message, wonFormat)

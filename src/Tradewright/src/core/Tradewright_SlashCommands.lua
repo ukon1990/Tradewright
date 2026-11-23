@@ -220,9 +220,10 @@ end
 
 local SLASH_HELP_LINES = {
 	"/tw opens the window (/tradewright works too) | /tw scan: scan your professions | /tw status: the last scan"
-		.. " | /tw bags on|off: Tradewright bags | /twfarm start|pause|stop: run a farm | /tw docs: open Help",
+		.. " | /tw bags on|off: Tradewright bags | /twfarm start|pause|stop: run a farm | /tw docs: open Help"
+		.. " | /tw intro: show Get started",
 	"Advanced: /tw debug [on|off|toggle] | /tw settings spectree on|off | recipeoutput on|off | invbatch <n>"
-		.. " | /tw auction status|enable|disable|refresh [crafts]|dump [visible|full] | /tw sources [seal]",
+		.. " | /tw auction status|enable|disable|refresh [crafts]|dump [visible|full] | /tw sources [seal] | /tw intro reset",
 }
 
 -- Shown in help only while export is switched on; the format itself is described in docs/export-format.md.
@@ -383,6 +384,7 @@ end)
 local SLASH_COMMANDS = {
 	[""] = function(self) self:ToggleDashboard() end,
 	docs = openDocumentation, documentation = openDocumentation,
+	intro = function(self, rest) self:HandleGetStartedSlash(rest) end,
 	help = printSlashHelp,
 	settings = function(self, rest) self:HandleSettingsSlash(rest) end,
 	auction = handleAuctionSlash, ah = handleAuctionSlash,

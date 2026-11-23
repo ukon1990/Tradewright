@@ -296,6 +296,53 @@ function Tradewright:BuildAuctionPanelLayout(panel)
 	self:SkinTree(panel)
 end
 
+local FIRST_SCAN_HINT_HEIGHT = 40
+
+-- Until the first full scan the panel has no prices at all, so it says what to press.
+function Tradewright:IsFirstFullScanHintDue()
+	return self:GetLastFullAuctionScanAt() == nil and not self:IsFullAuctionDumpRunning()
+end
+
+local function createFirstScanHint(pe, panel)
+	local theme = pe:GetTheme()
+	local hint = CreateFrame("Frame", nil, panel, "BackdropTemplate")
+	pe:ApplyBackdrop(hint, theme.surface2, theme.tick)
+	hint:SetHeight(FIRST_SCAN_HINT_HEIGHT)
+	hint.title = pe:CreateText(hint, "GameFontNormal", "gold")
+	hint.title:SetPoint("TOPLEFT", 10, -6)
+	hint.title:SetPoint("TOPRIGHT", -10, -6)
+	hint.title:SetText(L["No prices yet. Press Full scan."])
+	hint.detail = pe:CreateText(hint, "GameFontHighlightSmall", "textMuted")
+	hint.detail:SetPoint("BOTTOMLEFT", 10, 6)
+	hint.detail:SetPoint("BOTTOMRIGHT", -10, 6)
+	hint.detail:SetText(L["Keep the auction house open until it ends."])
+	return hint
+end
+
+-- Stacks the sell rows under the header. The first-scan hint, when shown, sits right under the
+-- scan row (the one with Full scan) and pushes the other rows and the table down.
+function Tradewright:LayoutAuctionSellRows(panel, hintShown)
+	if hintShown and not panel.firstScanHint then
+		panel.firstScanHint = createFirstScanHint(self, panel)
+	end
+	local hint = panel.firstScanHint
+	if hint then
+		hint:SetShown(hintShown)
+	end
+	local y = self:GetTheme().size.header + 1 + AH_PAD
+	for index, row in ipairs(panel.sellRows or {}) do
+		anchorRow(panel, row, y)
+		y = y + AH_ROW + AH_ROW_GAP
+		if index == 1 and hintShown then
+			hint:ClearAllPoints()
+			hint:SetPoint("TOPLEFT", panel, "TOPLEFT", AH_PAD, -y)
+			hint:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -AH_PAD, -y)
+			y = y + FIRST_SCAN_HINT_HEIGHT + AH_ROW_GAP
+		end
+	end
+	panel.sellTableTop = y - AH_ROW_GAP + AH_PAD
+end
+
 -- Places the active tab's table between its controls and the progress row or footer.
 function Tradewright:LayoutAuctionPanelBody(panel, activeTab, progressShown)
 	local sell = activeTab == "sell"

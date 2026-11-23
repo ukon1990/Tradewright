@@ -13,10 +13,12 @@ A full scan is usually much faster than looking up many items one by one. Tradew
 ## Scope
 
 - F133: suggest the full scan instead of a long item scan
+- F139: get started steps for new players, Full scan as the main button
 
 ## Acceptance criteria
 
 - [ ] F133 done
+- [ ] F139 done
 - [ ] A full scan never starts without the player's click
 - [ ] `npm test` passes
 

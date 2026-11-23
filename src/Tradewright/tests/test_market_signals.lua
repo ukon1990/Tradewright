@@ -605,6 +605,16 @@ do
 	check("Craftable: no required material, cannot tell", ML.CraftableCount({}, have) == nil and ML.CraftableCount(nil, have) == nil)
 end
 
+do
+	local daily = {
+		copperOre = { [1 * DAY] = { p = 10 }, [2 * DAY] = { p = 11 } },
+		linenCloth = { [2 * DAY] = { p = 5 }, [tostring(3 * DAY)] = { p = 6 } },
+	}
+	check("History days: each day counts once across items", MS.CountHistoryDays(daily) == 3)
+	check("History days: counting stops at the limit", MS.CountHistoryDays(daily, 2) == 2)
+	check("History days: no history", MS.CountHistoryDays(nil) == 0 and MS.CountHistoryDays({}) == 0)
+end
+
 if failed > 0 then
 	print(failed .. " check(s) failed")
 	os.exit(1)

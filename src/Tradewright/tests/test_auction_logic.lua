@@ -294,6 +294,21 @@ do
 		switchedOff.queueBulk == true and switchedOff.highlightFullScan == false)
 end
 
+do
+	local NOW, FRESH = 100000, AL.FULL_SCAN_PRICE_FRESH_SEC
+	local function standsOut(status)
+		status.now = NOW
+		return AL.FullScanStandsOut(status)
+	end
+	check("Full scan stands out: before the first full scan", standsOut({ cooldown = 0 }) == true)
+	check("Full scan stands out: prices older than an hour", standsOut({ cooldown = 0, lastFullScanAt = NOW - FRESH - 1 }) == true)
+	check("Full scan stands out: prices left waiting for it",
+		standsOut({ cooldown = 0, lastFullScanAt = NOW - 60, waiting = 3 }) == true)
+	check("Full scan is plain: fresh prices, none waiting", standsOut({ cooldown = 0, lastFullScanAt = NOW - 60, waiting = 0 }) == false)
+	check("Full scan is plain: on cooldown", standsOut({ cooldown = 30 }) == false)
+	check("Full scan is plain: already running", standsOut({ active = true, cooldown = 0 }) == false)
+end
+
 if failed > 0 then
 	print(failed .. " test(s) failed")
 	os.exit(1)

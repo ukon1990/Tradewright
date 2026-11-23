@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.1
+
+- Get started: a short window with three steps opens the first time you open Tradewright, and `/tw intro` opens it again. The auction house panel says what to press when there are no prices yet.
+- Full scan stands out in gold when it is worth pressing: no prices yet, prices over an hour old, or items waiting for a price.
+- Disenchanting, prospecting and milling have a value: the cheapest input and what it yields, counted from your own results.
+- Enchants are valued as the scroll they make on a vellum.
+- Item tooltips say which character holds the item and where; reagent rows show that tooltip.
+- Inventory Qty leaves out soulbound and worn copies.
+
 ## 1.0.0
 
 First public release, for WoW Forever and retail.

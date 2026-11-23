@@ -494,6 +494,7 @@ function Tradewright:RefreshShellStatus()
 	ui.mainFrame.statusText:SetText(self:GetShellActivityText())
 	ui.mainFrame.statusRight:SetText(self:GetShellStoredText())
 	ui.mainFrame.subtitle:SetText(self:AccountGoldLabel())
+	self:RefreshGetStarted()
 end
 
 function Tradewright:ApplyThemeToUI()
@@ -636,6 +637,7 @@ function Tradewright:ToggleDashboard()
 	self:RecordExternalFrameInteraction("addon", "toggle_dashboard_show")
 	self:ApplyWindowScale()
 	self:ShowDashboardTab(self:GetActiveMainTab())
+	self:ShowGetStartedOnce()
 end
 
 function Tradewright:OpenDocumentationTab()

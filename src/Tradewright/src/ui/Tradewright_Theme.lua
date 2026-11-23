@@ -197,8 +197,10 @@ local function setFontColor(font, color)
 	end
 end
 
--- Button state -> fill, outline and label colour. Primary or selected buttons are "marked".
+-- Button state -> fill, outline and label colour. Primary or selected buttons are "marked";
+-- "solid" is the gold-filled button for the one thing to press now.
 local BUTTON_STATE_COLORS = {
+	solid = { fill = THEME.tick, border = THEME.gold, text = THEME.surface1 },
 	disabled = { fill = CLEAR, border = THEME.borderStrong, text = THEME.textDisabled },
 	marked = { fill = THEME.surface2, border = THEME.tick, text = THEME.gold },
 	tab = { fill = CLEAR, border = THEME.borderStrong, text = THEME.textMuted },
@@ -208,6 +210,9 @@ local BUTTON_STATE_COLORS = {
 local function buttonState(button)
 	if not button:IsEnabled() then
 		return "disabled"
+	end
+	if button.ahSolid then
+		return "solid"
 	end
 	if button.ahPrimary or button.ahSelected then
 		return "marked"
@@ -222,11 +227,19 @@ local function applyButtonState(button)
 	end
 	local colors = BUTTON_STATE_COLORS[buttonState(button)]
 	surface:SetColors(colors.fill, colors.border)
-	setFontColor(button:GetFontString(), colors.text)
+	local label = button:GetFontString()
+	setFontColor(label, colors.text)
+	-- The game's fonts carry a dark drop shadow. Behind a dark label on the gold fill it only
+	-- smears the letters, so a solid button drops it.
+	label:SetShadowColor(0, 0, 0, colors == BUTTON_STATE_COLORS.solid and 0 or 1)
 end
 
+-- The game swaps in the highlight font on hover, which resets the label, so it is styled again:
+-- gold for most buttons, while a solid one keeps its dark label (gold would vanish on the fill).
 local function onButtonEnter(button)
-	if button:IsEnabled() then
+	if button.ahSolid then
+		applyButtonState(button)
+	elseif button:IsEnabled() then
 		setFontColor(button:GetFontString(), THEME.gold)
 	end
 end
@@ -267,6 +280,13 @@ end
 function Tradewright:SetButtonPrimary(button, primary)
 	self:SkinButton(button)
 	button.ahPrimary = primary and true or nil
+	applyButtonState(button)
+end
+
+-- The one thing to press right now: gold fill, dark label. Stronger than primary; use it sparingly.
+function Tradewright:SetButtonSolid(button, solid)
+	self:SkinButton(button)
+	button.ahSolid = solid and true or nil
 	applyButtonState(button)
 end
 

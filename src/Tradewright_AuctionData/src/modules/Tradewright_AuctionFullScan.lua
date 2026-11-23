@@ -65,6 +65,11 @@ function Tradewright:SetLastFullAuctionScanRequestAt(ts)
 	auction.lastFullScanRequestAt[self:GetAuctionRegionKey() .. ":" .. self:GetAuctionConnectedRealmID()] = ts
 end
 
+-- How long the server makes the player wait between two full scans.
+function Tradewright:GetFullScanCooldownSec()
+	return FULL_AH_DUMP_COOLDOWN_SEC
+end
+
 function Tradewright:GetFullAuctionDumpCooldownRemaining()
 	local requests = self:InitAuctionDB().lastFullScanRequestAt
 	local requestedAt = type(requests) == "table"

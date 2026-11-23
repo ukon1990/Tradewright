@@ -149,6 +149,7 @@ local function getAuctionPanelScanStatus(pe, state)
 		dump = dump,
 		bulk = bulk,
 		cooldown = pe:GetFullAuctionDumpCooldownRemaining(),
+		lastFullScanAt = pe:GetLastFullAuctionScanAt(),
 		lastFullScanLabel = pe:FormatScanTimestamp(pe:GetLastFullAuctionScanAt()),
 		fullDumpActive = dump and dump.mode == "full" and dump.running == true,
 		running = state.auctionRefreshRunning == true,
@@ -193,12 +194,13 @@ local function refreshAuctionPanelScanButtons(panel, scan)
 	if panel.btnDumpFull then
 		panel.btnDumpFull:SetEnabled(not scan.fullDumpActive and scan.cooldown <= 0)
 		panel.btnDumpFull:SetText(fullScanButtonLabel(scan))
-		-- The locked highlight is the whole suggestion: the panel has no room for a line of text.
-		if Tradewright:GetAuctionPricesWaitingForFullScan() > 0 then
-			panel.btnDumpFull:LockHighlight()
-		else
-			panel.btnDumpFull:UnlockHighlight()
-		end
+		Tradewright:SetButtonSolid(panel.btnDumpFull, Tradewright.AuctionLogic.FullScanStandsOut({
+			active = scan.fullDumpActive,
+			cooldown = scan.cooldown,
+			lastFullScanAt = scan.lastFullScanAt,
+			now = Tradewright:Now(),
+			waiting = Tradewright:GetAuctionPricesWaitingForFullScan(),
+		}))
 	end
 	if panel.btnDumpVisible then
 		panel.btnDumpVisible:SetEnabled(not scan.fullDumpActive)
@@ -218,6 +220,7 @@ function Tradewright:RefreshFullScanCountdown(panel)
 	local scan = {
 		cooldown = self:GetFullAuctionDumpCooldownRemaining(),
 		fullDumpActive = dump and dump.mode == "full" and dump.running == true,
+		lastFullScanAt = self:GetLastFullAuctionScanAt(),
 		lastFullScanLabel = self:FormatScanTimestamp(self:GetLastFullAuctionScanAt()),
 	}
 	refreshAuctionPanelScanButtons(panel, scan)
@@ -503,6 +506,7 @@ local function refreshAuctionPanelVisibility(pe, panel, activeTab, cart, ui)
 	if panel.stats then panel.stats:SetShown(onSell) end
 	if panel.progressRow then
 		local progressShown = panel.progressText:IsShown() and panel.progressText:GetText() ~= ""
+		pe:LayoutAuctionSellRows(panel, onSell and pe:IsFirstFullScanHintDue())
 		pe:LayoutAuctionPanelBody(panel, activeTab, progressShown)
 	end
 	if panel.tableHost then

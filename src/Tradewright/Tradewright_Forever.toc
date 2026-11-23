@@ -3,7 +3,7 @@
 ## Title: Tradewright
 ## Notes: Required by all Tradewright modules: settings, saved data and shared code
 ## Author: Ukon1990
-## Version: 1.0.0
+## Version: 1.0.1
 ## IconTexture: Interface\AddOns\Tradewright\media\logo
 ## OptionalDeps: Blizzard_Professions
 ## SavedVariables: TradewrightDB, TradewrightLastExport, TradewrightSourcesDB
@@ -30,6 +30,7 @@ src\util\Tradewright_FarmLogic.lua
 src\util\Tradewright_WeekdayPattern.lua
 src\util\Tradewright_TooltipLogic.lua
 src\util\Tradewright_FilterLogic.lua
+src\util\Tradewright_StartLogic.lua
 src\util\Tradewright_ChartLogic.lua
 src\core\Tradewright_Data.lua
 src\core\Tradewright_ProfessionSpecTree.lua

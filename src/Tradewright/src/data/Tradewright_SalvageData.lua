@@ -1,9 +1,9 @@
 local _, Tradewright = ...
 
 -- Researched salvage yields: what disenchanting, prospecting and milling give on average, looked up
--- on the web (reference wikis and published counts of outcomes; no table is taken from another
--- addon). They are estimates that stand in until outcomes counted in game replace them (see
--- SalvageLogic.Yield). Sources, their quality and where they disagree: docs/research/salvage-yields.md.
+-- on the web (reference wikis and published counts of outcomes). They are estimates that stand in
+-- until outcomes counted in game replace them (see SalvageLogic.Yield). Sources, their quality and
+-- where they disagree: docs/research/salvage-yields.md.
 --
 -- Every number is the quantity received per destroyed item.
 
@@ -95,6 +95,6 @@ add(anyGear(EPIC, 61, 100, { [NEXUS_CRYSTAL] = 1.5 }))
 Tradewright.SALVAGE_DATA = {
 	-- WoW Forever has no Jewelcrafting or Inscription, so only disenchanting.
 	forever = { disenchant = classicDisenchant },
-	-- Retail ships none: no yields were found outside other addons' tables. Counted outcomes fill it.
+	-- Retail ships none yet; counted outcomes fill it.
 	retail = {},
 }
