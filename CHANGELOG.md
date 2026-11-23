@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+- Color themes: The addon now supports color themes, so that you can make it better match your UI. It has 6 themes + custom base and highlight color selection.
+- New version notice: You will now get a chat message, telling you that a new version is out. This can be turned off in the settings.
+- Minimap button: LibDBIcon is no used, so that addons that group minimap buttons can group the minimap icon.
+
 ## 1.0.1
 
 - Get started: Added a get started dialog box for new users, so that it hopefully is clearer to new users how to do the basics (updating the AH data)

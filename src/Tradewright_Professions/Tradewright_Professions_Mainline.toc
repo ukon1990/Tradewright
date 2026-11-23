@@ -3,7 +3,7 @@
 ## Title: Tradewright Professions
 ## Notes: Recipes, reagents and craft profit, read from your profession windows
 ## Author: Ukon1990
-## Version: 1.0.1
+## Version: 1.0.2
 ## IconTexture: Interface\AddOns\Tradewright\media\logo
 ## Dependencies: Tradewright
 ## OptionalDeps: Blizzard_Professions
