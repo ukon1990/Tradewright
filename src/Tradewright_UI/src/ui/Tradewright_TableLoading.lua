@@ -17,7 +17,7 @@ local NAME_WIDTHS = { 150, 110, 175, 125, 160, 100, 140, 120 }
 
 local function placeholderBar(parent, color, width, height)
 	local bar = parent:CreateTexture(nil, "ARTWORK")
-	bar:SetColorTexture(color.r, color.g, color.b, 1)
+	Tradewright:ColorTexture(bar, color, 1)
 	bar:SetSize(width, height)
 	return bar
 end
@@ -68,7 +68,7 @@ function TableMixin:CreateLoadingState()
 	loading.note:SetPoint("TOPLEFT", 10, -6)
 	loading.note:SetPoint("TOPRIGHT", -10, -6)
 	loading.note:SetJustifyH("LEFT")
-	loading.note:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	Tradewright:ColorText(loading.note, "textMuted")
 	local bars = CreateFrame("Frame", nil, loading)
 	bars:SetPoint("TOPLEFT", 0, -NOTE_HEIGHT)
 	bars:SetPoint("BOTTOMRIGHT")

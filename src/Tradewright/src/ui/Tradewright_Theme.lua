@@ -4,37 +4,24 @@ Tradewright.ui = Tradewright.ui or {}
 
 local WHITE = "Interface\\Buttons\\WHITE8X8"
 
--- One look for every Tradewright frame, shared with QuestPlanner (UI/PlanCard.lua):
--- flat near-black panels, 1px outlines, gold corner ticks. Read-only: callers must not mutate it.
-local THEME = {
-	surface1 = { r = 0.043, g = 0.051, b = 0.071, a = 0.92 }, -- window
-	surface2 = { r = 0.067, g = 0.078, b = 0.106, a = 1 }, -- raised: table header, fields, tiles
-	surface3 = { r = 0.094, g = 0.110, b = 0.145, a = 1 }, -- icon placeholder, progress track
-	borderStrong = { r = 0.23, g = 0.25, b = 0.28, a = 1 }, -- window and button outline
-	borderControl = { r = 0.41, g = 0.44, b = 0.48, a = 1 }, -- edit box, dropdown, checkbox outline
-	borderSubtle = { r = 0.15, g = 0.16, b = 0.19, a = 1 }, -- dividers, table and tile outline
-	gold = { r = 1, g = 0.82, b = 0 }, -- title, selected tab, sorted column, primary action
-	tick = { r = 0.79, g = 0.64, b = 0.15 }, -- corner ticks, primary outline, progress fill
-	textPrimary = { r = 0.95, g = 0.94, b = 0.92 },
-	textMuted = { r = 0.60, g = 0.63, b = 0.67 },
-	textDisabled = { r = 0.5, g = 0.5, b = 0.5 },
-	success = { r = 0.40, g = 0.73, b = 0.42 },
-	warning = { r = 0.95, g = 0.65, b = 0.30 },
-	danger = { r = 0.89, g = 0.39, b = 0.38 },
-	accent = { r = 0.39, g = 0.71, b = 0.96, a = 0.95 }, -- neutral status and graph line
-	spacing = { xs = 4, sm = 8, md = 12, lg = 16, xl = 24 },
-	size = {
-		header = 34,
-		tabs = 30,
-		control = 26,
-		controlSmall = 22,
-		tableHead = 22,
-		row = 24,
-		rowTall = 36,
-		footer = 24,
-		icon = 18,
-		scrollGutter = 14,
-	},
+local ThemeLogic = Tradewright.ThemeLogic
+
+-- One look for every Tradewright frame. The colour tables are filled from the player's theme and
+-- overwritten in place when it changes, so code may keep a reference to one but must never replace
+-- or change it. Token meanings are listed with the dark theme in Tradewright_ThemeLogic.lua.
+local THEME = ThemeLogic.ResolvePalette(ThemeLogic.DEFAULT_THEME)
+THEME.spacing = { xs = 4, sm = 8, md = 12, lg = 16, xl = 24 }
+THEME.size = {
+	header = 34,
+	tabs = 30,
+	control = 26,
+	controlSmall = 22,
+	tableHead = 22,
+	row = 24,
+	rowTall = 36,
+	footer = 24,
+	icon = 18,
+	scrollGutter = 14,
 }
 
 function Tradewright:GetSetting(path, defaultValue)
@@ -88,13 +75,156 @@ function Tradewright:GetTheme()
 	return THEME
 end
 
+-- Every colour put on a frame, texture or label through paint(), so a theme change can put the new
+-- colours on what is already built. Weak keys: the list never keeps a region alive.
+local paintedRegions = setmetatable({}, { __mode = "k" })
+
+local function applyPaint(region, method, entry)
+	local color = entry.color
+	region[method](region, color.r, color.g, color.b, entry.alpha or color.a or 1)
+	if entry.isLabel then
+		-- The game's fonts carry a dark drop shadow. Behind dark text it only smears the letters.
+		region:SetShadowColor(0, 0, 0, (entry.noShadow or THEME.isLight) and 0 or 1)
+	end
+end
+
+local function paintEntry(region, method)
+	local methods = paintedRegions[region]
+	if not methods then
+		methods = {}
+		paintedRegions[region] = methods
+	end
+	local entry = methods[method]
+	if not entry then
+		entry = {}
+		methods[method] = entry
+	end
+	return entry
+end
+
+-- Colours `region` with `method` (SetColorTexture, SetVertexColor, SetBackdropColor, ...) and remembers
+-- it. `color` must be a table that outlives the call: a theme colour, or a fixed colour of the caller's.
+local function paint(region, method, color, alpha)
+	local entry = paintEntry(region, method)
+	entry.color, entry.alpha = color, alpha
+	applyPaint(region, method, entry)
+end
+
+local function paintLabel(label, color, noShadow)
+	local entry = paintEntry(label, "SetTextColor")
+	entry.color, entry.isLabel, entry.noShadow = color, true, noShadow
+	applyPaint(label, "SetTextColor", entry)
+end
+
+local function themeColor(color)
+	return type(color) == "string" and THEME[color] or color
+end
+
+-- The four below colour something and keep it in step with the theme. `color` is a theme token
+-- ("textMuted", "gold", ...) or a colour table that outlives the call; `alpha` overrides the colour's own.
+
+function Tradewright:ColorText(fontString, color)
+	paintLabel(fontString, themeColor(color))
+end
+
+function Tradewright:ColorTexture(texture, color, alpha)
+	paint(texture, "SetColorTexture", themeColor(color), alpha)
+end
+
+--- For a texture file or atlas, which is tinted rather than filled.
+function Tradewright:TintTexture(texture, color, alpha)
+	paint(texture, "SetVertexColor", themeColor(color), alpha)
+end
+
+function Tradewright:ColorStatusBar(bar, color, alpha)
+	paint(bar, "SetStatusBarColor", themeColor(color), alpha)
+end
+
+local readableQualityColors = {}
+
+--- The game's colour for an item quality, or nil for an unknown one. On a light theme it is darkened
+--- until it reads on the panels, where the game's white and yellow names would vanish.
+function Tradewright:GetQualityColor(quality)
+	local color = quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
+	if not color or not THEME.isLight then
+		return color
+	end
+	if not readableQualityColors[quality] then
+		readableQualityColors[quality] = ThemeLogic.ReadableOn(color, THEME.surface3)
+	end
+	return readableQualityColors[quality]
+end
+
+--- The two colours the player's theme is built from: `{ background, highlight }`.
+function Tradewright:GetThemeSeed()
+	local themeId = self:GetSetting("appearance.theme", ThemeLogic.DEFAULT_THEME)
+	return ThemeLogic.GetSeed(themeId, self:GetSetting("appearance.customTheme"))
+end
+
+--- Reads the player's theme into the palette. Frames built later use it at once; RecolorUI updates
+--- the ones already built.
+function Tradewright:ApplyThemeSetting()
+	local themeId = self:GetSetting("appearance.theme", ThemeLogic.DEFAULT_THEME)
+	local palette = ThemeLogic.ResolvePalette(themeId, self:GetSetting("appearance.customTheme"))
+	self.shownThemeId = themeId
+	readableQualityColors = {}
+	for token, value in pairs(palette) do
+		if type(value) == "table" then
+			local color = THEME[token]
+			color.r, color.g, color.b, color.a = value.r, value.g, value.b, value.a
+		else
+			THEME[token] = value
+		end
+	end
+end
+
+local REDRAW_DELAY_SEC = 0.1
+local redrawPending = false
+
+--- Puts the current palette on everything already built, then lets open windows redraw their rows.
+function Tradewright:RecolorUI()
+	for region, methods in pairs(paintedRegions) do
+		for method, entry in pairs(methods) do
+			applyPaint(region, method, entry)
+		end
+	end
+	-- The colour picker reports every step of a drag; rows are redrawn once after the burst.
+	if redrawPending or not self.RefreshThemedWindows then
+		return
+	end
+	redrawPending = true
+	C_Timer.After(REDRAW_DELAY_SEC, function()
+		redrawPending = false
+		self:RefreshThemedWindows()
+	end)
+end
+
+local function copySeedColor(color)
+	return { r = color.r, g = color.g, b = color.b }
+end
+
+--- Shows the theme setting everywhere, after the player changed it. The custom theme starts from
+--- the colours of the theme shown until then, so the first pick changes one colour, not the whole look.
+function Tradewright:ApplyThemeChange()
+	local isCustom = self:GetSetting("appearance.theme") == ThemeLogic.CUSTOM_THEME
+	if isCustom and not ThemeLogic.IsSeed(self:GetSetting("appearance.customTheme")) then
+		local seed = ThemeLogic.GetSeed(self.shownThemeId)
+		self:SetSetting("appearance.customTheme", {
+			background = copySeedColor(seed.background),
+			highlight = copySeedColor(seed.highlight),
+		})
+	end
+	self:ApplyThemeSetting()
+	self:RecolorUI()
+end
+
 function Tradewright:ApplyBackdrop(frame, bg, border)
 	if not frame then
 		return
 	end
 	frame:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
-	frame:SetBackdropColor(bg.r, bg.g, bg.b, bg.a or 1)
-	frame:SetBackdropBorderColor(border.r, border.g, border.b, border.a or 1)
+	paint(frame, "SetBackdropColor", bg)
+	paint(frame, "SetBackdropBorderColor", border)
 end
 
 -- A raised region inside a window (never a second window outline).
@@ -107,11 +237,10 @@ local function addCornerTicks(frame)
 		return
 	end
 	frame.ahCornerTicks = true
-	local tick = THEME.tick
 	for _, corner in ipairs({ "TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT" }) do
 		for _, size in ipairs({ { 10, 2 }, { 2, 10 } }) do
 			local texture = frame:CreateTexture(nil, "OVERLAY")
-			texture:SetColorTexture(tick.r, tick.g, tick.b, 1)
+			paint(texture, "SetColorTexture", THEME.tick, 1)
 			texture:SetSize(size[1], size[2])
 			texture:SetPoint(corner)
 		end
@@ -134,7 +263,7 @@ end
 -- (template scripts swap textures on press, but never restore alpha).
 
 local function colorTexture(texture, color, alpha)
-	texture:SetColorTexture(color.r, color.g, color.b, alpha or color.a or 1)
+	paint(texture, "SetColorTexture", color, alpha)
 end
 
 local function hideRegions(frame, keys)
@@ -191,16 +320,10 @@ end
 
 local CLEAR = { r = 0, g = 0, b = 0, a = 0 }
 
-local function setFontColor(font, color)
-	if font then
-		font:SetTextColor(color.r, color.g, color.b)
-	end
-end
-
 -- Button state -> fill, outline and label colour. Primary or selected buttons are "marked";
 -- "solid" is the gold-filled button for the one thing to press now.
 local BUTTON_STATE_COLORS = {
-	solid = { fill = THEME.tick, border = THEME.gold, text = THEME.surface1 },
+	solid = { fill = THEME.tick, border = THEME.gold, text = THEME.textOnAccent },
 	disabled = { fill = CLEAR, border = THEME.borderStrong, text = THEME.textDisabled },
 	marked = { fill = THEME.surface2, border = THEME.tick, text = THEME.gold },
 	tab = { fill = CLEAR, border = THEME.borderStrong, text = THEME.textMuted },
@@ -228,10 +351,9 @@ local function applyButtonState(button)
 	local colors = BUTTON_STATE_COLORS[buttonState(button)]
 	surface:SetColors(colors.fill, colors.border)
 	local label = button:GetFontString()
-	setFontColor(label, colors.text)
-	-- The game's fonts carry a dark drop shadow. Behind a dark label on the gold fill it only
-	-- smears the letters, so a solid button drops it.
-	label:SetShadowColor(0, 0, 0, colors == BUTTON_STATE_COLORS.solid and 0 or 1)
+	if label then
+		paintLabel(label, colors.text, colors == BUTTON_STATE_COLORS.solid)
+	end
 end
 
 -- The game swaps in the highlight font on hover, which resets the label, so it is styled again:
@@ -240,7 +362,7 @@ local function onButtonEnter(button)
 	if button.ahSolid then
 		applyButtonState(button)
 	elseif button:IsEnabled() then
-		setFontColor(button:GetFontString(), THEME.gold)
+		paintLabel(button:GetFontString(), THEME.gold)
 	end
 end
 
@@ -260,7 +382,7 @@ function Tradewright:SkinButton(button)
 	button:SetHighlightTexture(WHITE)
 	local highlight = button:GetHighlightTexture()
 	if highlight then
-		highlight:SetVertexColor(THEME.gold.r, THEME.gold.g, THEME.gold.b, 0.09)
+		paint(highlight, "SetVertexColor", THEME.gold, 0.09)
 		highlight:SetAllPoints()
 	end
 	button:SetNormalFontObject("GameFontHighlightSmall")
@@ -318,7 +440,7 @@ function Tradewright:SkinEditBox(editBox)
 	end
 	self:AddSurface(editBox, THEME.surface2, THEME.borderControl, 6, 2)
 	editBox:SetFontObject("GameFontHighlightSmall")
-	editBox:SetTextColor(THEME.textPrimary.r, THEME.textPrimary.g, THEME.textPrimary.b)
+	paint(editBox, "SetTextColor", THEME.textPrimary)
 	return editBox
 end
 
@@ -342,7 +464,7 @@ function Tradewright:SkinCheckButton(check)
 	mark:ClearAllPoints()
 	mark:SetSize(8, 8)
 	mark:SetPoint("CENTER")
-	mark:SetVertexColor(THEME.gold.r, THEME.gold.g, THEME.gold.b, 1)
+	paint(mark, "SetVertexColor", THEME.gold, 1)
 	mark:SetDrawLayer("OVERLAY")
 	local disabledMark = check.GetDisabledCheckedTexture and check:GetDisabledCheckedTexture()
 	if disabledMark then
@@ -354,7 +476,7 @@ function Tradewright:SkinCheckButton(check)
 		label:ClearAllPoints()
 		label:SetPoint("LEFT", check, "RIGHT", 2, 0)
 		label:SetFontObject("GameFontHighlightSmall")
-		label:SetTextColor(THEME.textPrimary.r, THEME.textPrimary.g, THEME.textPrimary.b)
+		paintLabel(label, THEME.textPrimary)
 	end
 	return check
 end
@@ -390,7 +512,7 @@ local function skinScrollBar(scrollFrame)
 	bar:SetThumbTexture(WHITE)
 	local thumb = bar:GetThumbTexture()
 	thumb:SetSize(6, 32)
-	thumb:SetVertexColor(THEME.borderStrong.r, THEME.borderStrong.g, THEME.borderStrong.b, 1)
+	paint(thumb, "SetVertexColor", THEME.borderStrong, 1)
 end
 
 -- Glyphs drawn on 22px icon buttons, one texture per line: { width, height, x, y, rotation }.
@@ -414,8 +536,8 @@ function Tradewright:SkinCloseButton(button, glyph)
 	end
 	button:SetSize(22, 22)
 	button:SetHighlightTexture(WHITE)
-	button:GetHighlightTexture():SetVertexColor(THEME.gold.r, THEME.gold.g, THEME.gold.b, 0.09)
-	self:AddSurface(button, { r = 0, g = 0, b = 0, a = 0 }, THEME.borderStrong)
+	paint(button:GetHighlightTexture(), "SetVertexColor", THEME.gold, 0.09)
+	self:AddSurface(button, CLEAR, THEME.borderStrong)
 	for _, spec in ipairs(GLYPHS[glyph or "close"]) do
 		local line = button:CreateTexture(nil, "ARTWORK")
 		line:SetSize(spec[1], spec[2])

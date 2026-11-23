@@ -81,7 +81,7 @@ local function addDropdownLabel(holder, label)
 	title:SetJustifyH("LEFT")
 	title:SetWordWrap(false)
 	local muted = Tradewright:GetTheme().textMuted
-	title:SetTextColor(muted.r, muted.g, muted.b)
+	Tradewright:ColorText(title, muted)
 	title:SetText(label)
 	holder.title = title
 end
@@ -94,7 +94,7 @@ local function createDropdownButton(holder)
 	button:SetHeight(DROPDOWN_HEIGHT)
 	Tradewright:AddSurface(button, theme.surface2, theme.borderControl)
 	button:SetHighlightTexture("Interface\\Buttons\\WHITE8X8")
-	button:GetHighlightTexture():SetVertexColor(theme.gold.r, theme.gold.g, theme.gold.b, 0.09)
+	Tradewright:TintTexture(button:GetHighlightTexture(), "gold", 0.09)
 	local text = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	text:SetPoint("LEFT", 8, 0)
 	text:SetPoint("RIGHT", -22, 0)
@@ -103,7 +103,7 @@ local function createDropdownButton(holder)
 	local caret = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	caret:SetPoint("RIGHT", -8, 0)
 	caret:SetText("v")
-	caret:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	Tradewright:ColorText(caret, "textMuted")
 	holder.button = button
 	holder.text = text
 	return button

@@ -103,6 +103,8 @@
 | [f136-record-outcomes](issues/e18-salvage-value/f136-record-outcomes/README.md) | Record disenchant, prospecting and milling outcomes | open |
 | [f137-shipped-yields](issues/e18-salvage-value/f137-shipped-yields/README.md) | Researched starting yields | done |
 | [f138-use-salvage-value](issues/e18-salvage-value/f138-use-salvage-value/README.md) | Use the value: profit, give-back, tooltips | open |
+| [e19-themes](issues/e19-themes/README.md) | Colour themes | open |
+| [f140-colour-themes](issues/e19-themes/f140-colour-themes/README.md) | Colour themes and own colours | open |
 
 Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E07 follow-ups: F55, then F56 → F57 → F58. E10: F80 first (no dependencies), then F81 and F82. E13: F105, F106, F119, then F107 and F108; F109 and F110 (after F106); F117 (after F109); F111; F112; F113; then the splits F114, F115, F116, F118. E14: F120 → F121 → F122 → F123, then F124. E15: F125 → F126, F127. E18: F134 (stands alone), F135, then F136 and F137, then F138.
 

@@ -229,7 +229,7 @@ function TableMixin:CreateDefaultCell(rowFrame, column)
 	fontString:SetJustifyH(column.justifyH or "LEFT")
 	fontString:SetWordWrap(false)
 	local text = Tradewright:GetTheme().textPrimary
-	fontString:SetTextColor(text.r, text.g, text.b)
+	Tradewright:ColorText(fontString, text)
 	return fontString
 end
 
@@ -243,11 +243,10 @@ function TableMixin:AcquireRow(index)
 	row:SetHeight(self.rowHeight)
 	row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	row:SetHighlightTexture(WHITE)
-	row:GetHighlightTexture():SetVertexColor(1, 1, 1, 0.04)
+	Tradewright:TintTexture(row:GetHighlightTexture(), "hover")
 	row.selectedFill = row:CreateTexture(nil, "BACKGROUND")
 	row.selectedFill:SetAllPoints()
-	local gold = Tradewright:GetTheme().gold
-	row.selectedFill:SetColorTexture(gold.r, gold.g, gold.b, 0.07)
+	Tradewright:ColorTexture(row.selectedFill, "gold", 0.07)
 	row.selectedFill:Hide()
 	row.cells = {}
 
@@ -538,19 +537,18 @@ function TableMixin:InitTableState(options)
 end
 
 function TableMixin:CreateHeaderBar()
-	local theme = Tradewright:GetTheme()
 	local header = CreateFrame("Frame", nil, self.frame)
 	header:SetPoint("TOPLEFT", self.frame, "TOPLEFT", 1, -1)
 	header:SetPoint("TOPRIGHT", self.frame, "TOPRIGHT", -1, -1)
 	header:SetHeight(self.headerHeight)
 	local headerFill = header:CreateTexture(nil, "BACKGROUND")
 	headerFill:SetAllPoints()
-	headerFill:SetColorTexture(theme.surface2.r, theme.surface2.g, theme.surface2.b, 1)
+	Tradewright:ColorTexture(headerFill, "surface2", 1)
 	local headerRule = header:CreateTexture(nil, "BORDER")
 	headerRule:SetPoint("BOTTOMLEFT")
 	headerRule:SetPoint("BOTTOMRIGHT")
 	headerRule:SetHeight(1)
-	headerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	Tradewright:ColorTexture(headerRule, "borderSubtle", 1)
 	self.header = header
 end
 
@@ -587,7 +585,7 @@ function TableMixin:CreateEmptyState()
 	empty.hint:SetPoint("TOP", empty, "CENTER", 0, -4)
 	empty.hint:SetPoint("LEFT")
 	empty.hint:SetPoint("RIGHT")
-	empty.hint:SetTextColor(muted.r, muted.g, muted.b)
+	Tradewright:ColorText(empty.hint, muted)
 	empty:Hide()
 	self.emptyFrame = empty
 end

@@ -143,7 +143,7 @@ local function itemColumn(pe)
 		cell.name:SetPoint("LEFT", cell, "LEFT", 5, 0)
 		cell.name:SetPoint("RIGHT", cell, "RIGHT", -5, 0)
 		cell.name:SetText(string.format("%s · %d %s", row.label, row.count, pe:Plural(row.count, "item")))
-		cell.name:SetTextColor(gold.r, gold.g, gold.b)
+		Tradewright:ColorText(cell.name, gold)
 		cell.detail:Hide()
 	end
 	return column
@@ -196,7 +196,7 @@ local function createHeader(pe, f)
 	rule:SetPoint("TOPLEFT", 1, -theme.size.header)
 	rule:SetPoint("TOPRIGHT", -1, -theme.size.header)
 	rule:SetHeight(1)
-	rule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	Tradewright:ColorTexture(rule, "borderSubtle", 1)
 end
 
 -- "Only crafting reagents" narrows the surplus for this mailbox visit, to stash reagents on the

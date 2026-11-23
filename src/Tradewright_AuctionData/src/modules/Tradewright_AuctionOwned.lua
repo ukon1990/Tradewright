@@ -108,6 +108,7 @@ end
 local function buildOwnedButtons(panel)
 	panel.ownedSummary = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	panel.ownedSummary:SetJustifyH("LEFT")
+	Tradewright:ColorText(panel.ownedSummary, "textPrimary")
 	panel.btnOwnedCheck = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.btnOwnedCheck:SetText(L["Check prices"])
 	panel.btnOwnedCheck:SetScript("OnClick", recheckOwnedAuctionPrices)

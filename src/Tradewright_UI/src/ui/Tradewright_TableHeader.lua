@@ -117,7 +117,7 @@ function TableMixin:StyleHeaderButton(button, column)
 	local color = sorted and theme.gold or theme.textMuted
 	button.text:SetText(column.label or column.id)
 	button.text:SetJustifyH(column.justifyH or "LEFT")
-	button.text:SetTextColor(color.r, color.g, color.b)
+	Tradewright:ColorText(button.text, color)
 	button.text:ClearAllPoints()
 	button.arrow:ClearAllPoints()
 	button.text:SetPoint("LEFT", button, "LEFT", CELL_PAD, 0)
@@ -130,7 +130,7 @@ function TableMixin:StyleSortArrow(arrow, sorted)
 	arrow:SetPoint("RIGHT", arrow:GetParent(), "RIGHT", -CELL_PAD, 0)
 	arrow:SetShown(sorted)
 	if sorted then
-		arrow:SetVertexColor(gold.r, gold.g, gold.b)
+		Tradewright:TintTexture(arrow, gold)
 		arrow:SetTexCoord(0, 0.5625, self.sortAsc and 1 or 0, self.sortAsc and 0 or 1)
 	end
 end

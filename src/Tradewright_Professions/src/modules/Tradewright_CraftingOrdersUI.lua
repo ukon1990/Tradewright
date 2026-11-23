@@ -177,7 +177,7 @@ local function updatePatronCheckboxState()
 	if lab and lab.SetTextColor then
 		local theme = Tradewright:GetTheme()
 		local color = (not isNpc and theme.textDisabled) or (not hasData and theme.warning) or theme.textPrimary
-		lab:SetTextColor(color.r, color.g, color.b)
+		Tradewright:ColorText(lab, color)
 	end
 end
 

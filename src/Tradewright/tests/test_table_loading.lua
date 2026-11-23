@@ -31,9 +31,9 @@ local function newRegion()
 end
 _G.CreateFrame = function() return newRegion() end
 
-local color = { r = 0.5, g = 0.5, b = 0.5 }
-local pe = { GetTheme = function() return { textMuted = color, surface3 = color } end }
-for _, path in ipairs({ "/src/util/Tradewright_FilterLogic.lua", "/../Tradewright_UI/src/ui/Tradewright_Table.lua",
+local pe = {}
+for _, path in ipairs({ "/src/util/Tradewright_FilterLogic.lua", "/src/util/Tradewright_ThemeLogic.lua",
+	"/src/ui/Tradewright_Theme.lua", "/../Tradewright_UI/src/ui/Tradewright_Table.lua",
 	"/../Tradewright_UI/src/ui/Tradewright_TableLoading.lua" }) do
 	local chunk, err = loadfile(root .. path)
 	assert(chunk, err)

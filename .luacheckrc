@@ -27,6 +27,7 @@ globals = {
 	"SLASH_TWFARM1",
 	"SLASH_TRADEWRIGHT1",
 	"SLASH_TRADEWRIGHT2",
+	"ColorPickerFrame", -- older clients take the picker's callbacks as fields set on the frame
 	"SlashCmdList",
 	"StaticPopupDialogs",
 	"UISpecialFrames",
@@ -46,6 +47,7 @@ read_globals = {
 	"C_AddOns",
 	"C_AuctionHouse",
 	"C_Bank",
+	"C_ChatInfo",
 	"BankFrame",
 	"C_Container",
 	"C_EquipmentSet",
@@ -147,11 +149,15 @@ read_globals = {
 	"GetTrainerServiceSkillReq",
 	"hooksecurefunc",
 	"IsControlKeyDown",
+	"IsInGroup",
+	"IsInGuild",
+	"IsInRaid",
 	"IsAltKeyDown",
 	"IsModifiedClick",
 	"IsMouseButtonDown",
 	"IsShiftKeyDown",
 	"ITEM_QUALITY_COLORS",
+	"LibStub",
 	"TEXTURE_ITEM_QUEST_BANG",
 	"ItemDB",
 	"ItemKeyMixin",
@@ -162,6 +168,7 @@ read_globals = {
 	"LE_EXPANSION_DRAGONFLIGHT",
 	"LE_EXPANSION_MIDNIGHT",
 	"LE_EXPANSION_WAR_WITHIN",
+	"LE_PARTY_CATEGORY_INSTANCE",
 	"LE_ITEM_BIND_ON_ACQUIRE",
 	"LE_ITEM_BIND_QUEST",
 	"LOOT_ITEM_CREATED_SELF",
@@ -190,6 +197,8 @@ read_globals = {
 	"QueryAuctionItems",
 	"QuestieLoader",
 	"RAID_CLASS_COLORS",
+	"RegisterAddonMessagePrefix",
+	"SendAddonMessage",
 	"SendMail",
 	"SendMailBodyEditBox",
 	"SendMailNameEditBox",
@@ -228,3 +237,6 @@ read_globals = {
 
 -- Generated recipe/spec data: long table rows are fine.
 files["src/Tradewright_Professions/src/data/"] = { max_line_length = false }
+
+-- Bundled third-party libraries are kept as published and are not ours to lint.
+exclude_files = { "src/*/Libs/" }

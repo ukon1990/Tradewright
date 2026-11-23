@@ -207,7 +207,7 @@ local function createActions(pe, f, host)
 	f.clearQueueButton = pe:CreateButton(actions, L["Clear queue"], function() pe:ClearCraftQueue() end)
 	f.clearQueueButton:SetPoint("RIGHT")
 	local danger = pe:GetTheme().danger
-	f.clearQueueButton:GetFontString():SetTextColor(danger.r, danger.g, danger.b)
+	Tradewright:ColorText(f.clearQueueButton:GetFontString(), danger)
 	return actions
 end
 

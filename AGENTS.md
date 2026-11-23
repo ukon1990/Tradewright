@@ -15,7 +15,7 @@
 | UI | `src/Tradewright_UI/` | Tradewright window, craft panel, mail |
 | Bags (optional) | `src/Tradewright_Bags/` | Bag and bank window grouped by category, other characters as tabs, multi-select; own on/off switches |
 | Sightings | `src/Tradewright/src/modules/Tradewright_Sources.lua`, `Tradewright_LootSightings.lua`, `src/Tradewright/src/data/Tradewright_SourceData.lua` | Own record of vendors, trainers and loot sources (`TradewrightSourcesDB`), read together with the shipped data file |
-| Pure helpers | `src/Tradewright/src/util/Tradewright_*Logic.lua` | No WoW API, offline-testable: `ForeverLogic` (client flags, storage keys, export encoding), `AuctionLogic`, `MarketLogic`, `MailLogic`, `IncomeLogic`, `FilterLogic`, `MaterialLogic`, `SkillUpLogic`, `LevelingRouteLogic`, `StartLogic` (Get started steps), `SourceLogic` (sightings store, shipping and pruning), … |
+| Pure helpers | `src/Tradewright/src/util/Tradewright_*Logic.lua` | No WoW API, offline-testable: `ForeverLogic` (client flags, storage keys, export encoding), `AuctionLogic`, `MarketLogic`, `MailLogic`, `IncomeLogic`, `FilterLogic`, `MaterialLogic`, `SkillUpLogic`, `LevelingRouteLogic`, `StartLogic` (Get started steps), `ThemeLogic` (theme palettes, contrast), `VersionLogic` (version comparison, version message), `SourceLogic` (sightings store, shipping and pruning), … |
 | Tests | `src/Tradewright/tests/run_tests.py` | Offline Lua 5.1 (no WoW client) |
 | Lint | `scripts/lint.py`, `.luacheckrc`, `scripts/lint-baseline.json` | luacheck + file/function size + complexity, ratcheted |
 | Specs | `docs/specifications/` | Issues / backlog |
@@ -39,6 +39,7 @@
 | Blizzard_Professions | `OptionalDeps` | Soft; Forever may ship a subset of DF profession UI |
 | Questie, QuestieDB | `OptionalDeps` (AuctionData) | Soft; vendor places for vendors not visited yet |
 | TomTom | none | Soft; waypoint arrow when the game's own is unavailable |
+| LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0 | bundled in `src/Tradewright_UI/Libs/` | Minimap button. Kept as published: never edited, not linted; licences in `src/Tradewright_UI/THIRD-PARTY-NOTICES.md` |
 
 Load order: `Tradewright` → `Tradewright_AuctionData` + `Tradewright_Professions` → `Tradewright_Inventory` → `Tradewright_UI` → `Tradewright_Bags` (optional; the pack works without it).
 

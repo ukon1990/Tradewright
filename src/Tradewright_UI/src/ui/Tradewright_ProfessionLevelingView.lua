@@ -225,9 +225,9 @@ local function routeColumns(pe)
 			updateCell = function(cell, row)
 				cell.name:SetText(row.name)
 				if row.kind == "rankCap" then
-					cell.name:SetTextColor(warning.r, warning.g, warning.b)
+					Tradewright:ColorText(cell.name, warning)
 				else
-					cell.name:SetTextColor(1, 1, 1)
+					Tradewright:ColorText(cell.name, "textPrimary")
 				end
 				cell.detail:SetText(row.detailText)
 			end },
@@ -356,7 +356,6 @@ end
 
 -- Profession name, skill, a bar from the current skill to the route's end, and the rank-cap badge.
 local function createProgressLine(pe, host)
-	local theme = pe:GetTheme()
 	local line = CreateFrame("Frame", nil, host)
 	line:SetPoint("TOPLEFT")
 	line:SetPoint("TOPRIGHT")
@@ -372,10 +371,10 @@ local function createProgressLine(pe, host)
 	host.skillBar:SetPoint("LEFT", host.professionText, "RIGHT", 8, 0)
 	host.skillBar:SetPoint("RIGHT", host.endSkillText, "LEFT", -8, 0)
 	host.skillBar:SetStatusBarTexture("Interface\\Buttons\\WHITE8x8")
-	host.skillBar:SetStatusBarColor(theme.tick.r, theme.tick.g, theme.tick.b)
+	Tradewright:ColorStatusBar(host.skillBar, "tick")
 	local barBackground = host.skillBar:CreateTexture(nil, "BACKGROUND")
 	barBackground:SetAllPoints()
-	barBackground:SetColorTexture(theme.surface2.r, theme.surface2.g, theme.surface2.b, 1)
+	Tradewright:ColorTexture(barBackground, "surface2", 1)
 	return line
 end
 

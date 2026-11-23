@@ -24,7 +24,7 @@ TRANSLATED = re.compile(r'^\s*\[("(?:[^"\\\n]|\\.)*")\]\s*=', re.M)
 def code_files():
     for path in sorted(SRC.rglob("*.lua")):
         parts = path.relative_to(SRC).parts
-        if "tests" not in parts and "data" not in parts and "locale" not in parts:
+        if "tests" not in parts and "data" not in parts and "locale" not in parts and "Libs" not in parts:
             yield path
 
 

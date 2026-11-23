@@ -14,8 +14,7 @@ local bagParents = {} -- [bag] = frame whose ID is the bag, as the item button t
 local readOnly = {}
 
 -- Flat look over any button: 1px outline, dark fill, cropped icon, count bottom right.
-local function addLook(pe, button)
-	local theme = pe:GetTheme()
+local function addLook(button)
 	local name = button:GetName()
 	local normal = button.GetNormalTexture and button:GetNormalTexture()
 	if normal then
@@ -26,7 +25,7 @@ local function addLook(pe, button)
 	button.ahFill = button:CreateTexture(nil, "BACKGROUND", nil, 1)
 	button.ahFill:SetPoint("TOPLEFT", 1, -1)
 	button.ahFill:SetPoint("BOTTOMRIGHT", -1, 1)
-	button.ahFill:SetColorTexture(theme.surface3.r, theme.surface3.g, theme.surface3.b, 1)
+	Tradewright:ColorTexture(button.ahFill, "surface3", 1)
 	button.ahIcon = button.icon or (name and _G[name .. "IconTexture"]) or button:CreateTexture(nil, "ARTWORK")
 	button.ahIcon:ClearAllPoints()
 	button.ahIcon:SetPoint("TOPLEFT", 1, -1)
@@ -37,13 +36,13 @@ local function addLook(pe, button)
 	button.ahCount:SetPoint("BOTTOMRIGHT", -2, 2)
 	button.ahSelect = button:CreateTexture(nil, "OVERLAY")
 	button.ahSelect:SetAllPoints()
-	button.ahSelect:SetColorTexture(theme.gold.r, theme.gold.g, theme.gold.b, SELECT_ALPHA)
+	Tradewright:ColorTexture(button.ahSelect, "gold", SELECT_ALPHA)
 	button.ahSelect:Hide()
 	-- New item: a small gold corner, top left.
 	button.ahNew = button:CreateTexture(nil, "OVERLAY", nil, 1)
 	button.ahNew:SetSize(NEW_MARK, NEW_MARK)
 	button.ahNew:SetPoint("TOPLEFT", 1, -1)
-	button.ahNew:SetColorTexture(theme.gold.r, theme.gold.g, theme.gold.b, 1)
+	Tradewright:ColorTexture(button.ahNew, "gold", 1)
 	button.ahNew:Hide()
 	-- Starts a quest: the game's own yellow "!" over the icon, kept after the quest is accepted.
 	button.ahQuest = button:CreateTexture(nil, "OVERLAY", nil, 2)
@@ -83,7 +82,7 @@ local function hideGameGlows(button)
 	end
 end
 
-local function createLiveSlot(pe, content, bag, slot)
+local function createLiveSlot(content, bag, slot)
 	local name = string.format("TradewrightBagSlot%d_%d", bag, slot)
 	local parent = bagParent(content, bag)
 	-- Newer clients have an ItemButton frame type; older ones use a plain Button.
@@ -95,7 +94,7 @@ local function createLiveSlot(pe, content, bag, slot)
 	-- addon code wrote, and the game's click code passes that tainted value to protected calls,
 	-- which blocks using an item while a spell is targeting (Pick Lock on a lockbox).
 	button:SetID(slot)
-	addLook(pe, button)
+	addLook(button)
 	hideGameGlows(button)
 	button:HookScript("OnEnter", forgetNew)
 	return button
@@ -105,7 +104,7 @@ end
 function Tradewright:AcquireLiveBagSlot(content, bag, slot)
 	live[bag] = live[bag] or {}
 	if not live[bag][slot] then
-		live[bag][slot] = createLiveSlot(self, content, bag, slot)
+		live[bag][slot] = createLiveSlot(content, bag, slot)
 	end
 	return live[bag][slot]
 end
@@ -146,9 +145,9 @@ function Tradewright:AcquireReadOnlyBagSlot(content, index)
 		local pe = self
 		local gold = self:GetTheme().gold
 		local button = CreateFrame("Button", nil, content)
-		addLook(self, button)
+		addLook(button)
 		button:SetHighlightTexture(WHITE)
-		button:GetHighlightTexture():SetVertexColor(gold.r, gold.g, gold.b, 0.12)
+		Tradewright:TintTexture(button:GetHighlightTexture(), gold, 0.12)
 		button:SetScript("OnEnter", showSavedTooltip)
 		button:SetScript("OnLeave", GameTooltip_Hide)
 		button:SetScript("OnClick", function(self)
@@ -194,12 +193,12 @@ function Tradewright:SetBagSlotItem(button, item, look)
 	button.ahNew:SetShown(item.isNew == true)
 	button.ahQuest:SetShown(item.startsQuest == true)
 	button.ahItem = item
-	button.ahBorder:SetColorTexture(color.r, color.g, color.b, 1)
+	Tradewright:ColorTexture(button.ahBorder, color, 1)
 	button.ahFill:Show()
 	button.ahIcon:SetTexture(item.icon)
 	button.ahIcon:SetDesaturated(item.locked == true)
 	button.ahIcon:Show()
-	button.ahCount:SetTextColor(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b)
+	Tradewright:ColorText(button.ahCount, "textPrimary")
 	button.ahCount:SetText(item.count > 1 and item.count or "")
 	button.ahCount:Show()
 	button:SetAlpha(look.dim and DIM_ALPHA or 1)
@@ -208,15 +207,14 @@ end
 
 --- Draw the free-slot tile: an empty slot showing how many normal slots are free.
 function Tradewright:SetBagSlotFree(button, freeCount)
-	local theme = self:GetTheme()
 	button.ahItem = nil
 	button.ahSelect:Hide()
 	button.ahNew:Hide()
 	button.ahQuest:Hide()
-	button.ahBorder:SetColorTexture(theme.borderStrong.r, theme.borderStrong.g, theme.borderStrong.b, 1)
+	Tradewright:ColorTexture(button.ahBorder, "borderStrong", 1)
 	button.ahFill:Show()
 	button.ahIcon:Hide()
-	button.ahCount:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	Tradewright:ColorText(button.ahCount, "textMuted")
 	button.ahCount:SetText(freeCount)
 	button.ahCount:Show()
 	button:SetAlpha(1)

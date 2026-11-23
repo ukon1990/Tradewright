@@ -84,7 +84,7 @@ function Tradewright:CreateCraftQueueFooter(view)
 	view.footer:SetHeight(26)
 	view.clearButton = self:CreateButton(view.footer, L["Clear queue"], function() pe:ClearCraftQueue() end)
 	view.clearButton:SetPoint("RIGHT")
-	view.clearButton:GetFontString():SetTextColor(danger.r, danger.g, danger.b)
+	Tradewright:ColorText(view.clearButton:GetFontString(), danger)
 	view.clearOrdersButton = self:CreateButton(view.footer, L["Clear orders"], function()
 		if pe.ClearCraftingOrderQueue then
 			pe:ClearCraftingOrderQueue()

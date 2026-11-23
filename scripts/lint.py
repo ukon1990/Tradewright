@@ -4,7 +4,7 @@
 Checks:
   * luacheck (config: .luacheckrc) over all of src/  -> per-file warning counts
   * file length, function length, cyclomatic complexity and parameter count
-    for hand-written Lua (src/**, excluding tests/ and generated data/)
+    for hand-written Lua (src/**, excluding tests/, generated data/ and bundled Libs/)
   * no Lua comment cites a feature or epic id (F12, E09) in src/** including tests/,
     excluding generated data/; no baseline, any hit fails
 
@@ -76,10 +76,10 @@ def issue_id_comments(path: Path) -> list[tuple[int, str]]:
 
 
 def issue_id_fails() -> list[str]:
-    """Comment ids in src/** (tests included, generated data/ excluded), plus a fixture self-check."""
+    """Comment ids in src/** (tests included, generated data/ and bundled Libs/ excluded), plus a fixture self-check."""
     if issue_id_comments(ID_FIXTURE) != [(2, "E09"), (2, "F70")]:
         return [f"{rel(ID_FIXTURE)}: self-check failed - expected E09 and F70 on line 2 only"]
-    files = sorted(p for p in (ROOT / "src").rglob("*.lua") if "data" not in p.relative_to(ROOT).parts)
+    files = sorted(p for p in (ROOT / "src").rglob("*.lua") if not {"data", "Libs"} & set(p.relative_to(ROOT).parts))
     return [
         f"{rel(path)}:{line}: comment cites feature/epic id {found} - the issue and commit carry it"
         for path in files
@@ -144,7 +144,7 @@ def rel(path: Path) -> str:
 
 def metric_files() -> list[Path]:
     return sorted(
-        p for p in (ROOT / "src").rglob("*.lua") if not {"tests", "data"} & set(p.relative_to(ROOT).parts)
+        p for p in (ROOT / "src").rglob("*.lua") if not {"tests", "data", "Libs"} & set(p.relative_to(ROOT).parts)
     )
 
 

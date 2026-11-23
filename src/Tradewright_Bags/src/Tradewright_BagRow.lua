@@ -157,14 +157,13 @@ local function refreshCell(cell, info)
 end
 
 function Tradewright:CreateBagRow(parent)
-	local theme = self:GetTheme()
 	local row = CreateFrame("Frame", nil, parent)
 	row:SetHeight(self.BAG_ROW_HEIGHT)
 	row.heading = self:CreateHeading(row, L["Equipped bags"])
 	row.heading:SetPoint("TOPLEFT")
 	row.heading:SetPoint("TOPRIGHT")
 	row.divider = row:CreateTexture(nil, "ARTWORK")
-	row.divider:SetColorTexture(theme.borderStrong.r, theme.borderStrong.g, theme.borderStrong.b, 1)
+	Tradewright:ColorTexture(row.divider, "borderStrong", 1)
 	row.divider:SetSize(1, CELL_HEIGHT)
 	row.cells = {}
 	return row

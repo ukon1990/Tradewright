@@ -413,7 +413,7 @@ local function createPanelHeader(pe, f)
 	headerRule:SetPoint("TOPLEFT", 1, -theme.size.header)
 	headerRule:SetPoint("TOPRIGHT", -1, -theme.size.header)
 	headerRule:SetHeight(1)
-	headerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	Tradewright:ColorTexture(headerRule, "borderSubtle", 1)
 end
 
 -- Footer: when this profession was scanned.
@@ -427,7 +427,7 @@ local function createPanelFooter(pe, f)
 	footerRule:SetPoint("TOPLEFT")
 	footerRule:SetPoint("TOPRIGHT")
 	footerRule:SetHeight(1)
-	footerRule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	Tradewright:ColorTexture(footerRule, "borderSubtle", 1)
 	f.footerText = pe:CreateText(f.footer, "GameFontHighlightSmall", "textMuted")
 	f.footerText:SetPoint("LEFT", PAD, 0)
 	f.footerText:SetPoint("RIGHT", -PAD, 0)

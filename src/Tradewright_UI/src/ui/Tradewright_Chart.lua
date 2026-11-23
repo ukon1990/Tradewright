@@ -114,7 +114,7 @@ function ChartMixin:MutedText(justify)
 	local fs = self.plot:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	fs:SetWordWrap(false)
 	fs:SetJustifyH(justify or "LEFT")
-	fs:SetTextColor(muted.r, muted.g, muted.b)
+	Tradewright:ColorText(fs, muted)
 	return fs
 end
 
@@ -165,7 +165,7 @@ function ChartMixin:DrawLine(name, from, to, style)
 	end)
 	local color = style.color
 	line:SetThickness(style.thickness)
-	line:SetColorTexture(color.r, color.g, color.b, style.alpha or 1)
+	Tradewright:ColorTexture(line, color, style.alpha or 1)
 	line:SetStartPoint("BOTTOMLEFT", self.plot, from.x, from.y)
 	line:SetEndPoint("BOTTOMLEFT", self.plot, to.x, to.y)
 end
@@ -189,7 +189,7 @@ function ChartMixin:DrawFill(from, to, color)
 	if area.SetGradient and CreateColor then
 		area:SetGradient("VERTICAL", CreateColor(color.r, color.g, color.b, 0.02), CreateColor(color.r, color.g, color.b, 0.32))
 	else
-		area:SetVertexColor(color.r, color.g, color.b, 0.18)
+		Tradewright:TintTexture(area, color, 0.18)
 	end
 end
 
@@ -198,7 +198,7 @@ function ChartMixin:DrawMarker(name, at, color, size)
 	dot:ClearAllPoints()
 	dot:SetSize(size, size)
 	dot:SetPoint("CENTER", self.plot, "BOTTOMLEFT", at.x, at.y)
-	dot:SetVertexColor(color.r, color.g, color.b, 1)
+	Tradewright:TintTexture(dot, color, 1)
 end
 
 function ChartMixin:PlotRight()
@@ -253,7 +253,7 @@ function ChartMixin:DrawQuantityColumns()
 			column:ClearAllPoints()
 			column:SetPoint("BOTTOM", self.plot, "BOTTOMLEFT", self.scales.xAt(p.at), self.padBottom)
 			column:SetSize(columnWidth, height)
-			column:SetColorTexture(color.r, color.g, color.b, 0.35)
+			Tradewright:ColorTexture(column, color, 0.35)
 		end
 	end
 end
@@ -307,13 +307,13 @@ function ChartMixin:DrawLastValue()
 	end)
 	local surface, accent = self.theme.surface1, self.colors.primary
 	pillText:SetText(self.yFormatter(last.value))
-	pillText:SetTextColor(surface.r, surface.g, surface.b)
+	Tradewright:ColorText(pillText, surface)
 	pillText:ClearAllPoints()
 	local pillY = lastY + 14 <= self.padBottom + self.box.height and lastY + 6 or lastY - 22
 	pill:ClearAllPoints()
 	pill:SetSize(math.ceil(pillText:GetStringWidth()) + 10, 16)
 	pill:SetPoint("BOTTOMRIGHT", self.plot, "BOTTOMLEFT", math.min(lastX, self:PlotRight()), pillY)
-	pill:SetColorTexture(accent.r, accent.g, accent.b, 1)
+	Tradewright:ColorTexture(pill, accent, 1)
 	pillText:SetPoint("CENTER", pill, "CENTER", 0, 0)
 	pillText:SetDrawLayer("OVERLAY", 5)
 end
@@ -347,7 +347,7 @@ function ChartMixin:DrawLegend()
 		swatch:SetSize(10, key == "quantity" and 6 or 2)
 		swatch:SetPoint("RIGHT", label, "LEFT", -4, 0)
 		local color = self.colors[key]
-		swatch:SetColorTexture(color.r, color.g, color.b, 1)
+		Tradewright:ColorTexture(swatch, color, 1)
 		x = x - label:GetStringWidth() - 30
 	end
 end
@@ -401,7 +401,7 @@ function ChartMixin:CreateHoverMarks()
 	local muted = self.theme.textMuted
 	local crosshair = self.plot:CreateLine(nil, "OVERLAY", nil, 0)
 	crosshair:SetThickness(1)
-	crosshair:SetColorTexture(muted.r, muted.g, muted.b, 0.6)
+	Tradewright:ColorTexture(crosshair, muted, 0.6)
 	crosshair:Hide()
 	self.crosshair = crosshair
 	self.halo = self:CreateHoverDot(2, 12)
@@ -470,11 +470,11 @@ function ChartMixin:ShowHoverMarks(target)
 	self.crosshair:Show()
 	self.halo:ClearAllPoints()
 	self.halo:SetPoint("CENTER", plot, "BOTTOMLEFT", target.x, target.y)
-	self.halo:SetVertexColor(1, 1, 1, 0.9)
+	Tradewright:TintTexture(self.halo, "textPrimary", 0.9)
 	self.halo:Show()
 	self.hoverDot:ClearAllPoints()
 	self.hoverDot:SetPoint("CENTER", plot, "BOTTOMLEFT", target.x, target.y)
-	self.hoverDot:SetVertexColor(color.r, color.g, color.b, 1)
+	Tradewright:TintTexture(self.hoverDot, color, 1)
 	self.hoverDot:Show()
 end
 

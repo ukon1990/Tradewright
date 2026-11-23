@@ -2,7 +2,7 @@ local _, Tradewright = ...
 
 local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 local function setColor(fontString, color)
-	fontString:SetTextColor(color.r, color.g, color.b)
+	Tradewright:ColorText(fontString, color)
 end
 
 local function newText(parent, font, color, justify)
@@ -92,7 +92,7 @@ function Tradewright:CreateHeading(parent, label)
 	heading.rule:SetHeight(1)
 	heading.rule:SetPoint("LEFT", heading.text, "RIGHT", 8, 0)
 	heading.rule:SetPoint("RIGHT", heading, "RIGHT", 0, 0)
-	heading.rule:SetColorTexture(theme.borderSubtle.r, theme.borderSubtle.g, theme.borderSubtle.b, 1)
+	Tradewright:ColorTexture(heading.rule, "borderSubtle", 1)
 	function heading:SetText(text)
 		self.text:SetText(text or "")
 	end
@@ -198,12 +198,12 @@ function Tradewright:StyleProgressBar(bar)
 	local theme = self:GetTheme()
 	bar:SetHeight(14)
 	bar:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
-	bar:SetStatusBarColor(theme.tick.r, theme.tick.g, theme.tick.b, 1)
+	Tradewright:ColorStatusBar(bar, "tick", 1)
 	bar:SetMinMaxValues(0, 1)
 	if not bar.ahTrack then
 		bar.ahTrack = bar:CreateTexture(nil, "BACKGROUND")
 		bar.ahTrack:SetAllPoints()
-		bar.ahTrack:SetColorTexture(theme.surface3.r, theme.surface3.g, theme.surface3.b, 1)
+		Tradewright:ColorTexture(bar.ahTrack, "surface3", 1)
 		self:AddSurface(bar, { r = 0, g = 0, b = 0, a = 0 }, theme.borderStrong, 1, 1)
 	end
 	return bar
@@ -356,9 +356,8 @@ local DEFAULT_ITEM_ICON = 134400
 -- Quality colour of an item (white when unknown) and its icon.
 function Tradewright:GetItemLook(itemID)
 	local desc = itemID and self:ResolveItemDescriptor(tonumber(itemID) or itemID) or nil
-	local quality = desc and desc.quality
-	local color = quality and ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[quality]
-	return desc and desc.icon or DEFAULT_ITEM_ICON, color or { r = 1, g = 1, b = 1 }
+	local color = self:GetQualityColor(desc and desc.quality)
+	return desc and desc.icon or DEFAULT_ITEM_ICON, color or self:GetTheme().textPrimary
 end
 
 -- An 18px item icon outlined in its quality colour. `size` overrides (32 for detail headers).
@@ -374,7 +373,7 @@ function Tradewright:CreateItemIcon(parent, size)
 	function holder:SetItem(itemID, iconOverride)
 		local icon, color = Tradewright:GetItemLook(itemID)
 		self.icon:SetTexture(iconOverride or icon)
-		self.border:SetColorTexture(color.r, color.g, color.b, 0.9)
+		Tradewright:ColorTexture(self.border, color, 0.9)
 	end
 	return holder
 end
@@ -432,7 +431,7 @@ function Tradewright:CreateItemColumn(spec)
 		local _, color = pe:GetItemLook(itemID)
 		cell.icon:SetItem(itemID, spec.getIcon and spec.getIcon(row) or nil)
 		cell.name:SetText(spec.getName(row) or ("#" .. tostring(itemID or "?")))
-		cell.name:SetTextColor(color.r, color.g, color.b)
+		Tradewright:ColorText(cell.name, color)
 		setItemCellDetail(cell, spec.getDetail and spec.getDetail(row) or nil)
 	end
 	return column
@@ -449,7 +448,7 @@ function Tradewright:CreateBadge(parent)
 		local theme = Tradewright:GetTheme()
 		local color = theme[colorKey or "textMuted"] or theme.textMuted
 		self.text:SetText(string.upper(text or ""))
-		self.text:SetTextColor(color.r, color.g, color.b)
+		Tradewright:ColorText(self.text, color)
 		self.surface:SetColors(nil, color)
 		self:SetWidth(math.ceil(self.text:GetStringWidth()) + 12)
 		self:SetShown(text ~= nil and text ~= "")
@@ -485,7 +484,7 @@ function Tradewright:CreateDetailHeader(parent, onClose, onPopOut)
 		self.icon:SetItem(itemID, iconOverride)
 		self.icon:Show()
 		self.title:SetText(title or "")
-		self.title:SetTextColor(color.r, color.g, color.b)
+		Tradewright:ColorText(self.title, color)
 		self.subtitle:SetText(subtitle or "")
 	end
 	return header

@@ -44,7 +44,7 @@ local function createRow(pe, content)
 	row.name:SetPoint("RIGHT", row.why, "LEFT", -8, 0)
 	row.name:SetWordWrap(false)
 	row:SetHighlightTexture(WHITE)
-	row:GetHighlightTexture():SetVertexColor(gold.r, gold.g, gold.b, 0.12)
+	Tradewright:TintTexture(row:GetHighlightTexture(), gold, 0.12)
 	row:SetScript("OnEnter", showTooltip)
 	row:SetScript("OnLeave", GameTooltip_Hide)
 	row:SetScript("OnClick", function(self)
@@ -57,13 +57,13 @@ local function fillRow(pe, row, entry)
 	local theme = pe:GetTheme()
 	local item = pe:DescribeBagItem(entry.id, { count = 1 })
 	local tone = entry.n > 0 and theme.success or theme.danger
-	local quality = ITEM_QUALITY_COLORS and ITEM_QUALITY_COLORS[item.quality] or theme.textPrimary
+	local quality = pe:GetQualityColor(item.quality) or theme.textPrimary
 	row.entry = entry
 	row.icon:SetTexture(item.icon)
 	row.count:SetText(string.format("%+d", entry.n))
-	row.count:SetTextColor(tone.r, tone.g, tone.b)
+	Tradewright:ColorText(row.count, tone)
 	row.name:SetText(item.name)
-	row.name:SetTextColor(quality.r, quality.g, quality.b)
+	Tradewright:ColorText(row.name, quality)
 	row.why:SetText(pe.ItemLogLogic.Describe(entry) .. "  ·  " .. pe.TooltipLogic.AgeText(time() - entry.t))
 end
 

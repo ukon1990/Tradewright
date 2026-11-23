@@ -1,107 +1,64 @@
-local addonName, Tradewright = ...
+local _, Tradewright = ...
 
 local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
 -- Minimap button: click opens the dashboard, right-click the settings tab, drag moves it round the minimap.
+-- LibDBIcon draws and drags the button, so addons that gather minimap buttons recognise it.
 
+local LibDataBroker = LibStub("LibDataBroker-1.1")
+local LibDBIcon = LibStub("LibDBIcon-1.0")
+
+local ICON_NAME = Tradewright.DISPLAY_NAME
+local SHOW_SETTING = "general.showMinimapButton"
+local ANGLE_SETTING = "integrations.minimapButtonAngle"
 local DEFAULT_ANGLE = 225
 local TOOLTIP_LINES = { { "Click", L["Open Tradewright"] }, { "Right-click", L["Open settings"] }, { "Drag", L["Move this button"] } }
 
--- Standard minimap-button layout (same offsets as LibDBIcon): the tracking-border
--- ring sits in the top-left of its texture, so everything anchors TOPLEFT, not CENTER.
-local function addButtonTextures(button)
-	local background = button:CreateTexture(nil, "BACKGROUND")
-	background:SetTexture("Interface/Minimap/UI-Minimap-Background")
-	background:SetSize(20, 20)
-	background:SetPoint("TOPLEFT", 7, -5)
-	local icon = button:CreateTexture(nil, "ARTWORK")
-	icon:SetSize(17, 17)
-	icon:SetPoint("TOPLEFT", 7, -6)
-	icon:SetTexture(Tradewright.ADDON_ICON)
-	icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
-	button.icon = icon
-	local border = button:CreateTexture(nil, "OVERLAY")
-	border:SetTexture("Interface/Minimap/MiniMap-TrackingBorder")
-	border:SetSize(53, 53)
-	border:SetPoint("TOPLEFT")
-end
+-- LibDBIcon reads `hide` and `minimapPos` from the table it is given and writes `minimapPos`
+-- while the button is dragged. This table maps both fields onto the settings the button has
+-- always used, so the saved format stays as it was.
+local iconSettings = setmetatable({}, {
+	__index = function(_, field)
+		if field == "hide" then
+			return not Tradewright:GetSetting(SHOW_SETTING, true)
+		elseif field == "minimapPos" then
+			return tonumber(Tradewright:GetSetting(ANGLE_SETTING, DEFAULT_ANGLE)) or DEFAULT_ANGLE
+		end
+	end,
+	__newindex = function(_, field, value)
+		if field == "minimapPos" then
+			Tradewright:SetSetting(ANGLE_SETTING, value)
+		end
+	end,
+})
 
--- Saves the angle from the minimap centre to the cursor and moves the button there.
-local function followCursor(button)
-	Tradewright:InitDB()
-	local centerX, centerY = Minimap:GetCenter()
-	local cursorX, cursorY = GetCursorPosition()
-	local scale = Minimap:GetEffectiveScale()
-	cursorX, cursorY = cursorX / scale, cursorY / scale
-	Tradewright:SetSetting("integrations.minimapButtonAngle", math.deg(math.atan2(cursorY - centerY, cursorX - centerX)))
-	Tradewright:UpdateMinimapButtonPosition(button)
-end
-
-local function showTooltip(button)
+local function addTooltipLines(tooltip)
 	local theme = Tradewright:GetTheme()
 	local muted = theme.textMuted
-	GameTooltip:SetOwner(button, "ANCHOR_LEFT")
-	GameTooltip:SetText(Tradewright.DISPLAY_NAME, theme.gold.r, theme.gold.g, theme.gold.b)
+	tooltip:AddLine(Tradewright.DISPLAY_NAME, theme.gold.r, theme.gold.g, theme.gold.b)
 	for _, pair in ipairs(TOOLTIP_LINES) do
-		GameTooltip:AddDoubleLine(pair[1], pair[2], muted.r, muted.g, muted.b, 1, 1, 1)
+		tooltip:AddDoubleLine(pair[1], pair[2], muted.r, muted.g, muted.b, 1, 1, 1)
 	end
-	GameTooltip:Show()
 end
 
-local function bindButtonScripts(button)
-	button:SetScript("OnClick", function(_, mouse)
-		if mouse == "RightButton" then
-			Tradewright:OpenSettingsTab()
-		else
-			Tradewright:ToggleDashboard()
-		end
-	end)
-	button:SetScript("OnDragStart", function(self)
-		self:SetScript("OnUpdate", followCursor)
-	end)
-	button:SetScript("OnDragStop", function(self)
-		self:SetScript("OnUpdate", nil)
-	end)
-	button:SetScript("OnEnter", showTooltip)
-	button:SetScript("OnLeave", GameTooltip_Hide)
-end
-
-local function createMinimapButton()
-	local button = CreateFrame("Button", addonName .. "MinimapButton", Minimap)
-	button:SetSize(31, 31)
-	button:SetFrameStrata("MEDIUM")
-	button:SetFrameLevel(Minimap:GetFrameLevel() + 8)
-	button:SetHighlightTexture("Interface/Minimap/UI-Minimap-ZoomButton-Highlight", "ADD")
-	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-	button:RegisterForDrag("LeftButton")
-	addButtonTextures(button)
-	bindButtonScripts(button)
-	return button
+local function createLauncher()
+	return LibDataBroker:NewDataObject(ICON_NAME, {
+		type = "launcher",
+		icon = Tradewright.ADDON_ICON,
+		OnClick = function(_, mouse)
+			if mouse == "RightButton" then
+				Tradewright:OpenSettingsTab()
+			else
+				Tradewright:ToggleDashboard()
+			end
+		end,
+		OnTooltipShow = addTooltipLines,
+	})
 end
 
 --- Creates the button once; afterwards shows or hides it by the "Show minimap button" setting.
 function Tradewright:EnsureMinimapButton()
-	if not Minimap then
-		return
+	if not LibDBIcon:IsRegistered(ICON_NAME) then
+		LibDBIcon:Register(ICON_NAME, createLauncher(), iconSettings)
 	end
-	self:InitDB()
-	local ui = self.ui
-	local showButton = self:GetSetting("general.showMinimapButton", true)
-	if not ui.minimapButton then
-		ui.minimapButton = createMinimapButton()
-	end
-	ui.minimapButton:SetShown(showButton)
-	if showButton then
-		self:UpdateMinimapButtonPosition(ui.minimapButton)
-	end
-end
-
-function Tradewright:UpdateMinimapButtonPosition(button)
-	if not button or not Minimap then
-		return
-	end
-	local degrees = tonumber(self:GetSetting("integrations.minimapButtonAngle", DEFAULT_ANGLE)) or DEFAULT_ANGLE
-	local radians = math.rad(degrees)
-	local radius = (math.min(Minimap:GetWidth(), Minimap:GetHeight()) * 0.5) + 5
-	button:ClearAllPoints()
-	button:SetPoint("CENTER", Minimap, "CENTER", math.cos(radians) * radius, math.sin(radians) * radius)
+	LibDBIcon:Refresh(ICON_NAME)
 end

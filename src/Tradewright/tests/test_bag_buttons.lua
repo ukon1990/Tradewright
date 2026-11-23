@@ -49,15 +49,13 @@ _G.CreateFrame = function(_, name, parent, template)
 	return newFrame(name, parent, template)
 end
 
-local pe = {
-	GetTheme = function()
-		local color = { r = 1, g = 1, b = 1 }
-		return { surface3 = color, gold = color }
-	end,
-}
-local chunk, err = loadfile(root .. "/../Tradewright_Bags/src/Tradewright_BagButtons.lua")
-assert(chunk, err)
-chunk("Tradewright_Bags", pe)
+local pe = {}
+for _, path in ipairs({ "/src/util/Tradewright_ThemeLogic.lua", "/src/ui/Tradewright_Theme.lua",
+	"/../Tradewright_Bags/src/Tradewright_BagButtons.lua" }) do
+	local chunk, err = loadfile(root .. path)
+	assert(chunk, err)
+	chunk("Tradewright_Bags", pe)
+end
 
 local content = newFrame(nil, nil)
 local button = pe:AcquireLiveBagSlot(content, 3, 7)

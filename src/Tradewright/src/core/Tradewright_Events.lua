@@ -26,6 +26,7 @@ local function onAddonLoaded(self, loadedAddonName)
 	self.baseDb.meta.familyLoaded = self.baseDb.meta.familyLoaded or {}
 	self.baseDb.meta.familyLoaded[loadedAddonName] = time()
 	if loadedAddonName == addonName then
+		self:ApplyThemeSetting()
 		self.baseDb.meta.lastLoad = {
 			loadedAt = time(),
 			addonVersion = self.VERSION,

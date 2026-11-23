@@ -11,6 +11,8 @@ local CONTENT_MAX_WIDTH = 640
 local SECTION_GAP = 16
 local ROW_GAP = 6
 local SELECT_WIDTH = 150
+local SETTING_ROW_HEIGHT = 26
+local ThemeLogic = Tradewright.ThemeLogic
 
 local function refreshEconomy(pe)
 	pe:RefreshInventoryTabIfVisible()
@@ -66,6 +68,27 @@ local function generalSection(pe)
 			onChange = function() pe:EnsureMinimapButton() end },
 		{ kind = "select", label = L["Window scale"], path = "appearance.windowScale", default = 1,
 			options = pe:GetWindowScaleOptions(), onChange = function() pe:ApplyWindowScale() end },
+		{ kind = "check", label = L["Tell me when a newer version is available"], path = "general.versionNotice", default = true },
+	} }
+end
+
+local function appearanceSection(pe)
+	local function isCustom()
+		return pe:GetSetting("appearance.theme") == ThemeLogic.CUSTOM_THEME
+	end
+	local function applyTheme()
+		pe:ApplyThemeChange()
+	end
+	return { title = L["Appearance"], items = {
+		{ kind = "select", label = L["Theme"], path = "appearance.theme", default = ThemeLogic.DEFAULT_THEME,
+			options = ThemeLogic.Choices(), onChange = applyTheme },
+		{ kind = "color", label = L["Background"], path = "appearance.customTheme.background", seedColor = "background",
+			visible = isCustom, onChange = applyTheme },
+		{ kind = "color", label = L["Highlight"], path = "appearance.customTheme.highlight", seedColor = "highlight",
+			visible = isCustom, onChange = applyTheme },
+		{ kind = "note", visible = isCustom,
+			text = L["Text, panel and border colours are worked out from these two, so the window stays readable with any choice."] },
+		{ kind = "note", text = L["Game tooltips and menus keep the game's own colours."] },
 	} }
 end
 
@@ -262,11 +285,11 @@ local function bagsSection()
 	} }
 end
 
--- Every setting, grouped into the categories listed on the left. Item kind: check | select | note.
+-- Every setting, grouped into the categories listed on the left. Item kind: check | select | color | note.
 -- A section or item with `visible(pe)` is hidden when it returns false; empty sections and categories hide too.
 local function buildCategories(pe)
 	return {
-		{ key = "general", label = L["General"], sections = { generalSection(pe), farmingSection(), troubleshootingSection() } },
+		{ key = "general", label = L["General"], sections = { generalSection(pe), appearanceSection(pe), farmingSection(), troubleshootingSection() } },
 		{ key = "prices", label = L["Prices"], sections = { auctionHouseSection(pe), feesSection(), goldSection() } },
 		{ key = "opportunities", label = L["Opportunities"], sections = { opportunitiesSection() } },
 		{ key = "crafting", label = L["Crafting"], sections = { craftsSection(), professionScanSection(), craftingOrdersSection() } },
@@ -303,7 +326,7 @@ end
 
 local function createSelect(pe, parent, item)
 	local row = CreateFrame("Frame", nil, parent)
-	row:SetHeight(26)
+	row:SetHeight(SETTING_ROW_HEIGHT)
 	row.select = pe:CreateSettingDropdown(row, {
 		setting = item.path,
 		default = item.default,
@@ -322,11 +345,34 @@ local function createSelect(pe, parent, item)
 	return row
 end
 
+-- A colour of the custom theme. Until the player has picked one, it shows the colour of the theme in use.
+local function createColor(pe, parent, item)
+	local row = CreateFrame("Frame", nil, parent)
+	row:SetHeight(SETTING_ROW_HEIGHT)
+	row.swatch = pe:CreateColorSwatch(row, function()
+		return pe:GetSetting(item.path) or pe:GetThemeSeed()[item.seedColor]
+	end, function(color)
+		pe:SetSetting(item.path, color)
+		runOnChange(pe, item)
+	end)
+	row.swatch:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+	row.label = pe:CreateText(row, "GameFontHighlightSmall")
+	row.label:SetPoint("LEFT", row, "LEFT", 0, 0)
+	row.label:SetPoint("RIGHT", row.swatch, "LEFT", -12, 0)
+	row.label:SetText(item.label)
+	return row
+end
+
+-- Kinds drawn as a full-width row: label on the left, control on the right.
+local ROW_KINDS = { select = true, color = true }
+
 local function createItem(pe, parent, item)
 	if item.kind == "check" then
 		item.control = createCheck(pe, parent, item)
 	elseif item.kind == "select" then
 		item.control = createSelect(pe, parent, item)
+	elseif item.kind == "color" then
+		item.control = createColor(pe, parent, item)
 	else
 		item.control = pe:CreateParagraph(parent)
 	end
@@ -337,8 +383,8 @@ local function itemHeight(item)
 		local label = item.control.Text
 		return math.max(22, math.ceil(label and label:GetStringHeight() or 0) + 8)
 	end
-	if item.kind == "select" then
-		return 26
+	if ROW_KINDS[item.kind] then
+		return SETTING_ROW_HEIGHT
 	end
 	return math.ceil(item.control:GetStringHeight())
 end
@@ -371,7 +417,7 @@ local function placeItem(item, frame, width, top)
 	control:ClearAllPoints()
 	if item.kind == "check" then
 		control:SetPoint("TOPLEFT", frame, "TOPLEFT", -4, -top)
-	elseif item.kind == "select" then
+	elseif ROW_KINDS[item.kind] then
 		control:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -top)
 		control:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, -top)
 	else
@@ -503,6 +549,8 @@ local function refreshItem(pe, item)
 		item.control:SetChecked(pe:GetSetting(item.path, item.default) and true or false)
 	elseif item.kind == "select" then
 		item.control.select:RefreshText()
+	elseif item.kind == "color" then
+		item.control.swatch:Refresh()
 	else
 		item.control:SetText(type(item.text) == "function" and item.text(pe) or item.text)
 	end

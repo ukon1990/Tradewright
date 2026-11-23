@@ -75,7 +75,7 @@ local function createMailRow(pe, parent)
 	local gold = pe:GetTheme().gold
 	row.openFill = row:CreateTexture(nil, "BACKGROUND", nil, 1)
 	row.openFill:SetAllPoints()
-	row.openFill:SetColorTexture(gold.r, gold.g, gold.b, 0.07)
+	Tradewright:ColorTexture(row.openFill, gold, 0.07)
 	row:EnableMouse(true)
 	row:SetScript("OnEnter", function(self) showDestTooltip(pe, self) end)
 	row:SetScript("OnLeave", GameTooltip_Hide)
@@ -184,7 +184,7 @@ local function addRule(parent, inset, offsetY)
 	rule:SetPoint("TOPLEFT", inset, offsetY)
 	rule:SetPoint("TOPRIGHT", -inset, offsetY)
 	rule:SetHeight(1)
-	rule:SetColorTexture(border.r, border.g, border.b, 1)
+	Tradewright:ColorTexture(rule, border, 1)
 end
 
 -- Header: title and the collapse button.

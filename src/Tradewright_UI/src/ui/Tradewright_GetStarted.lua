@@ -6,6 +6,7 @@ local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return
 
 local WINDOW_WIDTH, STEP_HEIGHT, PAD, GAP = 420, 44, 12, 8
 local TEXT_LEFT, STATE_WIDTH = 36, 60
+local THEME_SELECT_WIDTH = 120
 local SEEN_SETTING, DONE_SETTING = "general.getStartedSeen", "general.getStartedDone"
 
 local function stepTexts(pe)
@@ -65,6 +66,33 @@ local function createStepRow(pe, parent, number)
 	return row
 end
 
+-- The theme choice, offered here because a new player has not found Settings yet. Not a step:
+-- it has no number and never counts toward the progress.
+local function createThemeRow(pe, parent)
+	local ThemeLogic = pe.ThemeLogic
+	local row = pe:CreateInset(parent)
+	row:SetHeight(STEP_HEIGHT)
+	row.select = pe:CreateSettingDropdown(row, {
+		setting = "appearance.theme",
+		default = ThemeLogic.DEFAULT_THEME,
+		width = THEME_SELECT_WIDTH,
+		choices = ThemeLogic.Choices(),
+		onChanged = function()
+			pe:ApplyThemeChange()
+		end,
+	})
+	row.select:SetPoint("RIGHT", -10, 0)
+	local title = pe:CreateText(row, "GameFontHighlight")
+	title:SetPoint("TOPLEFT", TEXT_LEFT, -7)
+	title:SetPoint("RIGHT", row.select, "LEFT", -GAP, 0)
+	title:SetText(L["Pick the colours of the window"])
+	local detail = pe:CreateText(row, "GameFontHighlightSmall", "textMuted")
+	detail:SetPoint("BOTTOMLEFT", TEXT_LEFT, 7)
+	detail:SetPoint("RIGHT", row.select, "LEFT", -GAP, 0)
+	detail:SetText(L["Change it later, or pick your own colours, under Settings > General."])
+	return row
+end
+
 -- Right-hand note of a step: done, how far the scan days are, or that it is the one to do next.
 local function stepStateText(pe, step, isNext, scanDays)
 	if step.done then
@@ -86,8 +114,8 @@ local function refreshStepRows(pe, window, progress, scanDays)
 		row.title:SetText(texts[step.id].title)
 		row.detail:SetText(texts[step.id].detail)
 		row.state:SetText(stepStateText(pe, step, isNext, scanDays))
-		row.number:SetTextColor(color.r, color.g, color.b)
-		row.state:SetTextColor(color.r, color.g, color.b)
+		Tradewright:ColorText(row.number, color)
+		Tradewright:ColorText(row.state, color)
 	end
 end
 
@@ -112,7 +140,7 @@ local function createTitleBar(pe, window)
 	return headerHeight
 end
 
--- Intro line, the three step rows and the Got it button, stacked under the title bar.
+-- Intro line, the three step rows, the theme row and the Got it button, stacked under the title bar.
 local function createWindowBody(pe, window, top)
 	local intro = pe:CreateText(window, "GameFontHighlightSmall", "textMuted")
 	intro:SetPoint("TOPLEFT", PAD, -top)
@@ -127,6 +155,10 @@ local function createWindowBody(pe, window, top)
 		window.stepRows[number] = row
 		y = y + STEP_HEIGHT + GAP
 	end
+	window.themeRow = createThemeRow(pe, window)
+	window.themeRow:SetPoint("TOPLEFT", PAD, -y)
+	window.themeRow:SetPoint("TOPRIGHT", -PAD, -y)
+	y = y + STEP_HEIGHT + GAP
 	local gotIt = pe:CreateButton(window, L["Got it"], function()
 		closeWindow(pe)
 	end, { solid = true })
@@ -164,7 +196,10 @@ end
 
 function Tradewright:OpenGetStarted()
 	local progress, scanDays = startProgress(self)
-	refreshStepRows(self, ensureWindow(self), progress, scanDays)
+	local window = ensureWindow(self)
+	refreshStepRows(self, window, progress, scanDays)
+	-- The theme may have been changed in Settings since the window was last open.
+	window.themeRow.select:RefreshText()
 	self.ui.getStartedCover:Show()
 end
 

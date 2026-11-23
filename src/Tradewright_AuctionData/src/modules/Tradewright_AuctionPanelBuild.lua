@@ -147,6 +147,7 @@ local function buildPanelHeader(panel, w)
 	stats:SetJustifyH("LEFT")
 	stats:SetJustifyV("TOP")
 	stats:SetWordWrap(true)
+	Tradewright:ColorText(stats, "textPrimary")
 	panel.stats = stats
 	w.title, w.stats = title, stats
 end
@@ -402,6 +403,7 @@ local function buildProgressWidgets(self, panel)
 	panel.progressText:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 44)
 	panel.progressText:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -10, 44)
 	panel.progressText:SetJustifyH("LEFT")
+	Tradewright:ColorText(panel.progressText, "textPrimary")
 	panel.progressText:SetText("")
 	panel.progressBar = CreateFrame("StatusBar", nil, panel)
 	panel.progressBar:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 10, 24)

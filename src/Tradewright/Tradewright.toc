@@ -32,6 +32,8 @@ src\util\Tradewright_TooltipLogic.lua
 src\util\Tradewright_FilterLogic.lua
 src\util\Tradewright_StartLogic.lua
 src\util\Tradewright_ChartLogic.lua
+src\util\Tradewright_ThemeLogic.lua
+src\util\Tradewright_VersionLogic.lua
 src\core\Tradewright_Data.lua
 src\core\Tradewright_ProfessionSpecTree.lua
 src\core\Tradewright_ProfessionScan.lua
@@ -51,4 +53,5 @@ src\data\Tradewright_EnchantScrollData.lua
 src\modules\Tradewright_Sources.lua
 src\modules\Tradewright_LootSightings.lua
 src\modules\Tradewright_SalvageSightings.lua
+src\modules\Tradewright_VersionNotice.lua
 src\core\Tradewright_Events.lua

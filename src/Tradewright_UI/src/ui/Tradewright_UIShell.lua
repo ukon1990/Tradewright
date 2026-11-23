@@ -37,7 +37,7 @@ local function addRule(frame, edge, color)
 	rule:SetPoint(edge .. "LEFT")
 	rule:SetPoint(edge .. "RIGHT")
 	rule:SetHeight(1)
-	rule:SetColorTexture(color.r, color.g, color.b, color.a or 1)
+	Tradewright:ColorTexture(rule, color, color.a or 1)
 	return rule
 end
 
@@ -52,15 +52,15 @@ local function createTabButton(parent, label)
 	button:SetFontString(text)
 	button:SetWidth(math.ceil(text:GetStringWidth()) + 20)
 	button:SetHighlightTexture("Interface\\Buttons\\WHITE8X8")
-	button:GetHighlightTexture():SetVertexColor(1, 1, 1, 0.04)
+	Tradewright:TintTexture(button:GetHighlightTexture(), "hover")
 	button.underline = button:CreateTexture(nil, "OVERLAY")
 	button.underline:SetPoint("BOTTOMLEFT")
 	button.underline:SetPoint("BOTTOMRIGHT")
 	button.underline:SetHeight(2)
-	button.underline:SetColorTexture(theme.gold.r, theme.gold.g, theme.gold.b, 1)
+	Tradewright:ColorTexture(button.underline, "gold", 1)
 	button:SetScript("OnEnter", function(self)
 		if not self.selected then
-			self:GetFontString():SetTextColor(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b)
+			Tradewright:ColorText(self:GetFontString(), "textPrimary")
 		end
 	end)
 	button:SetScript("OnLeave", function(self)
@@ -73,7 +73,7 @@ function Tradewright:StyleDashboardTab(button, selected)
 	local theme = self:GetTheme()
 	local color = selected and theme.gold or theme.textMuted
 	button.selected = selected and true or nil
-	button:GetFontString():SetTextColor(color.r, color.g, color.b)
+	Tradewright:ColorText(button:GetFontString(), color)
 	button.underline:SetShown(selected and true or false)
 end
 
@@ -278,12 +278,13 @@ function Tradewright:CreateDashboardTitleBar(frame)
 	frame.subtitle:SetPoint("RIGHT", frame.closeButton, "LEFT", -10, 0)
 	frame.subtitle:SetJustifyH("RIGHT")
 	frame.subtitle:SetWordWrap(false)
-	frame.subtitle:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+	Tradewright:ColorText(frame.subtitle, "textMuted")
 	frame.title = frame.titleBar:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 	frame.title:SetPoint("LEFT", frame.icon, "RIGHT", 8, 0)
 	frame.title:SetPoint("RIGHT", frame.subtitle, "LEFT", -12, 0)
 	frame.title:SetJustifyH("LEFT")
 	frame.title:SetWordWrap(false)
+	Tradewright:ColorText(frame.title, "gold")
 	frame.title:SetText(Tradewright.DISPLAY_NAME)
 end
 
@@ -344,7 +345,7 @@ function Tradewright:CreateDashboardStatusBar(frame)
 	frame.statusText:SetJustifyH("LEFT")
 	for _, text in ipairs({ frame.statusText, frame.statusRight }) do
 		text:SetWordWrap(false)
-		text:SetTextColor(theme.textMuted.r, theme.textMuted.g, theme.textMuted.b)
+		Tradewright:ColorText(text, "textMuted")
 	end
 end
 
@@ -511,6 +512,18 @@ function Tradewright:ApplyThemeToUI()
 		end
 	end
 	self:SkinTree(ui.mainFrame)
+end
+
+--- Redraws what is open after a theme change: row and cell colours are set again on every redraw.
+function Tradewright:RefreshThemedWindows()
+	local mainFrame = self.ui and self.ui.mainFrame
+	if mainFrame and mainFrame:IsShown() then
+		self:ApplyThemeToUI()
+		self:RefreshDashboard(true)
+	end
+	if self.RefreshBagWindow then
+		self:RefreshBagWindow()
+	end
 end
 
 -- The module drawing a tab (from TAB_ORDER), cached in ui.tabModules.
