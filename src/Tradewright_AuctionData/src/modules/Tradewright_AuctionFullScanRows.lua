@@ -11,6 +11,8 @@ local CLASSIC_AH_DUMP_QUERY_RETRY_SEC = 0.5
 local CLASSIC_AH_DUMP_QUERY_MAX_RETRIES = 40
 
 local CLASSIC_AH_DUMP_NEXT_PAGE_SEC = 0.15
+-- How long the scan waits after the last page for a late answer to its own query.
+local CLASSIC_AH_DUMP_LAST_PAGE_SETTLE_SEC = 2
 
 function Tradewright:IsAuctionDumpAhOriginPrice(row)
 	if type(row) ~= "table" then
@@ -200,7 +202,7 @@ function Tradewright:StartClassicFullAuctionDump(existingToken)
 		index = 0,
 		persistDone = 0,
 		persistTotal = 0,
-		aggregate = {},
+		pages = {},
 		pageSize = CLASSIC_AH_DUMP_PAGE_SIZE,
 		queryRetries = 0,
 	}
@@ -245,54 +247,76 @@ function Tradewright:QueryClassicAuctionDumpPage(token, page, retries)
 	self:RefreshAuctionHousePanel()
 end
 
-function Tradewright:OnAuctionItemListUpdate()
-	local state = self:GetState()
-	local dump = state.auctionDump
-	if not dump or dump.mode ~= "full" or dump.classic ~= true or dump.running ~= true then
-		return false
-	end
-	if dump.status ~= "querying" and dump.status ~= "waiting_query" then
-		return false
-	end
-	local numBatch, totalAuctions = GetNumAuctionItems("list")
-	numBatch = tonumber(numBatch) or 0
-	totalAuctions = tonumber(totalAuctions) or 0
-	dump.total = totalAuctions
-	dump.status = "processing"
-	dump.seenAt = Tradewright:Now()
-	dump.aggregate = dump.aggregate or {}
-	local aggregateRow = self.AggregateAuctionRow
+-- The listings on the page the client shows, as { itemID, count, buyout }.
+local function readShownPage(numBatch)
+	local rows = {}
 	for i = 1, numBatch do
 		local _, _, count, _, _, _, _, _, _, buyoutPrice, _, _, _, _, _, _, itemID = GetAuctionItemInfo("list", i)
 		itemID = normalizeItemID(itemID)
 		if not itemID and type(GetAuctionItemLink) == "function" then
 			local link = GetAuctionItemLink("list", i)
-			if type(link) == "string" then
-				itemID = normalizeItemID(link:match("item:(%d+)"))
-			end
+			itemID = type(link) == "string" and normalizeItemID(link:match("item:(%d+)")) or nil
 		end
-		aggregateRow(dump.aggregate, itemID, count, buyoutPrice)
+		rows[i] = { itemID, count, buyoutPrice }
 	end
-	local pageSize = tonumber(dump.pageSize) or CLASSIC_AH_DUMP_PAGE_SIZE
+	return rows
+end
+
+local function isClassicDumpWaitingForAnswer(dump)
+	return dump and dump.mode == "full" and dump.classic == true and dump.running == true
+		and (dump.status == "querying" or dump.status == "settling")
+end
+
+--- AUCTION_ITEM_LIST_UPDATE fires for every auction house search (the player's, the auction window's,
+--- another addon's) and does not say which query it answers. So the scan takes an answer only while
+--- its own query is out, files it under the page it asked for, and after what looks like the last page
+--- waits a moment: when that page was the answer to another search, the answer to the scan's own query
+--- arrives in that time and replaces it, and the scan goes on.
+function Tradewright:OnAuctionItemListUpdate()
+	local dump = self:GetState().auctionDump
+	if not isClassicDumpWaitingForAnswer(dump) then
+		return false
+	end
+	local numBatch, totalAuctions = GetNumAuctionItems("list")
+	numBatch, totalAuctions = tonumber(numBatch) or 0, tonumber(totalAuctions) or 0
 	local page = tonumber(dump.page) or 0
+	local pageSize = tonumber(dump.pageSize) or CLASSIC_AH_DUMP_PAGE_SIZE
+	dump.pages[page] = readShownPage(numBatch)
+	dump.answers = (tonumber(dump.answers) or 0) + 1
+	dump.total = totalAuctions
 	dump.done = math.min(totalAuctions, (page * pageSize) + numBatch)
 	self:RefreshAuctionHousePanel()
+	local token, answers = dump.token, dump.answers
 	if numBatch >= pageSize and dump.done < totalAuctions then
+		dump.status = "processing"
 		C_Timer.After(CLASSIC_AH_DUMP_NEXT_PAGE_SEC, function()
-			Tradewright:QueryClassicAuctionDumpPage(dump.token, page + 1)
+			Tradewright:QueryClassicAuctionDumpPage(token, page + 1)
 		end)
-		return true
+	else
+		dump.status = "settling"
+		C_Timer.After(CLASSIC_AH_DUMP_LAST_PAGE_SETTLE_SEC, function()
+			Tradewright:FinishClassicAuctionDumpPaging(token, answers)
+		end)
 	end
-	-- Finished paging: persist aggregates through the shared dump pipeline.
-	dump.persistKeys = {}
-	for itemID in pairs(dump.aggregate or {}) do
-		dump.persistKeys[#dump.persistKeys + 1] = itemID
-	end
-	table.sort(dump.persistKeys)
-	dump.persistIndex = 1
-	dump.persistDone = 0
-	dump.persistTotal = #dump.persistKeys
-	dump.sourceLabel = "classic_full"
-	self:PersistFullAuctionDumpChunk(dump.token)
 	return true
+end
+
+--- Ends the paging when no answer came in after the last page; then saves every page read.
+function Tradewright:FinishClassicAuctionDumpPaging(token, answers)
+	local dump = self:GetState().auctionDump
+	if not isClassicDumpWaitingForAnswer(dump) or dump.status ~= "settling"
+		or tonumber(dump.token) ~= tonumber(token) or dump.answers ~= answers then
+		return
+	end
+	local aggregate, aggregateRow = {}, self.AggregateAuctionRow
+	for page = 0, tonumber(dump.page) or 0 do
+		for _, row in ipairs(dump.pages[page] or {}) do
+			aggregateRow(aggregate, row[1], row[2], row[3])
+		end
+	end
+	dump.pages = nil
+	dump.aggregate = aggregate
+	dump.seenAt = Tradewright:Now()
+	dump.sourceLabel = "classic_full"
+	self:SaveFullAuctionDumpAggregate(token)
 end

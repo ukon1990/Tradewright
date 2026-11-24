@@ -191,6 +191,20 @@ function Tradewright:PersistFullAuctionDumpChunk(token)
 	end)
 end
 
+--- Every listing of the scan is read into `dump.aggregate` (one entry per item): save it in chunks.
+function Tradewright:SaveFullAuctionDumpAggregate(token)
+	local dump = self:GetState().auctionDump
+	dump.persistKeys = {}
+	for itemID in pairs(dump.aggregate or {}) do
+		dump.persistKeys[#dump.persistKeys + 1] = itemID
+	end
+	table.sort(dump.persistKeys)
+	dump.persistIndex = 1
+	dump.persistDone = 0
+	dump.persistTotal = #dump.persistKeys
+	self:PersistFullAuctionDumpChunk(token)
+end
+
 function Tradewright:ProcessFullAuctionDumpChunk(token)
 	local state = self:GetState()
 	local dump = state.auctionDump
@@ -203,15 +217,7 @@ function Tradewright:ProcessFullAuctionDumpChunk(token)
 	local total = tonumber(dump.total) or 0
 	local index = tonumber(dump.index) or 0
 	if index >= total then
-		dump.persistKeys = {}
-		for itemID in pairs(dump.aggregate or {}) do
-			dump.persistKeys[#dump.persistKeys + 1] = itemID
-		end
-		table.sort(dump.persistKeys)
-		dump.persistIndex = 1
-		dump.persistDone = 0
-		dump.persistTotal = #dump.persistKeys
-		self:PersistFullAuctionDumpChunk(token)
+		self:SaveFullAuctionDumpAggregate(token)
 		return
 	end
 	dump.status = "processing"

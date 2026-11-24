@@ -517,7 +517,7 @@
    },
    "Tradewright:ProcessFullAuctionDumpChunk": {
     "ccn": [
-     13
+     11
     ]
    },
    "Tradewright:StartAuctionDump": {
@@ -546,14 +546,6 @@
    "Tradewright:IsAuctionDumpAhOriginPrice": {
     "ccn": [
      18
-    ]
-   },
-   "Tradewright:OnAuctionItemListUpdate": {
-    "lines": [
-     51
-    ],
-    "ccn": [
-     20
     ]
    },
    "Tradewright:PersistAuctionDumpObservation": {
