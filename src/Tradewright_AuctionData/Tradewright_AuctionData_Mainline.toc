@@ -3,7 +3,7 @@
 ## Title: Tradewright Auction Data
 ## Notes: Auction house prices, scans and the sell, cart and auctions panel
 ## Author: Ukon1990
-## Version: 1.0.2
+## Version: 1.0.3
 ## IconTexture: Interface\AddOns\Tradewright\media\logo
 ## Dependencies: Tradewright
 ## OptionalDeps: Blizzard_Professions, Questie, QuestieDB

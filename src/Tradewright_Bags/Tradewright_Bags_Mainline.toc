@@ -3,7 +3,7 @@
 ## Title: Tradewright Bags
 ## Notes: Optional bag window for Tradewright: items grouped by category, other characters as tabs
 ## Author: Ukon1990
-## Version: 1.0.2
+## Version: 1.0.3
 ## IconTexture: Interface\AddOns\Tradewright\media\logo
 ## Dependencies: Tradewright, Tradewright_AuctionData, Tradewright_Professions, Tradewright_Inventory, Tradewright_UI
 ## OptionalDeps: Blizzard_Professions

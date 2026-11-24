@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.3
+
+- Professions: The Scan button is gone. A profession you have never stored is stored as soon as you open it, and it is updated each time you close the window. Type `/tw rescan` to scan it again by hand.
+- Full scan: Fixed a case where the answer to another auction house search could end the page-by-page full scan early, so only a few items got prices.
+- Price history: The 14 day and 90 day charts now show the data collected so far, instead of staying empty until that much history exists.
+- Item details: The button that opens an item's details is now on the other tabs of the `/tw` window too.
+
 ## 1.0.2
 
 - Color themes: The addon now supports color themes, so that you can make it better match your UI. It has 6 themes + custom base and highlight color selection.
