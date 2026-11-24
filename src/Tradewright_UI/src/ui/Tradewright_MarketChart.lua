@@ -20,22 +20,18 @@ local function rangeById(id)
 	return RANGES[#RANGES]
 end
 
--- Daily points of one stored listing, oldest first, no older than `days`.
+-- Daily points of one stored listing, oldest first, covering today and the `days - 1` days before it.
+-- Shows whatever days are saved so far, so a range is never empty just because it is not full yet.
 local function dailyPoints(pe, storageKey, days)
 	local auction = pe:InitAuctionDB()
-	local byDay = auction and auction.history.daily and auction.history.daily[storageKey] or {}
-	local cutoff = Tradewright:Now() - days * DAY
-	local points = {}
-	for dayKey, entry in pairs(byDay) do
-		local at = tonumber(dayKey)
-		if at and at >= cutoff and tonumber(entry.p) then
-			points[#points + 1] = { at = at, price = entry.p, low = entry.lo, high = entry.hi, qty = entry.q or 0 }
-		end
+	if not auction then
+		return {}
 	end
-	table.sort(points, function(a, b)
-		return a.at < b.at
-	end)
-	return points
+	local history, now = auction.history, Tradewright:Now()
+	local MS = pe.MarketSignals
+	local fromTs = MS.DayStart(now) - (days - 1) * DAY
+	return MS.DailyPoints(history.daily and history.daily[storageKey], history.hourly and history.hourly[storageKey],
+		history.dailyThrough, fromTs, now)
 end
 
 -- Chart series for a daily range: the day's middle price, the usual price as a flat line, listed quantity.
@@ -43,8 +39,8 @@ local function dailySeries(pe, storageKey, days)
 	local usual = pe.GetUsualPrice and pe:GetUsualPrice(storageKey)
 	local series = { primary = {}, secondary = {}, quantity = {} }
 	for index, point in ipairs(dailyPoints(pe, storageKey, days)) do
-		series.primary[index] = { at = point.at, value = point.price, meta = { min = point.low, max = point.high } }
-		series.quantity[index] = { at = point.at, value = point.qty }
+		series.primary[index] = { at = point.at, value = point.p, meta = { min = point.lo, max = point.hi } }
+		series.quantity[index] = { at = point.at, value = point.q }
 		if usual then
 			series.secondary[index] = { at = point.at, value = usual.usual }
 		end

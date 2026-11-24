@@ -527,6 +527,13 @@ rolled[today - DAY].p = 999
 pe:RollupDailyAuctionHistory()
 check("A second load does not redo finished days", rolled[today - DAY].p == 999)
 rolled[today - DAY].p = 101
+local chartDays = pe.MarketSignals.DailyPoints(rolled, auction.history.hourly["k"], auction.history.dailyThrough,
+	today - 13 * DAY, today + 2 * HOUR)
+check("Chart days include rolled days and today from hourly history",
+	#chartDays == 7 and chartDays[1].at == today - 6 * DAY and chartDays[7].at == today and chartDays[7].p == 50)
+local lateDays = pe.MarketSignals.DailyPoints({}, auction.history.hourly["k"], today - 2 * DAY, today - DAY, today + 2 * HOUR)
+check("Chart days roll up days not rolled up yet and skip days before the range",
+	#lateDays == 2 and lateDays[1].at == today - DAY and lateDays[1].p == 101)
 local usual = pe:GetUsualPrice("k")
 check("Usual price needs 5 days and uses the daily middle", usual and usual.days == 6 and usual.usual == 103.5, usual and usual.usual)
 check("Unknown listing has no usual price", pe:GetUsualPrice("missing") == nil)

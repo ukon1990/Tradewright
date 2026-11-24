@@ -110,6 +110,38 @@ function MarketSignals.RollupItemDays(hourlyByHour, fromTs, toTs)
 	return out
 end
 
+-- Copy saved daily entries from `fromTs` on into `byDay`; a saved day replaces one rolled up from hours.
+local function addSavedDays(byDay, dailyByDay, fromTs)
+	if type(dailyByDay) ~= "table" then
+		return
+	end
+	for dayKey, entry in pairs(dailyByDay) do
+		-- Day keys may come back as strings from older saved data.
+		local at = tonumber(dayKey)
+		if at and at >= fromTs then
+			byDay[at] = entry
+		end
+	end
+end
+
+--- Daily price points of one item from `fromTs` on, oldest first: `{ at, p, lo, hi, q }`. Reads the saved
+--- daily history plus the days still only in hourly history, from `rolledThrough` on (today, and finished
+--- days the addon has not rolled up yet because it was not loaded since), so a chart shows every scanned day.
+function MarketSignals.DailyPoints(dailyByDay, hourlyByHour, rolledThrough, fromTs, now)
+	local byDay = MarketSignals.RollupItemDays(hourlyByHour, math.max(fromTs, tonumber(rolledThrough) or 0), now + 1)
+	addSavedDays(byDay, dailyByDay, fromTs)
+	local points = {}
+	for at, entry in pairs(byDay) do
+		if type(entry) == "table" and positive(entry.p) then
+			points[#points + 1] = { at = at, p = entry.p, lo = entry.lo, hi = entry.hi, q = entry.q or 0 }
+		end
+	end
+	table.sort(points, function(a, b)
+		return a.at < b.at
+	end)
+	return points
+end
+
 local function pricesSince(dailyByDay, cutoff)
 	local prices = {}
 	if type(dailyByDay) ~= "table" then
