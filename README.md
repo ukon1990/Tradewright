@@ -40,7 +40,7 @@ Tradewright is split into several addons, so you can turn off the parts you don'
 1. Enable the five core addons, and `Tradewright_Bags` if you want the bag window.
 2. Type `/tw` or `/tradewright` to open the window.
 3. Open the auction house and run a full scan to fill in prices.
-4. Open a profession and press Scan to save your recipes.
+4. Open each of your professions once; Tradewright saves the recipes.
 5. Open the Crafts tab to see which crafts are profitable.
 
 ## Optional addons

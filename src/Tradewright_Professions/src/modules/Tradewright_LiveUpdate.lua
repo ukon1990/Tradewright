@@ -133,6 +133,30 @@ function Tradewright:ScheduleLiveProfessionRefresh()
 	end)
 end
 
+-- Has the open profession been stored with recipes before?
+local function isProfessionSaved(self, skillLineID)
+	local characterData = self.db and self.db.characters and self.db.characters[self:GetCharacterKey()]
+	local saved = characterData and characterData.professions and characterData.professions[tostring(skillLineID)]
+	return saved ~= nil and type(saved.recipes) == "table" and next(saved.recipes) ~= nil
+end
+
+--- Store the open profession straight away when it has never been stored, so its recipes
+--- show in the Crafts tab without closing the window. A stored one is updated on close.
+function Tradewright:StoreOpenProfessionIfNew()
+	local state = self:GetState()
+	local skillLineID = state.liveProfessionSkillLineID
+	if not skillLineID or self:LiveUpdatesBlocked() or state.pendingScan
+		or state.liveProfessionTimer or state.liveProfessionMergeJob or isProfessionSaved(self, skillLineID) then
+		return
+	end
+	-- The recipe list is often still empty when the window opens; the list event comes again once it loads.
+	local recipeIDs = C_TradeSkillUI.GetAllRecipeIDs and C_TradeSkillUI.GetAllRecipeIDs()
+	if type(recipeIDs) ~= "table" or #recipeIDs == 0 then
+		return
+	end
+	self:ScheduleLiveProfessionRefresh()
+end
+
 local function buildKnownSpellSet(self, professionData)
 	local known = {}
 	if not professionData or type(professionData.recipes) ~= "table" then

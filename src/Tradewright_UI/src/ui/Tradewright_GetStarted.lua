@@ -18,7 +18,7 @@ local function stepTexts(pe)
 				math.floor(pe:GetFullScanCooldownSec() / 60)),
 		},
 		professionScan = {
-			title = L["Open each profession and press Scan"],
+			title = L["Open each of your professions once"],
 			detail = L["Saves your recipes, for craft profit."],
 		},
 		scanDays = {

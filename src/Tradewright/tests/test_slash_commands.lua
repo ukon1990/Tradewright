@@ -73,7 +73,8 @@ pe.GetSetting = function(_, key, default)
 	end
 	return settings[key]
 end
-for _, name in ipairs({ "ToggleDashboard", "OpenDocumentationTab", "HandleGetStartedSlash", "StartScan", "StartFullCharacterDump", "PrintStatus",
+for _, name in ipairs({ "ToggleDashboard", "OpenDocumentationTab", "HandleGetStartedSlash", "StartScan",
+	"ScanOpenProfession", "StartFullCharacterDump", "PrintStatus",
 	"Export", "SetDebugEnabled", "ClearDebugLog", "QueueCraftEconomyAuctionRefresh", "QueueVisibleAuctionRefresh",
 	"StartAuctionDump" }) do
 	spy(name)
@@ -85,7 +86,7 @@ pe.BuildAuctionInventoryRows = function() return { {}, {}, {} } end
 -- Top-level commands
 local TOP_LEVEL = {
 	{ "", "ToggleDashboard" }, { "docs", "OpenDocumentationTab" }, { "documentation", "OpenDocumentationTab" },
-	{ "scan", "StartScan" }, { "status", "PrintStatus" }, { "SCAN", "StartScan" },
+	{ "scan", "StartScan" }, { "rescan", "ScanOpenProfession" }, { "status", "PrintStatus" }, { "SCAN", "StartScan" },
 	{ "intro", "HandleGetStartedSlash" },
 }
 for _, case in ipairs(TOP_LEVEL) do

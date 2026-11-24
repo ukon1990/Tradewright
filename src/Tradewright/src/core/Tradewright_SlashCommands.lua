@@ -219,7 +219,8 @@ function Tradewright:RunAuctionDumpSlash(mode)
 end
 
 local SLASH_HELP_LINES = {
-	"/tw opens the window (/tradewright works too) | /tw scan: scan your professions | /tw status: the last scan"
+	"/tw opens the window (/tradewright works too) | /tw scan: scan your professions | /tw rescan: read the open profession anew"
+		.. " | /tw status: the last scan"
 		.. " | /tw bags on|off: Tradewright bags | /twfarm start|pause|stop: run a farm | /tw docs: open Help"
 		.. " | /tw intro: show Get started",
 	"Advanced: /tw debug [on|off|toggle] | /tw settings spectree on|off | recipeoutput on|off | invbatch <n>"
@@ -390,6 +391,7 @@ local SLASH_COMMANDS = {
 	auction = handleAuctionSlash, ah = handleAuctionSlash,
 	debug = handleDebugSlash,
 	scan = function(self) self:StartScan() end,
+	rescan = function(self) self:ScanOpenProfession() end,
 	full = startFullCharacterDump, dumpfull = startFullCharacterDump,
 	status = function(self) self:PrintStatus() end,
 	export = whenExportEnabled(handleExportSlash),

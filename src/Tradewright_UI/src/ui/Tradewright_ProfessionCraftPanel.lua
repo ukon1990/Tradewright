@@ -341,10 +341,6 @@ local function createRecipeActions(pe, f, host)
 		queueOpenRecipe(math.max(1, tonumber(host.qty:GetText()) or 1))
 	end, { primary = true })
 	f.addButton:SetPoint("LEFT", host.qty, "RIGHT", 10, 0)
-	f.scanBtn = pe:CreateButton(host.actions, L["Scan"], function()
-		pe:ScanOpenProfession()
-	end, { tooltip = L["Store every recipe and reagent of this profession."] })
-	f.scanBtn:SetPoint("RIGHT")
 end
 
 local function createRecipeMaterials(pe, host)
@@ -589,11 +585,11 @@ local REFRESH_THROTTLE_SEC = 0.10
 local SELECT_RECIPE_TEXT = L["Select a recipe to see its profit and reagents."]
 -- What the empty panel says for each reason EvaluateSelectedProfessionRecipe gives.
 local EMPTY_REASON_TEXT = {
-	no_data = L["This recipe is not saved yet. Press Scan, or wait for the recipe list to finish loading."],
+	no_data = L["This recipe is not saved yet. It is saved once the recipe list has loaded, or when you close the profession window."],
 	no_recipe = SELECT_RECIPE_TEXT,
 	not_ready = L["The profession window is still loading."],
-	no_eval = L["Profit for this recipe could not be worked out yet. Select it again or press Scan."],
-	no_profession = L["The profession for this recipe could not be found. Press Scan."],
+	no_eval = L["Profit for this recipe could not be worked out yet. Select it again, or type /tw rescan."],
+	no_profession = L["The profession for this recipe could not be found. Type /tw rescan."],
 }
 
 function Tradewright:RefreshProfessionSideParts(panel)

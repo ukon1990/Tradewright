@@ -356,6 +356,40 @@ do
 	check("Incremental: chunking off collects sync", #pe.jobs == 0 and #pe.collected == 51)
 end
 
+-- Opening a profession stores it at once only when it has never been stored.
+local function storeOnOpen(saved, setup)
+	local pe = newAddon(saved)
+	local scheduled = 0
+	function pe:ScheduleLiveProfessionRefresh()
+		scheduled = scheduled + 1
+	end
+	pe:GetState().liveProfessionSkillLineID = SKILL
+	allRecipeIDs = { 1, 2 }
+	if setup then
+		setup(pe, pe:GetState())
+	end
+	pe:StoreOpenProfessionIfNew()
+	return scheduled
+end
+
+check("Store on open: a profession never stored is stored", storeOnOpen(nil) == 1)
+check("Store on open: a stored profession waits for the window to close", storeOnOpen(savedProfession({ 1 })) == 0)
+check("Store on open: an empty saved entry counts as not stored", storeOnOpen(savedProfession({})) == 1)
+check("Store on open: nothing while the recipe list is still empty", storeOnOpen(nil, function()
+	allRecipeIDs = {}
+end) == 0)
+check("Store on open: nothing during a full scan", storeOnOpen(nil, function(_, state)
+	state.scanInProgress = true
+end) == 0)
+check("Store on open: not again while a store is already under way", storeOnOpen(nil, function(_, state)
+	state.liveProfessionMergeJob = {}
+end) == 0 and storeOnOpen(nil, function(_, state)
+	state.liveProfessionTimer = {}
+end) == 0)
+check("Store on open: nothing before the open profession is known", storeOnOpen(nil, function(_, state)
+	state.liveProfessionSkillLineID = nil
+end) == 0)
+
 if failed > 0 then
 	print(string.format("%d check(s) failed", failed))
 	os.exit(1)

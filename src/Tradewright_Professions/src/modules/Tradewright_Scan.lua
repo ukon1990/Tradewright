@@ -164,7 +164,7 @@ function Tradewright:ScanOpenProfession()
 
 	local openInfo = C_TradeSkillUI and C_TradeSkillUI.GetBaseProfessionInfo and C_TradeSkillUI.GetBaseProfessionInfo() or nil
 	if not openInfo then
-		self:PrintMessage(L["Open a profession window first, then click Scan."])
+		self:PrintMessage(L["Open a profession window first, then type /tw rescan."])
 		return false
 	end
 

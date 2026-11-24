@@ -25,7 +25,7 @@ local GIVE_BACK_STAT_LABEL = { vendor = L["Sold to vendor"], auction = L["Sold a
 
 -- Title and hint of the empty table, per reason GetLevelingRoute gives for having no route.
 local EMPTY_TEXT = {
-	no_data = { L["Profession not scanned yet"], L["Press Scan on the Recipe view, then come back."] },
+	no_data = { L["Profession not scanned yet"], L["Open this profession once on this character, then come back."] },
 	unsupported = { L["Not available here"], L["This game version does not report when recipes stop giving skill."] },
 	no_prices = { L["No prices for a route yet"],
 		L["No recipe that can still give skill has a price for all its reagents. Run a full scan at the auction house."] },

@@ -109,7 +109,7 @@ local function createProfessionTable(pe, panel)
 		autoFitToScroll = true,
 		footer = true,
 		emptyTitle = L["No professions scanned"],
-		emptyHint = L["Open a profession window and press Scan."],
+		emptyHint = L["Open a profession window, or press Scan professions on the Overview tab."],
 	})
 	panel.profTable.frame:SetPoint("TOPLEFT", panel.profHeading, "BOTTOMLEFT", 0, -8)
 	panel.profTable.frame:SetPoint("BOTTOMRIGHT", panel.right, "BOTTOMRIGHT", 0, 0)

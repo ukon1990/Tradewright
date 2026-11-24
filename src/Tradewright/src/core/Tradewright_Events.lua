@@ -76,6 +76,7 @@ local function onTradeSkillShow(self)
 	callOptional(self, "InitCraftingOrdersFilters")
 	self:TryScanCurrentProfession()
 	self:RememberOpenProfessionSkillLineID()
+	callOptional(self, "StoreOpenProfessionIfNew")
 	self:InitProfessionCraftEconomyHooks()
 	refreshProfessionPanel(self)
 	callOptional(self, "RecordExternalFrameInteraction", "ProfessionsFrame", "trade_skill_show")
@@ -84,6 +85,7 @@ end
 local function onTradeSkillListUpdate(self)
 	self:TryScanCurrentProfession()
 	self:RememberOpenProfessionSkillLineID()
+	callOptional(self, "StoreOpenProfessionIfNew")
 	refreshProfessionPanel(self, "trade_skill_list_update")
 end
 

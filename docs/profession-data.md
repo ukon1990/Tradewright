@@ -33,7 +33,7 @@ Example: `gletryne-Draenor__Blacksmithing__164.json`
 ### How to refresh data
 
 1. Open a profession window in WoW.
-2. Click **Scan** on the Tradewright panel (below schematic), **or** run `/tradewright scan` (all professions) / `/tradewright full` (scan + full character export).
+2. The open profession is saved by itself (when first opened, and again on close if it changed). `/tradewright rescan` re-reads the open profession, `/tradewright scan` goes through every profession, `/tradewright full` scans and then exports the full character.
 3. Re-run the export script above.
 
 **Important:** Data is only as fresh as the last scan. Spec tree layout (`paths` / `milestones` / `edges`) requires a scan after schema ≥ 12.
@@ -313,7 +313,7 @@ Compare `specBreakdown.totals.skill` with `crafting.bonusSkill` from scan for va
 | `spec_catalog`            | Static Midnight catalog only                      |
 | `character`               | Everything for one character                      |
 
-Profession panel **Scan** = save open profession. **Export** = scan + `profession_talents` for that profession.
+`/tw rescan` = re-read the open profession. **Export** = scan + `profession_talents` for that profession.
 
 ---
 

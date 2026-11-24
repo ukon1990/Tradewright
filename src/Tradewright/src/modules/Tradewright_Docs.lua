@@ -8,13 +8,13 @@ Tradewright.DOCUMENTATION_SECTIONS = {
 		body = [=[FIRST STEPS
 • Open the window with /tw or /tradewright, or the minimap button.
 • Open the auction house and run a full scan. Prices on every tab come from your scans.
-• Open each profession window and press Scan below the recipe. Crafts and Inventory then know your recipes.
+• Open each of your professions once. Tradewright saves the recipes, so Crafts and Inventory know them.
 • Scan the auction house again on later days. Usual prices, sales estimates and Opportunities need several days of scans.
 
 PROFESSION PANEL
 • Below the recipe Tradewright shows the reagents, what they cost and the profit.
 • Add to queue puts the craft in the craft queue, shown here and on the Crafts tab.
-• Scan saves every recipe and reagent of the open profession for this character.]=],
+• Recipes are saved again when you close the window, if they changed. /tw rescan reads the open profession anew.]=],
 	},
 	{
 		id = "inventory_tab",

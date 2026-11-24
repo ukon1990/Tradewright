@@ -322,7 +322,7 @@ function OverviewTab:RefreshAccountDetail(panel, keys)
 	panel.detailMeta:SetText(string.format(L["%d characters saved"], #keys))
 	panel.listHeading:SetText(L["Recent scans"])
 	panel.listTable:SetColumns(panel.historyColumns)
-	panel.listTable:SetEmptyText(L["No scans yet"], L["Open a profession window and press Scan professions."])
+	panel.listTable:SetEmptyText(L["No scans yet"], L["Open a profession window, or press Scan professions."])
 	panel.listTable:SetRows(recentScanRows(Tradewright.db))
 	panel.listTable:Refresh()
 end
@@ -340,7 +340,7 @@ function OverviewTab:RefreshCharacterDetail(panel, selectedKey, selectedData, cu
 
 	local isCurrent = selectedKey == currentKey
 	panel.listTable:SetColumns(panel.professionColumns)
-	panel.listTable:SetEmptyText(L["No professions saved"], isCurrent and L["Open a profession window and press Scan professions."]
+	panel.listTable:SetEmptyText(L["No professions saved"], isCurrent and L["Open a profession window, or press Scan professions."]
 		or L["Log in on this character to scan and refresh it."])
 	panel.listTable:SetRows(pe:BuildProfessionRows(charData))
 	panel.listTable:Refresh()
