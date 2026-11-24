@@ -457,6 +457,7 @@ function Tradewright:CreateBadge(parent)
 end
 
 -- Detail pane header: 32px item icon, name, muted second line, optional close and pop-out buttons.
+-- `header.itemID` is the item last passed to SetItem.
 function Tradewright:CreateDetailHeader(parent, onClose, onPopOut)
 	local header = CreateFrame("Frame", nil, parent)
 	header:SetHeight(32)
@@ -481,6 +482,7 @@ function Tradewright:CreateDetailHeader(parent, onClose, onPopOut)
 	header.subtitle:SetPoint("RIGHT", header, "RIGHT", 0, 0)
 	function header:SetItem(itemID, title, subtitle, iconOverride)
 		local _, color = Tradewright:GetItemLook(itemID)
+		self.itemID = itemID
 		self.icon:SetItem(itemID, iconOverride)
 		self.icon:Show()
 		self.title:SetText(title or "")

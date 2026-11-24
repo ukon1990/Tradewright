@@ -227,7 +227,12 @@ end
 local function createHistoryFacts(pe, view, opts)
 	local top = view
 	if not opts.noHeader then
-		view.header = pe:CreateDetailHeader(view)
+		view.header = pe:CreateDetailHeader(view, nil, function()
+			local row = view.row
+			if row then
+				pe:ShowItemDetailsWindow(row.itemID, row.storageKey)
+			end
+		end)
 		view.header:SetPoint("TOPLEFT")
 		view.header:SetPoint("TOPRIGHT")
 		top = view.header
@@ -257,6 +262,7 @@ function Tradewright:CreateMarketHistoryView(parent, opts)
 
 	-- rowData: a Market browser row (storageKey, itemID, price, marketHigh, sampleSize, listingCount, seenAt).
 	function view:ShowRow(rowData)
+		self.row = rowData
 		if self.header then
 			self.header:SetItem(rowData.itemID, rowData.name or pe:GetItemDisplayName(rowData.itemID),
 				string.format(L["Item %s · %s"], tostring(rowData.itemID or "?"), rowData.scope == "commodity" and "commodity" or "item"))
