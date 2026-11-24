@@ -105,7 +105,15 @@
 | [f138-use-salvage-value](issues/e18-salvage-value/f138-use-salvage-value/README.md) | Use the value: profit, give-back, tooltips | open |
 | [e19-themes](issues/e19-themes/README.md) | Colour themes | open |
 | [f140-colour-themes](issues/e19-themes/f140-colour-themes/README.md) | Colour themes and own colours | open |
+| [e20-destroying](issues/e20-destroying/README.md) | Destroying: disenchant give-back, Destroying tab, AH search below disenchant value | open |
+| [f141-disenchant-give-back](issues/e20-destroying/f141-disenchant-give-back/README.md) | Disenchant as a give-back choice in the leveling route | implemented, not checked in game |
+| [f142-destroy-data-quality](issues/e20-destroying/f142-destroy-data-quality/README.md) | Data quality check for salvage values | done (shown by F143, F144) |
+| [f143-destroying-tab](issues/e20-destroying/f143-destroying-tab/README.md) | Destroying tab | implemented, not checked in game |
+| [f144-destroy-search](issues/e20-destroying/f144-destroy-search/README.md) | Auction house search for gear below its disenchant value | implemented, not checked in game |
+| [f145-disenchant-chances](issues/e20-destroying/f145-disenchant-chances/README.md) | Chances per material for disenchanting | implemented, not checked in game |
+| [f146-destroying-tiles](issues/e20-destroying/f146-destroying-tiles/README.md) | Destroying tab: stat tiles, kind of gear, empty state | implemented, not checked in game |
+| [f147-who-can-disenchant](issues/e20-destroying/f147-who-can-disenchant/README.md) | Who can disenchant an owned item | implemented, not checked in game |
 
-Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E07 follow-ups: F55, then F56 → F57 → F58. E10: F80 first (no dependencies), then F81 and F82. E13: F105, F106, F119, then F107 and F108; F109 and F110 (after F106); F117 (after F109); F111; F112; F113; then the splits F114, F115, F116, F118. E14: F120 → F121 → F122 → F123, then F124. E15: F125 → F126, F127. E18: F134 (stands alone), F135, then F136 and F137, then F138.
+Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E07 follow-ups: F55, then F56 → F57 → F58. E10: F80 first (no dependencies), then F81 and F82. E13: F105, F106, F119, then F107 and F108; F109 and F110 (after F106); F117 (after F109); F111; F112; F113; then the splits F114, F115, F116, F118. E14: F120 → F121 → F122 → F123, then F124. E15: F125 → F126, F127. E18: F134 (stands alone), F135, then F136 and F137, then F138. E20: after F136 and F138 are checked in game, F141 and F142 (independent), then F143 → F144, then F145, F146, F147.
 
 Research behind E06 to E09: [WoW gold making market strategies](../research/gold-making-market-strategies.md). Designs: [Tradewright Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnSs5), section "Finding gold"; E14 in section "Profession leveling (E14)".

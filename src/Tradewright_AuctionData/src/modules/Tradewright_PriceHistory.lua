@@ -1,8 +1,10 @@
 local _, Tradewright = ...
 
 -- Daily price history and the usual price built from it.
--- `auction.history.daily[storageKey][dayTs] = { p, lo, hi, q, n }`; `auction.history.dailyThrough` is the
--- start of the first day that has not been rolled up yet.
+-- `auction.history.daily[storageKey][dayTs] = { p, lo, hi, q, n, s, g, c }`; `auction.history.dailyThrough`
+-- is the start of the first day that has not been rolled up yet. Everything that reads an item's days
+-- goes through GetDailyPriceHistory, which adds the days still only in hourly history, so the chart,
+-- the usual price, sales a day and days of prices always count the same days.
 
 local DAY = 24 * 3600
 local MIN_USUAL_DAYS = 5
@@ -21,8 +23,7 @@ end
 local function rollupFinishedDays(history, MS, from, today)
 	for storageKey, hourly in pairs(history.hourly or {}) do
 		local byDay = history.daily[storageKey] or {}
-		mergeDays(byDay, MS.RollupItemDays(hourly, from, today))
-		mergeDays(byDay, MS.EstimateSoldByDay(hourly, from, today))
+		mergeDays(byDay, MS.DaysFromHours(hourly, from, today))
 		if next(byDay) ~= nil then
 			history.daily[storageKey] = byDay
 		end
@@ -43,7 +44,7 @@ local function trimDailyHistory(daily, cutoff)
 end
 
 --- Fold every finished day of hourly history into daily history, then drop days past their retention.
---- Runs once at load; a day is rolled up the first time the addon loads after it ended.
+--- Runs at login; a day is rolled up at the first login after it ended.
 function Tradewright:RollupDailyAuctionHistory()
 	local auction = self:InitAuctionDB()
 	local MS = self.MarketSignals
@@ -85,15 +86,21 @@ function Tradewright:GetScanDayCount(limit)
 	return state.scanDayCount
 end
 
-local function dailyHistory(pe, storageKey)
-	local auction = pe:InitAuctionDB()
-	local daily = auction and auction.history.daily
-	return daily and daily[storageKey]
+--- Every day of one stored listing's prices, today included, keyed by day start (see
+--- MarketSignals.ItemDays). The one source of an item's daily prices; nil without auction data.
+function Tradewright:GetDailyPriceHistory(storageKey)
+	local auction = self:InitAuctionDB()
+	if not auction then
+		return nil
+	end
+	local history = auction.history
+	return self.MarketSignals.ItemDays(history.daily and history.daily[storageKey], history.hourly and history.hourly[storageKey],
+		history.dailyThrough, Tradewright:Now())
 end
 
--- The usual price from saved daily history, or false when an item has fewer than 5 days.
+-- The usual price from the item's days, or false when an item has fewer than 5 days.
 local function computeUsualPrice(pe, storageKey, window)
-	local usual = pe.MarketSignals.UsualPrice(dailyHistory(pe, storageKey), Tradewright:Now(), window)
+	local usual = pe.MarketSignals.UsualPrice(pe:GetDailyPriceHistory(storageKey), Tradewright:Now(), window)
 	if usual and usual.days >= MIN_USUAL_DAYS then
 		return usual
 	end
@@ -122,7 +129,7 @@ end
 local function computeSellsPerDay(pe, storageKey, window)
 	local itemID = tonumber(pe.ForeverLogic.ParseItemIDFromStorageKey(storageKey))
 	local own = ownSalesPerDay(pe, itemID, window)
-	return pe.MarketSignals.SellsPerDay(dailyHistory(pe, storageKey), Tradewright:Now(), window, own) or false
+	return pe.MarketSignals.SellsPerDay(pe:GetDailyPriceHistory(storageKey), Tradewright:Now(), window, own) or false
 end
 
 -- One cached value per stored listing and kind, dropped at the next scan observation or window change.
@@ -142,7 +149,7 @@ local function cachedSignal(pe, kind, storageKey, compute)
 end
 
 local function computeWeekdayPattern(pe, storageKey)
-	return pe.WeekdayPattern.Build(dailyHistory(pe, storageKey)) or false
+	return pe.WeekdayPattern.Build(pe:GetDailyPriceHistory(storageKey)) or false
 end
 
 --- Weekday price pattern of one stored listing (see Tradewright_WeekdayPattern.lua), or nil when the
@@ -160,30 +167,45 @@ end
 --- For early estimates only; everything else uses `GetUsualPrice`.
 function Tradewright:GetEarlyUsualPrice(storageKey)
 	local window = tonumber(self:GetSetting("auction.usualPriceDays", 14)) or 14
-	return self.MarketSignals.UsualPrice(dailyHistory(self, storageKey), Tradewright:Now(), window)
+	return self.MarketSignals.UsualPrice(self:GetDailyPriceHistory(storageKey), Tradewright:Now(), window)
 end
 
 --- Estimated units sold per day of one stored listing: `{ perDay, confidence, pairs }`, or nil when the
---- scans do not say. Built from finished days, so it appears the day after two scans of an item.
+--- scans do not say. Appears once two scans of an item lie within a day of each other.
 function Tradewright:GetSellsPerDay(storageKey)
 	return cachedSignal(self, "sells", storageKey, computeSellsPerDay)
 end
 
--- The stored listing of an item with the most daily history (items can have several variants).
+-- Days with a price in one stored listing's history.
+local function pricedDayCount(pe, storageKey)
+	local days = 0
+	for _, day in pairs(pe:GetDailyPriceHistory(storageKey) or {}) do
+		if (tonumber(day.p) or 0) > 0 then
+			days = days + 1
+		end
+	end
+	return days
+end
+
+-- The stored listing of an item with the most daily history (items can have several variants),
+-- and how many days that is.
 local function bestStorageKey(pe, itemID)
 	local auction = pe:InitAuctionDB()
 	local keys = auction and auction.indexes.byItemID[tostring(itemID)]
 	local best, bestDays
 	for storageKey in pairs(keys or {}) do
-		local days = 0
-		for _ in pairs(dailyHistory(pe, storageKey) or {}) do
-			days = days + 1
-		end
+		local days = pricedDayCount(pe, storageKey)
 		if not best or days > bestDays then
 			best, bestDays = storageKey, days
 		end
 	end
-	return best
+	return best, bestDays or 0
+end
+
+--- Days of scans behind an item's price: those of its listing with the most history, 0 when never scanned.
+function Tradewright:GetItemPriceDays(itemID)
+	local _, days = bestStorageKey(self, itemID)
+	return days
 end
 
 --- Usual price and sells per day for an item ID (tooltip, Inventory): `usual, sells`, either may be nil.

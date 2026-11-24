@@ -41,6 +41,7 @@ Tradewright.DASHBOARD_TABS = {
 	{ id = "inventory", label = L["Inventory"], module = function() return Tradewright:MakePanelTab("inventory") end },
 	{ id = "market", label = L["Market"], module = function() return Tradewright:MakePanelTab("market") end },
 	{ id = "crafts", label = L["Crafts"], module = function() return Tradewright:MakePanelTab("crafts") end },
+	{ id = "salvage", label = L["Destroying"], module = function() return Tradewright.SalvageTab end },
 	{ id = "farming", label = L["Farming"], module = function() return Tradewright.FarmingTab end },
 	{ id = "export", label = L["Export"], module = function() return Tradewright.ExportTab end,
 		shown = function() return Tradewright:IsExportEnabled() end },

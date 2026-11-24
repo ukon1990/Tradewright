@@ -48,9 +48,9 @@ function Tradewright:ApplyAhCutToSaleCopper(copper)
 	return copper * (1 - self:GetAuctionCut())
 end
 
--- What one item got from salvaging counts for: the better of its AH price after the cut and its
--- vendor price. nil when it has neither.
-local function salvagedItemValue(self, itemID)
+--- What one item got from salvaging counts for: the better of its AH price after the cut and its
+--- vendor price. nil when it has neither.
+function Tradewright:GetSalvagedItemValue(itemID)
 	local value = math.max(self:ApplyAhCutToSaleCopper((self:GetMarketEstimateCopper(itemID))) or 0, self:GetItemVendorSellCopper(itemID) or 0)
 	return value > 0 and value or nil
 end
@@ -66,12 +66,41 @@ function Tradewright:GetSalvageValue(action, input)
 		return nil
 	end
 	local value, unvalued = self.SalvageLogic.Value(yield, function(itemID)
-		return salvagedItemValue(self, itemID)
+		return self:GetSalvagedItemValue(itemID)
 	end)
 	if value <= 0 then
 		return nil
 	end
 	return { value = value, basis = yield.basis, casts = yield.casts, inputsPerCast = yield.inputsPerCast, unvalued = unvalued }
+end
+
+-- Whether an item got from salvaging has a price, and the days of scans behind it: nil days for an
+-- item valued at its vendor price, which needs no history.
+local function salvagedItemPriceFacts(self, itemID)
+	if (self:GetMarketEstimateCopper(itemID) or 0) > 0 then
+		return true, self.GetItemPriceDays and self:GetItemPriceDays(itemID) or 0
+	end
+	return (self:GetItemVendorSellCopper(itemID) or 0) > 0, nil
+end
+
+--- How far the values of salvaging `inputs` can be trusted (see SalvageCheckLogic.Check):
+--- `inputs` is a list of SalvageLogic inputs, one per item valued, so a kind held often weighs more.
+function Tradewright:CheckSalvageValues(action, inputs)
+	local yields = {}
+	for _, input in ipairs(inputs) do
+		local yield = self:GetSalvageYield(action, input)
+		if yield then
+			yield.kind = self.SalvageLogic.GroupKey(action, input)
+			yields[#yields + 1] = yield
+		end
+	end
+	return self.SalvageCheckLogic.Check({
+		now = self:Now(), yields = yields,
+		lastFullScanAt = self.GetLastFullAuctionScanAt and self:GetLastFullAuctionScanAt() or nil,
+		priceOf = function(itemID)
+			return salvagedItemPriceFacts(self, itemID)
+		end,
+	})
 end
 
 local function schematicMaxQuality(recipeData)

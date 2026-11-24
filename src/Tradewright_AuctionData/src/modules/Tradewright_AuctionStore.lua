@@ -117,7 +117,6 @@ function Tradewright:CompactAuctionStorageData()
 	compactSnapshotRoot(auction.snapshot and auction.snapshot.commodities or nil)
 	compactSnapshotRoot(auction.snapshot and auction.snapshot.items or nil)
 	auction.history = auction.history or {}
-	self:RollupDailyAuctionHistory()
 	self:TrimAuctionHistory()
 end
 

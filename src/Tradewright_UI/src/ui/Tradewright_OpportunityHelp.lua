@@ -14,7 +14,7 @@ end
 
 local function usualFix(pe, insights)
 	local coverage = pe:GetHistoryCoverage(insights)
-	local text = string.format(L["A usual price needs scans on 5 different days. Your best item has %d. Today's scans count from tomorrow."],
+	local text = string.format(L["A usual price needs scans on 5 different days, today included. Your best item has %d."],
 		coverage.bestDays)
 	if coverage.early > 0 and not pe:GetSetting("opportunities.allowEarly", false) then
 		text = text .. L[" Or turn on \"Also show items with only 2 to 4 days of prices\" in Settings, Opportunities."]

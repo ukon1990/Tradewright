@@ -520,26 +520,30 @@ check("Load rolls up each finished day", rolled and rolled[today - DAY] and roll
 check("Today is not rolled up yet", rolled and rolled[today] == nil)
 check("Rolled days carry the sold estimate", rolled and rolled[today - DAY].g == 24 and rolled[today - DAY].s == 0 and rolled[today - 6 * DAY].g == nil)
 local glueSells = pe:GetSellsPerDay("k")
-check("Sales a day comes from finished days", glueSells and glueSells.perDay == 0 and glueSells.pairs == 5)
+check("Sales a day counts today's scans too", glueSells and glueSells.pairs == 6 and glueSells.perDay == 15 / (6 * 24 - 1) * 24,
+	glueSells and glueSells.perDay)
 check("Rollup remembers how far it got", auction.history.dailyThrough == today)
 check("Days past retention are dropped", auction.history.daily["old"] == nil)
 rolled[today - DAY].p = 999
 pe:RollupDailyAuctionHistory()
 check("A second load does not redo finished days", rolled[today - DAY].p == 999)
 rolled[today - DAY].p = 101
-local chartDays = pe.MarketSignals.DailyPoints(rolled, auction.history.hourly["k"], auction.history.dailyThrough,
-	today - 13 * DAY, today + 2 * HOUR)
+local chartDays = pe.MarketSignals.DailyPoints(pe:GetDailyPriceHistory("k"), today - 13 * DAY)
 check("Chart days include rolled days and today from hourly history",
 	#chartDays == 7 and chartDays[1].at == today - 6 * DAY and chartDays[7].at == today and chartDays[7].p == 50)
-local lateDays = pe.MarketSignals.DailyPoints({}, auction.history.hourly["k"], today - 2 * DAY, today - DAY, today + 2 * HOUR)
-check("Chart days roll up days not rolled up yet and skip days before the range",
+local lateDays = pe.MarketSignals.DailyPoints(pe.MarketSignals.ItemDays({}, auction.history.hourly["k"], today - 2 * DAY, today + 2 * HOUR),
+	today - DAY)
+check("Days not rolled up yet come from hourly history; days before the range are skipped",
 	#lateDays == 2 and lateDays[1].at == today - DAY and lateDays[1].p == 101)
+local unrolled = pe.MarketSignals.ItemDays(nil, auction.history.hourly["k"], nil, today + 2 * HOUR)
+check("Without any rollup every scanned day is still there, with its sales", unrolled[today - 6 * DAY] and unrolled[today]
+	and unrolled[today - DAY].g == 24)
 local usual = pe:GetUsualPrice("k")
-check("Usual price needs 5 days and uses the daily middle", usual and usual.days == 6 and usual.usual == 103.5, usual and usual.usual)
+check("Usual price counts today and uses the daily middle", usual and usual.days == 7 and usual.usual == 103, usual and usual.usual)
 check("Unknown listing has no usual price", pe:GetUsualPrice("missing") == nil)
 auction.indexes = { byItemID = { ["42"] = { k = true, few = true } } }
 local itemUsual, itemSells = pe:GetItemPriceSignals(42)
-check("Item lookup uses the listing with the most history", itemUsual and itemUsual.days == 6 and itemSells ~= nil)
+check("Item lookup uses the listing with the most history", itemUsual and itemUsual.days == 7 and itemSells ~= nil)
 check("Item without listings has no signals", pe:GetItemPriceSignals(7) == nil)
 local realLogic = pe.ForeverLogic
 pe.ForeverLogic = { ParseItemIDFromStorageKey = function() return 42 end }

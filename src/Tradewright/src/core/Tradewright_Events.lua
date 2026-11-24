@@ -55,6 +55,8 @@ local function onPlayerLogin(self)
 	callOptional(self, "InitCraftingOrdersFilters")
 	callOptional(self, "InitDynamicLayeringHooks")
 	callOptional(self, "InitMailPanelHooks")
+	-- Turns the finished days of hourly scans into daily prices, which usual prices and price days read.
+	callOptional(self, "RollupDailyAuctionHistory")
 	-- Without a full scan every price is missing, so the first step matters more than the commands.
 	if self.GetLastFullAuctionScanAt and not self:GetLastFullAuctionScanAt() then
 		self:PrintMessage(L["No prices yet. Open the auction house and press Full scan."])

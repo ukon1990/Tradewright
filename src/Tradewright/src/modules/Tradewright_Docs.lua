@@ -151,7 +151,7 @@ The Opportunities tab has four lists. Each shows the sums behind a row and what 
 
 WHAT THE LISTS NEED
 • One full scan fills Sure things.
-• Flips, Price gaps and Sell now need a usual price: scans on 5 different days. Today's scans count from tomorrow.
+• Flips, Price gaps and Sell now need a usual price: scans on 5 different days, today included.
 • They also need a sales estimate: two scans of an item within a day, so scan twice on some days.
 • The "Usual price known for" card shows how far along your scans are.
 

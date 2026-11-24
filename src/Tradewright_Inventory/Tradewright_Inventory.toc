@@ -20,6 +20,8 @@ src\modules\Tradewright_ReagentStash.lua
 src\modules\Tradewright_LevelingQueue.lua
 src\modules\Tradewright_MailPlans.lua
 src\modules\Tradewright_Holdings.lua
+src\modules\Tradewright_SalvageHoldings.lua
+src\modules\Tradewright_SalvageBuys.lua
 src\modules\Tradewright_ItemLogLogic.lua
 src\modules\Tradewright_ItemLog.lua
 src\modules\Tradewright_Inventory.lua

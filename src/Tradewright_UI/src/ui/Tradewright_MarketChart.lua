@@ -23,15 +23,9 @@ end
 -- Daily points of one stored listing, oldest first, covering today and the `days - 1` days before it.
 -- Shows whatever days are saved so far, so a range is never empty just because it is not full yet.
 local function dailyPoints(pe, storageKey, days)
-	local auction = pe:InitAuctionDB()
-	if not auction then
-		return {}
-	end
-	local history, now = auction.history, Tradewright:Now()
 	local MS = pe.MarketSignals
-	local fromTs = MS.DayStart(now) - (days - 1) * DAY
-	return MS.DailyPoints(history.daily and history.daily[storageKey], history.hourly and history.hourly[storageKey],
-		history.dailyThrough, fromTs, now)
+	local fromTs = MS.DayStart(Tradewright:Now()) - (days - 1) * DAY
+	return MS.DailyPoints(pe:GetDailyPriceHistory(storageKey), fromTs)
 end
 
 -- Chart series for a daily range: the day's middle price, the usual price as a flat line, listed quantity.

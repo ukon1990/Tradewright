@@ -14,6 +14,7 @@ local SECTION_GAP = 10
 local GIVE_BACK_OPTIONS = {
 	{ value = "vendor", label = L["Sell to vendor"] },
 	{ value = "auction", label = L["Sell at auction"] },
+	{ value = "disenchant", label = L["Disenchant"] },
 	{ value = "none", label = L["Worth nothing"] },
 }
 local RECIPE_SCOPE_OPTIONS = {
@@ -21,7 +22,9 @@ local RECIPE_SCOPE_OPTIONS = {
 	{ value = "all", label = L["All recipes"] },
 	{ value = "known", label = L["Known recipes only"] },
 }
-local GIVE_BACK_STAT_LABEL = { vendor = L["Sold to vendor"], auction = L["Sold at auction"], none = L["Crafted items"] }
+local GIVE_BACK_STAT_LABEL = {
+	vendor = L["Sold to vendor"], auction = L["Sold at auction"], disenchant = L["Disenchanted"], none = L["Crafted items"],
+}
 
 -- Title and hint of the empty table, per reason GetLevelingRoute gives for having no route.
 local EMPTY_TEXT = {
@@ -71,10 +74,20 @@ local function salvageInputNote(pe, candidate)
 	return input and string.format(L["with %s"], pe:GetItemDisplayName(input.itemID)) or nil
 end
 
-local function craftStepDetail(pe, step, queued, isNextStep)
+-- Marks a step whose crafts are counted at a disenchant value that rests on researched yields
+-- rather than on the player's own disenchants.
+local function disenchantEstimateNote(route, candidate)
+	if route.giveBackMode == "disenchant" and candidate.disenchantBasis == "researched" then
+		return L["disenchant estimated"]
+	end
+	return nil
+end
+
+local function craftStepDetail(pe, route, step, queued, isNextStep)
 	-- "~" for an expected count; the detail line has little room at this panel width.
 	local parts = { string.format(craftCountIsExact(step) and L["%d crafts"] or L["~%d crafts"], step.crafts) }
 	parts[#parts + 1] = salvageInputNote(pe, step.candidate)
+	parts[#parts + 1] = disenchantEstimateNote(route, step.candidate)
 	if isNextStep then
 		parts[#parts + 1] = L["next step"]
 	end
@@ -150,7 +163,7 @@ function Tradewright:LevelingStepRow(route, step, index, isNextStep)
 	return {
 		_rowIdentity = index, kind = "craft", step = step, route = route, name = step.name or "?",
 		skillText = string.format("%d–%d", step.fromSkill, step.toSkill),
-		detailText = craftStepDetail(self, step, queued, isNextStep),
+		detailText = craftStepDetail(self, route, step, queued, isNextStep),
 		cost = route.giveBackMode == "none" and step.materials or step.net,
 		action = craftStepAction(step, queued),
 		learnBlockedBy = learnBlockedBy(route, step),
@@ -320,6 +333,20 @@ local function showRankTooltip(pe, rowFrame, row)
 	GameTooltip:Show()
 end
 
+-- What the items of one craft fetch from a vendor and, for gear, from disenchanting.
+local function addGiveBackLines(pe, candidate)
+	if candidate.vendorGiveBack then
+		addMoneyLine(pe, L["Sells to a vendor for"], candidate.vendorGiveBack)
+	end
+	if candidate.disenchantGiveBack then
+		local label = L["Disenchants for"]
+		if candidate.disenchantBasis == "researched" then
+			label = label .. " (" .. L["estimate"] .. ")"
+		end
+		addMoneyLine(pe, label, candidate.disenchantGiveBack)
+	end
+end
+
 local function showStepTooltip(pe, rowFrame, row)
 	if row and row.kind == "rankCap" then
 		return showRankTooltip(pe, rowFrame, row)
@@ -333,9 +360,7 @@ local function showStepTooltip(pe, rowFrame, row)
 	GameTooltip:SetText(row.name, 1, 0.82, 0)
 	GameTooltip:AddLine(string.format(L["Skill %d to %d · %s"], step.fromSkill, step.toSkill, row.detailText), 0.6, 0.63, 0.67, true)
 	addMaterialLines(pe, candidate)
-	if candidate.vendorGiveBack then
-		addMoneyLine(pe, L["Sells to a vendor for"], candidate.vendorGiveBack)
-	end
+	addGiveBackLines(pe, candidate)
 	if (step.reusedQuantity or 0) > 0 then
 		addMoneyLine(pe, string.format(L["%d used as a reagent by later steps, saving"], step.reusedQuantity), step.reuseValue)
 	end

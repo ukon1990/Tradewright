@@ -78,6 +78,21 @@ do
 	check("Sold at auction uses the auction value", route({ sells, plain }, { giveBackMode = "auction" }).totals.net == 80 * 10)
 	plain.vendorGiveBack = 95
 	check("Auction mode falls back to the vendor value", RL.GiveBack(plain, "auction") == 95 and RL.GiveBack(plain, "none") == 0)
+	check("Disenchant mode falls back to the vendor value for items that cannot be disenchanted",
+		RL.GiveBack(plain, "disenchant") == 95)
+end
+
+-- Counting crafted gear at its disenchant value
+do
+	local gear = recipe("Gear", 150, 160, 300)
+	gear.vendorGiveBack, gear.disenchantGiveBack = 50, 280
+	local pouch = recipe("Pouch", 150, 160, 200)
+	pouch.vendorGiveBack = 60
+	check("Sold to vendor: the cheaper pouch wins", route({ gear, pouch }, { giveBackMode = "vendor" }).steps[1].name == "Pouch")
+	local disenchanted = route({ gear, pouch }, { giveBackMode = "disenchant" })
+	check("Disenchanted: the gear's value makes it the cheaper route", disenchanted.steps[1].name == "Gear")
+	check("Disenchanted: give-back is the disenchant value", disenchanted.totals.giveBack == 80 * 280
+		and disenchanted.totals.net == 80 * 20)
 end
 
 -- Recipes not learned

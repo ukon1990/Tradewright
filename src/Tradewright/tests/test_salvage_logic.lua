@@ -123,7 +123,7 @@ end
 
 -- Researched disenchant rows cover a range of item levels
 do
-	local dust, shard = { [STRANGE_DUST] = 1.2 }, { [10978] = 1 }
+	local dust, shard = { [STRANGE_DUST] = 1.2 }, { [10978] = 1 } -- plain averages, as prospecting rows hold
 	local researched = { disenchant = {
 		{ expansionID = 0, quality = 2, isWeapon = false, fromLevel = 5, toLevel = 15, yield = dust },
 		{ expansionID = 0, quality = 3, fromLevel = 1, toLevel = 25, yield = shard },
@@ -131,13 +131,15 @@ do
 	local function yieldOf(input)
 		return SalvageLogic.ResearchedYield(researched, "disenchant", input)
 	end
-	check("Row: gear inside the range", yieldOf({ expansionID = 0, quality = 2, itemLevel = 15 }) == dust)
+	check("Row: gear inside the range", yieldOf({ expansionID = 0, quality = 2, itemLevel = 15 })[STRANGE_DUST] == 1.2)
 	check("Row: outside the range, another quality, a weapon, another expansion: none",
 		yieldOf({ expansionID = 0, quality = 2, itemLevel = 16 }) == nil and yieldOf({ expansionID = 0, quality = 4, itemLevel = 10 }) == nil
 		and yieldOf({ expansionID = 0, quality = 2, itemLevel = 10, isWeapon = true }) == nil
 		and yieldOf({ expansionID = 1, quality = 2, itemLevel = 10 }) == nil)
-	check("Row without weapon or armor covers both", yieldOf({ expansionID = 0, quality = 3, itemLevel = 20, isWeapon = true }) == shard
-		and yieldOf({ expansionID = 0, quality = 3, itemLevel = 20 }) == shard)
+	check("Row without weapon or armor covers both", yieldOf({ expansionID = 0, quality = 3, itemLevel = 20, isWeapon = true })[10978] == 1
+		and yieldOf({ expansionID = 0, quality = 3, itemLevel = 20 })[10978] == 1)
+	local _, noChances = yieldOf({ expansionID = 0, quality = 3, itemLevel = 20 })
+	check("Rows of plain averages have no chances", noChances == nil)
 	check("No table for the action: none", SalvageLogic.ResearchedYield(researched, "mill", { itemID = 1 }) == nil)
 end
 
@@ -163,6 +165,37 @@ do
 	end
 	check("Shipped: every classic item level of green and rare gear has a row", covered)
 	check("Shipped: a retail table exists, even when empty", type(data.SALVAGE_DATA.retail) == "table")
+	local perInput, chances = gear(2, 29)
+	check("Shipped: chance and count per material, the average following from them",
+		chances[11083].chance == 0.75 and chances[11083].min == 1 and chances[11083].max == 2 and perInput[11083] == 1.125)
+	local consistent = true
+	for _, row in ipairs(forever.disenchant) do
+		local total = 0
+		for _, material in pairs(row.yield) do
+			consistent = consistent and material.min <= material.max and material.chance > 0
+			total = total + material.chance
+		end
+		consistent = consistent and math.abs(total - 1) < 1e-9
+	end
+	check("Shipped: every row's chances add up to one disenchant", consistent)
+end
+
+-- Chances from the player's own disenchants
+do
+	local store = { epoch = 1, yields = {} }
+	local gearInput = { expansionID = 0, quality = 2, isWeapon = false, itemLevel = 29 }
+	for cast = 1, 4 do
+		local results = cast == 4 and { [11082] = 1 } or { [11083] = 2 }
+		SalvageLogic.RecordOutcome(store, "disenchant", { input = gearInput, inputCount = 1, results = results })
+	end
+	SalvageLogic.RecordOutcome(store, "disenchant", { input = gearInput, inputCount = 2, casts = 2, results = { [11083] = 3 } })
+	local yield = SalvageLogic.Yield({ own = store }, "disenchant", gearInput)
+	check("Only casts recorded one at a time give chances", yield.chances[11083].chance == 0.75 and yield.chances[11082].chance == 0.25)
+	check("The count when it drops follows from the average", math.abs(yield.chances[11083].each - (9 / 6) / 0.75) < 1e-9)
+	check("Own casts are counted even under researched yields", yield.ownCasts == 6)
+	local old = { epoch = 1, yields = { { [SalvageLogic.YieldKey("disenchant", gearInput)] = { casts = 3, inputs = 3, items = { [11083] = 4 } } } } }
+	local fromOld = SalvageLogic.Yield({ own = old }, "disenchant", gearInput)
+	check("Records saved before chances give averages only", fromOld.chances == nil and fromOld.perInput[11083] == 4 / 3)
 end
 
 -- Value
@@ -188,6 +221,42 @@ do
 	SourceLogic.Prune(store, shipped)
 	check("Shipped epochs leave the saved store, the open one stays", store.yields[1] == nil and store.yields[2][key].casts == 1)
 	check("Together they still give every outcome", SalvageLogic.Yield({ own = store, shipped = shipped }, "prospect", ORE).casts == 3)
+end
+
+-- The best use of one item
+do
+	local use, gain = SalvageLogic.BestUse({ vendor = 10, auction = 50, salvage = 80 })
+	check("Disenchanting wins when it gets the most, by the gap to the next best", use == "salvage" and gain == 30)
+	use, gain = SalvageLogic.BestUse({ vendor = 90, auction = 50, salvage = 80 })
+	check("A vendor price can win", use == "vendor" and gain == 10)
+	use, gain = SalvageLogic.BestUse({ vendor = 10, salvage = 40 })
+	check("A bound item compares vendor and disenchant only", use == "salvage" and gain == 30)
+	use, gain = SalvageLogic.BestUse({ salvage = 40 })
+	check("A single open use gains all of its value", use == "salvage" and gain == 40)
+	use, gain = SalvageLogic.BestUse({ vendor = 40, salvage = 40 })
+	check("A tie goes to the least work", use == "vendor" and gain == 0)
+	check("No use open: nil", SalvageLogic.BestUse({}) == nil)
+end
+
+-- Auctions below their disenchant value
+do
+	-- Worth 100 each; with a 20% margin the limit is 80.
+	local rows = SalvageLogic.BuyBelowValue({
+		{ itemID = 1, price = 50, value = 100, steps = { 50, 2, 70, 1, 80, 5, 90, 3 } },
+		{ itemID = 2, price = 80, value = 100 },
+		{ itemID = 3, price = 79, value = 100 },
+		{ itemID = 4, price = 30, value = 100, basis = "researched" },
+	}, 0.2)
+	check("Only buyouts below the value less the margin pass; the limit itself does not", #rows == 3, #rows)
+	local first = rows[1]
+	check("Units listed below the limit are counted from the price steps", first.itemID == 1 and first.quantity == 3 and first.cost == 170)
+	check("Gain is their value less their cost, and its share of the cost",
+		first.gain == 130 and math.abs(first.gainShare - 130 / 170) < 1e-9 and first.limit == 80)
+	check("Without price steps only the cheapest unit counts", rows[2].itemID == 4 and rows[2].quantity == 1 and rows[2].gain == 70)
+	check("The item's own fields are kept", rows[2].basis == "researched")
+	check("Most gain first", rows[3].itemID == 3 and rows[3].gain == 21)
+	check("Price steps that disagree with the buyout give no row",
+		#SalvageLogic.BuyBelowValue({ { itemID = 5, price = 50, value = 100, steps = { 95, 1 } } }, 0.2) == 0)
 end
 
 if failed > 0 then

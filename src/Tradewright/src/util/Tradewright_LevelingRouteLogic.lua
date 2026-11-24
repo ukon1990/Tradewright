@@ -5,7 +5,7 @@ local _, Tradewright = ...
 ---
 --- A candidate is one priced recipe:
 --- `{ recipeID, name, bounds, learned, learnSkill, learnCost, materialCost, vendorGiveBack,
----    auctionGiveBack, skillUpsPerCraft, outputItemID, outputQuantity, reagents }`, costs in copper for
+---    auctionGiveBack, disenchantGiveBack, disenchantBasis, skillUpsPerCraft, outputItemID, outputQuantity, reagents }`, costs in copper for
 --- one craft. `bounds` comes from `SkillUpLogic.DifficultyBounds`. `learnSkill` and `learnCost` only
 --- matter for a recipe not learned; `source` then says where it comes from once that is known:
 --- "trainer" (with `trainers`), "vendor" (with `vendors`) or "drop" (with `dropSource`). `reagents = { { itemID, quantity, unitPrice } }` per craft.
@@ -24,13 +24,16 @@ local SkillUpLogic = Tradewright.SkillUpLogic
 -- Expected crafts are fractions; this keeps 6.0000001 from rounding up to 7.
 local ROUNDING_SLACK = 1e-6
 
---- What one craft gives back, by the player's choice of `giveBackMode`: "vendor", "auction" or "none".
---- An item without an auction price counts for its vendor price in "auction" mode.
+--- What one craft gives back, by the player's choice of `giveBackMode`: "vendor", "auction",
+--- "disenchant" or "none". An item without an auction price, or one that cannot be disenchanted
+--- (bags, ammo pouches, kits), counts for its vendor price in the "auction" and "disenchant" modes.
 function LevelingRouteLogic.GiveBack(candidate, giveBackMode)
 	if giveBackMode == "vendor" then
 		return candidate.vendorGiveBack or 0
 	elseif giveBackMode == "auction" then
 		return candidate.auctionGiveBack or candidate.vendorGiveBack or 0
+	elseif giveBackMode == "disenchant" then
+		return candidate.disenchantGiveBack or candidate.vendorGiveBack or 0
 	end
 	return 0
 end

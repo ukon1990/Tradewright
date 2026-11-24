@@ -64,6 +64,11 @@ local function newAddon(recipes, skill)
 		return default
 	end
 	function pe:GetItemVendorSellCopper() return 40 end
+	-- Item 1 is gear worth 25 a piece when disenchanted; other items cannot be disenchanted.
+	function pe:GetSalvageInput(action, itemID)
+		return action == "disenchant" and itemID == self.disenchantableItemID and { quality = 2 } or nil
+	end
+	function pe:GetSalvageValue() return { value = 25, basis = "researched", casts = 0 } end
 	function pe:GetRecipeSource() return nil end
 	function pe:EvaluateCraftScenario(_, _, _, recipeData)
 		if not recipeData.materialCost then
@@ -94,6 +99,22 @@ end
 local function routeFor(pe)
 	pe:GetLevelingRoute(CHARACTER, SKILL_LINE)
 	return pe:GetLevelingRoute(CHARACTER, SKILL_LINE)
+end
+
+-- Crafted gear counted at its disenchant value
+do
+	local pe = newAddon({ ["11"] = recipe("Gear", 200, true, 100) }, 100)
+	pe.disenchantableItemID = 1
+	pe.settings["professions.leveling.giveBack"] = "disenchant"
+	local route = routeFor(pe)
+	local step = route.steps[1]
+	check("Disenchant value per craft is per item times the items made", step.candidate.disenchantGiveBack == 50
+		and step.candidate.disenchantBasis == "researched")
+	check("Disenchant mode counts that value", route.giveBackMode == "disenchant" and step.net == step.crafts * 50)
+	check("A step on researched yields says so", pe:LevelingStepRow(route, step, 1, false).detailText:find("disenchant estimated", 1, true) ~= nil)
+	pe.settings["professions.leveling.giveBack"] = "vendor"
+	local vendorRoute = routeFor(pe)
+	check("Other modes do not mark the estimate", not pe:LevelingStepRow(vendorRoute, vendorRoute.steps[1], 1, false).detailText:find("disenchant", 1, true))
 end
 
 -- Why there is no route
@@ -129,6 +150,7 @@ do
 	check("Costs come from the crafts engine, per craft", known.materialCost == 100 and known.vendorGiveBack == 80 and known.auctionGiveBack == 140)
 	check("Recipe id is the crafting spell, which the profession window and the craft queue open", known.recipeID == 2000)
 	check("Vendor sale is the default give-back", route.giveBackMode == "vendor" and route.steps[1].net == route.steps[1].crafts * 20)
+	check("A crafted item that cannot be disenchanted has no disenchant value", known.disenchantGiveBack == nil)
 	local unknown
 	for _, step in ipairs(route.steps) do
 		if step.name == "Unknown" then

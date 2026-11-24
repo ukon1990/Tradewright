@@ -126,6 +126,20 @@ calls = {}
 fire("BANKFRAME_OPENED")
 check("Bank open schedules an inventory refresh", lastCall().name == "ScheduleLiveInventoryRefresh")
 
+-- Login rolls up the finished days of hourly scans: usual prices and price days read only daily history.
+_G.SlashCmdList = {}
+for _, name in ipairs({ "EnsureMinimapButton", "RegisterBlizzardSettings", "InitProfessionCraftEconomyHooks", "PrintMessage", "RollupDailyAuctionHistory" }) do
+	spy(name)
+end
+pe.RecordWalletObservation = nil
+calls = {}
+fire("PLAYER_LOGIN")
+local rolledUp = false
+for _, call in ipairs(calls) do
+	rolledUp = rolledUp or call.name == "RollupDailyAuctionHistory"
+end
+check("Login rolls up daily price history", rolledUp)
+
 if failed > 0 then
 	print(failed .. " check(s) failed")
 	os.exit(1)

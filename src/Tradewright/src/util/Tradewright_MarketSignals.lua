@@ -124,15 +124,11 @@ local function addSavedDays(byDay, dailyByDay, fromTs)
 	end
 end
 
---- Daily price points of one item from `fromTs` on, oldest first: `{ at, p, lo, hi, q }`. Reads the saved
---- daily history plus the days still only in hourly history, from `rolledThrough` on (today, and finished
---- days the addon has not rolled up yet because it was not loaded since), so a chart shows every scanned day.
-function MarketSignals.DailyPoints(dailyByDay, hourlyByHour, rolledThrough, fromTs, now)
-	local byDay = MarketSignals.RollupItemDays(hourlyByHour, math.max(fromTs, tonumber(rolledThrough) or 0), now + 1)
-	addSavedDays(byDay, dailyByDay, fromTs)
+--- Points of one item's days (see ItemDays) from `fromTs` on, oldest first: `{ at, p, lo, hi, q }`.
+function MarketSignals.DailyPoints(byDay, fromTs)
 	local points = {}
-	for at, entry in pairs(byDay) do
-		if type(entry) == "table" and positive(entry.p) then
+	for at, entry in pairs(byDay or {}) do
+		if at >= fromTs and type(entry) == "table" and positive(entry.p) then
 			points[#points + 1] = { at = at, p = entry.p, lo = entry.lo, hi = entry.hi, q = entry.q or 0 }
 		end
 	end
@@ -230,6 +226,29 @@ function MarketSignals.EstimateSoldByDay(hourlyByHour, fromTs, toTs, maxGapHours
 		end
 	end
 	return out
+end
+
+--- One item's days built from hourly history in `[fromTs, toTs)`, with the fields daily history keeps:
+--- the price (RollupItemDays) and the units sold (EstimateSoldByDay).
+function MarketSignals.DaysFromHours(hourlyByHour, fromTs, toTs)
+	local byDay = MarketSignals.RollupItemDays(hourlyByHour, fromTs, toTs)
+	for dayTs, sold in pairs(MarketSignals.EstimateSoldByDay(hourlyByHour, fromTs, toTs)) do
+		local day = byDay[dayTs] or {}
+		for field, value in pairs(sold) do
+			day[field] = value
+		end
+		byDay[dayTs] = day
+	end
+	return byDay
+end
+
+--- Every day of one item's price history up to and including today, keyed by day start: the saved
+--- daily history plus the days still only in hourly history, from `rolledThrough` on (today, and
+--- finished days not rolled up yet). The one view of an item's days: prices, sales and charts all read it.
+function MarketSignals.ItemDays(dailyByDay, hourlyByHour, rolledThrough, now)
+	local byDay = MarketSignals.DaysFromHours(hourlyByHour, tonumber(rolledThrough) or 0, now + 1)
+	addSavedDays(byDay, dailyByDay, 0)
+	return byDay
 end
 
 local function soldSince(dailyByDay, cutoff)

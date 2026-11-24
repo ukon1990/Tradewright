@@ -209,6 +209,11 @@ function Tradewright:RefreshViewsAfterLiveSearch()
 	if self.RefreshMarketTab then
 		self:RefreshMarketTab()
 	end
+	-- The Destroying tab's auction view shows what a Search found.
+	local salvagePanel = self.ui and self.ui.salvagePanel
+	if salvagePanel and salvagePanel:IsVisible() then
+		self.SalvageTab:Refresh()
+	end
 end
 
 --- The auction house's own result list (a name search, or browsing a category) carries the lowest

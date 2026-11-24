@@ -5,7 +5,10 @@ local _, Tradewright = ...
 ---
 --- Outcomes are kept in the sightings store (see Tradewright_SourceLogic.lua), in epochs like its
 --- loot tallies so they ship and prune the same way:
----   yields = { [epoch] = { [yieldKey] = { casts, inputs, items = { [itemID] = quantity received } } } }
+---   yields = { [epoch] = { [yieldKey] = { casts, inputs, items = { [itemID] = quantity received },
+---     single, hits = { [itemID] = casts that gave it } } } }
+--- `single` counts the casts recorded one at a time, the only ones that tell which cast gave what:
+--- `hits` counts those per item, so `hits / single` is an item's chance per cast.
 ---
 --- A `yieldKey` names the action and what was destroyed: "p:<itemID>" prospecting an ore,
 --- "m:<itemID>" milling a herb, "d:<expansionID>:<quality>:<W or A>:<item level>" disenchanting a
@@ -94,6 +97,15 @@ function SalvageLogic.OutcomeBetween(before, after)
 	return { inputItemID = inputItemID, inputCount = inputCount, results = results }
 end
 
+-- A cast recorded alone tells which items it gave: one more single cast, one more hit for each.
+local function countSingleCast(record, results)
+	record.single = (record.single or 0) + 1
+	record.hits = record.hits or {}
+	for itemID in pairs(results or {}) do
+		record.hits[itemID] = (record.hits[itemID] or 0) + 1
+	end
+end
+
 --- Records an outcome in `store`: `outcome = { input, inputCount, results, casts }`, where
 --- `inputCount` of `input` were destroyed over `casts` casts (1 when left out) and gave
 --- `results = { [itemID] = quantity }`.
@@ -108,19 +120,30 @@ function SalvageLogic.RecordOutcome(store, action, outcome)
 	for itemID, quantity in pairs(outcome.results or {}) do
 		record.items[itemID] = (record.items[itemID] or 0) + quantity
 	end
+	if (outcome.casts or 1) == 1 then
+		countSingleCast(record, outcome.results)
+	end
 end
 
+local function addCounts(total, counts)
+	for itemID, count in pairs(counts or {}) do
+		total[itemID] = (total[itemID] or 0) + count
+	end
+end
+
+-- Records saved before `single` and `hits` existed add nothing to them.
 local function addRecord(total, record)
 	total.casts = total.casts + record.casts
 	total.inputs = total.inputs + record.inputs
-	for itemID, quantity in pairs(record.items) do
-		total.items[itemID] = (total.items[itemID] or 0) + quantity
-	end
+	total.single = (total.single or 0) + (record.single or 0)
+	total.hits = total.hits or {}
+	addCounts(total.items, record.items)
+	addCounts(total.hits, record.hits)
 end
 
 -- Everything `store` holds for the group, over all its epochs.
 local function groupTotal(store, groupKey)
-	local total = { casts = 0, inputs = 0, items = {} }
+	local total = { casts = 0, inputs = 0, items = {}, single = 0, hits = {} }
 	for _, bucket in pairs(store and store.yields or {}) do
 		for yieldKey, record in pairs(bucket) do
 			if groupOfKey(yieldKey) == groupKey then
@@ -131,13 +154,47 @@ local function groupTotal(store, groupKey)
 	return total
 end
 
--- `{ casts, basis, inputsPerCast, perInput = { [itemID] = quantity per destroyed input } }` from summed counts.
+-- Each item's chance per cast and the average count when it drops, from the casts recorded one at a
+-- time; nil when there are none.
+local function countedChances(total, perInput)
+	if total.single == 0 then
+		return nil
+	end
+	local chances = {}
+	for itemID, average in pairs(perInput) do
+		local chance = (total.hits[itemID] or 0) / total.single
+		if chance > 0 then
+			chances[itemID] = { chance = chance, each = average / chance }
+		end
+	end
+	return chances
+end
+
+-- `{ casts, basis, inputsPerCast, perInput = { [itemID] = quantity per destroyed input }, chances }` from summed counts.
 local function yieldOf(total, basis)
 	local perInput = {}
 	for itemID, quantity in pairs(total.items) do
 		perInput[itemID] = quantity / total.inputs
 	end
-	return { casts = total.casts, basis = basis, inputsPerCast = total.inputs / total.casts, perInput = perInput }
+	return {
+		casts = total.casts, basis = basis, inputsPerCast = total.inputs / total.casts, perInput = perInput,
+		chances = countedChances(total, perInput),
+	}
+end
+
+-- A researched row's materials, `{ [itemID] = { chance, min, max } }`, as averages per input and chances.
+-- Prospecting and milling rows hold plain averages: they have no chances.
+local function researchedOf(materials)
+	local perInput, chances, complete = {}, {}, true
+	for itemID, material in pairs(materials) do
+		if type(material) == "table" then
+			perInput[itemID] = material.chance * (material.min + material.max) / 2
+			chances[itemID] = { chance = material.chance, min = material.min, max = material.max }
+		else
+			perInput[itemID], complete = material, false
+		end
+	end
+	return perInput, complete and chances or nil
 end
 
 -- Whether a researched disenchant row covers the gear: `{ expansionID, quality, isWeapon, fromLevel, toLevel }`,
@@ -150,7 +207,7 @@ local function rowCoversGear(row, input)
 end
 
 --- The researched yield of `input` in `data`, the tables looked up on the web and shipped with the
---- addon (Tradewright_SalvageData.lua): `{ [itemID] = quantity per input }`, or nil.
+--- addon (Tradewright_SalvageData.lua): `perInput, chances` (see Yield), or nil.
 --- `data = { prospect = { [itemID] = yield }, mill = { [itemID] = yield }, disenchant = { row, … } }`,
 --- a disenchant row being `{ expansionID, quality, isWeapon, fromLevel, toLevel, yield }`.
 function SalvageLogic.ResearchedYield(data, action, input)
@@ -159,11 +216,11 @@ function SalvageLogic.ResearchedYield(data, action, input)
 		return nil
 	end
 	if action ~= "disenchant" then
-		return byAction[input.itemID]
+		return byAction[input.itemID] and researchedOf(byAction[input.itemID])
 	end
 	for _, row in ipairs(byAction) do
 		if rowCoversGear(row, input) then
-			return row.yield
+			return researchedOf(row.yield)
 		end
 	end
 	return nil
@@ -173,23 +230,33 @@ end
 --- `sources = { own, shipped, researched }`: the player's saved store, the store shipped with the
 --- addon (other players' counted outcomes), and the researched tables (see ResearchedYield); any of
 --- them may be nil.
---- Returns `{ perInput, casts, basis, inputsPerCast }`, the last being how many items one cast
---- destroyed on average (5 ore for a prospect), nil for researched yields. The player's own outcomes win once there are enough of them
+--- Returns `{ perInput, casts, basis, inputsPerCast, chances, ownCasts }`: `inputsPerCast` how many
+--- items one cast destroyed on average (5 ore for a prospect), nil for researched yields; `chances`
+--- each item's chance per cast with its count, `{ chance, min, max }` researched or `{ chance, each }`
+--- counted (average count when it drops), nil when not known; `ownCasts` the player's own casts of
+--- the group, counted towards TRUSTED_CASTS. The player's own outcomes win once there are enough of them
 --- ("own"), as yields shift with skill and talents; then all counted outcomes ("counted"); then
 --- researched yields ("researched", casts 0); last, the few counted outcomes there are.
 function SalvageLogic.Yield(sources, action, input)
 	local groupKey = SalvageLogic.GroupKey(action, input)
 	local own = groupTotal(sources.own, groupKey)
-	if own.casts >= SalvageLogic.TRUSTED_CASTS then
-		return yieldOf(own, "own")
+	local ownCasts = own.casts
+	local yield
+	if ownCasts >= SalvageLogic.TRUSTED_CASTS then
+		yield = yieldOf(own, "own")
+	else
+		addRecord(own, groupTotal(sources.shipped, groupKey))
+		local researched, chances = SalvageLogic.ResearchedYield(sources.researched, action, input)
+		if own.casts >= SalvageLogic.TRUSTED_CASTS or (own.inputs > 0 and not researched) then
+			yield = yieldOf(own, "counted")
+		elseif researched then
+			yield = { casts = 0, basis = "researched", perInput = researched, chances = chances }
+		end
 	end
-	addRecord(own, groupTotal(sources.shipped, groupKey))
-	local counted = own
-	local researched = SalvageLogic.ResearchedYield(sources.researched, action, input)
-	if counted.casts >= SalvageLogic.TRUSTED_CASTS or (counted.inputs > 0 and not researched) then
-		return yieldOf(counted, "counted")
+	if yield then
+		yield.ownCasts = ownCasts
 	end
-	return researched and { casts = 0, basis = "researched", perInput = researched } or nil
+	return yield
 end
 
 local ACTION_OF_PREFIX = { p = "prospect", m = "mill" }
@@ -243,6 +310,80 @@ function SalvageLogic.Value(yield, valueOfItem)
 		end
 	end
 	return value, unvalued
+end
+
+-- Order of preference when two uses are worth the same: the one with the least work first.
+local USES = { "vendor", "auction", "salvage" }
+
+--- The best thing to do with one item, given what each use gets for it in copper
+--- (`{ vendor, auction, salvage }`, nil for a use that is not open): `use, gain`, `gain` being how
+--- much more it gets than the next best use (all of it when no other use is open). nil when no use is.
+function SalvageLogic.BestUse(values)
+	local open = {}
+	for rank, use in ipairs(USES) do
+		if values[use] then
+			open[#open + 1] = { use = use, value = values[use], rank = rank }
+		end
+	end
+	if #open == 0 then
+		return nil, nil
+	end
+	table.sort(open, function(a, b)
+		if a.value ~= b.value then
+			return a.value > b.value
+		end
+		return a.rank < b.rank
+	end)
+	return open[1].use, open[1].value - (open[2] and open[2].value or 0)
+end
+
+-- Units listed below `limit` and what they cost, from price steps (`{ price, quantity, ... }`,
+-- cheapest first). Without steps only the cheapest listing is known: one unit at `price`.
+local function listedBelow(item, limit)
+	if not (item.steps and #item.steps > 0) then
+		return 1, item.price
+	end
+	local quantity, cost = 0, 0
+	for index = 1, #item.steps, 2 do
+		if item.steps[index] >= limit then
+			break
+		end
+		quantity = quantity + item.steps[index + 1]
+		cost = cost + item.steps[index] * item.steps[index + 1]
+	end
+	return quantity, cost
+end
+
+--- Auctions worth buying to destroy: each `item = { itemID, price, value, steps, ... }` (cheapest
+--- buyout, what destroying one gives, price steps when known) whose buyout is below its value less
+--- `margin` (0.15 keeps 15% of the value back for prices that move and yields that vary).
+--- Returns copies of those items, most gain first, with `limit` (the highest price worth paying),
+--- `quantity` and `cost` (units listed below the limit and their total price), `gain` (their value
+--- less the cost) and `gainShare` (gain over cost). No auction cut: the items are bought, not sold.
+function SalvageLogic.BuyBelowValue(items, margin)
+	local rows = {}
+	for _, item in ipairs(items) do
+		local limit = item.value * (1 - margin)
+		-- Steps from an older search can disagree with the cheapest buyout: no units, no row.
+		local quantity, cost = listedBelow(item, limit)
+		if item.price > 0 and item.price < limit and quantity > 0 then
+			local row = {}
+			for key, field in pairs(item) do
+				row[key] = field
+			end
+			row.limit, row.quantity, row.cost = limit, quantity, cost
+			row.gain = quantity * item.value - cost
+			row.gainShare = row.gain / row.cost
+			rows[#rows + 1] = row
+		end
+	end
+	table.sort(rows, function(a, b)
+		if a.gain ~= b.gain then
+			return a.gain > b.gain
+		end
+		return a.itemID < b.itemID
+	end)
+	return rows
 end
 
 return SalvageLogic

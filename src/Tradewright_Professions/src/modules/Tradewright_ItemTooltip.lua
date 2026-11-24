@@ -86,15 +86,15 @@ end
 -- The actions and the profession (skill line) each one takes: Enchanting, Jewelcrafting, Inscription.
 local SALVAGE_ACTIONS = { { action = "disenchant", skillLineID = 333 }, { action = "prospect", skillLineID = 755 }, { action = "mill", skillLineID = 773 } }
 
--- Whether the logged-in character or any saved character has the profession. A saved character
--- counts once its profession has been scanned.
-local function someCharacterHasProfession(pe, skillLineID)
-	for _, profession in ipairs(pe:GetPlayerProfessions()) do
+--- Whether the logged-in character or any saved character has the profession. A saved character
+--- counts once its profession has been scanned.
+function Tradewright:SomeCharacterHasProfession(skillLineID)
+	for _, profession in ipairs(self:GetPlayerProfessions()) do
 		if profession.skillLineID == skillLineID then
 			return true
 		end
 	end
-	for _, character in pairs(pe.db.characters or {}) do
+	for _, character in pairs(self.db.characters or {}) do
 		if character.professions and character.professions[tostring(skillLineID)] then
 			return true
 		end
@@ -116,7 +116,7 @@ local function fillSalvage(pe, out, itemID)
 		return
 	end
 	for _, salvage in ipairs(SALVAGE_ACTIONS) do
-		local input = someCharacterHasProfession(pe, salvage.skillLineID) and pe:GetSalvageInput(salvage.action, itemID)
+		local input = pe:SomeCharacterHasProfession(salvage.skillLineID) and pe:GetSalvageInput(salvage.action, itemID)
 		local worth = input and pe:GetSalvageValue(salvage.action, input)
 		if worth then
 			out.salvage = out.salvage or {}

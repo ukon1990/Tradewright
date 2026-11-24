@@ -506,16 +506,20 @@ local SHIPPED_EPOCH = 0
 
 -- Adds one record of counts (a loot tally or a salvage yield) to the bucket's record of the same key:
 -- every number is summed, and so is each item's count.
+-- Adds one record's counts to the shipped one: numbers add up, and so do tables of counts per item
+-- (loot `items`, salvage `items` and `hits`).
 local function addCounts(bucket, key, counts)
 	local total = bucket[key] or { items = {} }
 	bucket[key] = total
 	for field, value in pairs(counts) do
 		if type(value) == "number" then
 			total[field] = (total[field] or 0) + value
+		elseif type(value) == "table" then
+			total[field] = total[field] or {}
+			for itemID, count in pairs(value) do
+				total[field][itemID] = (total[field][itemID] or 0) + count
+			end
 		end
-	end
-	for itemID, count in pairs(counts.items) do
-		total.items[itemID] = (total.items[itemID] or 0) + count
 	end
 end
 

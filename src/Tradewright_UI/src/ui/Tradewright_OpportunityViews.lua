@@ -95,7 +95,7 @@ local function coverageStat(pe, stat, insights)
 	local coverage = pe:GetHistoryCoverage(insights)
 	local note
 	if coverage.full == 0 then
-		note = string.format(L["Best item has %d of 5 scan days · today's scans count tomorrow"], coverage.bestDays)
+		note = string.format(L["Best item has %d of 5 scan days"], coverage.bestDays)
 	elseif (coverage.withSells or 0) < coverage.full / 2 then
 		note = string.format(L["Only %s know what sells · scan twice within a day"], pe:FormatNumberGrouped(coverage.withSells or 0))
 	elseif coverage.early > 0 then

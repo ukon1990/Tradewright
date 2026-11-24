@@ -59,6 +59,9 @@ src\ui\Tradewright_VendorBuyWindow.lua
 src\ui\Tradewright_FarmWindow.lua
 src\ui\Tradewright_FarmTargets.lua
 src\ui\Tradewright_FarmingTab.lua
+src\ui\Tradewright_SalvageTiles.lua
+src\ui\Tradewright_SalvageViews.lua
+src\ui\Tradewright_SalvageTab.lua
 src\ui\Tradewright_UIShell.lua
 src\ui\Tradewright_GetStarted.lua
 src\ui\Tradewright_MinimapButton.lua

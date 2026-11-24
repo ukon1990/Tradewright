@@ -210,6 +210,18 @@ local function giveBackPerCraft(self, evaluation)
 	return vendor, soldAtAuction and evaluation.saleNet * outputQuantity or nil
 end
 
+-- What disenchanting the items of one craft gives: `value, basis` (see GetSalvageValue), or nil when
+-- the crafted item cannot be disenchanted or nothing it gives has a price. Whether one of the
+-- player's characters can disenchant does not matter: the route prices the items, not the work.
+local function disenchantPerCraft(self, evaluation)
+	local input = self.GetSalvageInput and self:GetSalvageInput("disenchant", evaluation.outputItemID)
+	local worth = input and self.GetSalvageValue and self:GetSalvageValue("disenchant", input)
+	if not worth then
+		return nil
+	end
+	return worth.value * math.max(1, tonumber(evaluation.outputQty) or 1), worth.basis
+end
+
 -- The materials of one craft with the price the route pays for each: `{ { itemID, quantity, unitPrice } }`.
 local function candidateReagents(evaluation)
 	local reagents = {}
@@ -242,6 +254,7 @@ local function priceCandidate(self, candidate, build, workItem)
 		candidate.auctionGiveBack = evaluation.saleNet and evaluation.saleNet * evaluation.outputQty or nil
 	else
 		candidate.vendorGiveBack, candidate.auctionGiveBack = giveBackPerCraft(self, evaluation)
+		candidate.disenchantGiveBack, candidate.disenchantBasis = disenchantPerCraft(self, evaluation)
 		candidate.outputItemID = tonumber(evaluation.outputItemID)
 		candidate.outputQuantity = math.max(1, tonumber(evaluation.outputQty) or 1)
 	end
@@ -318,7 +331,7 @@ local function currentBuild(self, characterKey, characterData, professionData, s
 end
 
 --- The player's choices for the route:
---- `{ giveBackMode = "vendor" | "auction" | "none", recipeScope = "trainer" | "all" | "known" }`.
+--- `{ giveBackMode = "vendor" | "auction" | "disenchant" | "none", recipeScope = "trainer" | "all" | "known" }`.
 function Tradewright:GetLevelingSettings()
 	return {
 		giveBackMode = tostring(self:GetSetting("professions.leveling.giveBack", "vendor")),

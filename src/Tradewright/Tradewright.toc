@@ -23,6 +23,7 @@ src\util\Tradewright_ReagentStashLogic.lua
 src\util\Tradewright_VendorLogic.lua
 src\util\Tradewright_SourceLogic.lua
 src\util\Tradewright_SalvageLogic.lua
+src\util\Tradewright_SalvageCheckLogic.lua
 src\util\Tradewright_EnchantLogic.lua
 src\util\Tradewright_SkillUpLogic.lua
 src\util\Tradewright_LevelingRouteLogic.lua
