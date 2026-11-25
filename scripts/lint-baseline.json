@@ -480,11 +480,6 @@
      14
     ]
    },
-   "Tradewright:OnAuctionHouseClosed": {
-    "lines": [
-     42
-    ]
-   },
    "Tradewright:OnCommoditySearchResultsUpdated": {
     "ccn": [
      11

@@ -187,20 +187,18 @@ local function addRule(parent, inset, offsetY)
 	Tradewright:ColorTexture(rule, border, 1)
 end
 
--- Header: title and the collapse button.
+-- Header: title and the fold button; folded, a rail stands in for the panel at the mailbox edge.
 function Tradewright:CreateMailPanelHeader(panel)
+	local pe = self
 	local header = self:GetTheme().size.header
-	local collapse = CreateFrame("Button", nil, panel, "UIPanelCloseButton")
-	collapse:ClearAllPoints()
+	panel.dock = self:CreatePanelDock({
+		panel = panel,
+		gameWindow = panel:GetParent(),
+		setting = "mail.sidePanelExpanded",
+		onExpand = function() pe:RefreshMailPanel() end,
+	})
+	local collapse = panel.dock.collapseButton
 	collapse:SetPoint("RIGHT", panel, "TOPRIGHT", -6, -(header / 2))
-	self:SkinCloseButton(collapse)
-	collapse:SetScript("OnEnter", function(button)
-		GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
-		GameTooltip:SetText(L["Collapse the mail panel"], 1, 1, 1)
-		GameTooltip:Show()
-	end)
-	collapse:SetScript("OnLeave", GameTooltip_Hide)
-	panel.toggleBtn = collapse
 	local title = self:CreateText(panel, "GameFontNormalLarge", "gold")
 	title:SetPoint("LEFT", panel, "TOPLEFT", MAIL_PAD, -(header / 2) - 1)
 	title:SetPoint("RIGHT", collapse, "LEFT", -12, 0)
@@ -264,27 +262,6 @@ function Tradewright:CreateMailPanelBody(panel)
 	panel.rows = {}
 end
 
--- Collapsed, the panel is replaced by one small button at the mailbox edge.
-function Tradewright:BindMailPanelCollapse(panel, mail)
-	local pe = self
-	local expand = self:CreateButton(mail, Tradewright.DISPLAY_NAME, nil, { small = true })
-	expand:SetPoint("TOPLEFT", mail, "TOPRIGHT", 8, -20)
-	expand:Hide()
-	panel.collapseTab = expand
-	local function applyExpanded(expanded)
-		expanded = expanded ~= false
-		pe:SetSetting("mail.sidePanelExpanded", expanded)
-		panel:SetShown(expanded)
-		expand:SetShown(not expanded)
-	end
-	panel.toggleBtn:SetScript("OnClick", function() applyExpanded(false) end)
-	expand:SetScript("OnClick", function()
-		applyExpanded(true)
-		pe:RefreshMailPanel()
-	end)
-	panel.applyExpanded = applyExpanded
-end
-
 function Tradewright:EnsureMailPanel()
 	self.ui = self.ui or {}
 	if self.ui.mailPanel and self.ui.mailPanel:IsObjectType("Frame") then
@@ -305,9 +282,37 @@ function Tradewright:EnsureMailPanel()
 	self:CreateMailPanelFooter(panel)
 	self:CreateMailPanelBody(panel)
 	self:SkinTree(panel)
-	self:BindMailPanelCollapse(panel, mail)
 	self.ui.mailPanel = panel
 	return panel
+end
+
+-- One row per destination; rows left over from a longer plan are hidden.
+local function fillMailRows(pe, panel, plan)
+	for index, dest in ipairs(plan) do
+		local row = panel.rows[index]
+		if not row then
+			row = createMailRow(pe, panel.content)
+			panel.rows[index] = row
+		end
+		row:ClearAllPoints()
+		row:SetPoint("TOPLEFT", panel.content, "TOPLEFT", 0, -((index - 1) * MAIL_ROW))
+		row:SetPoint("TOPRIGHT", panel.content, "TOPRIGHT", 0, -((index - 1) * MAIL_ROW))
+		fillMailRow(pe, row, dest)
+	end
+	for index = #plan + 1, #panel.rows do
+		panel.rows[index]:Hide()
+	end
+	panel.content:SetHeight(math.max(MAIL_ROW, #plan * MAIL_ROW))
+	panel.empty:SetShown(#plan == 0)
+end
+
+-- The rail's count while folded: characters with a mail ready to attach.
+local function refreshMailRail(pe, panel, ready)
+	local details = {}
+	if ready > 0 then
+		details[1] = { label = L["Ready to mail"], value = string.format(L["%d characters"], ready) }
+	end
+	pe:SetPanelDockBadges(panel.dock, { gold = ready, details = details })
 end
 
 function Tradewright:RefreshMailPanel()
@@ -316,35 +321,19 @@ function Tradewright:RefreshMailPanel()
 		return
 	end
 	if not _G.MailFrame or not MailFrame:IsShown() then
-		panel:Hide()
-		panel.collapseTab:Hide()
+		self:ShowPanelDock(panel.dock, false)
 		return
 	end
-	local expanded = self:GetSetting("mail.sidePanelExpanded", true)
-	panel.applyExpanded(expanded)
-
+	self:ShowPanelDock(panel.dock, true)
 	panel.summary:SetText(roleText(self))
 	local plan = self:BuildMailPanelPlan()
-	for index, dest in ipairs(plan) do
-		local row = panel.rows[index]
-		if not row then
-			row = createMailRow(self, panel.content)
-			panel.rows[index] = row
-		end
-		row:ClearAllPoints()
-		row:SetPoint("TOPLEFT", panel.content, "TOPLEFT", 0, -((index - 1) * MAIL_ROW))
-		row:SetPoint("TOPRIGHT", panel.content, "TOPRIGHT", 0, -((index - 1) * MAIL_ROW))
-		fillMailRow(self, row, dest)
-	end
-	for index = #plan + 1, #panel.rows do
-		panel.rows[index]:Hide()
-	end
-	panel.content:SetHeight(math.max(MAIL_ROW, #plan * MAIL_ROW))
-	panel.empty:SetShown(#plan == 0)
+	fillMailRows(self, panel, plan)
 	panel.footerText:SetText(footerText(self, plan))
 	local queueState = self:EnsureMailSendQueueState()
 	local sending = refreshProgress(panel, queueState)
-	panel.sendAllBtn:SetEnabled(#self:GetReadyMailDestinations(plan) > 0 and not sending)
+	local ready = #self:GetReadyMailDestinations(plan)
+	refreshMailRail(self, panel, ready)
+	panel.sendAllBtn:SetEnabled(ready > 0 and not sending)
 	panel.cancelBtn:SetEnabled(queueState.running == true)
 	self:RefreshMailReviewPanel(plan)
 end
@@ -366,7 +355,7 @@ end
 function Tradewright:OnMailFrameHide()
 	local panel = self.ui and self.ui.mailPanel
 	if panel then
-		panel:Hide()
+		self:ShowPanelDock(panel.dock, false)
 	end
 	self:ClearMailSkipped()
 	self:SetMailReagentsOnly(false)

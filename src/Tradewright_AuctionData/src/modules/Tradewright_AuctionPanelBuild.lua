@@ -13,6 +13,7 @@ local function isAuctionHousePanelReady(panel)
 		and panel.tabCart
 		and panel.tableHost
 		and panel.cartTableHost
+		and panel.dock
 end
 
 local function isFrame(frame)
@@ -499,6 +500,7 @@ function Tradewright:EnsureAuctionHousePanel()
 	panel.sellControls = collectSellControls(panel, ui, w)
 	buildResizeHandle(panel)
 	self:BuildAuctionPanelLayout(panel)
+	self:BuildAuctionPanelDock(panel)
 	panel.__ahAuctionPanelInitInProgress = nil
 	panel.__ahAuctionPanelInitialized = true
 	ui.auctionPanel = panel

@@ -521,6 +521,25 @@ local function overviewText(pe, summary, recipeRows, totals)
 	return text
 end
 
+-- Counts on the rail that stands in for the folded panel: queued recipes, and those ready to craft now.
+local function refreshQueueRail(pe, panel, recipeRows)
+	if not panel.dock then
+		return
+	end
+	local ready = 0
+	for _, row in ipairs(recipeRows) do
+		if row.canCraftNow then
+			ready = ready + 1
+		end
+	end
+	local details = {}
+	if #recipeRows > 0 then
+		details[1] = { label = L["Queue"], value = string.format(L["%d recipes"], #recipeRows) }
+		details[2] = { label = L["Ready to craft"], value = tostring(ready) }
+	end
+	pe:SetPanelDockBadges(panel.dock, { gold = #recipeRows, green = ready, details = details })
+end
+
 function Tradewright:RefreshProfessionQueueCard(panel)
 	if not panel or not panel.recipeTable then
 		return
@@ -541,4 +560,5 @@ function Tradewright:RefreshProfessionQueueCard(panel)
 	panel.reagentTable:SetFooterText(shoppingFooter(self, reagentRows),
 		totals.cost and self:FormatCopperShort(totals.cost) or nil)
 	panel.clearQueueButton:SetEnabled(#recipeRows > 0)
+	refreshQueueRail(self, panel, recipeRows)
 end

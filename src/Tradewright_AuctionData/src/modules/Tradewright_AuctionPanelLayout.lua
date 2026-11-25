@@ -363,3 +363,23 @@ function Tradewright:LayoutAuctionPanelBody(panel, activeTab, progressShown)
 		panel.tableHost:SetPoint("BOTTOMRIGHT", panel.footer, "TOPRIGHT", -(AH_PAD - 1), AH_PAD)
 	end
 end
+
+-- Fold button at the right end of the header, left of it the Sell / Cart / Auctions switch, and the rail
+-- that stands in for the panel while it is folded.
+function Tradewright:BuildAuctionPanelDock(panel)
+	local pe = self
+	if panel.dock then
+		-- A rebuilt panel gets a new dock; the old rail belongs to the game window, so hide it.
+		panel.dock.rail:Hide()
+	end
+	panel.dock = self:CreatePanelDock({
+		panel = panel,
+		gameWindow = panel:GetParent(),
+		setting = "auction.sidePanelExpanded",
+		onExpand = function() pe:RefreshAuctionHousePanel() end,
+	})
+	local collapse = panel.dock.collapseButton
+	collapse:SetPoint("RIGHT", panel, "TOPRIGHT", -6, -(self:GetTheme().size.header / 2))
+	panel.tabAuctions:ClearAllPoints()
+	panel.tabAuctions:SetPoint("RIGHT", collapse, "LEFT", -8, 0)
+end

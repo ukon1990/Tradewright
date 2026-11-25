@@ -520,7 +520,23 @@ local GLYPHS = {
 	close = { { 11, 1.5, 0, 0, math.pi / 4 }, { 11, 1.5, 0, 0, -math.pi / 4 } },
 	-- A window outline with a thick title bar: "open in a window".
 	window = { { 11, 2, 0, 4.5 }, { 11, 1, 0, -5 }, { 1, 10, -5, 0 }, { 1, 10, 5, 0 } },
+	-- Chevrons for folding a docked panel: "<" folds it toward the game window, ">" unfolds it.
+	foldLeft = { { 6, 1.5, 0.5, 2, math.pi / 4 }, { 6, 1.5, 0.5, -2, -math.pi / 4 } },
+	foldRight = { { 6, 1.5, -0.5, 2, -math.pi / 4 }, { 6, 1.5, -0.5, -2, math.pi / 4 } },
 }
+
+-- Draws `glyph` (a GLYPHS key) centred on `frame` with one texture per line; `offsetY` moves it up or down.
+function Tradewright:DrawGlyph(frame, glyph, offsetY)
+	for _, spec in ipairs(GLYPHS[glyph]) do
+		local line = frame:CreateTexture(nil, "ARTWORK")
+		line:SetSize(spec[1], spec[2])
+		line:SetPoint("CENTER", frame, offsetY and "TOP" or "CENTER", spec[3], spec[4] + (offsetY or 0))
+		colorTexture(line, THEME.textMuted)
+		if spec[5] and line.SetRotation then
+			line:SetRotation(spec[5])
+		end
+	end
+end
 
 -- Replaces the red close button art with a 22px outlined square holding a drawn glyph (X by default).
 function Tradewright:SkinCloseButton(button, glyph)
@@ -538,19 +554,11 @@ function Tradewright:SkinCloseButton(button, glyph)
 	button:SetHighlightTexture(WHITE)
 	paint(button:GetHighlightTexture(), "SetVertexColor", THEME.gold, 0.09)
 	self:AddSurface(button, CLEAR, THEME.borderStrong)
-	for _, spec in ipairs(GLYPHS[glyph or "close"]) do
-		local line = button:CreateTexture(nil, "ARTWORK")
-		line:SetSize(spec[1], spec[2])
-		line:SetPoint("CENTER", spec[3], spec[4])
-		colorTexture(line, THEME.textMuted)
-		if spec[5] and line.SetRotation then
-			line:SetRotation(spec[5])
-		end
-	end
+	self:DrawGlyph(button, glyph or "close")
 	return button
 end
 
--- 22px square header button with a drawn glyph ("close" or "window"); `tooltip` is optional.
+-- 22px square header button with a drawn glyph (a GLYPHS key); `tooltip` is optional.
 function Tradewright:CreateIconButton(parent, glyph, onClick, tooltip)
 	local button = CreateFrame("Button", nil, parent, glyph == "close" and "UIPanelCloseButton" or nil)
 	button:ClearAllPoints()

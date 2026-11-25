@@ -27,6 +27,8 @@ globals = {
 	"SLASH_TWFARM1",
 	"SLASH_TRADEWRIGHT1",
 	"SLASH_TRADEWRIGHT2",
+	"BINDING_HEADER_TRADEWRIGHT", -- key binding labels, read by the game's Key Bindings window
+	"BINDING_NAME_TRADEWRIGHT_TOGGLE_PANEL_DOCK",
 	"ColorPickerFrame", -- older clients take the picker's callbacks as fields set on the frame
 	"SlashCmdList",
 	"StaticPopupDialogs",

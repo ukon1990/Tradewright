@@ -111,7 +111,7 @@ function Tradewright:OnAuctionHouseShow()
 		local panel = self:EnsureAuctionHousePanel()
 		self:HideExtraAuctionHousePanels(panel)
 		if panel then
-			panel:Show()
+			self:ShowPanelDock(panel.dock, true)
 		end
 	end
 	self:PrimeAuctionPanelRows()
@@ -121,6 +121,16 @@ function Tradewright:OnAuctionHouseShow()
 	if self:CanStartFullAuctionSideActions(false) then
 		queueStalePricesOnOpen(self)
 		self:StartAuctionRoiEnrichment(self:BuildAuctionVisibleItemIDs())
+	end
+end
+
+-- Hides the panel and its rail, so a rail left showing cannot come back once the panel is switched off.
+local function hideAuctionPanel(pe)
+	local panel = pe.ui and pe.ui.auctionPanel
+	if panel and panel.dock then
+		pe:ShowPanelDock(panel.dock, false)
+	elseif panel then
+		panel:Hide()
 	end
 end
 
@@ -162,9 +172,7 @@ function Tradewright:OnAuctionHouseClosed()
 	state.auctionRefreshQueueOrderCounter = nil
 	state.auctionSearchedTargets = nil
 	state.auctionSearchedTargetsMeta = nil
-	if self.ui and self.ui.auctionPanel then
-		self.ui.auctionPanel:Hide()
-	end
+	hideAuctionPanel(self)
 end
 
 function Tradewright:OnAuctionHouseBrowseResultsUpdated()
@@ -221,7 +229,8 @@ end
 function Tradewright:OnAuctionBagUpdate()
 	if self:IsAuctionHouseFrameOpen() then
 		local panel = self.ui and self.ui.auctionPanel
-		if panel and panel.IsShown and panel:IsShown() then
+		-- Also while folded: the rail's cart count follows the bags.
+		if panel and panel.dock and self:IsPanelDockShown(panel.dock) then
 			self:PrimeAuctionPanelRows()
 			self:RefreshAuctionHousePanel()
 		end

@@ -363,6 +363,19 @@ local function refreshAuctionPanelProgress(pe, panel, scan)
 	refreshAuctionPanelTiming(panel, scan)
 end
 
+-- Counts on the rail that stands in for the panel while it is folded; they keep updating while folded.
+local function refreshAuctionPanelRail(pe, panel, scan, cart)
+	local details = {}
+	if cart.outstanding > 0 then
+		details[#details + 1] = { label = L["Cart"], value = string.format(L["%d items"], cart.outstanding) }
+	end
+	local progressText = auctionProgressText(pe, scan)
+	if progressText then
+		details[#details + 1] = { label = L["Progress"], value = progressText }
+	end
+	pe:SetPanelDockBadges(panel.dock, { gold = cart.outstanding, progress = auctionProgressFraction(scan), details = details })
+end
+
 local function styleAuctionPanelTab(pe, tab, active)
 	tab:SetEnabled(true)
 	if pe.StyleShellButton then
@@ -606,6 +619,7 @@ function Tradewright:RefreshAuctionHousePanel()
 	refreshAuctionPanelPostButtons(panel, scan)
 	refreshAuctionPanelPauseButtons(panel, scan)
 	refreshAuctionPanelProgress(self, panel, scan)
+	refreshAuctionPanelRail(self, panel, scan, cart)
 	refreshAuctionPanelTabs(self, panel, activeTab, cart)
 	if activeTab == "auctions" then
 		refreshOwnedAuctionsTab(self, panel, state, scan.queued)

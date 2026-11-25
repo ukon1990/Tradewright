@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="TRADEWRIGHT_TOGGLE_PANEL_DOCK" header="TRADEWRIGHT">
+		Tradewright:TogglePanelDock()
+	</Binding>
+</Bindings>

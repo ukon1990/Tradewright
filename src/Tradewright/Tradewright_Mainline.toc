@@ -47,6 +47,7 @@ src\util\Tradewright_Util.lua
 src\util\Tradewright_JsonCodec.lua
 src\util\Tradewright_ItemInfo.lua
 src\ui\Tradewright_Theme.lua
+src\ui\Tradewright_PanelRail.lua
 src\modules\Tradewright_Docs.lua
 src\data\Tradewright_SourceData.lua
 src\data\Tradewright_SalvageData.lua

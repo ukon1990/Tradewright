@@ -64,7 +64,7 @@ local AUCTION_SETTING_DEFAULTS = {
 	{ "enabled", true }, { "sellPanelEnabled", true }, { "tabEnabled", true }, { "minMarginPercent", 5 },
 	{ "minMarginCopper", 100 }, { "historyRetentionDays", 30 }, { "visibleRefreshThrottleMs", 150 },
 	{ "dumpBatchSize", 50 }, { "priceFreshnessMinutes", 15 }, { "autoCraftEconomyRefreshOnOpen", false },
-	{ "craftScanIncludeOptionalSlots", false }, { "suggestFullScan", true },
+	{ "craftScanIncludeOptionalSlots", false }, { "suggestFullScan", true }, { "sidePanelExpanded", true },
 }
 -- Auction settings mirrored into the auction module's own settings table (in this order).
 local AUCTION_MIRRORED_KEYS = {}

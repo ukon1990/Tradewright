@@ -134,64 +134,9 @@ function Tradewright:SetProfessionPanelActiveTab(tabId, persist)
 	end
 end
 
-function Tradewright:ApplyProfessionPanelExpanded(expanded)
-	local panel = self._professionCraftPanel
-	if not panel then
-		return
-	end
-	expanded = expanded ~= false
-	self:SetSetting("professions.sidePanelExpanded", expanded)
-	panel:SetShown(expanded)
-	self:UpdateProfessionPanelToggleButton(expanded)
-end
-
-function Tradewright:UpdateProfessionPanelToggleButton(expanded)
-	local panel = self._professionCraftPanel
-	if not panel then
-		return
-	end
-	if expanded == nil then
-		expanded = self:GetSetting("professions.sidePanelExpanded", true) ~= false
-	end
-	local toggle = panel.panelToggleBtn
-	if toggle then
-		toggle:Show()
-		toggle:SetText(expanded and L["Hide panel"] or L["Show panel"])
-	end
-	-- The side tab stays hidden: the toggle lives on the profession title bar.
-	if panel.collapseTab then
-		panel.collapseTab:Hide()
-	end
-end
-
-local function anchorProfessionPanelToggleButton(toggle, pf)
-	if not toggle or not pf then
-		return
-	end
-	toggle:SetParent(pf)
-	toggle:ClearAllPoints()
-	local close = pf.CloseButton
-	if close then
-		toggle:SetPoint("RIGHT", close, "LEFT", -6, 0)
-	elseif pf.TitleContainer and pf.TitleContainer.CloseButton then
-		toggle:SetPoint("RIGHT", pf.TitleContainer.CloseButton, "LEFT", -6, 0)
-	else
-		toggle:SetPoint("TOPRIGHT", pf, "TOPRIGHT", -36, -4)
-	end
-	toggle:SetFrameStrata(pf:GetFrameStrata() or "MEDIUM")
-	local baseLevel = pf.GetFrameLevel and pf:GetFrameLevel() or 100
-	toggle:SetFrameLevel(baseLevel + 50)
-end
-
--- Hides the panel with its toggle button and collapsed tab.
+-- Hides the panel and its rail.
 local function hideProfessionPanel(panel)
-	panel:Hide()
-	if panel.panelToggleBtn then
-		panel.panelToggleBtn:Hide()
-	end
-	if panel.collapseTab then
-		panel.collapseTab:Hide()
-	end
+	Tradewright:ShowPanelDock(panel.dock, false)
 end
 
 local function hookRecipeSelection(page, scheduleRefresh)
@@ -269,11 +214,8 @@ function Tradewright:LayoutProfessionCraftEconomyPanel(panel)
 	local x = 8 + (sideTab and math.ceil(sideTab:GetWidth()) or 0)
 	panel:SetPoint("TOPLEFT", pf, "TOPRIGHT", x, -20)
 	panel:SetPoint("BOTTOMLEFT", pf, "BOTTOMRIGHT", x, 16)
-	if panel.panelToggleBtn then
-		anchorProfessionPanelToggleButton(panel.panelToggleBtn, pf)
-	end
-	if panel.collapseTab then
-		panel.collapseTab:Hide()
+	if panel.dock then
+		self:SetPanelDockOffset(panel.dock, x)
 	end
 end
 
@@ -386,13 +328,23 @@ local function createRecipeView(pe, f)
 	return host
 end
 
--- Title bar: the title and the Recipe / Leveling / Queue switch.
+-- The fold button and the rail that stands in for the panel while it is folded.
+local function createPanelDock(pe, f, pf)
+	f.dock = pe:CreatePanelDock({
+		panel = f,
+		gameWindow = pf,
+		setting = "professions.sidePanelExpanded",
+		onExpand = function() pe:ScheduleRefreshProfessionCraftEconomyPanel(0.05) end,
+	})
+	f.dock.collapseButton:SetPoint("RIGHT", f, "TOPRIGHT", -6, -(pe:GetTheme().size.header / 2))
+end
+
+-- Title bar: the title, the Recipe / Leveling / Queue switch and the fold button.
 local function createPanelHeader(pe, f)
-	local theme = pe:GetTheme()
 	f.tabQueue = pe:CreateButton(f, L["Queue"], function()
 		pe:SetProfessionPanelActiveTab("queue", true)
 	end, { small = true })
-	f.tabQueue:SetPoint("RIGHT", f, "TOPRIGHT", -PAD, -(theme.size.header / 2))
+	f.tabQueue:SetPoint("RIGHT", f.dock.collapseButton, "LEFT", -8, 0)
 	f.tabLeveling = pe:CreateButton(f, L["Leveling"], function()
 		pe:SetProfessionPanelActiveTab("leveling", true)
 	end, { small = true })
@@ -402,6 +354,7 @@ local function createPanelHeader(pe, f)
 	end, { small = true })
 	f.tabInfo:SetPoint("RIGHT", f.tabLeveling, "LEFT", 1, 0)
 	f.title = pe:CreateText(f, "GameFontNormalLarge", "gold")
+	local theme = pe:GetTheme()
 	f.title:SetPoint("LEFT", f, "TOPLEFT", PAD, -(theme.size.header / 2) - 1)
 	f.title:SetPoint("RIGHT", f.tabInfo, "LEFT", -12, 0)
 	f.title:SetText(Tradewright.DISPLAY_NAME)
@@ -429,31 +382,6 @@ local function createPanelFooter(pe, f)
 	f.footerText:SetPoint("RIGHT", -PAD, 0)
 end
 
--- Toggle on the profession window's title bar, left of its close button.
-local function createPanelToggle(pe, pf)
-	local theme = pe:GetTheme()
-	local panelToggle = CreateFrame("Button", addonName .. "ProfessionPanelToggle", pf, "UIPanelButtonTemplate")
-	panelToggle:SetText(L["Hide panel"])
-	pe:SkinButton(panelToggle)
-	panelToggle:SetSize(80, theme.size.controlSmall)
-	anchorProfessionPanelToggleButton(panelToggle, pf)
-	panelToggle:HookScript("OnEnter", function(button)
-		GameTooltip:SetOwner(button, "ANCHOR_BOTTOM")
-		GameTooltip:SetText(L["Tradewright panel"], 1, 1, 1)
-		GameTooltip:AddLine(L["Show or hide recipe profit and the craft queue."], theme.textMuted.r, theme.textMuted.g, theme.textMuted.b, true)
-		GameTooltip:Show()
-	end)
-	panelToggle:HookScript("OnLeave", GameTooltip_Hide)
-	panelToggle:SetScript("OnClick", function()
-		local wasExpanded = pe:GetSetting("professions.sidePanelExpanded", true) ~= false
-		pe:ApplyProfessionPanelExpanded(not wasExpanded)
-		if not wasExpanded then
-			pe:ScheduleRefreshProfessionCraftEconomyPanel(0.05)
-		end
-	end)
-	return panelToggle
-end
-
 function Tradewright:EnsureProfessionCraftEconomyPanel()
 	if self._professionCraftPanel then
 		self:LayoutProfessionCraftEconomyPanel(self._professionCraftPanel)
@@ -472,9 +400,9 @@ function Tradewright:EnsureProfessionCraftEconomyPanel()
 	self:LayoutProfessionCraftEconomyPanel(f)
 	self:StyleWindow(f)
 	f:SetClampedToScreen(true)
+	createPanelDock(self, f, pf)
 	createPanelHeader(self, f)
 	createPanelFooter(self, f)
-	f.panelToggleBtn = createPanelToggle(self, pf)
 
 	createRecipeView(self, f)
 	self:CreateProfessionQueueView(f)
@@ -606,7 +534,7 @@ function Tradewright:RenderProfessionPanelEmpty(panel, reason)
 	if reason == "not_retail" then
 		return hideProfessionPanel(panel)
 	end
-	panel:Show()
+	self:ShowPanelDock(panel.dock, true)
 	renderProfessionEmpty(panel, EMPTY_REASON_TEXT[reason] or SELECT_RECIPE_TEXT)
 	self:RefreshProfessionSideParts(panel)
 	panel.addButton:SetEnabled(false)
@@ -626,10 +554,9 @@ function Tradewright:RenderProfessionCraftEconomyPanel()
 		return
 	end
 	self:LayoutProfessionCraftEconomyPanel(panel)
-	local expanded = self:GetSetting("professions.sidePanelExpanded", true) ~= false
-	self:UpdateProfessionPanelToggleButton(expanded)
-	if not expanded then
-		panel:Hide()
+	-- Folded: only the rail shows, but the side parts still refresh so its counts stay current.
+	if not self:IsPanelDockExpanded(panel.dock) then
+		self:ShowPanelDock(panel.dock, true)
 		return self:RefreshProfessionSideParts(panel)
 	end
 	self:SetProfessionPanelActiveTab(self.ui and self.ui.professionPanelActiveTab or self:GetSetting("professions.sidePanelTab", "info"), false)
@@ -641,7 +568,7 @@ function Tradewright:RenderProfessionCraftEconomyPanel()
 	panel.addButton:SetEnabled(true)
 	renderProfessionRecipe(self, panel, context)
 	self:RefreshProfessionSideParts(panel)
-	panel:Show()
+	self:ShowPanelDock(panel.dock, true)
 end
 
 --- Redraws the side panel of the profession window; calls closer than REFRESH_THROTTLE_SEC are

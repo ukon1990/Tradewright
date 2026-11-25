@@ -172,7 +172,8 @@ function Tradewright:CancelMailSendQueue()
 			setMailField(box, "")
 		end
 	end
-	if self.ui and self.ui.mailPanel and self.ui.mailPanel:IsShown() then
+	-- Also while folded: the rail's count follows what is left to mail.
+	if self.ui and self.ui.mailPanel and self:IsPanelDockShown(self.ui.mailPanel.dock) then
 		self:RefreshMailPanel()
 	end
 end
