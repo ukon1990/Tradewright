@@ -36,17 +36,9 @@ function Tradewright:OnAuctionHouseAuctionCreated()
 	self:RefreshAuctionHousePanel()
 end
 
+-- The event does not say which auction sold, so sales are counted from the auction house mail
+-- (the ledger) instead; here the panel only refreshes.
 function Tradewright:OnAuctionHouseAuctionSold()
-	local state = self:GetState()
-	local itemID = normalizeItemID(state and state.auctionActiveItemID)
-	if itemID then
-		self:RecordAuctionTransaction({
-			kind = "sold",
-			itemID = itemID,
-			quantity = 1,
-			source = "auction_event",
-		})
-	end
 	self:PrimeAuctionPanelRows()
 	self:RefreshAuctionHousePanel()
 end

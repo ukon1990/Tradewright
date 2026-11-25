@@ -195,31 +195,16 @@ function Tradewright:UpdateAuctionPanelRowPrice(itemID, priceState)
 	end
 end
 
-function Tradewright:GetAuctionPanelPersonalSaleRate(itemID, characterKey)
-	local auction = self:InitAuctionDB()
-	if not auction or not auction.transactions or type(auction.transactions.events) ~= "table" then
-		return nil, "-"
-	end
+--- Share of the player's own postings of an item that sold: sales / (sales + expired + cancelled),
+--- from the mail ledger, so each sale counts for the item that actually sold. Returns the fraction
+--- and its "80%" text, or nil and "-" while the item was never posted (or Inventory is off).
+function Tradewright:GetAuctionPanelPersonalSaleRate(itemID)
 	itemID = normalizeItemID(itemID)
-	if not itemID then
+	local tally = itemID and self.GetLedgerItemTally and self:GetLedgerItemTally(itemID)
+	local ratio = self.IncomeLogic.SaleChance(tally, 1)
+	if not ratio then
 		return nil, "-"
 	end
-	characterKey = characterKey and tostring(characterKey) or self:GetCharacterKey()
-	local posted, sold = 0, 0
-	for _, event in ipairs(auction.transactions.events) do
-		if tonumber(event and event.itemID) == itemID and tostring(event.characterKey or "") == characterKey then
-			local kind = tostring(event.kind or "")
-			if kind == "posted" then
-				posted = posted + math.max(1, tonumber(event.quantity) or 1)
-			elseif kind == "sold" then
-				sold = sold + math.max(1, tonumber(event.quantity) or 1)
-			end
-		end
-	end
-	if posted <= 0 then
-		return nil, "-"
-	end
-	local ratio = math.max(0, math.min(1, sold / posted))
 	return ratio, string.format("%.0f%%", ratio * 100)
 end
 

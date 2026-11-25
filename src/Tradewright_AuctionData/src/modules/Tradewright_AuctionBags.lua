@@ -198,9 +198,8 @@ function Tradewright:BuildAuctionInventoryRows(opts)
 			rows[#rows + 1] = row
 		end
 	end
-	local characterKey = self:GetCharacterKey()
 	for _, row in ipairs(rows) do
-		local v, display = self:GetAuctionPanelPersonalSaleRate(row.itemID, characterKey)
+		local v, display = self:GetAuctionPanelPersonalSaleRate(row.itemID)
 		row.personalSaleRateValue = v
 		row.personalSaleRateDisplay = display or "-"
 		self:UpdateAuctionRowDumpState(row)

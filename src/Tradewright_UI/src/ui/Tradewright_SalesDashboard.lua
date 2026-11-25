@@ -70,7 +70,6 @@ local function addOrigins(items, sales, labels)
 	end
 end
 
--- How much of what this character posted sold (AuctionData's ledger; nil when never posted).
 -- What each sold item cost to buy and what it made per unit, for items the ledger also saw bought.
 local function addPurchases(pe, items)
 	if not pe.GetLedgerItemTally then
@@ -84,6 +83,7 @@ local function addPurchases(pe, items)
 	end
 end
 
+-- How much of what was posted sold, from the mail ledger (nil when never posted).
 local function addSaleRates(pe, items)
 	if not pe.GetAuctionPanelPersonalSaleRate then
 		return
