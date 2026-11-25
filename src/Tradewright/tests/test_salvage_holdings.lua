@@ -79,6 +79,24 @@ do
 		table.concat(newAddon({}, true, { [755] = true }):GetSalvageActions(), ",") == "disenchant,prospect")
 end
 
+-- Worth destroying, for the mailbox: an item whose best use is to destroy it
+do
+	local pe = newAddon({})
+	check("Best destroyed: the cloak gets more disenchanted than at auction", pe:IsBestDestroyed("disenchant", CLOAK))
+	function pe:GetSalvageValue() return { value = 10, basis = "researched", casts = 0 } end
+	check("Best destroyed: not gear known to sell for more", not pe:IsBestDestroyed("disenchant", CLOAK))
+	function pe:GetSalvageValue() return nil end
+	check("Best destroyed: not gear whose disenchant value is not known", not pe:IsBestDestroyed("disenchant", CLOAK))
+	check("Can destroy: uncommon gear, whatever its value", pe:CanDestroy("disenchant", CLOAK))
+	check("Can destroy: not linen, which is no gear", not pe:CanDestroy("disenchant", LINEN))
+	function pe:GetSalvageInput(_, itemID) return { itemID = itemID } end
+	function pe:GetSalvageYield(_, input) return input.itemID == LINEN and { perInput = {} } or nil end
+	check("Can destroy: ore and herbs only with a known yield", pe:CanDestroy("prospect", LINEN) and not pe:CanDestroy("prospect", CLOAK))
+	check("Client actions: Forever disenchants only, retail also prospects and mills",
+		table.concat(newAddon({}, false):GetClientSalvageActions(), ",") == "disenchant"
+		and table.concat(newAddon({}, true):GetClientSalvageActions(), ",") == "disenchant,prospect,mill")
+end
+
 -- Who can disenchant
 do
 	local pe = newAddon({})
@@ -88,6 +106,9 @@ do
 		["Maelis-R"] = { meta = { name = "Maelis" }, professions = { ["164"] = { skillLevel = 200 } } },
 	} }
 	local enchanters = pe:GetEnchanters()
+	pe.db.characters["Maelis-R"].professions["755"] = { skillLevel = 50 }
+	local jewelcrafters = pe:GetSalvageCharacters("prospect")
+	check("Prospectors are the jewelcrafters", #jewelcrafters == 1 and jewelcrafters[1].characterKey == "Maelis-R")
 	check("Enchanters only, highest skill first", #enchanters == 2 and enchanters[1].name == "Elra" and enchanters[1].skillLevel == 180
 		and enchanters[2].characterKey == "Torvik-R")
 end

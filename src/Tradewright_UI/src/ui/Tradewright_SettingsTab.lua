@@ -229,23 +229,50 @@ local function inventorySection()
 	} }
 end
 
+local DESTROYER_LABELS = { disenchant = L["Disenchanter"], prospect = L["Prospector"], mill = L["Miller"] }
+local PROFITABLE_ONLY_LABELS = {
+	disenchant = L["Only gear worth more disenchanted than sold"],
+	prospect = L["Only ore worth more prospected than sold"],
+	mill = L["Only herbs worth more milled than sold"],
+}
+
+-- One select per destroying action this client has, and whether only what is worth more destroyed
+-- goes. Until one is chosen, the character with the best skill in its profession is used, and shown
+-- as chosen.
+local function destroyerItems(pe, items, characterOptions)
+	if not pe.GetDestroyerSettingPath then
+		return
+	end
+	for _, action in ipairs(pe:GetClientSalvageActions()) do
+		items[#items + 1] = { kind = "select", label = DESTROYER_LABELS[action], path = pe:GetDestroyerSettingPath(action),
+			default = pe:GetDefaultDestroyerKey(action) or "", options = characterOptions }
+		items[#items + 1] = { kind = "check", label = PROFITABLE_ONLY_LABELS[action], path = "mail.destroyProfitableOnly." .. action,
+			default = false }
+	end
+	items[#items + 1] = { kind = "note",
+		text = L["Everything these characters can destroy is mailed to them, handy while levelling the profession."]
+			.. L[" Review… in the mailbox shows what goes."] }
+end
+
 -- The bank character is chosen per realm (on Forever, one for all characters), from
--- the characters known there, by full name on Forever.
+-- the characters known there, by full name on Forever. So are the characters that destroy items.
 local function mailSection(pe)
-	local sellerOptions = { { value = "", label = L["None"] } }
+	local characterOptions = { { value = "", label = L["None"] } }
 	local realmKeys, realm = {}, "?"
 	if pe.GetRealmCharacterKeys then
 		realmKeys, realm = pe:GetRealmCharacterKeys()
 	end
 	for _, characterKey in ipairs(realmKeys) do
-		sellerOptions[#sellerOptions + 1] = { value = characterKey, label = pe:GetMailRecipient(characterKey) }
+		characterOptions[#characterOptions + 1] = { value = characterKey, label = pe:GetMailRecipient(characterKey) }
 	end
-	return { title = L["Mail"], items = {
+	local items = {
 		{ kind = "select", label = L["Bank character"], path = "mail.sellerByRealm." .. realm, default = "",
-			options = sellerOptions },
+			options = characterOptions },
 		{ kind = "note", text = L["The character that sells at the auction house and holds your reagents."] },
 		{ kind = "check", label = L["Mail reagents to my crafters when the mailbox opens"], path = "mail.autoSendMaterials", default = true },
-	} }
+	}
+	destroyerItems(pe, items, characterOptions)
+	return { title = L["Mail"], items = items }
 end
 
 -- The bags module is its own addon; its settings only show when it is loaded.

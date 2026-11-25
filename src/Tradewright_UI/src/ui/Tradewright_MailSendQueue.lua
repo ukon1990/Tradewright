@@ -12,7 +12,10 @@ end
 
 local ATTACHMENTS_MAX = ATTACHMENTS_MAX_SEND or 12
 local AUTO_SEND_TIMEOUT = 6
-local MAIL_SUBJECTS = { materials = L["Tradewright reagents"], crafts = L["Tradewright crafts"], surplus = L["Tradewright surplus"] }
+local MAIL_SUBJECTS = {
+	materials = L["Tradewright reagents"], crafts = L["Tradewright crafts"], surplus = L["Tradewright surplus"],
+	destroy = L["Tradewright to destroy"],
+}
 local MAIL_BODY = L["Sent with Tradewright."]
 
 local function clearMailAttachments()
@@ -286,11 +289,11 @@ function Tradewright:AutoSendReadyMaterials()
 	end
 end
 
---- Materials and crafted items; the surplus only goes from its review panel.
+--- Materials and crafted items; the surplus and items to destroy only go from their review panel.
 function Tradewright:GetReadyMailDestinations(plan)
 	local ready = {}
 	for _, dest in ipairs(plan) do
-		if dest.kind ~= "surplus" and (tonumber(dest.totalQuantity) or 0) > 0 then
+		if not dest.reviewKey and (tonumber(dest.totalQuantity) or 0) > 0 then
 			ready[#ready + 1] = dest
 		end
 	end

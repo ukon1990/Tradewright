@@ -128,6 +128,33 @@ do
 		and ML.EarlierForeverSeller({ Ashford = "Gone-Ashford" }, known) == nil and ML.EarlierForeverSeller(nil, known) == nil)
 end
 
+-- Who items to destroy go to
+do
+	local known = { ["Elra-R"] = true, ["Torvik-R"] = true }
+	local enchanters = { "Elra-R", "Torvik-R" }
+	check("Destroyer: nothing chosen picks the best with the profession", ML.ResolveDestroyerCharacter(nil, enchanters, known) == "Elra-R")
+	check("Destroyer: a choice wins over the best", ML.ResolveDestroyerCharacter("Torvik-R", enchanters, known) == "Torvik-R")
+	check("Destroyer: None, or a character no longer known, sends nothing",
+		ML.ResolveDestroyerCharacter("", enchanters, known) == nil and ML.ResolveDestroyerCharacter("Gone-R", enchanters, known) == nil)
+	check("Destroyer: nobody with the profession", ML.ResolveDestroyerCharacter(nil, {}, known) == nil)
+end
+
+-- Items to destroy: only the ones worth more destroyed, with their own keep amounts
+do
+	local bags = {
+		[1] = { name = "Cloak", quantity = 3, quality = 2, sellable = true },
+		[2] = { name = "Linen", quantity = 20, quality = 1, sellable = true },
+		[3] = { name = "Bound ring", quantity = 1, quality = 2, sellable = false },
+		[4] = { name = "Boots", quantity = 1, quality = 2, sellable = true },
+	}
+	local destroyed = { [1] = true, [3] = true, [4] = true }
+	local rows = ML.BuildDestroyRows(bags, function(itemID) return destroyed[itemID] end, { [1] = 1, [2] = 5 }, { [4] = 1 }, {})
+	local byID = {}
+	for _, row in ipairs(rows) do byID[row.itemID] = row end
+	check("Destroy rows: only items worth destroying that can be mailed", #rows == 2 and byID[1] and byID[4] and not byID[2] and not byID[3])
+	check("Destroy rows: keep amounts hold back, sent without one", byID[1].send == 2 and byID[4].send == 0 and byID[4].reason == "held")
+end
+
 if failed > 0 then
 	print(failed .. " check(s) failed")
 	os.exit(1)

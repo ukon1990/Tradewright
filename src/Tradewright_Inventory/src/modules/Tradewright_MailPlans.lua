@@ -1,7 +1,7 @@
 local _, Tradewright = ...
 
--- Who mails what to whom: the bank character ("seller") of each realm, and the
--- plans the mailbox panel sends. The decisions are pure functions, mostly in MailLogic (the seller
+-- Who mails what to whom: the bank character ("seller") of each realm, the characters that
+-- disenchant, prospect and mill, and the plans the mailbox panel sends. The decisions are pure functions, mostly in MailLogic (the seller
 -- choice and the return-to-seller plan are in ForeverLogic).
 
 -- WoW Forever has no realms: the second part of its character keys is a surname, so all of its
@@ -59,6 +59,50 @@ end
 
 function Tradewright:IsSellerCharacter()
 	return self:GetSellerCharacterKey() == self:GetCharacterKey()
+end
+
+--- Where the character chosen to destroy for `action` ("disenchant", "prospect", "mill") on this
+--- realm (all of Forever) is saved.
+function Tradewright:GetDestroyerSettingPath(action)
+	local _, realm = self:GetRealmCharacterKeys()
+	return "mail.destroyerByRealm." .. realm .. "." .. action
+end
+
+-- This realm's characters with the profession `action` takes, the highest skill first, and every
+-- character known here (known[characterKey] = true).
+local function destroyerCandidates(pe, action)
+	local known, candidates = {}, {}
+	for _, characterKey in ipairs((pe:GetRealmCharacterKeys())) do
+		known[characterKey] = true
+	end
+	for _, character in ipairs(pe:GetSalvageCharacters(action)) do
+		if known[character.characterKey] then
+			candidates[#candidates + 1] = character.characterKey
+		end
+	end
+	return candidates, known
+end
+
+--- The character on this realm with the best skill in the profession `action` takes, or nil.
+function Tradewright:GetDefaultDestroyerKey(action)
+	return (destroyerCandidates(self, action))[1]
+end
+
+--- Whether only items worth more destroyed than sold go to the character that destroys with
+--- `action`; else everything it can destroy goes. Off unless turned on.
+function Tradewright:GetDestroyProfitableOnly(action)
+	return self:GetSetting("mail.destroyProfitableOnly." .. action, false) == true
+end
+
+function Tradewright:SetDestroyProfitableOnly(action, enabled)
+	self:SetSetting("mail.destroyProfitableOnly." .. action, enabled == true)
+end
+
+--- The character items to destroy with `action` are mailed to: the one chosen in settings, else the
+--- best one with the profession. nil when "None" is chosen or nobody has it.
+function Tradewright:GetDestroyerCharacterKey(action)
+	local candidates, known = destroyerCandidates(self, action)
+	return self.MailLogic.ResolveDestroyerCharacter(self:GetSetting(self:GetDestroyerSettingPath(action)), candidates, known)
 end
 
 -- Saved per character under settings.mail[name][characterKey].
@@ -141,45 +185,95 @@ local function heldQuantities(pe, plan)
 	return held
 end
 
--- The surplus row, shown on every character but the seller even when nothing goes: its review rows with names
--- and prices, their summary, and the items that go.
-local function surplusDestination(pe, plan, bags, seller)
-	local rows = pe.MailLogic.BuildReviewRows(bags, characterStore(pe, "keepByCharacter"), heldQuantities(pe, plan),
-		pe:GetMailSendOthers(), pe:GetMailSkipped())
-	pe:NarrowSurplusToReagents(rows)
+-- Names and prices on review rows, their summary, and the items that go: what a destination with a
+-- review panel shows. `dest` = { kind, reviewKey, characterKey, action? }.
+local function reviewDestination(pe, rows, dest)
 	for _, row in ipairs(rows) do
 		row.name = row.name or pe:GetItemDisplayName(row.itemID)
 		row.unitPrice = pe:GetMailItemUnitPrice(row.itemID)
 	end
 	local summary = pe.MailLogic.SummarizeReviewRows(rows)
-	return { kind = "surplus", characterKey = seller, mailName = pe:GetMailRecipient(seller),
-		items = pe.MailLogic.SurplusItems(rows), totalQuantity = summary.send, reviewRows = rows, summary = summary }
+	dest.mailName = pe:GetMailRecipient(dest.characterKey)
+	dest.items, dest.totalQuantity = pe.MailLogic.SurplusItems(rows), summary.send
+	dest.reviewRows, dest.summary = rows, summary
+	return dest
 end
 
---- Everything the mailbox panel can send from this character: materials for crafters, and on any
---- character but the seller the crafted items owed to it and the surplus above keep amounts. Each
---- destination carries its `kind`.
+-- The surplus row, shown on every character but the seller even when nothing goes.
+local function surplusDestination(pe, plan, bags, seller)
+	local rows = pe.MailLogic.BuildReviewRows(bags, characterStore(pe, "keepByCharacter"), heldQuantities(pe, plan),
+		pe:GetMailSendOthers(), pe:GetMailSkipped())
+	pe:NarrowSurplusToReagents(rows)
+	return reviewDestination(pe, rows, { kind = "surplus", reviewKey = "surplus", characterKey = seller })
+end
+
+-- The items in the bags `action` can destroy, for `destroyer`; with "only worth more destroyed" on,
+-- the ones known to sell for more stay (reason "notProfitable"). nil when the bags hold none.
+local function destroyDestination(pe, plan, bags, action, destroyer)
+	local rows = pe.MailLogic.BuildDestroyRows(bags, function(itemID) return pe:CanDestroy(action, itemID) end,
+		characterStore(pe, "keepByCharacter"), heldQuantities(pe, plan), pe:GetMailSkipped())
+	if #rows == 0 then
+		return nil
+	end
+	if pe:GetDestroyProfitableOnly(action) then
+		pe.MailLogic.SendOnly(rows, function(itemID) return pe:IsBestDestroyed(action, itemID) end, "notProfitable")
+	end
+	return reviewDestination(pe, rows, { kind = "destroy", reviewKey = action, action = action, characterKey = destroyer })
+end
+
+-- A row per destroying action with a destroyer other than this character, added to `plan`. Returns
+-- the rows added.
+local function addDestroyDestinations(pe, plan, bags)
+	local added, current = {}, pe:GetCharacterKey()
+	for _, action in ipairs(pe:GetClientSalvageActions()) do
+		local destroyer = pe:GetDestroyerCharacterKey(action)
+		local dest = destroyer and destroyer ~= current and destroyDestination(pe, plan, bags, action, destroyer)
+		if dest then
+			plan[#plan + 1] = dest
+			added[#added + 1] = dest
+		end
+	end
+	return added
+end
+
+-- Crafted items owed to the seller. Ones that left the bags some other way are no longer owed.
+local function addCraftsDestination(pe, plan, bags, seller)
+	local toSeller = characterStore(pe, "toSellerByCharacter")
+	for itemID, owed in pairs(toSeller) do
+		local held = bags[itemID] and bags[itemID].quantity or 0
+		toSeller[itemID] = held > 0 and math.min(owed, held) or nil
+	end
+	for _, dest in ipairs(pe:SetMailRecipients(pe.MailLogic.BuildReturnToSellerPlan(toSeller, bags, seller))) do
+		plan[#plan + 1] = dest
+	end
+end
+
+--- Everything the mailbox panel can send from this character: materials for crafters; items to
+--- destroy to the disenchanter, prospector and miller; and on any character but the seller the
+--- crafted items owed to it and the surplus above keep amounts. Each destination carries its `kind`;
+--- the ones with a review panel (surplus, destroy) also a `reviewKey`. Rows take items in this order,
+--- what one sends being held back from the rows after; the rows to destroy are listed first.
 function Tradewright:BuildMailPanelPlan()
 	local plan = self:BuildShoppingMailSendPlan()
 	for _, dest in ipairs(plan) do
 		dest.kind = "materials"
 	end
-	local seller = self:GetSellerCharacterKey()
-	if not seller or seller == self:GetCharacterKey() then
-		return plan
-	end
 	local bags = self:GetBagItems()
-	-- Crafted items that left the bags some other way are no longer owed.
-	local toSeller = characterStore(self, "toSellerByCharacter")
-	for itemID, owed in pairs(toSeller) do
-		local held = bags[itemID] and bags[itemID].quantity or 0
-		toSeller[itemID] = held > 0 and math.min(owed, held) or nil
+	local seller = self:GetSellerCharacterKey()
+	local toSeller = seller ~= nil and seller ~= self:GetCharacterKey()
+	if toSeller then
+		addCraftsDestination(self, plan, bags, seller)
 	end
-	for _, dest in ipairs(self:SetMailRecipients(self.MailLogic.BuildReturnToSellerPlan(toSeller, bags, seller))) do
-		plan[#plan + 1] = dest
+	local listed = addDestroyDestinations(self, plan, bags)
+	for _, dest in ipairs(plan) do
+		if dest.kind ~= "destroy" then
+			listed[#listed + 1] = dest
+		end
 	end
-	plan[#plan + 1] = surplusDestination(self, plan, bags, seller)
-	return plan
+	if toSeller then
+		listed[#listed + 1] = surplusDestination(self, listed, bags, seller)
+	end
+	return listed
 end
 
 --- A parcel reached the mail server: crafted items in it are no longer owed to the seller.
@@ -221,20 +315,21 @@ function Tradewright:GetMailItemUnitPrice(itemID)
 	return self.GetNativeAhPrice and self:GetNativeAhPrice(itemID) or nil
 end
 
---- The surplus review rows (MailLogic.BuildReviewRows, with names and prices) and the surplus
---- destination of `panelPlan` (BuildMailPanelPlan, built when not given). No rows on the seller.
-function Tradewright:BuildMailReviewRows(panelPlan)
+--- The review rows and the destination of `panelPlan` (BuildMailPanelPlan, built when not given)
+--- whose review panel is `reviewKey` ("surplus", or a destroying action); the first destination with
+--- a review panel when `reviewKey` is nil. No rows when the plan has no such destination.
+function Tradewright:BuildMailReviewRows(panelPlan, reviewKey)
 	for _, dest in ipairs(panelPlan or self:BuildMailPanelPlan()) do
-		if dest.kind == "surplus" then
+		if dest.reviewKey and (reviewKey == nil or dest.reviewKey == reviewKey) then
 			return dest.reviewRows, dest
 		end
 	end
 	return {}, nil
 end
 
---- Keep everything the bags hold now, so nothing goes until the bags grow.
-function Tradewright:KeepCurrentMailBags()
-	for _, row in ipairs(self:BuildMailReviewRows()) do
+--- Keep everything of one review panel's rows the bags hold now, so nothing goes until the bags grow.
+function Tradewright:KeepCurrentMailBags(reviewKey)
+	for _, row in ipairs((self:BuildMailReviewRows(nil, reviewKey))) do
 		if row.bags > 0 then
 			self:SetMailKeepAmount(row.itemID, row.bags)
 		end

@@ -83,6 +83,20 @@ function MailLogic.BuildReviewRows(bagItems, keep, held, sendOthers, skip)
 	return rows
 end
 
+--- The review rows for the items worth more destroyed: like BuildReviewRows with everything sendable,
+--- over the items `isDestroyed(itemID)` accepts only, and keep amounts of those items only (an item
+--- kept elsewhere is no row here).
+function MailLogic.BuildDestroyRows(bagItems, isDestroyed, keep, held, skip)
+	local wanted, kept = {}, {}
+	for itemID, bag in pairs(bagItems or {}) do
+		if listable(bag) and isDestroyed(itemID) then
+			wanted[itemID] = bag
+			kept[itemID] = keep and keep[itemID]
+		end
+	end
+	return MailLogic.BuildReviewRows(wanted, kept, held, true, skip)
+end
+
 --- The review rows that send something, as { { itemID, quantity, name } } sorted by name.
 function MailLogic.SurplusItems(rows)
 	local items = {}
@@ -175,6 +189,19 @@ function MailLogic.ResolveSellerCharacter(sellerByRealm, realm, knownCharacters)
 		return nil
 	end
 	return key
+end
+
+--- The character that destroys items for one action (disenchant, prospect, mill): the one chosen,
+--- else, while nothing is chosen, the first of `candidates` (the characters with the profession, best
+--- first). `chosen` "" means none, as does a chosen character no longer in `knownCharacters`.
+function MailLogic.ResolveDestroyerCharacter(chosen, candidates, knownCharacters)
+	if chosen == nil then
+		return candidates and candidates[1] or nil
+	end
+	if type(chosen) ~= "string" or chosen == "" or not (knownCharacters and knownCharacters[chosen]) then
+		return nil
+	end
+	return chosen
 end
 
 --- Shares the bag stock out over the characters that need materials mailed to them.

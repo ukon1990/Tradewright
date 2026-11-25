@@ -6,15 +6,27 @@ local _, Tradewright = ...
 
 local SalvageLogic = Tradewright.SalvageLogic
 
-local ENCHANTING = 333 -- skill line
--- The actions and the profession (skill line) each takes. Prospecting and milling are retail only:
--- Forever has no Jewelcrafting or Inscription.
+-- The actions and the profession (skill line) each takes: Enchanting, Jewelcrafting, Inscription.
+-- Prospecting and milling are retail only: Forever has no Jewelcrafting or Inscription.
 local ACTIONS = {
-	{ action = "disenchant", skillLineID = ENCHANTING },
+	{ action = "disenchant", skillLineID = 333 },
 	{ action = "prospect", skillLineID = 755, retailOnly = true },
 	{ action = "mill", skillLineID = 773, retailOnly = true },
 }
 local PLACES = { "bags", "bank" }
+-- Disenchanting takes uncommon, rare and epic gear.
+local DISENCHANTED_QUALITY = { [2] = true, [3] = true, [4] = true }
+
+--- The actions this client has at all: disenchanting, and on retail prospecting and milling.
+function Tradewright:GetClientSalvageActions()
+	local actions = {}
+	for _, entry in ipairs(ACTIONS) do
+		if not entry.retailOnly or self.IS_RETAIL then
+			actions[#actions + 1] = entry.action
+		end
+	end
+	return actions
+end
 
 --- The actions the Destroying tab offers: disenchanting always, since its values need no enchanter
 --- of the player's; prospecting and milling on retail once one of the characters has the profession.
@@ -28,26 +40,39 @@ function Tradewright:GetSalvageActions()
 	return actions
 end
 
---- The player's characters with Enchanting, as their last profession scan saved them:
---- `{ { characterKey, name, skillLevel } }`, the highest skill first.
-function Tradewright:GetEnchanters()
-	local enchanters = {}
+local function skillLineOf(action)
+	for _, entry in ipairs(ACTIONS) do
+		if entry.action == action then
+			return entry.skillLineID
+		end
+	end
+end
+
+--- The player's characters with the profession `action` takes, as their last profession scan saved
+--- them: `{ { characterKey, name, skillLevel } }`, the highest skill first.
+function Tradewright:GetSalvageCharacters(action)
+	local skillLineID, found = tostring(skillLineOf(action)), {}
 	for characterKey, character in pairs(self.db and self.db.characters or {}) do
-		local profession = character.professions and character.professions[tostring(ENCHANTING)]
+		local profession = character.professions and character.professions[skillLineID]
 		if profession then
-			enchanters[#enchanters + 1] = {
+			found[#found + 1] = {
 				characterKey = characterKey, name = character.meta and character.meta.name or characterKey,
 				skillLevel = tonumber(profession.skillLevel) or 0,
 			}
 		end
 	end
-	table.sort(enchanters, function(a, b)
+	table.sort(found, function(a, b)
 		if a.skillLevel ~= b.skillLevel then
 			return a.skillLevel > b.skillLevel
 		end
 		return a.name < b.name
 	end)
-	return enchanters
+	return found
+end
+
+--- The player's characters with Enchanting (see GetSalvageCharacters).
+function Tradewright:GetEnchanters()
+	return self:GetSalvageCharacters("disenchant")
 end
 
 -- Every stack a character holds, as `{ itemID, count, where, characterKey, characterName, bound }`.
@@ -90,6 +115,24 @@ local function salvageRow(pe, action, stack)
 	local use, gain = SalvageLogic.BestUse({ vendor = stack.vendor, auction = stack.auction, salvage = stack.salvage })
 	stack.bestUse, stack.gain = use, gain * stack.count
 	return stack
+end
+
+--- Whether `action` can destroy `itemID`: uncommon, rare and epic gear for disenchanting; for
+--- prospecting and milling, ore and herbs with a known yield, as nothing else tells which items those
+--- take.
+function Tradewright:CanDestroy(action, itemID)
+	local input = self:GetSalvageInput(action, itemID)
+	if action == "disenchant" then
+		return input ~= nil and DISENCHANTED_QUALITY[input.quality] == true
+	end
+	return input ~= nil and self:GetSalvageYield(action, input) ~= nil
+end
+
+--- Whether destroying one `itemID` with `action` is known to get more than selling it to a vendor or
+--- at the auction house. False when destroying it has no known value.
+function Tradewright:IsBestDestroyed(action, itemID)
+	local row = salvageRow(self, action, { itemID = itemID, count = 1, bound = false })
+	return row ~= nil and row.bestUse == "salvage"
 end
 
 --- The owned items `action` can destroy with a known value, one row per character and place:

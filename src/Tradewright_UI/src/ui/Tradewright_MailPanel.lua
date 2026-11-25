@@ -33,7 +33,15 @@ end
 
 local MAIL_PAD = 12
 local MAIL_ROW = 48
-local ROW_TITLES = { crafts = L["Crafted items to %s"], surplus = L["Surplus to %s"] }
+local ROW_TITLES = {
+	crafts = L["Crafted items to %s"], surplus = L["Surplus to %s"],
+	disenchant = L["For %s to disenchant"], prospect = L["For %s to prospect"], mill = L["For %s to mill"],
+}
+
+--- "Surplus to Bånkey", "For Elra to disenchant": what a mailbox row or the review panel is titled.
+function Tradewright:GetMailDestinationTitle(dest)
+	return string.format(ROW_TITLES[dest.action or dest.kind] or "%s", self:GetMailCharacterLabel(dest.characterKey))
+end
 
 -- Tooltip lines for a list of items: name in `color`, count in `valueColor`, `suffix` after each name.
 local function addItemLines(pe, items, color, valueColor, suffix)
@@ -53,7 +61,7 @@ local function showDestTooltip(pe, row)
 	local danger = pe:GetTheme().danger
 	addItemLines(pe, row.dest.items, muted, { r = 1, g = 1, b = 1 }, "")
 	addItemLines(pe, row.dest.missing, danger, danger, L[" (not in bags)"])
-	if row.dest.kind == "surplus" then
+	if row.dest.reviewKey then
 		GameTooltip:AddLine(L["Review… lists every item, what goes and what stays."], muted.r, muted.g, muted.b, true)
 	end
 	GameTooltip:Show()
@@ -71,7 +79,7 @@ local function createMailRow(pe, parent)
 	row.items = pe:CreateText(row, "GameFontHighlightSmall", "textMuted")
 	row.items:SetPoint("BOTTOMLEFT", 10, 8)
 	row.items:SetPoint("RIGHT", row.send, "LEFT", -10, 0)
-	-- The surplus row opens the review panel; gold outline while it is open.
+	-- The surplus row and the rows of items to destroy open the review panel; gold fill while it shows theirs.
 	local gold = pe:GetTheme().gold
 	row.openFill = row:CreateTexture(nil, "BACKGROUND", nil, 1)
 	row.openFill:SetAllPoints()
@@ -82,11 +90,11 @@ local function createMailRow(pe, parent)
 	return row
 end
 
--- "Crafted items to Bånkey · 6 items · ready" with the count muted and the state coloured. The
--- surplus row has no state: what goes is decided in its review panel.
+-- "Crafted items to Bånkey · 6 items · ready" with the count muted and the state coloured. Rows
+-- with a review panel have no state: what goes is decided there.
 local function destTitle(pe, dest)
-	local text = string.format(ROW_TITLES[dest.kind] or "%s", pe:GetMailCharacterLabel(dest.characterKey))
-	if dest.kind == "surplus" then
+	local text = pe:GetMailDestinationTitle(dest)
+	if dest.reviewKey then
 		return text
 	end
 	text = text .. " " .. pe:Colorize("· " .. pe:FormatNumberGrouped(dest.totalQuantity or 0) .. " items", "textMuted")
@@ -94,7 +102,7 @@ local function destTitle(pe, dest)
 	return text .. " " .. pe:Colorize("· " .. (ready and "ready" or (string.format(L["%s still missing"], #dest.missing))), ready and "success" or "warning")
 end
 
--- "214 to send · 12 stay · 4 skipped" for the surplus row.
+-- "214 to send · 12 stay · 4 skipped" for a row with a review panel.
 local function surplusText(pe, sum)
 	local text = sum.send > 0 and (string.format(L["%s to send"], pe:FormatNumberGrouped(sum.send))) or L["Nothing to send"]
 	local stay = sum.kept - sum.skipped
@@ -120,18 +128,18 @@ local function destItemsText(pe, items)
 end
 
 -- Fills one destination row: title, count and state, the first three items, and its button:
--- Prepare for materials and crafts, Review… for the surplus.
+-- Attach for materials and crafts, Review… for the surplus and the items to destroy.
 local function fillMailRow(pe, row, dest)
-	local surplus = dest.kind == "surplus"
+	local review = dest.reviewKey ~= nil
 	row.dest = dest
 	row.name:SetText(destTitle(pe, dest))
-	row.items:SetText(surplus and surplusText(pe, dest.summary) or destItemsText(pe, dest.items or {}))
-	local open = surplus and pe:IsMailReviewPanelShown()
-	pe:SetButtonLabel(row.send, open and L["Hide review"] or (surplus and "Review…" or "Attach"), true)
-	row.send:SetEnabled(surplus or not pe:EnsureMailSendQueueState().running)
+	row.items:SetText(review and surplusText(pe, dest.summary) or destItemsText(pe, dest.items or {}))
+	local open = review and pe:IsMailReviewPanelShown(dest.reviewKey)
+	pe:SetButtonLabel(row.send, open and L["Hide review"] or (review and L["Review…"] or L["Attach"]), true)
+	row.send:SetEnabled(review or not pe:EnsureMailSendQueueState().running)
 	row.send:SetScript("OnClick", function()
-		if surplus then
-			pe:ToggleMailReviewPanel()
+		if review then
+			pe:ToggleMailReviewPanel(nil, dest.reviewKey)
 		else
 			pe:StartMailSendQueue({ dest })
 		end
@@ -149,7 +157,7 @@ local function footerText(pe, plan)
 	if #ready > 0 then
 		return string.format(L["%d %s · %s items to attach"], #ready, pe:Plural(#ready, "mail"), pe:FormatNumberGrouped(items))
 	end
-	return #plan > 0 and L["Use Review… to choose what surplus goes"] or L["No mail pending"]
+	return #plan > 0 and L["Use Review… to choose what goes"] or L["No mail pending"]
 end
 
 -- Progress text: a count beside the bar for automatic sends, a prompt for a prepared mail.

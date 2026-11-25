@@ -1,17 +1,18 @@
 local addonName, Tradewright = ...
 
 local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return text end })
--- Surplus review (mailbox panel → Review… on the surplus row): every item the surplus mail could send,
--- docked to the right of the mailbox panel. Keep amounts are edited in the row and saved per
--- character; unticking an item skips it for this mailbox visit only. Rows come from
--- MailLogic.BuildReviewRows, the same rows the surplus mail is built from.
+-- Mail review (mailbox panel → Review… on the surplus row or a row of items to destroy): every item
+-- that mail could send, docked to the right of the mailbox panel. Keep amounts are edited in the row
+-- and saved per character; unticking an item skips it for this mailbox visit only. Rows come from
+-- the destination's own review rows (MailLogic.BuildReviewRows or BuildDestroyRows), the same rows
+-- its mail is built from.
 
 local PAD = 12
 local WIDTH = 520
 local FILTERS = { { id = "sending", label = L["Sending"] }, { id = "kept", label = L["Kept"] }, { id = "all", label = L["All"] } }
 local REASONS = {
 	held = L["For your crafts"], kept = L["All kept"], skipped = L["Not this time"], othersOff = L["No keep amount set"],
-	notReagent = L["Not a reagent"],
+	notReagent = L["Not a reagent"], notProfitable = L["Not worth more destroyed"],
 }
 local KEEP_HINT = L["Type a number; while typing, mouse wheel adds or removes one stack. Shift-click: keep all. Ctrl-click: clear the keep amount."]
 
@@ -32,7 +33,7 @@ local function showRowTooltip(pe, owner, row)
 		{ L["In bags"], n(row.bags) },
 		{ L["Held for your queued crafts"], n(row.held) },
 		{ L["Keep on this character"], row.keep and n(row.keep) or "-" },
-		{ L["Sends to the bank character"], n(row.send) },
+		{ L["Goes in this mail"], n(row.send) },
 	}, KEEP_HINT)
 end
 
@@ -244,6 +245,12 @@ local function createToolbar(pe, f)
 	end)
 	f.sendOthers:SetPoint("TOPLEFT", f.search, "BOTTOMLEFT", -6, -8)
 	createReagentChecks(pe, f)
+	-- In place of the surplus boxes on the rows of items to destroy.
+	f.profitableOnly = pe:CreateCheckbox(f, L["Only items worth more destroyed than sold"], function(checked)
+		pe:SetDestroyProfitableOnly(f.reviewKey, checked)
+		pe:RefreshMailPanel()
+	end)
+	f.profitableOnly:SetPoint("TOPLEFT", f.sendOthers, "TOPLEFT")
 end
 
 -- Clear keeps asks for a second click within a few seconds.
@@ -276,7 +283,7 @@ local function createActions(pe, f)
 	clear:SetScript("OnClick", function(button) confirmClearKeeps(pe, button) end)
 	clear:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", PAD, PAD)
 	local keepAll = pe:CreateButton(f, L["Keep what I have now"], function()
-		pe:KeepCurrentMailBags()
+		pe:KeepCurrentMailBags(f.reviewKey)
 		pe:RefreshMailPanel()
 	end, { tooltip = L["Keep everything the bags hold now, so nothing goes until you have more."] })
 	keepAll:SetPoint("LEFT", clear, "RIGHT", 8, 0)
@@ -315,36 +322,60 @@ local function ensurePanel(pe)
 	return f
 end
 
-function Tradewright:IsMailReviewPanelShown()
+--- Whether the review panel is open; with `reviewKey`, open on that destination.
+function Tradewright:IsMailReviewPanelShown(reviewKey)
 	local f = self.ui and self.ui.mailReviewPanel
-	return f ~= nil and f:IsShown()
+	return f ~= nil and f:IsShown() and (reviewKey == nil or f.reviewKey == reviewKey)
 end
 
---- Opens or closes the review panel; `show` nil toggles. The choice is saved, so the panel opens
---- with the mailbox next time. The mailbox panel highlights its surplus row while it is open.
-function Tradewright:ToggleMailReviewPanel(show)
+--- Opens or closes the review panel on the destination `reviewKey` ("surplus" when nil); `show` nil
+--- toggles, and a panel open on another destination switches to this one. The choice is saved, so the
+--- panel opens with the mailbox next time. The mailbox panel highlights the row it shows.
+function Tradewright:ToggleMailReviewPanel(show, reviewKey)
 	if not (self.ui and self.ui.mailPanel) then
 		return
 	end
 	local f = ensurePanel(self)
+	reviewKey = reviewKey or f.reviewKey or "surplus"
 	if show == nil then
-		show = not f:IsShown()
+		show = not self:IsMailReviewPanelShown(reviewKey)
 	end
+	f.reviewKey = reviewKey
 	self:SetSetting("mail.reviewPanelOpen", show)
 	f:SetShown(show)
 	self:RefreshMailPanel()
 end
 
 -- Shows the review panel again when it was open last time the mailbox closed: on opening the
--- mailbox, and on expanding a collapsed mailbox panel. Not on the seller (it has no surplus row).
+-- mailbox, and on expanding a collapsed mailbox panel. On the destination it showed last, else on
+-- the first with a review panel (the seller has no surplus row).
 local function restorePanel(pe, plan)
 	local panel = pe.ui and pe.ui.mailPanel
 	if not (pe:GetSetting("mail.reviewPanelOpen", false) and panel and panel:IsShown()) then
 		return
 	end
-	local _, dest = pe:BuildMailReviewRows(plan)
+	local last = pe.ui.mailReviewPanel and pe.ui.mailReviewPanel.reviewKey
+	local _, dest = pe:BuildMailReviewRows(plan, last)
+	if not dest then
+		_, dest = pe:BuildMailReviewRows(plan)
+	end
 	if dest then
-		pe:ToggleMailReviewPanel(true)
+		pe:ToggleMailReviewPanel(true, dest.reviewKey)
+	end
+end
+
+-- The send-everything and reagent boxes narrow the surplus only; for items to destroy, one box
+-- in their place narrows to what is worth more destroyed, and the table moves up under it.
+local function showSurplusChecks(pe, f, surplus)
+	f.sendOthers:SetShown(surplus)
+	f.reagentsOnly:SetShown(surplus)
+	f.ownProfessions:SetShown(surplus and f.reagentsOnly.check:GetChecked())
+	f.profitableOnly:SetShown(not surplus)
+	if surplus then
+		f.table.frame:SetPoint("TOPLEFT", f.reagentsOnly, "BOTTOMLEFT", 0, -6)
+	else
+		f.profitableOnly.check:SetChecked(pe:GetDestroyProfitableOnly(f.reviewKey))
+		f.table.frame:SetPoint("TOPLEFT", f.profitableOnly, "BOTTOMLEFT", 0, -6)
 	end
 end
 
@@ -362,12 +393,13 @@ local function refreshControls(pe, f, sum)
 	f.sendOthers.check:SetChecked(pe:GetMailSendOthers())
 	f.reagentsOnly.check:SetChecked(pe:GetMailReagentsOnly())
 	f.ownProfessions.check:SetChecked(pe:GetStashOnlyOwnProfessions())
-	f.ownProfessions:SetShown(pe:GetMailReagentsOnly())
+	showSurplusChecks(pe, f, f.reviewKey == "surplus")
 end
 
--- Title "Surplus to <seller>", items and mails in the header, totals in the table footer.
-local function refreshTexts(pe, f, sum, seller)
-	f.title:SetText(string.format(L["Surplus to %s"], pe:GetMailCharacterLabel(seller)))
+-- Title ("Surplus to <seller>", "For <enchanter> to disenchant"), items and mails in the header,
+-- totals in the table footer.
+local function refreshTexts(pe, f, sum, dest)
+	f.title:SetText(pe:GetMailDestinationTitle(dest))
 	f.meta:SetText(string.format(L["%d different items"], sum.all))
 	local skipped = sum.skipped > 0 and string.format(L[" · %d skipped this time"], sum.skipped) or ""
 	f.table:SetFooterText(string.format(L["%s to send%s"], pe:FormatNumberGrouped(sum.send), skipped),
@@ -380,18 +412,17 @@ function Tradewright:RefreshMailReviewPanel(plan)
 	if not f or not f:IsShown() then
 		return restorePanel(self, plan)
 	end
-	local seller = self:GetSellerCharacterKey()
-	if not seller or seller == self:GetCharacterKey() then
+	local rows, dest = self:BuildMailReviewRows(plan, f.reviewKey)
+	if not dest then
 		f:Hide()
 		return
 	end
-	local rows, dest = self:BuildMailReviewRows(plan)
 	f.dest = dest
-	local sum = dest and dest.summary or self.MailLogic.SummarizeReviewRows(rows)
+	local sum = dest.summary
 	refreshControls(self, f, sum)
 	f.table:SetRows(self.MailLogic.ListReviewRows(rows, f.filter, f.searchText, function(row)
 		return self:GetItemFilterInfo(row.itemID).classLabel
 	end))
 	f.table:Refresh()
-	refreshTexts(self, f, sum, seller)
+	refreshTexts(self, f, sum, dest)
 end
