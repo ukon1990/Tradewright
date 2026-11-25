@@ -139,7 +139,7 @@ local function createCraftsCard(pe, dash)
 				getName = function(row) return (pe:GetCraftRowLabels(row)) end,
 				getDetail = function(row) return select(2, pe:GetCraftRowLabels(row)) end,
 			}),
-			{ id = "profit", label = L["Profit"], justifyH = "RIGHT", width = 80,
+			{ id = "profit", label = L["Profit"], justifyH = "RIGHT", width = 80, fitContent = true,
 				getText = function(row) return pe:FormatSignedMoney(row.profit) end },
 			-- roi is already a percent (not a fraction), so it skips PercentColumn.
 			{ id = "roi", label = L["Return"], justifyH = "RIGHT", width = 54, optional = true,

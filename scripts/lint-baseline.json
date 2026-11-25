@@ -610,10 +610,7 @@
   "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionPanelLayout.lua": {
    "Tradewright:BuildAuctionPanelLayout": {
     "lines": [
-     213
-    ],
-    "ccn": [
-     11
+     181
     ]
    },
    "placeIn": {

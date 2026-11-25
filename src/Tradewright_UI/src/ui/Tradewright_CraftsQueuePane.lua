@@ -59,7 +59,7 @@ function Tradewright:GetCraftQueueBuyColumns()
 			getItemID = function(line) return line.itemID end,
 			getName = function(line) return line.name end }),
 		{ id = "buy", label = L["Buy"], width = 40, justifyH = "RIGHT", getText = function(line) return pe:FormatNumberGrouped(line.quantityToBuy or 0) end },
-		{ id = "cost", label = L["Cost"], width = 76, justifyH = "RIGHT",
+		{ id = "cost", label = L["Cost"], width = 76, justifyH = "RIGHT", fitContent = true,
 			getText = function(line) return line.estimatedBuyCost and pe:FormatCopperShort(line.estimatedBuyCost) or "-" end },
 	}
 end

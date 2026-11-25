@@ -244,7 +244,7 @@ local function routeColumns(pe)
 				end
 				cell.detail:SetText(row.detailText)
 			end },
-		{ id = "cost", label = L["Cost"], width = 92, justifyH = "RIGHT",
+		{ id = "cost", label = L["Cost"], width = 92, justifyH = "RIGHT", fitContent = true,
 			getText = function(row) return row.cost and pe:FormatCopperShort(row.cost) or "" end },
 		{ id = "action", label = "", width = 62, createCell = actionCell(pe),
 			updateCell = function(cell, row) updateActionCell(pe, cell, row) end },

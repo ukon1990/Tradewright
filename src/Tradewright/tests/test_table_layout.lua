@@ -55,6 +55,48 @@ check("Flex: content fills the viewport", flex.contentWidth == 408, flex.content
 local narrow = newTable({ { id = "name", flex = 1, minWidth = 90 }, { id = "qty", flex = 3 } }, 160)
 check("Flex: never below minWidth", narrow._layoutColumnWidths.name == 90, narrow._layoutColumnWidths.name)
 
+-- Shrinkable fixed columns: the name keeps its minWidth, the numbers give up room before any column is dropped.
+local shrink = { { id = "name", flex = 1, minWidth = 100 }, { id = "price", width = 100, minWidth = 60 }, { id = "qty", width = 50 } }
+local wide = newTable(shrink, 400)
+check("Shrink: wide table gives numbers their width", wide._layoutColumnWidths.price == 100 and wide._layoutColumnWidths.name == 250,
+	tostring(wide._layoutColumnWidths.price) .. "/" .. tostring(wide._layoutColumnWidths.name))
+local mid = newTable(shrink, 230)
+check("Shrink: numbers shrink before the name goes below minWidth", mid._layoutColumnWidths.price == 80 and mid._layoutColumnWidths.name == 100,
+	tostring(mid._layoutColumnWidths.price) .. "/" .. tostring(mid._layoutColumnWidths.name))
+local least = newTable(shrink, 150)
+check("Shrink: never below minWidth", least._layoutColumnWidths.price == 60, least._layoutColumnWidths.price)
+check("Shrink: minWidth above width is ignored", newTable({ { id = "a", width = 50, minWidth = 90 } }, 40)._layoutColumnWidths.a == 50)
+local optionalShrink = { { id = "name", flex = 1, minWidth = 100 }, { id = "a", width = 100, minWidth = 60, optional = true } }
+check("Shrink: an optional column shrinks before it is dropped",
+	ids(newTable(optionalShrink, 160)) == "name,a" and ids(newTable(optionalShrink, 159)) == "name")
+
+-- Fitting columns to their widest text. The fake font is 6px a character, an inline icon 12px.
+TableMixin.CELL_PAD = 5
+local function fitTable(columns, rows, viewport)
+	local widget = setmetatable({ paddingX = 4, autoFitToScroll = true, columns = columns, rows = rows }, { __index = TableMixin })
+	local shown = ""
+	widget.frame = { CreateFontString = function()
+		return { Hide = function() end, SetFontObject = function() end, SetText = function(_, text) shown = text end,
+			GetStringWidth = function()
+				local visible = shown:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "XX")
+				return #visible * 6
+			end }
+	end }
+	widget.scrollFrame = { GetWidth = function() return viewport + 8 end }
+	function widget:GetVisibleColumns() return columns end
+	function widget:CellText(column, row) return column.getText(row) end
+	widget:MeasureFitWidths()
+	widget:RecomputeLayoutColumnWidths()
+	return widget
+end
+local money = { id = "price", width = 40, minWidth = 30, fitContent = true, getText = function(row) return row.text end }
+local fitRows = { { text = "100|Tg|t" }, { text = "|cffff0000-|r99|Tg|t 99|Ts|t" }, { text = "5" } }
+local fit = fitTable({ { id = "name", flex = 1, minWidth = 50 }, money }, fitRows, 300)
+check("Fit: widest visible text, not the biggest number", fit._layoutColumnWidths.price == 10 * 6 + 12, fit._layoutColumnWidths.price)
+check("Fit: the name takes the rest", fit._layoutColumnWidths.name == 300 - 72, fit._layoutColumnWidths.name)
+check("Fit: never narrower than width", fitTable({ money }, { { text = "1" } }, 300)._layoutColumnWidths.price == 40)
+check("Fit: shrinks toward minWidth when narrow", fitTable({ { id = "name", flex = 1, minWidth = 50 }, money }, fitRows, 80)._layoutColumnWidths.price == 30)
+
 -- Dropping optional columns
 local columns = {
 	{ id = "name", flex = 1, minWidth = 100 },

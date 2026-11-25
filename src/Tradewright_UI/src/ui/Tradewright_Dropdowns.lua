@@ -72,7 +72,8 @@ function Tradewright:NormalizeFilterSelection(selection, options)
 end
 
 local DROPDOWN_HEIGHT = 26
-local DROPDOWN_LABEL_GAP = 18
+-- Label line plus a few pixels: the label belongs to the control under it, not the row above.
+local DROPDOWN_LABEL_GAP = 15
 
 local function addDropdownLabel(holder, label)
 	local title = holder:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -119,7 +120,7 @@ local function bindDropdownTooltip(button, tooltip)
 end
 
 -- A flat 26px dropdown button with an optional label above it. The Blizzard menu frame is only used to
--- show the option list, anchored under the button. Holder height: 26, or 44 with a label.
+-- show the option list, anchored under the button. Holder height: 26, or 41 with a label.
 local function createDropdownShell(parent, config)
 	local holder = CreateFrame("Frame", nil, parent)
 	local hasLabel = config.label ~= false and config.label ~= nil

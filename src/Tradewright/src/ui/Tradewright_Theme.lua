@@ -276,6 +276,17 @@ local function hideRegions(frame, keys)
 end
 
 -- Fill plus four 1px edges, inset by `pad` (x, y) around the frame. Returns the surface table.
+-- A 1-unit line rounds to zero screen pixels at some UI scales below 1 and vanishes; PixelUtil
+-- keeps it at least one pixel thick.
+local function setLineThickness(line, horizontal)
+	local setter = horizontal and "SetHeight" or "SetWidth"
+	if PixelUtil then
+		PixelUtil[setter](line, 1, 1)
+	else
+		line[setter](line, 1)
+	end
+end
+
 function Tradewright:AddSurface(frame, fill, edge, padX, padY)
 	if frame.ahSurface then
 		return frame.ahSurface
@@ -292,12 +303,12 @@ function Tradewright:AddSurface(frame, fill, edge, padX, padY)
 			local y = side == "TOP" and padY or -padY
 			line:SetPoint(side .. "LEFT", frame, side .. "LEFT", -padX, y)
 			line:SetPoint(side .. "RIGHT", frame, side .. "RIGHT", padX, y)
-			line:SetHeight(1)
+			setLineThickness(line, true)
 		else
 			local x = side == "LEFT" and -padX or padX
 			line:SetPoint("TOP" .. side, frame, "TOP" .. side, x, padY)
 			line:SetPoint("BOTTOM" .. side, frame, "BOTTOM" .. side, x, -padY)
-			line:SetWidth(1)
+			setLineThickness(line, false)
 		end
 		colorTexture(line, edge)
 		surface.edges[#surface.edges + 1] = line

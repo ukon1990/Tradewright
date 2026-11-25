@@ -176,7 +176,8 @@ end
 local function refreshViewButtons(pe, panel, active)
 	for _, button in ipairs(panel.viewButtons) do
 		local rows = button.view.getRows(pe)
-		button:SetText(rows and string.format("%s (%d)", button.view.label, #rows) or button.view.label)
+		-- The count changes the label's length, so the button is resized to it.
+		pe:SetButtonLabel(button, rows and string.format("%s (%d)", button.view.label, #rows) or button.view.label)
 		pe:StyleShellButton(button, button.view == active)
 	end
 end

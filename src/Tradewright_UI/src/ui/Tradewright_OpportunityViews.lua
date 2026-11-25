@@ -6,6 +6,9 @@ local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return
 -- setStats(pe, stats, rows, insights) with the four stat tiles left to right, footer(pe, rows, insights), emptyTitle, emptyHint.
 -- Both lists sort on a column with the id "profit", so the table keeps its sort across a switch.
 
+-- Money columns want room for "1,234g 56s 78c" and shrink toward their minWidth when the window is narrow.
+local MONEY_WIDTH = 104
+
 -- "12" for a busy item, "0.4" for a slow one.
 local function perDayText(pe, perDay)
 	if perDay >= 10 then
@@ -15,9 +18,10 @@ local function perDayText(pe, perDay)
 end
 
 -- "Sales a day", with a "?" when the estimate rests on few scan pairs or on own sales alone.
-local function sellsColumn(pe, width)
+-- Wide enough for its header; shrinks to `minWidth` in a narrow window.
+local function sellsColumn(pe, minWidth)
 	return {
-		id = "sellsPerDay", label = L["Sales a day"], justifyH = "RIGHT", width = width, sortable = true, defaultSort = "desc",
+		id = "sellsPerDay", label = L["Sales a day"], justifyH = "RIGHT", width = 80, minWidth = minWidth, sortable = true, defaultSort = "desc",
 		sortValue = function(row) return row.sellsPerDay or 0 end,
 		getText = function(row) return perDayText(pe, row.sellsPerDay) .. (pe.FlipLogic.SellsUnsure(row) and " ?" or "") end,
 	}
@@ -42,7 +46,7 @@ end
 
 local function signedColumn(pe, label, field)
 	return {
-		id = "profit", label = label, justifyH = "RIGHT", width = 84, sortable = true, defaultSort = "desc",
+		id = "profit", label = label, justifyH = "RIGHT", width = MONEY_WIDTH + 8, minWidth = 84, fitContent = true, sortable = true, defaultSort = "desc",
 		sortValue = function(row) return row[field] or 0 end,
 		getText = function(row) return pe:FormatSignedMoney(row[field]) end,
 	}
@@ -138,8 +142,8 @@ end
 local function flipColumns(pe)
 	return {
 		itemColumn(pe, flipDetail),
-		pe:MoneyColumn({ id = "price", label = L["Buy at"], width = 76 }),
-		pe:MoneyColumn({ id = "usual", label = L["Usual"], width = 76 }),
+		pe:MoneyColumn({ id = "price", label = L["Buy at"], width = MONEY_WIDTH, minWidth = 76 }),
+		pe:MoneyColumn({ id = "usual", label = L["Usual"], width = MONEY_WIDTH, minWidth = 76 }),
 		{
 			id = "buyQty", label = L["Buy"], justifyH = "RIGHT", width = 44, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.buyQty or 0 end,
@@ -215,8 +219,8 @@ end
 local function vendorColumns(pe)
 	return {
 		itemColumn(pe, vendorDetail),
-		pe:MoneyColumn({ id = "price", label = L["Listed at"], width = 76 }),
-		pe:MoneyColumn({ id = "vendorSell", label = L["Vendor pays"], width = 84 }),
+		pe:MoneyColumn({ id = "price", label = L["Listed at"], width = MONEY_WIDTH, minWidth = 76 }),
+		pe:MoneyColumn({ id = "vendorSell", label = L["Vendor pays"], width = MONEY_WIDTH, minWidth = 84 }),
 		{
 			id = "qty", label = L["Qty"], justifyH = "RIGHT", width = 50, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.qty or 0 end,
@@ -290,9 +294,9 @@ end
 local function gapColumns(pe)
 	return {
 		itemColumn(pe, gapDetail),
-		pe:MoneyColumn({ id = "price", label = L["Cheapest"], width = 70 }),
-		pe:MoneyColumn({ id = "nextPrice", label = L["Next price"], width = 70 }),
-		pe:MoneyColumn({ id = "cost", label = L["To clear"], width = 74 }),
+		pe:MoneyColumn({ id = "price", label = L["Cheapest"], width = MONEY_WIDTH, minWidth = 70 }),
+		pe:MoneyColumn({ id = "nextPrice", label = L["Next price"], width = MONEY_WIDTH, minWidth = 70 }),
+		pe:MoneyColumn({ id = "cost", label = L["To clear"], width = MONEY_WIDTH, minWidth = 74 }),
 		signedColumn(pe, L["Profit if it holds"], "gain"),
 		sellsColumn(pe, 66),
 	}
@@ -414,7 +418,7 @@ end
 local function sellColumns(pe)
 	return {
 		itemColumn(pe, sellDetail),
-		pe:MoneyColumn({ id = "price", label = L["Price"], width = 70 }),
+		pe:MoneyColumn({ id = "price", label = L["Price"], width = MONEY_WIDTH, minWidth = 70 }),
 		{
 			id = "premium", label = L["Vs usual"], justifyH = "RIGHT", width = 60, sortable = true, defaultSort = "desc",
 			sortValue = function(row) return row.premium or 0 end,

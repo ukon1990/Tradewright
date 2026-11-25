@@ -65,6 +65,40 @@ local function sellsColumn(pe)
 	}
 end
 
+-- Header tooltips of the Market table and the hourly history table: what each column shows and how
+-- it is worked out. The usual price adds its window, which is a setting, when the tooltip opens.
+local COLUMN_HELP = {
+	price = { L["Lowest price"], L["The cheapest price for one, among the listings of your last scan of this item."] },
+	marketHigh = { L["Highest price"], L["The dearest price for one, among the listings of your last scan of this item."] },
+	vsUsual = { L["Vs usual"], L["How far the lowest price is from the usual price. Below zero: cheaper than usual, a possible buy."] },
+	sellsPerDay = { L["Sales a day, estimated"],
+		L["From drops in the listed quantity between scans up to a day apart. Runs high: cancelled and expired auctions count too. Never below your own sales."] },
+	sampleSize = { L["Quantity"], L["Units listed in your last scan, all sellers together."] },
+	listingCount = { L["Listings"], L["How many auctions those units are spread over."] },
+	seenAt = { L["Seen"], L["When a scan last saw this item listed."] },
+	at = { L["Hour"], L["Each full scan saves one hour of prices."] },
+	last = { L["Price"], L["The lowest price for one at the last scan in that hour."] },
+	qty = { L["Quantity"], L["Units listed in that hour."] },
+}
+
+local function addColumnHelp(columns)
+	for _, column in ipairs(columns) do
+		local help = COLUMN_HELP[column.id]
+		if help then
+			column.tooltipTitle, column.tooltipText = help[1], help[2]
+		end
+	end
+	return columns
+end
+
+local function usualHelpLines(pe)
+	local days = tonumber(pe:GetSetting("auction.usualPriceDays", 14)) or 14
+	return {
+		string.format(L["The middle value (median) of each day's lowest price over the last %d days, so one odd day does not move it."], days),
+		L["Shown once an item has scans on 5 days."],
+	}
+end
+
 -- The Market table's "Usual" and "Vs usual" columns; "-" until an item has 5 days of scans.
 local function usualColumns(pe)
 	local function usualOf(row)
@@ -75,7 +109,10 @@ local function usualColumns(pe)
 		local usual = usualOf(row)
 		return usual and row.price and (row.price - usual) / usual
 	end
-	return pe:MoneyColumn({ id = "usual", label = L["Usual"], width = 86, value = usualOf }), {
+	local usual = pe:MoneyColumn({ id = "usual", label = L["Usual"], width = 86, value = usualOf })
+	usual.tooltipTitle = L["Usual price"]
+	usual.getTooltipLines = function() return usualHelpLines(pe) end
+	return usual, {
 		id = "vsUsual", label = L["Vs usual"], justifyH = "RIGHT", width = 64, sortable = true, defaultSort = "asc",
 		sortValue = function(row) return vsUsual(row) or 0 end,
 		getText = function(row) return pe:FormatSignedPercent(vsUsual(row)) end,
@@ -151,7 +188,7 @@ function Tradewright:BuildMarketTableColumns()
 		}
 	end
 	local usual, vsUsual = usualColumns(pe)
-	return {
+	return addColumnHelp({
 		self:CreateItemColumn({
 			label = L["Item"], defaultSort = "asc",
 			getItemID = function(row) return row.itemID end,
@@ -161,14 +198,14 @@ function Tradewright:BuildMarketTableColumns()
 		pe:MoneyColumn({ id = "price", label = L["Lowest"], width = 86 }),
 		pe:MoneyColumn({ id = "marketHigh", label = L["Highest"], width = 86, value = function(row) return row.marketHigh or row.price end }),
 		usual, vsUsual, sellsColumn(pe),
-		count("sampleSize", "Qty", "sampleSize", 60),
-		count("listingCount", "Listings", "listingCount", 60, true),
+		count("sampleSize", L["Qty"], "sampleSize", 60),
+		count("listingCount", L["Listings"], "listingCount", 60, true),
 		{
 			id = "seenAt", label = L["Seen"], justifyH = "RIGHT", width = 64, sortable = true, defaultSort = "desc", optional = true,
 			sortValue = function(row) return row.seenAt or 0 end,
 			getText = function(row) return pe:FormatShortTime(row.seenAt) end,
 		},
-	}
+	})
 end
 
 function Tradewright:LayoutMarketPanel(panel)
@@ -216,11 +253,12 @@ local function createHistoryTable(pe, view)
 	})
 	view.historyTable.frame:SetPoint("TOPLEFT", view.graph, "BOTTOMLEFT", 0, -8)
 	view.historyTable.frame:SetPoint("BOTTOMRIGHT", view, "BOTTOMRIGHT", 0, 0)
-	view.historyTable:SetColumns({
+	view.historyTable:SetColumns(addColumnHelp({
 		{ id = "at", label = L["Hour"], width = 80, flex = 1, minWidth = 60, getText = function(p) return pe:FormatScanTimestamp(p.at) end },
-		{ id = "last", label = L["Price"], width = 78, justifyH = "RIGHT", getText = function(p) return pe:FormatCopperShort(p.last or p.avg or p.min) end },
+		{ id = "last", label = L["Price"], width = 78, justifyH = "RIGHT", fitContent = true,
+			getText = function(p) return pe:FormatCopperShort(p.last or p.avg or p.min) end },
 		{ id = "qty", label = L["Qty"], width = 52, justifyH = "RIGHT", getText = function(p) return pe:FormatNumberGrouped(p.qty or 0) end },
-	})
+	}))
 end
 
 -- The optional item header and the key facts list below it.

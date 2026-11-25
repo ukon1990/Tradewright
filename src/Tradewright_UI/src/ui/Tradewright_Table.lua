@@ -72,6 +72,7 @@ function TableMixin:SetColumns(columns)
 		end
 	end
 
+	self:MeasureFitWidths()
 	self:Refresh()
 end
 
@@ -108,6 +109,9 @@ end
 
 function TableMixin:SetRows(rows)
 	self.rows = rows or {}
+	if self:MeasureFitWidths() then
+		self:UpdateHeader()
+	end
 	self:RefreshRows()
 	-- The empty text and the footer (page position) follow every row change.
 	self:UpdateEmptyState()

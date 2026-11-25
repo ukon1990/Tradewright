@@ -193,6 +193,7 @@ read_globals = {
 	"NUM_BANKBAGSLOTS",
 	"NUM_TOTAL_BAG_FRAMES",
 	"PickupBagFromSlot",
+	"PixelUtil",
 	"PlaceAuctionBid",
 	"PutItemInBackpack",
 	"PutItemInBag",

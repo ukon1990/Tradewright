@@ -67,11 +67,12 @@ function Tradewright:RunAuctionPanelScanChoice()
 	self:RefreshAuctionHousePanel()
 end
 
+-- A row is AH_ROW tall unless it sets rowHeight (a row with labels above its controls).
 local function anchorRow(panel, frame, y)
 	frame:ClearAllPoints()
 	frame:SetPoint("TOPLEFT", panel, "TOPLEFT", AH_PAD, -y)
 	frame:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -AH_PAD, -y)
-	frame:SetHeight(AH_ROW)
+	frame:SetHeight(frame.rowHeight or AH_ROW)
 end
 
 local function placeIn(row, frame, point, relative, relativePoint, x)
@@ -80,11 +81,55 @@ local function placeIn(row, frame, point, relative, relativePoint, x)
 	frame:SetPoint(point, relative, relativePoint, x or 0, 0)
 end
 
+-- Sell row 3: search and item filters. Every control has a label above it, the search box too,
+-- so the row is as tall as a labelled dropdown and the controls sit on its bottom edge.
+local function buildSellFilterRow(pe, panel)
+	local row = CreateFrame("Frame", nil, panel)
+	local filters = { panel.subclassDropdown, panel.classDropdown }
+	if pe.IS_RETAIL then
+		table.insert(filters, 1, panel.expansionDropdown)
+	else
+		panel.expansionDropdown:Hide()
+		panel.expansionDropdown.Show = panel.expansionDropdown.Hide
+		panel.expansionDropdown.SetShown = function() end
+		pe.ui.ahExpansionFilterValues = {}
+	end
+	row.rowHeight = filters[1]:GetHeight()
+	placeIn(row, filters[1], "BOTTOMRIGHT", row, "BOTTOMRIGHT")
+	for index = 2, #filters do
+		placeIn(row, filters[index], "BOTTOMRIGHT", filters[index - 1], "BOTTOMLEFT", -AH_ROW_GAP)
+	end
+	-- The skinned edit box draws 6px wider and 2px taller on each side than the box itself.
+	local search = panel.searchBox
+	search:SetParent(row)
+	search:ClearAllPoints()
+	search:SetHeight(AH_ROW - 4)
+	search:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 6, 2)
+	search:SetPoint("BOTTOMRIGHT", filters[#filters], "BOTTOMLEFT", -(AH_ROW_GAP + 6), 2)
+	pe:AddSearchPlaceholder(search, L["Search name or ID"])
+	local label = pe:CreateText(row, "GameFontHighlightSmall", "textMuted")
+	label:SetPoint("TOPLEFT")
+	label:SetText(L["Search"])
+	return row
+end
+
+-- Sell row 4: two filter checkboxes and Reset filters.
+local function buildSellCheckRow(pe, panel)
+	local row = CreateFrame("Frame", nil, panel)
+	placeIn(row, panel.craftedOnly, "LEFT", row, "LEFT", -4)
+	pe:SkinCheckButton(panel.craftedOnly)
+	local craftedLabel = panel.craftedOnly.Text
+	placeIn(row, panel.profitableOnly, "LEFT", panel.craftedOnly, "RIGHT", (craftedLabel and craftedLabel:GetStringWidth() or 60) + 18)
+	placeIn(row, panel.clearBtn, "RIGHT", row, "RIGHT")
+	panel.clearBtn:SetHeight(pe:GetTheme().size.controlSmall)
+	pe:SetButtonLabel(panel.clearBtn, L["Reset filters"], true)
+	return row
+end
+
 -- Re-anchors the panel to the shared design: 34px header with Sell / Cart / Auctions switch, rows of 26px controls
 -- 8px apart inside a 12px inset, the table filling the rest, a progress row and a 24px status footer.
 function Tradewright:BuildAuctionPanelLayout(panel)
 	local pe = self
-	local ui = self.ui
 	local theme = self:GetTheme()
 	local headerHeight = theme.size.header
 
@@ -177,41 +222,10 @@ function Tradewright:BuildAuctionPanelLayout(panel)
 	placeIn(panel.sellRow2, panel.btnReserveItem, "RIGHT", panel.btnClearRule, "LEFT", -AH_ROW_GAP)
 	placeIn(panel.sellRow2, panel.btnIgnoreItem, "RIGHT", panel.btnReserveItem, "LEFT", -AH_ROW_GAP)
 
-	-- Sell row 3: search and item filters.
-	y = y + AH_ROW + AH_ROW_GAP
-	panel.sellRow3 = CreateFrame("Frame", nil, panel)
-	anchorRow(panel, panel.sellRow3, y)
-	local filters = { panel.subclassDropdown, panel.classDropdown }
-	if self.IS_RETAIL then
-		table.insert(filters, 1, panel.expansionDropdown)
-	else
-		panel.expansionDropdown:Hide()
-		panel.expansionDropdown.Show = panel.expansionDropdown.Hide
-		panel.expansionDropdown.SetShown = function() end
-		ui.ahExpansionFilterValues = {}
-	end
-	placeIn(panel.sellRow3, filters[1], "RIGHT", panel.sellRow3, "RIGHT")
-	for index = 2, #filters do
-		placeIn(panel.sellRow3, filters[index], "RIGHT", filters[index - 1], "LEFT", -AH_ROW_GAP)
-	end
-	placeIn(panel.sellRow3, panel.searchBox, "LEFT", panel.sellRow3, "LEFT", 6)
-	panel.searchBox:SetPoint("RIGHT", filters[#filters], "LEFT", -14, 0)
-	self:AddSearchPlaceholder(panel.searchBox, L["Search name or ID"])
-
-	-- Sell row 4: two filter checkboxes and Reset filters.
-	y = y + AH_ROW + AH_ROW_GAP
-	panel.sellRow4 = CreateFrame("Frame", nil, panel)
-	anchorRow(panel, panel.sellRow4, y)
-	placeIn(panel.sellRow4, panel.craftedOnly, "LEFT", panel.sellRow4, "LEFT", -4)
-	self:SkinCheckButton(panel.craftedOnly)
-	local craftedLabel = panel.craftedOnly.Text
-	placeIn(panel.sellRow4, panel.profitableOnly, "LEFT", panel.craftedOnly, "RIGHT", (craftedLabel and craftedLabel:GetStringWidth() or 60) + 18)
-	placeIn(panel.sellRow4, panel.clearBtn, "RIGHT", panel.sellRow4, "RIGHT")
-	panel.clearBtn:SetHeight(theme.size.controlSmall)
-	self:SetButtonLabel(panel.clearBtn, L["Reset filters"], true)
-
+	panel.sellRow3 = buildSellFilterRow(self, panel)
+	panel.sellRow4 = buildSellCheckRow(self, panel)
 	panel.sellRows = { panel.sellRow1, panel.sellRow2, panel.sellRow3, panel.sellRow4 }
-	panel.sellTableTop = y + AH_ROW + AH_PAD
+	self:LayoutAuctionSellRows(panel, false)
 
 	-- Progress row (shown while scanning or posting).
 	panel.progressRow = CreateFrame("Frame", nil, panel)
@@ -332,7 +346,7 @@ function Tradewright:LayoutAuctionSellRows(panel, hintShown)
 	local y = self:GetTheme().size.header + 1 + AH_PAD
 	for index, row in ipairs(panel.sellRows or {}) do
 		anchorRow(panel, row, y)
-		y = y + AH_ROW + AH_ROW_GAP
+		y = y + (row.rowHeight or AH_ROW) + AH_ROW_GAP
 		if index == 1 and hintShown then
 			hint:ClearAllPoints()
 			hint:SetPoint("TOPLEFT", panel, "TOPLEFT", AH_PAD, -y)

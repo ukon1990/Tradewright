@@ -42,13 +42,14 @@ function Tradewright:ItemColumn(spec)
 end
 
 --- A right-aligned number column showing `spec.format(value)`, or "-" when the row has no value.
---- `spec`: id, label, width, format, optional. The number is `row[spec.field or spec.id]`, or `spec.value(row)`.
---- Sortable unless `sortable = false`: highest first, rows without a value last; `sortValue` overrides the sort.
+--- `spec`: id, label, width, minWidth (shrinks to it in a narrow table), format, optional. The number is `row[spec.field or spec.id]`, or `spec.value(row)`.
+--- Grows past `width` to fit its widest value. Sortable unless `sortable = false`: highest first, rows without a value last; `sortValue` overrides the sort.
 function Tradewright:NumberColumn(spec)
 	local value = spec.value or function(row) return row[spec.field or spec.id] end
 	local sortable = spec.sortable ~= false
 	return {
-		id = spec.id, label = spec.label, width = spec.width, justifyH = "RIGHT", optional = spec.optional,
+		id = spec.id, label = spec.label, width = spec.width, minWidth = spec.minWidth, justifyH = "RIGHT", optional = spec.optional,
+		fitContent = true,
 		sortable = sortable, defaultSort = sortable and "desc" or nil,
 		sortValue = spec.sortValue or function(row) return tonumber(value(row)) or -1 end,
 		getText = function(row)
