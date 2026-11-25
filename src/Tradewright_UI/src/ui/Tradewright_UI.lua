@@ -107,10 +107,23 @@ function Tradewright:GetItemDisplayName(itemID, noRequest)
 	if not noRequest then
 		requestItemData(id)
 	end
+	return self:ItemNamePlaceholder(itemID)
+end
+
+-- What GetItemDisplayName shows until the client has loaded the item.
+function Tradewright:ItemNamePlaceholder(itemID)
 	return "#" .. tostring(itemID)
 end
 
--- Re-renders the rows of every visible table without rebuilding their data. Every table created with
+local function refreshVisibleDetailHeaders(pe)
+	for header in pairs(pe.DetailHeaders or {}) do
+		if header:IsVisible() then
+			header:RefreshItemName()
+		end
+	end
+end
+
+-- Re-renders the rows of every visible table, and the names in visible detail headers, without rebuilding their data. Every table created with
 -- `CreateReusableTable` is listed in `ReusableTables`, so new tabs need nothing here.
 function Tradewright:RefreshVisibleItemRows()
 	local ui = self.ui or {}
@@ -119,6 +132,7 @@ function Tradewright:RefreshVisibleItemRows()
 			tableWidget:RefreshRows()
 		end
 	end
+	refreshVisibleDetailHeaders(self)
 	if ui.activeMainTab == "inventory" and ui.invSelectedItemID and ui.inventoryPanel and ui.inventoryPanel:IsVisible() then
 		self:RenderInventoryDetails(ui.invSelectedItemID)
 	end

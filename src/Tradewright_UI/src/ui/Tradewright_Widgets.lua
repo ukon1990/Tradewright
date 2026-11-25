@@ -456,8 +456,33 @@ function Tradewright:CreateBadge(parent)
 	return badge
 end
 
+-- Every detail header, so their names can be filled in when item data arrives.
+Tradewright.DetailHeaders = setmetatable({}, { __mode = "k" })
+
+local function setHeaderItem(header, itemID, title, subtitle, iconOverride)
+	header.itemID = itemID
+	header.icon:SetItem(itemID, iconOverride)
+	header.icon:Show()
+	header.title:SetText(title or "")
+	header.subtitle:SetText(subtitle or "")
+	header.waitingForName = itemID ~= nil and title == Tradewright:ItemNamePlaceholder(itemID)
+	header:RefreshItemName()
+end
+
+-- Quality colour, and the name in place of the "#id" placeholder once the client has loaded the item.
+-- Called again by RefreshVisibleItemRows when item names arrive.
+local function refreshHeaderItemName(header)
+	local _, color = Tradewright:GetItemLook(header.itemID)
+	Tradewright:ColorText(header.title, color)
+	if header.waitingForName then
+		local name = Tradewright:GetItemDisplayName(header.itemID)
+		header.title:SetText(name)
+		header.waitingForName = name == Tradewright:ItemNamePlaceholder(header.itemID)
+	end
+end
+
 -- Detail pane header: 32px item icon, name, muted second line, optional close and pop-out buttons.
--- `header.itemID` is the item last passed to SetItem.
+-- `header:SetItem(itemID, title, subtitle, iconOverride)`; `header.itemID` is the item last passed to it.
 function Tradewright:CreateDetailHeader(parent, onClose, onPopOut)
 	local header = CreateFrame("Frame", nil, parent)
 	header:SetHeight(32)
@@ -480,15 +505,9 @@ function Tradewright:CreateDetailHeader(parent, onClose, onPopOut)
 	header.subtitle = self:CreateText(header, "GameFontHighlightSmall", "textMuted")
 	header.subtitle:SetPoint("BOTTOMLEFT", header.icon, "BOTTOMRIGHT", 8, 1)
 	header.subtitle:SetPoint("RIGHT", header, "RIGHT", 0, 0)
-	function header:SetItem(itemID, title, subtitle, iconOverride)
-		local _, color = Tradewright:GetItemLook(itemID)
-		self.itemID = itemID
-		self.icon:SetItem(itemID, iconOverride)
-		self.icon:Show()
-		self.title:SetText(title or "")
-		Tradewright:ColorText(self.title, color)
-		self.subtitle:SetText(subtitle or "")
-	end
+	header.SetItem = setHeaderItem
+	header.RefreshItemName = refreshHeaderItemName
+	Tradewright.DetailHeaders[header] = true
 	return header
 end
 

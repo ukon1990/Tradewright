@@ -302,7 +302,8 @@ function Tradewright:CreateMarketHistoryView(parent, opts)
 	function view:ShowRow(rowData)
 		self.row = rowData
 		if self.header then
-			self.header:SetItem(rowData.itemID, rowData.name or pe:GetItemDisplayName(rowData.itemID),
+			-- Not rowData.name: that was read when the list was built and may still be the "#id" placeholder.
+			self.header:SetItem(rowData.itemID, pe:GetItemDisplayName(rowData.itemID),
 				string.format(L["Item %s · %s"], tostring(rowData.itemID or "?"), rowData.scope == "commodity" and "commodity" or "item"))
 		end
 		self.facts:SetRows(marketFactRows(pe, rowData))
