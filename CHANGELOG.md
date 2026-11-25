@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.4
+
+- Destroying: A new Destroying tab in the `/tw` window lists the items on all your characters with their auction and vendor values, an estimated disenchant value, a suggested use for each, and which of your characters can disenchant it. The leveling route can now give back by disenchanting, and a "Below disenchant value" view finds gear on the auction house that is likely worth more disenchanted than its price, with a Search button at the open auction house.
+- Mail to a disenchanter: Choose a disenchanter (and on retail a prospector and miller) in the settings, and the mailbox gets a "For <name> to disenchant" row with what they can destroy. Until you choose one, the character with the best skill is used. A switch per profession sends only what is likely worth more destroyed than sold.
+- Side panels: The auction house, profession and mailbox panels can be folded into a thin rail at the edge with live counts. Click the rail to unfold it, or set a keybinding for it.
+- Post profitable: Items are now judged by what you get after the auction house cut, compared with the estimated craft cost, what you paid and the vendor price. Gathered items are no longer left out. The Return column shows that estimated gain in gold.
+- Bait prices: A price far below the estimated market price now warns you instead of being skipped. You can still sell it or skip it. Two new settings control when the warning shows.
+- Sold rate: The Sold column and the "You sold" tooltip line now come from your mail (sold, expired and cancelled auctions). Before, nearly every item showed 0%.
+- Price history: Fixed daily prices staying empty, so the charts, usual price and sales a day now use every day of scans.
+- Tables: Number and money columns grow to fit their values, the Market table headers have tooltips that explain each column, and the sell panel filters have labels.
+- Item names: Item details and the Market side panel show the item name instead of "#id" once the game has loaded the item.
+
 ## 1.0.3
 
 - Professions: The Scan button is gone. A profession you have never stored is stored as soon as you open it, and it is updated each time you close the window. Type `/tw rescan` to scan it again by hand.
