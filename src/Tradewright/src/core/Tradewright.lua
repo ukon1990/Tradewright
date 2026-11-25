@@ -18,6 +18,10 @@ Tradewright.IS_RETAIL = (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) and not Tradewr
 Tradewright.IS_SUPPORTED = Tradewright.IS_RETAIL or Tradewright.IS_FOREVER
 -- The auction house's share of a sale when nothing better is known (see Tradewright:GetAuctionCut).
 Tradewright.DEFAULT_AUCTION_CUT = 0.05
+-- A price at or under this share of the market price is unusually low (Settings can change it, 0 is off).
+Tradewright.DEFAULT_DUMP_LOW_FACTOR = 0.35
+-- How far up the listings above the cheapest the market price is read (Settings can change it).
+Tradewright.DEFAULT_MARKET_PRICE_SHARE = 0.25
 Tradewright.SCAN_WAIT_SECONDS = 0.25
 Tradewright.MAX_SANITIZE_DEPTH = 8
 Tradewright.MAX_EXPORT_BYTES = 2 * 1024 * 1024

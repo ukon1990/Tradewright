@@ -129,7 +129,10 @@ function Tradewright:BuildAuctionSellFilters(panel, ui, w)
 end
 
 function Tradewright:ApplyAuctionSellFilterDefaults(ui)
-	ui.ahSortKey = ui.ahSortKey or "potentialROI"
+	-- The Return column was sorted as "potentialROI" before it showed gold.
+	if ui.ahSortKey == nil or ui.ahSortKey == "potentialROI" then
+		ui.ahSortKey = "postGain"
+	end
 	if ui.ahSortAsc == nil then
 		ui.ahSortAsc = false
 	end

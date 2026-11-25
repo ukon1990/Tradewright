@@ -305,6 +305,72 @@ function AuctionLogic.SummarizeOwnedAuctions(auctions, lowestByItem, ahCut)
 	return rows, totals
 end
 
+-- The other values a unit has, in the order a tie is reported.
+local POST_ALTERNATIVES = { "craftCost", "paid", "vendorSell" }
+
+--- What posting one unit at `item.price` earns, in copper: the price after the auction house cut
+--- (fraction) minus the highest other value the unit has, `craftCost` (materials per unit when
+--- crafted), `paid` (the average price paid for it) or `vendorSell` (selling it to a vendor).
+--- Returns { price, cut, net, basis, baseline, gain }; basis names the value subtracted, nil when
+--- none is known. Nil without a price. The deposit is left out: the house returns it on a sale.
+function AuctionLogic.PostGain(item, ahCut)
+	local price = tonumber(item and item.price)
+	if not price or price <= 0 then
+		return nil
+	end
+	local cut = math.floor(price * (tonumber(ahCut) or Tradewright.DEFAULT_AUCTION_CUT) + 0.5)
+	local result = { price = price, cut = cut, net = price - cut, baseline = 0 }
+	for _, key in ipairs(POST_ALTERNATIVES) do
+		local value = tonumber(item[key])
+		if value and value > result.baseline then
+			result.basis, result.baseline = key, value
+		end
+	end
+	result.gain = result.net - result.baseline
+	return result
+end
+
+--- True when posting one unit pays more than every other value it has (see PostGain).
+function AuctionLogic.IsProfitablePost(item, ahCut)
+	local post = AuctionLogic.PostGain(item, ahCut)
+	return post ~= nil and post.gain > 0
+end
+
+--- The market price from flat price steps `{ price1, qty1, price2, qty2, … }`, cheapest first: the
+--- unit price `share` (fraction, default DEFAULT_MARKET_PRICE_SHARE) of the way up the units listed
+--- above the cheapest step. A higher share needs a cheap group to hold more of the units before it
+--- counts as the market. The cheapest step is left out because one cheap listing is how a bait
+--- looks, and with few auctions it would otherwise be the mark itself. Nil with fewer than two steps.
+function AuctionLogic.MarketPriceFromSteps(steps, share)
+	local units = 0
+	for index = 3, #(steps or {}), 2 do
+		units = units + (tonumber(steps[index + 1]) or 0)
+	end
+	if units <= 0 then
+		return nil
+	end
+	share = tonumber(share) or Tradewright.DEFAULT_MARKET_PRICE_SHARE
+	local mark, counted = math.max(1, math.ceil(units * share)), 0
+	for index = 3, #steps, 2 do
+		counted = counted + (tonumber(steps[index + 1]) or 0)
+		if counted >= mark then
+			return tonumber(steps[index])
+		end
+	end
+	return nil
+end
+
+--- The share of `usual` that `price` is, when that share is at or under `factor` (a fraction);
+--- nil otherwise, without both prices, or when factor is 0 or nil (the check is off).
+function AuctionLogic.LowPriceRatio(price, usual, factor)
+	price, usual, factor = tonumber(price), tonumber(usual), tonumber(factor)
+	if not (price and usual and factor) or price <= 0 or usual <= 0 or factor <= 0 then
+		return nil
+	end
+	local ratio = price / usual
+	return ratio <= factor and ratio or nil
+end
+
 -- True when a live auction house search differs from the saved scan entry ({ p = price, q = quantity, n = auctions }).
 -- A value the search did not report (nil) is never a difference.
 function AuctionLogic.LiveSearchDiffers(saved, price, quantity, listings)

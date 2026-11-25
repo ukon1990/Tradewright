@@ -309,6 +309,42 @@ do
 	check("Full scan is plain: already running", standsOut({ active = true, cooldown = 0 }) == false)
 end
 
+do
+	local function profitable(listing, cut)
+		return AL.IsProfitablePost(listing, cut or 0.05)
+	end
+	check("Profitable post: no price is never profitable", profitable({ vendorSell = 10 }) == false)
+	check("Profitable post: no other value, any price", profitable({ price = 100 }) == true)
+	check("Profitable post: beats the vendor after the cut", profitable({ price = 100, vendorSell = 94 }) == true)
+	check("Profitable post: the cut drops it under the vendor", profitable({ price = 100, vendorSell = 96 }) == false)
+	check("Profitable post: below what was paid", profitable({ price = 100, paid = 98 }) == false)
+	check("Profitable post: below the craft cost", profitable({ price = 100, vendorSell = 5, craftCost = 120 }) == false)
+	check("Profitable post: a bigger cut counts", profitable({ price = 100, vendorSell = 90 }, 0.15) == false)
+	local gain = AL.PostGain({ price = 1000, vendorSell = 50, paid = 400 }, 0.05)
+	check("Post gain: price minus cut minus what was paid",
+		gain.cut == 50 and gain.net == 950 and gain.basis == "paid" and gain.baseline == 400 and gain.gain == 550)
+	local loss = AL.PostGain({ price = 100, craftCost = 200, vendorSell = 10 }, 0.05)
+	check("Post gain: a loss against the craft cost", loss.basis == "craftCost" and loss.gain == -105)
+	local plain = AL.PostGain({ price = 100 }, 0.05)
+	check("Post gain: nothing to compare, only the cut", plain.basis == nil and plain.gain == 95)
+	check("Post gain: no price, no gain", AL.PostGain({ vendorSell = 10 }, 0.05) == nil)
+	check("Low price: at the share is low", AL.LowPriceRatio(35, 100, 0.35) == 0.35)
+	check("Low price: above the share is fine", AL.LowPriceRatio(36, 100, 0.35) == nil)
+	check("Low price: off at 0", AL.LowPriceRatio(1, 100, 0) == nil)
+	check("Low price: no usual price, no warning", AL.LowPriceRatio(1, nil, 0.35) == nil)
+	local market = AL.MarketPriceFromSteps
+	check("Market price: a 1c bait under one 1g auction", market({ 1, 1, 10000, 1 }) == 10000)
+	check("Market price: a 1c bait under 25s and 1g", market({ 1, 1, 2500, 1, 10000, 1 }) == 2500)
+	check("Market price: several baits stay under the quarter mark",
+		market({ 1, 1, 2, 1, 3, 1, 10000, 10 }) == 10000)
+	check("Market price: a quarter up the units", market({ 90, 5, 100, 4, 110, 4, 200, 4 }) == 100)
+	check("Market price: one step is not enough", market({ 100, 20 }) == nil)
+	check("Market price: no steps", market(nil) == nil)
+	local cluster = { 900, 1, 1000, 10, 10000, 20 } -- 10 at 10s, then 20 at 1g, above one cheapest
+	check("Market price: a big cheap group is the market at a quarter", market(cluster, 0.25) == 1000)
+	check("Market price: at half, the cheap group is too small", market(cluster, 0.5) == 10000)
+end
+
 if failed > 0 then
 	print(failed .. " test(s) failed")
 	os.exit(1)

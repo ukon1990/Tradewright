@@ -237,7 +237,8 @@ local function buildSellPostButtons(panel, w)
 	attachSimpleTooltip(
 		w.btnPostProfitable,
 		L["Post profitable"],
-		L["Queues every shown item that sells for more than it costs, skipping unusually low prices. Click Post next once per auction."]
+		L["Queues shown items that earn more after the auction house cut than a vendor pays, what you paid or their craft cost. "]
+			.. L["Warns before an unusually low price. Click Post next once per auction, Skip to leave one out."]
 	)
 	panel.btnPostProfitable = w.btnPostProfitable
 	w.btnPostAll = panelButton(panel, { 68, 20 }, L["Post all"], rightOf(w.btnPostProfitable), function()
@@ -246,7 +247,7 @@ local function buildSellPostButtons(panel, w)
 	attachSimpleTooltip(
 		w.btnPostAll,
 		L["Post all"],
-		L["Queues every shown item, also ones with little profit or an unusually low price. Click Post next once per auction."]
+		L["Queues every shown item. Warns before an unusually low price. Click Post next once per auction, Skip to leave one out."]
 	)
 	panel.btnPostAll = w.btnPostAll
 	w.btnPauseBulk = panelButton(panel, { 58, 20 }, L["Pause"], rightOf(w.btnPostAll), function()
@@ -301,6 +302,21 @@ local function buildSellRuleButtons(panel, w)
 	panel.btnClearRule = w.btnClearRule
 end
 
+local POST_BASIS_LABELS = { craftCost = L["Craft cost"], paid = L["You paid"], vendorSell = L["Vendor pays"] }
+
+-- The Return sum for one unit: price, minus the cut, minus the highest other value.
+local function addPostGainLines(pe, lines, post)
+	if not post then
+		return
+	end
+	lines[#lines + 1] = { L["Price"], pe:FormatCopperFull(post.price) }
+	lines[#lines + 1] = { string.format(L["Auction house cut (%s)"], pe:DescribeAuctionCut()), "-" .. pe:FormatCopperFull(post.cut) }
+	if post.basis then
+		lines[#lines + 1] = { POST_BASIS_LABELS[post.basis], "-" .. pe:FormatCopperFull(post.baseline) }
+	end
+	lines[#lines + 1] = { L["Return"], pe:FormatAuctionGain(post.gain) }
+end
+
 local function sellRowTooltipLines(pe, rowData)
 	local lines = {}
 	if not (rowData.nativePrice and rowData.nativePrice > 0) then
@@ -310,7 +326,10 @@ local function sellRowTooltipLines(pe, rowData)
 		local priceSource = tostring(rowData.fallbackPriceSource or L["another addon"])
 		lines[#lines + 1] = { string.format(L["Price from %s"], priceSource), pe:FormatCopperFull(rowData.fallbackPrice) }
 	end
-	lines[#lines + 1] = { "Return", pe:FormatPercent(rowData.potentialROI) }
+	addPostGainLines(pe, lines, rowData.postGain)
+	if rowData.potentialROI then
+		lines[#lines + 1] = { L["Craft return"], pe:FormatPercent(rowData.potentialROI) }
+	end
 	if rowData.isIgnoredByRule then
 		lines[#lines + 1] = { "Rule", L["never posted in bulk"] }
 	elseif (tonumber(rowData.reserveQty) or 0) > 0 then
@@ -328,6 +347,7 @@ local function showSellRowTooltip(rowFrame, rowData)
 	local hint = L["Click to put it in the sell slot · Shift-click to link"]
 	if rowData.isDumpedLow then
 		hint = string.format(L["The price is unusually low. %s"], hint)
+		lines[#lines + 1] = { L["Market price"], pe:FormatCopperFull(rowData.dumpBaseline) }
 	end
 	pe:ShowItemRowTooltip(rowFrame, rowData.itemID, lines, hint)
 end
@@ -350,6 +370,9 @@ local function onSellRowClick(_, rowData, _, tableWidget)
 		Tradewright:GetState().auctionLastSellSelectionItemID = id
 		Tradewright:RefreshAuctionPanelRules()
 		Tradewright:PrintMessage(string.format(L["%s is in the sell slot."], Tradewright:GetItemDisplayName(id)))
+		if rowData.isDumpedLow then
+			Tradewright:WarnLowAuctionPrice(rowData)
+		end
 	else
 		Tradewright:RefreshAuctionPanelRules()
 		Tradewright:PrintMessage(string.format(

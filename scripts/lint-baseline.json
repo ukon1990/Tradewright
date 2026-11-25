@@ -405,11 +405,6 @@
    }
   },
   "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionBulk.lua": {
-   "Tradewright:BuildAuctionBulkRows": {
-    "ccn": [
-     16
-    ]
-   },
    "Tradewright:ConfirmAuctionBulkCurrent": {
     "ccn": [
      12
@@ -417,10 +412,10 @@
    },
    "Tradewright:ContinueAuctionBulkPost": {
     "lines": [
-     59
+     45
     ],
     "ccn": [
-     19
+     15
     ]
    },
    "Tradewright:ProcessAuctionBulkPhase": {
@@ -430,10 +425,10 @@
    },
    "Tradewright:RunAuctionPanelBulkAction": {
     "lines": [
-     73
+     70
     ],
     "ccn": [
-     12
+     11
     ]
    }
   },
@@ -772,7 +767,7 @@
    },
    "Tradewright:FilterAuctionPanelRows": {
     "ccn": [
-     28
+     27
     ]
    },
    "Tradewright:GetAuctionSubclassFilterOptions": {

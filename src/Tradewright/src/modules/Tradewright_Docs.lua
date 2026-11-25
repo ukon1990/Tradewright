@@ -66,7 +66,10 @@ SELL
 • Check prices looks up the prices picked in the list beside it: your crafts, your items or both.
 • Full scan reads every auction once. The server allows it only now and then; the button shows when it is ready.
 • A lit Full scan button means many prices are older than an hour: one full scan updates them all, faster than checking them one by one.
-• Post profitable and Post all queue the shown items. Click Post next once per auction: the game does not let an addon post by itself.
+• Post profitable queues the shown items that earn more after the auction house cut than a vendor pays, what you paid or their craft cost.
+• Post all queues every shown item. Click Post next once per auction: the game does not let an addon post by itself. Skip leaves one out.
+• An item listed far under its market price warns before it is posted: someone may be baiting a low post.
+• The market price is read a quarter up the listings above the cheapest one. Settings, Auction house sets that mark and how far under warns.
 • Keep holds back a number of an item. Ignore leaves it out when posting many.
 
 CART

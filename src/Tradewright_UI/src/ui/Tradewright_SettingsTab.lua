@@ -52,6 +52,13 @@ local function choices(values, format, scale)
 	return options
 end
 
+-- Shares of the market price for the low-price warning, with Off first.
+local function lowPriceChoices()
+	local options = choices({ 0.25, 0.35, 0.5, 0.75 }, L["%d%% of the market price"], 100)
+	table.insert(options, 1, { value = 0, label = L["Off"] })
+	return options
+end
+
 -- Copper amounts as plain "25s" / "1g" labels.
 local function moneyChoices(values)
 	local options = {}
@@ -109,6 +116,11 @@ local function troubleshootingSection()
 end
 
 local function auctionHouseSection(pe)
+	local function refreshAuctionPanel()
+		if pe.RefreshAuctionHousePanel then
+			pe:RefreshAuctionHousePanel()
+		end
+	end
 	return { title = L["Auction house"], items = {
 		{ kind = "select", label = L["Keep hourly prices for"], path = "auction.historyRetentionDays", default = 30,
 			options = choices({ 7, 14, 30, 60, 90 }, L["%d days"]),
@@ -124,6 +136,11 @@ local function auctionHouseSection(pe)
 			options = choices({ 5, 15, 30, 60, 180 }, L["%d minutes"]) },
 		{ kind = "check", label = L["Suggest a full scan when one is ready"], path = "auction.suggestFullScan", default = true },
 		{ kind = "note", text = L["Off: every price older than an hour is checked one by one when the auction house opens."] },
+		{ kind = "select", label = L["Warn before posting under"], path = "auction.dumpLowFactor", default = pe.DEFAULT_DUMP_LOW_FACTOR,
+			options = lowPriceChoices(), onChange = refreshAuctionPanel },
+		{ kind = "select", label = L["Read the market price at"], path = "auction.marketPriceShare", default = pe.DEFAULT_MARKET_PRICE_SHARE,
+			options = choices({ 0.1, 0.25, 0.5, 0.75 }, L["%d%% up the listings"], 100), onChange = refreshAuctionPanel },
+		{ kind = "note", text = L["Counted over the listings above the cheapest one. Higher: a cheap group must hold more of them to count as the market."] },
 		{ kind = "check", label = L["Count the lost deposit when cancelling undercut auctions"], path = "auction.repostIncludeDeposit",
 			default = true },
 		{ kind = "check", label = L["Show prices and what you own on item tooltips (hold Shift for more)"], path = "auction.tooltipEnabled",

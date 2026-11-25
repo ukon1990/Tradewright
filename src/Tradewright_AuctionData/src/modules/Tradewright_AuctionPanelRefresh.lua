@@ -86,6 +86,8 @@ local function annotateAuctionPanelRows(pe, rows, state)
 		row.potentialROI = roi.potentialROI
 		row.recipeName = roi.recipeName
 		row.qualityIndex = row.qualityIndex or roi.qualityIndex
+		row.postGain = pe:GetAuctionRowPostGain(row)
+		pe:UpdateAuctionRowDumpState(row) -- follows a changed warning share in Settings
 		row._isScanning = tonumber(state.auctionActiveItemID) == tonumber(row.itemID)
 		local scanTs = pe:GetItemLastAuctionScanAt(row.itemID)
 		row.lastAuctionScanAtTs = scanTs
@@ -238,8 +240,12 @@ local function refreshAuctionPanelPostButtons(panel, scan)
 	local postReady = isBulkPostReady(scan)
 	for mode, button in pairs({ post_profitable = panel.btnPostProfitable, post_all = panel.btnPostAll }) do
 		local isJob = scan.bulkActive and scan.bulk.mode == mode
-		button:SetText(isJob and L["Post next"] or POST_BUTTON_LABELS[mode])
-		button:SetEnabled(not scan.bulkActive or (isJob and postReady))
+		local label = POST_BUTTON_LABELS[mode]
+		if scan.bulkActive then
+			label = isJob and L["Post next"] or L["Skip"]
+		end
+		button:SetText(label)
+		button:SetEnabled(not scan.bulkActive or postReady)
 	end
 end
 
@@ -293,7 +299,7 @@ end
 
 local function bulkFooterText(bulk)
 	return string.format(L["%s · posted %d, skipped %d, failed %d"], tostring(bulk.status or "Posting"),
-		tonumber(bulk.posted) or 0, tonumber(bulk.skippedDumped) or 0, tonumber(bulk.failed) or 0)
+		tonumber(bulk.posted) or 0, tonumber(bulk.skipped) or 0, tonumber(bulk.failed) or 0)
 end
 
 -- Progress bar fraction, or nil when nothing with a known total is running.

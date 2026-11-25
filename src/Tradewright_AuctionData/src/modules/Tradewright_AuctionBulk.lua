@@ -15,24 +15,21 @@ local BULK_CONFIRMATION_POLL_SEC = 0.25
 local BULK_CONFIRMATION_TIMEOUT_SEC = 2.5
 local BULK_WAIT_FOR_SEARCH_SEC = 0.10 -- a queued search still owns the AH
 
+-- A shown row the bulk job may post: something left to sell, not ignored or held back by a rule.
+local function isPostableRow(row)
+	return row ~= nil and row.itemID ~= nil
+		and (tonumber(row.quantitySellable) or tonumber(row.quantityOwned) or 0) > 0
+		and row.isIgnoredByRule ~= true and row.canBulkPost ~= false
+end
+
 function Tradewright:BuildAuctionBulkRows(mode)
-	mode = tostring(mode or "post_all")
 	local state = self:GetState()
 	local rows = {}
 	local sourceRows = self:FilterAuctionPanelRows(state.auctionPanelRows or {})
 	state.auctionVisibleRows = sourceRows
+	local profitableOnly = tostring(mode or "post_all") == "post_profitable"
 	for _, row in ipairs(sourceRows) do
-		local keep = row and row.itemID and (tonumber(row.quantitySellable) or tonumber(row.quantityOwned) or 0) > 0
-		if keep and row.isIgnoredByRule == true then
-			keep = false
-		end
-		if keep and row.canBulkPost == false then
-			keep = false
-		end
-		if keep and mode == "post_profitable" then
-			keep = (tonumber(row.potentialROI) or -999) > 0
-		end
-		if keep then
+		if isPostableRow(row) and (not profitableOnly or self:IsAuctionRowProfitableToPost(row)) then
 			rows[#rows + 1] = row
 		end
 	end
@@ -61,7 +58,7 @@ function Tradewright:MaybeStartDeferredAuctionBulk()
 	bulk.done = 0
 	bulk.selected = 0
 	bulk.posted = 0
-	bulk.skippedDumped = 0
+	bulk.skipped = 0
 	bulk.failed = 0
 	bulk.index = 1
 	bulk.phase = "selecting"
@@ -88,9 +85,9 @@ function Tradewright:FinishAuctionBulkJob()
 	bulk.status = "Completed"
 	bulk.paused = false
 	self:PrintMessage(string.format(
-		L["Posting done: %d posted, %d skipped for an unusually low price, %d failed."],
+		L["Posting done: %d posted, %d skipped, %d failed."],
 		tonumber(bulk.posted) or 0,
-		tonumber(bulk.skippedDumped) or 0,
+		tonumber(bulk.skipped) or 0,
 		tonumber(bulk.failed) or 0
 	))
 	self:ResumeAuctionScanAfterBulkPost()
@@ -118,6 +115,27 @@ function Tradewright:FailAuctionBulkCurrent(reason)
 	})
 	self:RefreshAuctionHousePanel()
 	C_Timer.After(BULK_AFTER_FAILURE_SEC, function()
+		Tradewright:ContinueAuctionBulkPost()
+	end)
+end
+
+--- Leaves the item waiting in the sell frame unposted and brings up the next one.
+function Tradewright:SkipAuctionBulkCurrent()
+	local bulk = self:GetState().auctionBulk
+	if not bulk or bulk.running ~= true or bulk.phase ~= "waiting_button" then
+		return
+	end
+	bulk.skipped = (tonumber(bulk.skipped) or 0) + 1
+	bulk.done = math.min(tonumber(bulk.total) or 0, tonumber(bulk.index) or 1)
+	bulk.status = string.format(L["Skipped: %s"], self:GetItemDisplayName(bulk.currentItemID))
+	bulk.index = (tonumber(bulk.index) or 1) + 1
+	bulk.phase = "selecting"
+	bulk.currentItemID = nil
+	bulk.retryCount = 0
+	bulk.currentSelectionCounted = false
+	bulk.paused = false
+	self:RefreshAuctionHousePanel()
+	C_Timer.After(BULK_NEXT_STEP_SEC, function()
 		Tradewright:ContinueAuctionBulkPost()
 	end)
 end
@@ -238,24 +256,6 @@ function Tradewright:ContinueAuctionBulkPost()
 		return
 	end
 	bulk.currentItemID = row.itemID
-	if row.isDumpedLow == true then
-		bulk.skippedDumped = (tonumber(bulk.skippedDumped) or 0) + 1
-		bulk.done = math.min(tonumber(bulk.total) or 0, tonumber(bulk.index) or 1)
-		bulk.status = string.format(L["Skipped, unusually low price: %s"], self:GetItemDisplayName(row.itemID))
-		bulk.index = (tonumber(bulk.index) or 1) + 1
-		bulk.phase = "selecting"
-		bulk.currentItemID = nil
-		bulk.retryCount = 0
-		bulk.currentSelectionCounted = false
-		self:DebugLog("AH", "bulk skip dumped", {
-			string.format(L["itemID=%s index=%s"], tostring(row.itemID), tostring(bulk.index)),
-		})
-		self:RefreshAuctionHousePanel()
-		C_Timer.After(BULK_NEXT_STEP_SEC, function()
-			Tradewright:ContinueAuctionBulkPost()
-		end)
-		return
-	end
 	bulk.status = string.format(L["Selecting: %s"], self:GetItemDisplayName(row.itemID))
 	self:DebugLog("AH", "bulk select", {
 		string.format(L["itemID=%s index=%s/%s retry=%s"], tostring(row.itemID), tostring(bulk.index), tostring(bulk.total), tostring(bulk.retryCount or 0)),
@@ -274,6 +274,10 @@ function Tradewright:ContinueAuctionBulkPost()
 	bulk.phase = "waiting_button"
 	bulk.token = (tonumber(bulk.token) or 0) + 1
 	bulk.status = string.format(L["Click Post next: %s"], self:GetItemDisplayName(row.itemID))
+	if row.isDumpedLow == true then
+		self:WarnLowAuctionPrice(row)
+		bulk.status = string.format(L["Unusually low price, Post next sells anyway, Skip moves on: %s"], self:GetItemDisplayName(row.itemID))
+	end
 	-- Throttle: "Post next" unlocks a moment after the item lands in the sell frame, which also
 	-- gives Blizzard's price lookup time to fill in the going price.
 	bulk.nextPostAt = GetTime() + AUCTION_BULK_MIN_INTERVAL
@@ -382,14 +386,20 @@ function Tradewright:ResumeAuctionScanAfterBulkPost()
 	return true
 end
 
+-- While a job runs, the button that started it is "Post next" and the other one is "Skip".
+local function pressPostButtonDuringJob(pe, bulk, mode)
+	if bulk.mode == mode then
+		pe:PostAuctionBulkCurrent()
+	else
+		pe:SkipAuctionBulkCurrent()
+	end
+end
+
 function Tradewright:RunAuctionPanelBulkAction(mode)
 	mode = tostring(mode or "post_all")
 	local state = self:GetState()
 	if state.auctionBulk and state.auctionBulk.running == true then
-		-- The button that started the job is its "Post next" button while it runs.
-		if state.auctionBulk.mode == mode then
-			self:PostAuctionBulkCurrent()
-		end
+		pressPostButtonDuringJob(self, state.auctionBulk, mode)
 		return
 	end
 	if not self:CanStartFullAuctionSideActions(true) then
@@ -416,7 +426,7 @@ function Tradewright:RunAuctionPanelBulkAction(mode)
 		done = 0,
 		selected = 0,
 		posted = 0,
-		skippedDumped = 0,
+		skipped = 0,
 		failed = 0,
 		maxRetries = 8,
 		retryCount = 0,

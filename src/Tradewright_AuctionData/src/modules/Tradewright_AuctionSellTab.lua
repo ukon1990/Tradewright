@@ -5,7 +5,17 @@ local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return
 local shared = Tradewright.AuctionShared
 local containsText = shared.containsText
 local flagText = shared.flagText
-local formatPercent = shared.formatPercent
+
+--- Copper as a signed short amount, red when it is a loss; "-" when unknown.
+function Tradewright:FormatAuctionGain(copper)
+	if copper == nil then
+		return "-"
+	end
+	if copper < 0 then
+		return self:Colorize("-" .. self:FormatCopperShort(-copper), "danger")
+	end
+	return self:FormatCopperShort(copper)
+end
 
 -- Rows can be empty right after the AH opens (bag info not in yet): try again a few times.
 local PRIME_ROWS_RETRY_SEC = 0.2
@@ -124,10 +134,10 @@ function Tradewright:BuildAuctionPanelColumns()
 			getText = function(row) return row and row.auctionScanAgeDisplay or "never" end,
 		},
 		{
-			id = "potentialROI", label = L["Return"], justifyH = "RIGHT", width = 54, sortable = true, defaultSort = "desc",
-			tooltipTitle = L["Return"], tooltipText = L["Profit divided by reagent cost, for crafted items."],
-			sortValue = function(row) return tonumber(row and row.potentialROI) or -9999 end,
-			getText = function(row) return formatPercent(row and row.potentialROI) end,
+			id = "postGain", label = L["Return"], justifyH = "RIGHT", width = 70, sortable = true, defaultSort = "desc",
+			tooltipTitle = L["Return"], tooltipText = L["One sale after the AH cut, minus craft cost, what you paid or vendor price, whichever is highest."],
+			sortValue = function(row) return row and row.postGain and row.postGain.gain or -math.huge end,
+			getText = function(row) return pe:FormatAuctionGain(row and row.postGain and row.postGain.gain) end,
 		},
 		{
 			id = "personalSaleRate", label = L["Sold %"], justifyH = "RIGHT", width = 50, sortable = true, defaultSort = "desc", optional = true,
@@ -180,7 +190,7 @@ function Tradewright:FilterAuctionPanelRows(rows)
 			keep = row.potentialROI ~= nil
 		end
 		if keep and profitableOnly then
-			keep = tonumber(row.potentialROI) and tonumber(row.potentialROI) > 0
+			keep = self:IsAuctionRowProfitableToPost(row)
 		end
 		if keep and not self:IsFilterSelectionEmpty(classSelection) then
 			keep = classSelection[tostring(row.itemClassLabel or "")] == true
