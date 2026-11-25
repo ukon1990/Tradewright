@@ -24,6 +24,7 @@
 | Saved-data move | `scripts/migrate-saved-data.mjs` | One-time: carries saved data from the old name (AuctionHelper) over to Tradewright |
 | Shipped sightings | `scripts/build-source-data.mjs` (+ `.lua`), `npm run sources:build` | Builds sealed sightings from saved data into `Tradewright_SourceData.lua`; in game first: `/tradewright sources seal`, then log out |
 | Enchant scrolls | `scripts/build-enchant-scroll-data.mjs`, `npm run enchants:build` | Builds `Tradewright_EnchantScrollData.lua` (enchant spell → the scroll it makes on a vellum) from the game's SpellEffect table; rerun after a patch adds enchants |
+| Not disenchantable | `scripts/build-no-disenchant-data.mjs`, `npm run nodisenchant:build` | Builds `Tradewright_NoDisenchantData.lua` (gear the game will not disenchant, e.g. enchanter wands) from the game's ItemSparse flags, Forever plus Classic Era; rerun after a patch adds items |
 
 ## Repo layout
 

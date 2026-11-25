@@ -52,6 +52,7 @@ src\modules\Tradewright_Docs.lua
 src\data\Tradewright_SourceData.lua
 src\data\Tradewright_SalvageData.lua
 src\data\Tradewright_EnchantScrollData.lua
+src\data\Tradewright_NoDisenchantData.lua
 src\modules\Tradewright_Sources.lua
 src\modules\Tradewright_LootSightings.lua
 src\modules\Tradewright_SalvageSightings.lua

@@ -58,10 +58,15 @@ end
 
 --- How the yield records name an item for `action` (see SalvageLogic): the item itself for ore and
 --- herbs; for gear its expansion, quality, item level and whether it is a weapon. nil for something
---- that cannot be disenchanted, or while the game has not loaded the item.
+--- that cannot be disenchanted, or while the game has not loaded the item. Gear the game marks as not
+--- disenchantable is known only from the shipped list (Tradewright_NoDisenchantData.lua): no API or
+--- tooltip line tells.
 function Tradewright:GetSalvageInput(action, itemID)
 	if action ~= "disenchant" then
 		return { itemID = itemID }
+	end
+	if (self.NOT_DISENCHANTABLE or {})[itemID] then
+		return nil
 	end
 	local item = self:ItemDescriptorFromID(itemID)
 	if not (item and item.quality and item.itemLevel and (item.classID == WEAPON_CLASS or item.classID == ARMOR_CLASS)) then

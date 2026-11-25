@@ -115,3 +115,11 @@ npm run enchants:build
 ```
 
 Enchants with crafting quality (Dragonflight and later) are not in the list; the game reports their scrolls as recipe outputs.
+
+## Gear that cannot be disenchanted
+
+Some gear of uncommon quality or better cannot be disenchanted (the wands an enchanter makes, many PvP rank rewards). The tooltip does not say so, and no API tells; the game marks these items with a flag in its `ItemSparse` table. The Destroying tab, salvage buys and tooltips leave them out using a shipped list built from that flag (downloaded from wago.tools: Forever's tables, and Classic Era's for the items Forever's export lacks). Rebuild it when a patch adds items:
+
+```bash
+npm run nodisenchant:build
+```
