@@ -179,3 +179,4 @@ end
 
 BINDING_HEADER_TRADEWRIGHT = Tradewright.DISPLAY_NAME
 BINDING_NAME_TRADEWRIGHT_TOGGLE_PANEL_DOCK = L["Fold or unfold the Tradewright panel"]
+BINDING_NAME_TRADEWRIGHT_POST_AUCTION = L["Post the auction in the sell frame"]

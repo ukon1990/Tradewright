@@ -76,7 +76,7 @@ end
 for _, name in ipairs({ "ToggleDashboard", "OpenDocumentationTab", "HandleGetStartedSlash", "StartScan",
 	"ScanOpenProfession", "StartFullCharacterDump", "PrintStatus",
 	"Export", "SetDebugEnabled", "ClearDebugLog", "QueueCraftEconomyAuctionRefresh", "QueueVisibleAuctionRefresh",
-	"StartAuctionDump" }) do
+	"StartAuctionDump", "PressAuctionPostKey" }) do
 	spy(name)
 end
 pe.IsDebugEnabled = function() return false end
@@ -87,7 +87,7 @@ pe.BuildAuctionInventoryRows = function() return { {}, {}, {} } end
 local TOP_LEVEL = {
 	{ "", "ToggleDashboard" }, { "docs", "OpenDocumentationTab" }, { "documentation", "OpenDocumentationTab" },
 	{ "scan", "StartScan" }, { "rescan", "ScanOpenProfession" }, { "status", "PrintStatus" }, { "SCAN", "StartScan" },
-	{ "intro", "HandleGetStartedSlash" },
+	{ "intro", "HandleGetStartedSlash" }, { "post", "PressAuctionPostKey" },
 }
 for _, case in ipairs(TOP_LEVEL) do
 	reset()

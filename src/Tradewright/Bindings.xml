@@ -2,4 +2,7 @@
 	<Binding name="TRADEWRIGHT_TOGGLE_PANEL_DOCK" header="TRADEWRIGHT">
 		Tradewright:TogglePanelDock()
 	</Binding>
+	<Binding name="TRADEWRIGHT_POST_AUCTION">
+		if Tradewright.PressAuctionPostKey then Tradewright:PressAuctionPostKey() end
+	</Binding>
 </Bindings>

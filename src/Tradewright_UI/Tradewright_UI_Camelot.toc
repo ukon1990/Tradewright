@@ -16,6 +16,7 @@ Bootstrap.lua
 src\ui\Tradewright_Widgets.lua
 src\ui\Tradewright_Dropdowns.lua
 src\ui\Tradewright_ColorSwatch.lua
+src\ui\Tradewright_KeyBindingButton.lua
 src\ui\Tradewright_Chart.lua
 src\ui\Tradewright_ItemDetailGraph.lua
 src\ui\Tradewright_Table.lua

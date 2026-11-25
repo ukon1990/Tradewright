@@ -222,7 +222,7 @@ local SLASH_HELP_LINES = {
 	"/tw opens the window (/tradewright works too) | /tw scan: scan your professions | /tw rescan: read the open profession anew"
 		.. " | /tw status: the last scan"
 		.. " | /tw bags on|off: Tradewright bags | /twfarm start|pause|stop: run a farm | /tw docs: open Help"
-		.. " | /tw intro: show Get started",
+		.. " | /tw intro: show Get started | /tw post: post the auction in the sell frame (for a macro)",
 	"Advanced: /tw debug [on|off|toggle] | /tw settings spectree on|off | recipeoutput on|off | invbatch <n>"
 		.. " | /tw auction status|enable|disable|refresh [crafts]|dump [visible|full] | /tw sources [seal] | /tw intro reset",
 }
@@ -389,6 +389,7 @@ local SLASH_COMMANDS = {
 	help = printSlashHelp,
 	settings = function(self, rest) self:HandleSettingsSlash(rest) end,
 	auction = handleAuctionSlash, ah = handleAuctionSlash,
+	post = function(self) if self.PressAuctionPostKey then self:PressAuctionPostKey() end end,
 	debug = handleDebugSlash,
 	scan = function(self) self:StartScan() end,
 	rescan = function(self) self:ScanOpenProfession() end,

@@ -195,7 +195,10 @@ local EVENT_HANDLERS = {
 	CRAFTINGORDERS_RELEASE_ORDER_RESPONSE = onCraftingOrderResponse,
 	CRAFTINGORDERS_REJECT_ORDER_RESPONSE = onCraftingOrderResponse,
 
-	MAIL_INBOX_UPDATE = "OnMailInboxUpdate",
+	MAIL_INBOX_UPDATE = function(self)
+		callOptional(self, "OnMailInboxUpdate")
+		callOptional(self, "DeleteEmptiedPackMail")
+	end,
 	MAIL_SEND_SUCCESS = "OnMailSendSuccess",
 	MAIL_FAILED = "OnMailSendFailed",
 }

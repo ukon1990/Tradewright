@@ -155,6 +155,25 @@ do
 	check("Destroy rows: keep amounts hold back, sent without one", byID[1].send == 2 and byID[4].send == 0 and byID[4].reason == "held")
 end
 
+-- Emptied mails between own characters
+do
+	local subjects = { "Tradewright reagents", "Tradewright crafts" }
+	local own = { alva = true, bryn = true }
+	local function mail(fields)
+		local m = { sender = "Alva Stone", subject = "Tradewright reagents 2/3", money = 0, cod = 0 }
+		for k, v in pairs(fields or {}) do m[k] = v end
+		return m
+	end
+	check("Emptied mail: own pack mail with nothing left", ML.IsEmptiedPackMail(mail(), subjects, own))
+	check("Emptied mail: retail sender with realm", ML.IsEmptiedPackMail(mail({ sender = "Bryn-Silvermoon", subject = "Tradewright crafts 1/1" }), subjects, own))
+	check("Emptied mail: items still attached stays", not ML.IsEmptiedPackMail(mail({ itemCount = 1 }), subjects, own))
+	check("Emptied mail: money left stays", not ML.IsEmptiedPackMail(mail({ money = 5 }), subjects, own))
+	check("Emptied mail: cash on delivery stays", not ML.IsEmptiedPackMail(mail({ cod = 100 }), subjects, own))
+	check("Emptied mail: someone else's mail stays", not ML.IsEmptiedPackMail(mail({ sender = "Stranger" }), subjects, own))
+	check("Emptied mail: other subject stays", not ML.IsEmptiedPackMail(mail({ subject = "Tradewright reagents please" }), subjects, own))
+	check("Emptied mail: unknown sender stays", not ML.IsEmptiedPackMail(mail({ sender = "" }), subjects, own))
+end
+
 if failed > 0 then
 	print(failed .. " check(s) failed")
 	os.exit(1)

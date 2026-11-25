@@ -190,6 +190,20 @@ pe:OnAuctionPostCalled(2589)
 bulk.phase, bulk.currentItemID = "waiting_button", 999
 pe:OnAuctionHouseAuctionCreated()
 check("Bulk: a late created event leaves the next item waiting", bulk.index == 2 and bulk.posted == 1 and bulk.phase == "waiting_button")
+-- The post key: Post next while a job runs, otherwise the game's post button with the AH open
+local clicks = 0
+pe.TryClickAuctionPostButton = function() clicks = clicks + 1 return true end
+pe.IsAuctionHouseFrameOpen = function() return true end
+bulk = bulkWaitingFor(2589, "waiting_button")
+bulk.nextPostAt = 0
+pe:PressAuctionPostKey()
+check("Post key: during a job it posts the waiting item", bulk.phase ~= "waiting_button" and clicks == 1)
+pe:GetState().auctionBulk = nil
+pe:PressAuctionPostKey()
+check("Post key: without a job it presses the game's post button", clicks == 2)
+pe.IsAuctionHouseFrameOpen = function() return false end
+pe:PressAuctionPostKey()
+check("Post key: does nothing with the auction house closed", clicks == 2)
 pe:GetState().auctionBulk = nil
 timers = {}
 

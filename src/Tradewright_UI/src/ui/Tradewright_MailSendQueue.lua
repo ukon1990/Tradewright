@@ -327,3 +327,44 @@ function Tradewright:OnMailSendFailed()
 		self:AdvanceMailSendQueue(false)
 	end
 end
+
+-- First names of this realm's characters (all of Forever), lower case, to tell own mail apart.
+local function ownFirstNames(pe)
+	local names = {}
+	for _, characterKey in ipairs((pe:GetRealmCharacterKeys())) do
+		names[(characterKey:match("^[^%-]+") or characterKey):lower()] = true
+	end
+	return names
+end
+
+local function readInboxMail(index)
+	local _, _, sender, subject, money, cod, _, itemCount = GetInboxHeaderInfo(index)
+	return { sender = sender, subject = subject, money = money, cod = cod, itemCount = itemCount }
+end
+
+-- Same steps as the game's own Delete button, so the mail window does not keep showing a gone mail.
+local function deleteInboxMail(index)
+	if InboxFrame and InboxFrame.openMailID == index and OpenMailFrame then
+		InboxFrame.openMailID = nil
+		HideUIPanel(OpenMailFrame)
+	end
+	DeleteInboxItem(index)
+end
+
+--- Deletes one mail the queue sent between own characters once everything is taken out of it.
+--- One per inbox update: deleting shifts the indexes, and the next update brings the next one.
+function Tradewright:DeleteEmptiedPackMail()
+	if not (DeleteInboxItem and MailFrame and MailFrame:IsShown()) or self:GetSetting("mail.deleteEmptied", true) == false then
+		return
+	end
+	local subjects = {}
+	for _, subject in pairs(MAIL_SUBJECTS) do
+		subjects[#subjects + 1] = subject
+	end
+	local ownNames = ownFirstNames(self)
+	for index = 1, GetInboxNumItems() do
+		if self.MailLogic.IsEmptiedPackMail(readInboxMail(index), subjects, ownNames) then
+			return deleteInboxMail(index)
+		end
+	end
+end

@@ -4,6 +4,40 @@ local _, Tradewright = ...
 local shared = Tradewright.AuctionShared
 local normalizeItemID = shared.normalizeItemID
 
+-- Sets the sell frame's quantity to all the player can post of the item, as its Max button does.
+local function fillWholeQuantity(sellFrame)
+	if type(sellFrame.SetToMaxQuantity) == "function" then
+		pcall(sellFrame.SetToMaxQuantity, sellFrame)
+		return
+	end
+	local maxButton = sellFrame.QuantityInput and sellFrame.QuantityInput.MaxButton
+	if maxButton and maxButton.Click then
+		maxButton:Click()
+	end
+end
+
+-- Modern sell frame (retail and Forever): SetPostItem is what a bag right-click calls. It opens
+-- the Sell tab on the item or commodity pane, and returns silently when the item can't be sold
+-- or its data isn't loaded, so success is read back from the sell frames.
+local function placeInSellFrame(pe, ah, bag, slot)
+	if not (ItemLocation and ItemLocation.CreateFromBagAndSlot) then
+		return false
+	end
+	local loc = ItemLocation:CreateFromBagAndSlot(bag, slot)
+	if not pcall(ah.SetPostItem, ah, loc) then
+		return false
+	end
+	for _, sellFrame in ipairs({ ah.ItemSellFrame, ah.CommoditiesSellFrame }) do
+		if sellFrame.GetItem and sellFrame:GetItem() == loc then
+			if pe:GetSetting("auction.postFullQuantity", true) ~= false then
+				fillWholeQuantity(sellFrame)
+			end
+			return true
+		end
+	end
+	return false
+end
+
 function Tradewright:TrySendItemToAuctionSellFrame(itemID, bag, slot)
 	itemID = normalizeItemID(itemID)
 	if not itemID then
@@ -36,18 +70,8 @@ function Tradewright:TrySendItemToAuctionSellFrame(itemID, bag, slot)
 	local ah = _G.AuctionHouseFrame
 	local hasSetPostItem = ah and type(ah.SetPostItem) == "function" and true or false
 
-	-- Modern sell frame (retail and Forever): SetPostItem is what a bag right-click calls. It opens
-	-- the Sell tab on the item or commodity pane, and returns silently when the item can't be sold
-	-- or its data isn't loaded, so success is read back from the sell frames.
-	if hasSetPostItem and ItemLocation and ItemLocation.CreateFromBagAndSlot then
-		local loc = ItemLocation:CreateFromBagAndSlot(bag, slot)
-		if pcall(ah.SetPostItem, ah, loc) then
-			for _, sellFrame in ipairs({ ah.ItemSellFrame, ah.CommoditiesSellFrame }) do
-				if sellFrame.GetItem and sellFrame:GetItem() == loc then
-					return true
-				end
-			end
-		end
+	if hasSetPostItem and placeInSellFrame(self, ah, bag, slot) then
+		return true
 	end
 
 	-- Classic cursor inject. Do not use on true retail when the modern sell frame exists

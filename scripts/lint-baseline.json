@@ -739,10 +739,10 @@
   "src/Tradewright_AuctionData/src/modules/Tradewright_AuctionSellFrame.lua": {
    "Tradewright:TrySendItemToAuctionSellFrame": {
     "lines": [
-     89
+     79
     ],
     "ccn": [
-     38
+     33
     ]
    }
   },
@@ -865,10 +865,10 @@
    },
    "buildEntryFromEval": {
     "lines": [
-     51
+     41
     ],
     "ccn": [
-     19
+     15
     ]
    }
   },

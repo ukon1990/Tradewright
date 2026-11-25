@@ -33,6 +33,34 @@ function MailLogic.EarlierForeverSeller(sellerByRealm, known)
 	return nil
 end
 
+local function isEmpty(mail)
+	return (tonumber(mail.money) or 0) == 0 and (tonumber(mail.cod) or 0) == 0 and (tonumber(mail.itemCount) or 0) == 0
+end
+
+-- Forever writes the sender as "First Surname", retail as "Name" or "Name-Realm".
+local function isFromOwnCharacter(sender, ownNames)
+	local firstName = tostring(sender or ""):match("^[^%s%-]+")
+	return firstName ~= nil and ownNames[firstName:lower()] == true
+end
+
+local function hasPackSubject(subject, subjects)
+	subject = tostring(subject or "")
+	for _, prefix in ipairs(subjects) do
+		if subject:sub(1, #prefix) == prefix and subject:sub(#prefix + 1):match("^ %d+/%d+$") then
+			return true
+		end
+	end
+	return false
+end
+
+--- Whether an inbox mail is one Tradewright sent between the player's own characters and has
+--- nothing left in it (no items, money or cash on delivery), so deleting it loses nothing.
+--- mail = { sender, subject, money, cod, itemCount }; subjects lists the subjects the send queue
+--- writes before " index/total"; ownNames[lower-case first name] = true.
+function MailLogic.IsEmptiedPackMail(mail, subjects, ownNames)
+	return isEmpty(mail) and isFromOwnCharacter(mail.sender, ownNames) and hasPackSubject(mail.subject, subjects)
+end
+
 local function listable(bag)
 	return bag.sellable and (tonumber(bag.quality) or 0) >= 1
 end

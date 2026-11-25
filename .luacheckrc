@@ -29,7 +29,9 @@ globals = {
 	"SLASH_TRADEWRIGHT2",
 	"BINDING_HEADER_TRADEWRIGHT", -- key binding labels, read by the game's Key Bindings window
 	"BINDING_NAME_TRADEWRIGHT_TOGGLE_PANEL_DOCK",
+	"BINDING_NAME_TRADEWRIGHT_POST_AUCTION",
 	"ColorPickerFrame", -- older clients take the picker's callbacks as fields set on the frame
+	"InboxFrame", -- the open mail is cleared on it when a mail is deleted, as the game's Delete button does
 	"SlashCmdList",
 	"StaticPopupDialogs",
 	"UISpecialFrames",
@@ -81,6 +83,7 @@ read_globals = {
 	"CreateVector2D",
 	"CursorHasItem",
 	"DeleteCursorItem",
+	"DeleteInboxItem",
 	"date",
 	"debugprofilestart",
 	"debugprofilestop",
@@ -116,6 +119,7 @@ read_globals = {
 	"GetItemInfo",
 	"GetItemInfoInstant",
 	"GetLocale",
+	"HideUIPanel",
 	"GetLootSlotInfo",
 	"GetLootSlotLink",
 	"GetLootSourceInfo",
@@ -181,6 +185,7 @@ read_globals = {
 	"LootSlot",
 	"MailFrame",
 	"MailFrameTab1",
+	"OpenMailFrame",
 	"MailFrameTab2",
 	"Menu",
 	"MerchantFrame",
@@ -236,6 +241,12 @@ read_globals = {
 	"wipe",
 	"WOW_PROJECT_ID",
 	"WOW_PROJECT_MAINLINE",
+	"GetBindingKey",
+	"GetBindingText",
+	"SetBinding",
+	"SaveBindings",
+	"GetCurrentBindingSet",
+	"InCombatLockdown",
 }
 
 -- Generated recipe/spec data: long table rows are fine.

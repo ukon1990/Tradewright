@@ -322,6 +322,18 @@ function Tradewright:PostAuctionBulkCurrent()
 	end)
 end
 
+--- The post key (key binding or /tw post in a macro): Post next while a job waits on an item,
+--- otherwise the game's own post button for the item in the sell frame. A key press is a hardware
+--- event, so the client accepts the post as it does a click.
+function Tradewright:PressAuctionPostKey()
+	local bulk = self:GetState().auctionBulk
+	if bulk and bulk.running == true then
+		self:PostAuctionBulkCurrent()
+	elseif self:IsAuctionHouseFrameOpen() then
+		self:TryClickAuctionPostButton()
+	end
+end
+
 function Tradewright:ToggleAuctionBulkPause()
 	local state = self:GetState()
 	local bulk = state.auctionBulk

@@ -141,6 +141,9 @@ local function auctionHouseSection(pe)
 		{ kind = "select", label = L["Read the market price at"], path = "auction.marketPriceShare", default = pe.DEFAULT_MARKET_PRICE_SHARE,
 			options = choices({ 0.1, 0.25, 0.5, 0.75 }, L["%d%% up the listings"], 100), onChange = refreshAuctionPanel },
 		{ kind = "note", text = L["Counted over the listings above the cheapest one. Higher: a cheap group must hold more of them to count as the market."] },
+		{ kind = "check", label = L["Post all I have of an item, not one"], path = "auction.postFullQuantity", default = true },
+		{ kind = "key", label = L["Post key"], binding = "TRADEWRIGHT_POST_AUCTION" },
+		{ kind = "note", text = L["Posts the item in the sell frame, or the next one while posting a list. Right-click the key to clear it. In a macro: /tw post"] },
 		{ kind = "check", label = L["Count the lost deposit when cancelling undercut auctions"], path = "auction.repostIncludeDeposit",
 			default = true },
 		{ kind = "check", label = L["Show prices and what you own on item tooltips (hold Shift for more)"], path = "auction.tooltipEnabled",
@@ -287,6 +290,7 @@ local function mailSection(pe)
 			options = characterOptions },
 		{ kind = "note", text = L["The character that sells at the auction house and holds your reagents."] },
 		{ kind = "check", label = L["Mail reagents to my crafters when the mailbox opens"], path = "mail.autoSendMaterials", default = true },
+		{ kind = "check", label = L["Delete mails between my characters once emptied"], path = "mail.deleteEmptied", default = true },
 	}
 	destroyerItems(pe, items, characterOptions)
 	return { title = L["Mail"], items = items }
@@ -329,7 +333,7 @@ local function bagsSection()
 	} }
 end
 
--- Every setting, grouped into the categories listed on the left. Item kind: check | select | color | note.
+-- Every setting, grouped into the categories listed on the left. Item kind: check | select | color | key | note.
 -- A section or item with `visible(pe)` is hidden when it returns false; empty sections and categories hide too.
 local function buildCategories(pe)
 	return {
@@ -407,16 +411,28 @@ local function createColor(pe, parent, item)
 	return row
 end
 
+-- A game key binding: the button shows the key and takes the next key pressed.
+local function createKey(pe, parent, item)
+	local row = CreateFrame("Frame", nil, parent)
+	row:SetHeight(SETTING_ROW_HEIGHT)
+	row.key = pe:CreateKeyBindingButton(row, item.binding, SELECT_WIDTH)
+	row.key:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+	row.label = pe:CreateText(row, "GameFontHighlightSmall")
+	row.label:SetPoint("LEFT", row, "LEFT", 0, 0)
+	row.label:SetPoint("RIGHT", row.key, "LEFT", -12, 0)
+	row.label:SetText(item.label)
+	return row
+end
+
 -- Kinds drawn as a full-width row: label on the left, control on the right.
-local ROW_KINDS = { select = true, color = true }
+local ROW_KINDS = { select = true, color = true, key = true }
+local CREATE_ROW = { select = createSelect, color = createColor, key = createKey }
 
 local function createItem(pe, parent, item)
 	if item.kind == "check" then
 		item.control = createCheck(pe, parent, item)
-	elseif item.kind == "select" then
-		item.control = createSelect(pe, parent, item)
-	elseif item.kind == "color" then
-		item.control = createColor(pe, parent, item)
+	elseif CREATE_ROW[item.kind] then
+		item.control = CREATE_ROW[item.kind](pe, parent, item)
 	else
 		item.control = pe:CreateParagraph(parent)
 	end
@@ -595,6 +611,8 @@ local function refreshItem(pe, item)
 		item.control.select:RefreshText()
 	elseif item.kind == "color" then
 		item.control.swatch:Refresh()
+	elseif item.kind == "key" then
+		item.control.key:Refresh()
 	else
 		item.control:SetText(type(item.text) == "function" and item.text(pe) or item.text)
 	end
