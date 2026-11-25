@@ -60,9 +60,11 @@ end
 local CRAFT_EVAL_CHUNK = 85
 
 -- A recipe the player knows and the profession window still lists.
+-- A learned recipe that makes something to sell. An enchant cast on gear (Forever) makes nothing.
 local function recipeCanBeCrafted(self, professionData, recipeData)
 	local info = self:RecipeDataInfo(recipeData)
 	return info ~= nil and info.learned ~= false and not self:IsReplacedRecipeRank(professionData, recipeData)
+		and not Tradewright.CraftReagentPlan.enchantCastOnGear(recipeData)
 end
 
 local function collectCraftEvalWorkList(self)

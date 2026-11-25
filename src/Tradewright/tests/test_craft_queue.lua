@@ -165,6 +165,27 @@ do
 	check("Salvage: a line that makes an item is not counted by a cast", quantityOf(pe, plain) == 2)
 end
 
+-- An enchant cast on gear (Forever): makes no item, so its cast counts the line down
+
+do
+	local INFERIOR_STAMINA, MOTE, BRACERS = 7457, 247786, 6550
+	local pe = newAddon(true)
+	local key = pe:AddCraftToQueue({ recipeID = INFERIOR_STAMINA, characterKey = "Me-Realm", eval = {
+		recipeID = INFERIOR_STAMINA, recipeSpellID = INFERIOR_STAMINA, outputItemID = INFERIOR_STAMINA, enchantsGear = true,
+		reagentPlan = { { itemID = MOTE, quantityRequired = 1, priceUnit = 30 } },
+	} }, 5)
+	check("Enchant on gear: the line remembers its spell", pe:GetCraftQueueStorage()[key].enchantSpellID == INFERIOR_STAMINA)
+	pendOn(pe, key, INFERIOR_STAMINA)
+	crafted(pe, BRACERS, 1)
+	check("Enchant on gear: the enchanted item does not count the line down", quantityOf(pe, key) == 5)
+	pe:OnUnitSpellcastSucceeded("player", "cast", INFERIOR_STAMINA)
+	check("Enchant on gear: each cast counts one craft", quantityOf(pe, key) == 4)
+	local summary = pe:BuildCraftQueueSummary()
+	check("Enchant on gear: the cart lists its reagents", summary.reagentTotals[MOTE].quantityNeeded == 4)
+	check("Enchant on gear: its spell id is not taken as an item the queue makes",
+		summary.reagentTotals[INFERIOR_STAMINA] == nil)
+end
+
 -- Add
 
 do

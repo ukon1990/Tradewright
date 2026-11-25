@@ -13,7 +13,7 @@ local craftIsEnchantRecipe = ReagentPlan.craftIsEnchantRecipe
 local buildPlanIndexBySlot = ReagentPlan.buildPlanIndexBySlot
 local classifyCraftReagentSlot = ReagentPlan.classifyCraftReagentSlot
 local pickReagentForSlot = ReagentPlan.pickReagentForSlot
-local ensureEnchantingVellumInPlan = ReagentPlan.ensureEnchantingVellumInPlan
+local planEnchantTarget = ReagentPlan.planEnchantTarget
 local reagentSlotLabel = ReagentPlan.reagentSlotLabel
 local reagentSlotIncluded = ReagentPlan.reagentSlotIncluded
 
@@ -237,5 +237,5 @@ function Tradewright:PickCheapestReagentsPerSlotForTargetQuality(recipeData, pro
 			crafting = crafting, maxQ = maxQ, targetQualityIndex = targetQualityIndex, basePlan = basePlan,
 		})
 	end
-	return ensureEnchantingVellumInPlan(plan, recipeData, forceVellumFinalize), reachable
+	return planEnchantTarget(plan, recipeData, forceVellumFinalize), reachable
 end

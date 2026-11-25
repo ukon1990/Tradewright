@@ -74,6 +74,23 @@ local function salvageInputNote(pe, candidate)
 	return input and string.format(L["with %s"], pe:GetItemDisplayName(input.itemID)) or nil
 end
 
+-- For an enchant cast on gear: "on Runic Bracers", the item the queue's Craft button would enchant,
+-- or a warning naming the recipe's category ("Bracer Enchants") when nothing the player wears or
+-- carries fits. nil for other steps, and when the client cannot tell which items fit.
+local function enchantTargetNote(pe, candidate)
+	if not candidate.enchantsGear then
+		return nil
+	end
+	local target, fitKnown = pe:FindEnchantTarget(candidate.recipeID)
+	if target then
+		return string.format(L["on %s"], pe:GetItemDisplayName(target.itemID))
+	elseif not fitKnown then
+		return nil
+	end
+	local category = candidate.evaluation and candidate.evaluation.categoryName
+	return category and string.format(L["no item to enchant (%s)"], category) or L["no item to enchant"]
+end
+
 -- Marks a step whose crafts are counted at a disenchant value that rests on researched yields
 -- rather than on the player's own disenchants.
 local function disenchantEstimateNote(route, candidate)
@@ -87,6 +104,7 @@ local function craftStepDetail(pe, route, step, queued, isNextStep)
 	-- "~" for an expected count; the detail line has little room at this panel width.
 	local parts = { string.format(craftCountIsExact(step) and L["%d crafts"] or L["~%d crafts"], step.crafts) }
 	parts[#parts + 1] = salvageInputNote(pe, step.candidate)
+	parts[#parts + 1] = enchantTargetNote(pe, step.candidate)
 	parts[#parts + 1] = disenchantEstimateNote(route, step.candidate)
 	if isNextStep then
 		parts[#parts + 1] = L["next step"]

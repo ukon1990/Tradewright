@@ -13,6 +13,16 @@ local function craftIsEnchantRecipe(recipeData)
 		Tradewright.ENCHANT_SCROLL_DATA, Tradewright:GetRecipeSpellID(recipeData))
 end
 
+-- Retail casts an enchant for sale on a vellum. WoW Forever has no vellum: an enchant goes on a
+-- piece of gear the player wears or carries, makes no item and has nothing to sell.
+local function enchantCastOnGear(recipeData)
+	return not Tradewright.IS_RETAIL and craftIsEnchantRecipe(recipeData)
+end
+
+local function enchantGoesOnVellum(recipeData)
+	return Tradewright.IS_RETAIL == true and craftIsEnchantRecipe(recipeData)
+end
+
 local function buildPlanIndexBySlot(plan)
 	local index = {}
 	for _, entry in ipairs(plan or {}) do
@@ -132,13 +142,26 @@ local function pickReagentForSlot(slot, unitPriceFn, preferItemID)
 	return pickCheapestReagentForSlot(slot, unitPriceFn)
 end
 
---- Ensure enchant recipes include Enchanting Vellum as the target reagent.
---- When forceReplace is true, only replace existing required_target entries (not finishing slots).
-local function ensureEnchantingVellumInPlan(plan, recipeData, forceReplace)
+-- Drops the target entries from an enchant's plan: the gear it goes on is no reagent to buy.
+local function withoutTargetEntries(plan)
+	for index = #plan, 1, -1 do
+		if plan[index].slotClass == "required_target" then
+			table.remove(plan, index)
+		end
+	end
+	return plan
+end
+
+--- Gives an enchant's plan the target the client uses: one Enchanting Vellum on retail, none on
+--- Forever (see enchantCastOnGear). With forceReplace, an existing target entry becomes the vellum.
+local function planEnchantTarget(plan, recipeData, forceReplace)
 	if not craftIsEnchantRecipe(recipeData) then
 		return plan
 	end
 	plan = plan or {}
+	if enchantCastOnGear(recipeData) then
+		return withoutTargetEntries(plan)
+	end
 	local foundTarget = false
 	for _, entry in ipairs(plan) do
 		if entry and entry.slotClass == "required_target" then
@@ -211,9 +234,13 @@ local function outputItemIDFromGame(recipeID, withVellum)
 end
 
 --- The item a recipe makes when its scan data names none, which is the case for enchants: the
---- scroll from the shipped list, else what the game reports (enchants newer than the list).
+--- scroll from the shipped list, else what the game reports (enchants newer than the list). None
+--- for an enchant cast on gear.
 local function resolveCraftOutputItemID(self, recipeID, recipeData, opts)
 	opts = opts or {}
+	if enchantCastOnGear(recipeData) then
+		return nil
+	end
 	local spellID = tonumber(self:GetRecipeSpellID(recipeData)) or tonumber(recipeID)
 	local scrollItemID = Tradewright.EnchantLogic.ScrollItemID(Tradewright.ENCHANT_SCROLL_DATA, spellID)
 	if scrollItemID then
@@ -302,7 +329,7 @@ function Tradewright:PickCheapestReagentsPerSlot(recipeData, unitPriceFn, opts)
 	end
 
 	if enchantRecipe then
-		ensureEnchantingVellumInPlan(plan, recipeData, forceVellum)
+		planEnchantTarget(plan, recipeData, forceVellum)
 	end
 	return plan
 end
@@ -411,7 +438,9 @@ Tradewright.CraftReagentPlan = {
 	ENCHANTING_VELLUM_ITEM_ID = ENCHANTING_VELLUM_ITEM_ID,
 	craftIsEnchantRecipe = craftIsEnchantRecipe,
 	classifyCraftReagentSlot = classifyCraftReagentSlot,
-	ensureEnchantingVellumInPlan = ensureEnchantingVellumInPlan,
+	enchantCastOnGear = enchantCastOnGear,
+	enchantGoesOnVellum = enchantGoesOnVellum,
+	planEnchantTarget = planEnchantTarget,
 	cloneReagentPlan = cloneReagentPlan,
 	reagentPlanHasRequiredTarget = reagentPlanHasRequiredTarget,
 	reagentPlanContainsLiveSelection = reagentPlanContainsLiveSelection,

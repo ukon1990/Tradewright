@@ -381,6 +381,7 @@ local function queueRecipeRow(pe, entry, index)
 		recipeID = tonumber(entry.recipeID),
 		recipeSpellID = pe:GetCraftQueueLineSpellID(entry),
 		salvageSpellID = tonumber(entry.salvageSpellID),
+		enchantSpellID = tonumber(entry.enchantSpellID),
 		-- For a salvage line: the item to destroy and how many one craft takes.
 		salvageInput = entry.salvageSpellID and entry.reagentPlan and entry.reagentPlan[1] or nil,
 		outputItemID = tonumber(entry.outputItemID),

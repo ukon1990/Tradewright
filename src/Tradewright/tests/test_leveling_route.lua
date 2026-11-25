@@ -80,6 +80,11 @@ local function newAddon(recipes, skill)
 				outputQty = 5, saleNet = recipeData.salvageValuePerItem, recipeName = recipeData.info.name,
 				reagentPlan = { { itemID = recipeData.salvageItemID, quantityRequired = 5, priceUnit = 20 } } }
 		end
+		if recipeData.enchantsGear then
+			-- As the crafts engine answers for an enchant on Forever: reagents only, nothing made.
+			return { fullMatCost = recipeData.materialCost, enchantsGear = true, outputItemID = recipeData.recipeSpellID, outputQty = 1,
+				recipeName = recipeData.info.name, categoryName = "Bracer Enchants" }
+		end
 		return { fullMatCost = recipeData.materialCost, outputQty = 2, outputItemID = 1, saleNet = 70, recipeName = recipeData.info.name }
 	end
 	function pe:FormatCopperShort(copper) return tostring(copper) .. "c" end
@@ -115,6 +120,30 @@ do
 	pe.settings["professions.leveling.giveBack"] = "vendor"
 	local vendorRoute = routeFor(pe)
 	check("Other modes do not mark the estimate", not pe:LevelingStepRow(vendorRoute, vendorRoute.steps[1], 1, false).detailText:find("disenchant", 1, true))
+end
+
+-- An enchant cast on gear (Forever)
+do
+	local enchant = recipe("Enchant Bracer", 200, true, 30)
+	enchant.enchantsGear = true
+	local pe = newAddon({ ["7457"] = enchant }, 100)
+	for _, mode in ipairs({ "vendor", "auction", "disenchant" }) do
+		pe.settings["professions.leveling.giveBack"] = mode
+		local route = routeFor(pe)
+		local step = route.steps[1]
+		check("Enchant on gear: costs its reagents and gives nothing back (" .. mode .. ")",
+			step.candidate.enchantsGear and step.net == step.crafts * 30 and step.candidate.outputItemID == nil)
+	end
+	local route = routeFor(pe)
+	local function detail()
+		return pe:LevelingStepRow(route, route.steps[1], 1, false).detailText
+	end
+	function pe:FindEnchantTarget() return { itemID = 6550, equipped = true }, true end
+	check("Enchant on gear: the step names the item it goes on", detail():find("on Item 6550", 1, true) ~= nil, detail())
+	function pe:FindEnchantTarget() return nil, true end
+	check("Enchant on gear: no fitting item is said, with the category", detail():find("no item to enchant (Bracer Enchants)", 1, true) ~= nil, detail())
+	function pe:FindEnchantTarget() return nil, false end
+	check("Enchant on gear: a client that cannot tell says nothing", not detail():find("enchant", 1, true), detail())
 end
 
 -- Why there is no route

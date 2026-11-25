@@ -13,8 +13,9 @@ local recipeCategoryName = CraftCategories.recipeCategoryName
 local ReagentPlan = Tradewright.CraftReagentPlan
 local reagentPlanHasRequiredTarget = ReagentPlan.reagentPlanHasRequiredTarget
 local reagentPlanContainsLiveSelection = ReagentPlan.reagentPlanContainsLiveSelection
-local ensureEnchantingVellumInPlan = ReagentPlan.ensureEnchantingVellumInPlan
+local planEnchantTarget = ReagentPlan.planEnchantTarget
 local resolveCraftOutputItemID = ReagentPlan.resolveCraftOutputItemID
+local enchantCastOnGear = ReagentPlan.enchantCastOnGear
 local CraftConcentration = Tradewright.CraftConcentration
 local resolveCraftEvalConcentration = CraftConcentration.resolveCraftEvalConcentration
 local craftEvalProfitPerConcentration = CraftConcentration.craftEvalProfitPerConcentration
@@ -34,9 +35,10 @@ local function resolveCraftEvalQuality(self, evaluation)
 	evaluation.qualityIndex = math.max(1, math.min(evaluation.maxQ, tonumber(evaluation.opts.targetQualityIndex) or evaluation.defaultScenarioQ))
 end
 
--- The item the recipe makes at the evaluated quality, or nil. A salvage recipe makes no one item.
+-- The item the recipe makes at the evaluated quality, or nil. A salvage recipe makes no one item,
+-- and an enchant cast on gear makes none at all.
 local function craftedItemID(self, evaluation)
-	if evaluation.isSalvage then
+	if evaluation.makesNoItem then
 		return nil
 	end
 	local itemID = select(1, outputItemForQuality(evaluation.recipeData, evaluation.qualityIndex))
@@ -45,10 +47,10 @@ local function craftedItemID(self, evaluation)
 	})
 end
 
--- What the views draw for the craft: the crafted item's descriptor, or for a salvage recipe just the
--- recipe's own icon.
+-- What the views draw for the craft: the crafted item's descriptor, or for a recipe that makes no
+-- item just the recipe's own icon.
 local function craftEvalOutputDescriptor(self, evaluation)
-	if evaluation.isSalvage then
+	if evaluation.makesNoItem then
 		local info = self:RecipeDataInfo(evaluation.recipeData)
 		return { icon = info and info.icon }
 	end
@@ -57,7 +59,7 @@ end
 
 local function resolveCraftEvalOutputItem(self, evaluation)
 	local outputItemID = craftedItemID(self, evaluation)
-	if not outputItemID and (evaluation.opts.allowMissingOutput or evaluation.isSalvage) then
+	if not outputItemID and (evaluation.opts.allowMissingOutput or evaluation.makesNoItem) then
 		-- Shopping/queue still needs a stable key; recipe spell id is unique per line.
 		outputItemID = tonumber(self:GetRecipeSpellID(evaluation.recipeData)) or tonumber(evaluation.recipeID)
 	end
@@ -146,7 +148,7 @@ local function resolveCraftEvalPlan(self, evaluation)
 		return nil
 	end
 	if forceVellum then
-		ensureEnchantingVellumInPlan(plan, evaluation.recipeData, true)
+		planEnchantTarget(plan, evaluation.recipeData, true)
 	end
 	evaluation.plan, evaluation.qualityReachable = plan, qualityReachable
 	evaluation.usesRequiredTarget = reagentPlanHasRequiredTarget(plan)
@@ -185,6 +187,8 @@ local function resolveCraftEvalSale(self, evaluation)
 	-- A salvage recipe's stand-in item id must not be looked up as an item.
 	if evaluation.isSalvage then
 		return resolveSalvageSale(self, evaluation)
+	elseif evaluation.enchantsGear then
+		return
 	end
 	local saleGross, saleSrc = self:GetMarketEstimateCopper(evaluation.outputItemID)
 	if evaluation.vendorRecipe then
@@ -243,7 +247,7 @@ local function buildCraftEvalResult(self, evaluation)
 		recipeName = recipeDisplayName(recipeData),
 		professionName = professionData.professionName, skillLineID = professionData.skillLineID,
 		expansionTag = self:GetCraftExpansionTag(professionData, recipeData, craftedItemID(self, evaluation)),
-		learned = evaluation.learned, isSalvage = evaluation.isSalvage,
+		learned = evaluation.learned, isSalvage = evaluation.isSalvage, enchantsGear = evaluation.enchantsGear,
 		salvageBasis = evaluation.salvageBasis, salvageCasts = evaluation.salvageCasts, qualityIndex = evaluation.qualityIndex, baseQualityIndex = evaluation.baseQ,
 		scenarioBaseQualityIndex = evaluation.defaultScenarioQ, qualityReachable = evaluation.qualityReachable ~= false,
 		outputItemID = evaluation.outputItemID, outputQty = evaluation.outQty, outputIcon = evaluation.outputDesc and evaluation.outputDesc.icon,
@@ -268,6 +272,8 @@ function Tradewright:EvaluateCraftScenario(characterKey, professionData, recipeI
 		opts = opts, scenario = opts.scenario or "default", sourceMode = opts.sourceMode or "owned_first",
 	}
 	evaluation.isSalvage = self:PrepareSalvageRecipe(recipeData)
+	evaluation.enchantsGear = enchantCastOnGear(recipeData)
+	evaluation.makesNoItem = evaluation.isSalvage or evaluation.enchantsGear
 	resolveCraftEvalQuality(self, evaluation)
 	if not resolveCraftEvalOutputItem(self, evaluation) then
 		return nil

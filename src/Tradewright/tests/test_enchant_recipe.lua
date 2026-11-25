@@ -20,7 +20,8 @@ local ENCHANT_TYPE, ITEM_TYPE = 3, 1
 
 rawset(_G, "Enum", { CraftingReagentType = { Basic = 1, Finishing = 2 }, TradeskillRecipeType = { Item = ITEM_TYPE, Enchant = ENCHANT_TYPE } })
 
-local pe = {}
+-- Retail casts enchants on a vellum; the Forever section below turns this off.
+local pe = { IS_RETAIL = true }
 function pe:RecipeDataInfo(recipeData) return recipeData.info end
 function pe:RecipeDataSlots(recipeData) return recipeData.slots end
 function pe:GetRecipeSpellID(recipeData) return recipeData.recipeSpellID end
@@ -106,6 +107,34 @@ do
 	check("Plan: an enchant costs its reagents and one vellum", #plan == 2 and plan[1].itemID == LEYLIGHT_SHARD and lines == 1 and quantity == 1, #plan)
 	plan = pe:PickCheapestReagentsPerSlot(recipe(BRACERS_RECIPE, ITEM_TYPE), function() return 10 end)
 	check("Plan: an item recipe gets no vellum", #plan == 1 and vellumLines(plan) == 0)
+end
+
+-- WoW Forever: no vellum, the enchant is cast on gear
+do
+	pe.IS_RETAIL = false
+	rawset(_G, "C_TradeSkillUI", { GetRecipeOutputItemData = function() return { itemID = NEWER_SCROLL } end })
+	check("Forever: an enchant is cast on gear", ReagentPlan.enchantCastOnGear(recipe(WORD_OF_AGILITY, ENCHANT_TYPE))
+		and not ReagentPlan.enchantGoesOnVellum(recipe(WORD_OF_AGILITY, ENCHANT_TYPE)))
+	check("Forever: an item recipe is not", not ReagentPlan.enchantCastOnGear(recipe(BRACERS_RECIPE, ITEM_TYPE)))
+	check("Forever: an enchant makes no scroll", ReagentPlan.resolveCraftOutputItemID(pe, WORD_OF_AGILITY, recipe(WORD_OF_AGILITY, ENCHANT_TYPE)) == nil)
+	local plan = pe:PickCheapestReagentsPerSlot(recipe(WORD_OF_AGILITY, ENCHANT_TYPE), function() return 10 end, { forceEnchantingVellum = true })
+	check("Forever: an enchant costs its reagents only, even when the queue asks for a vellum", #plan == 1 and plan[1].itemID == LEYLIGHT_SHARD, #plan)
+	local withTarget = { { itemID = LEYLIGHT_SHARD, slotClass = "mandatory_base" }, { itemID = VELLUM, slotClass = "required_target" } }
+	ReagentPlan.planEnchantTarget(withTarget, recipe(WORD_OF_AGILITY, ENCHANT_TYPE), true)
+	check("Forever: a target entry leaves the plan", #withTarget == 1 and withTarget[1].itemID == LEYLIGHT_SHARD)
+	pe.IS_RETAIL = true
+end
+
+-- Which gear an enchant goes on
+do
+	local pick = EnchantLogic.PickTarget
+	local worn = { equipped = true, sellPrice = 500 }
+	local cheap, dear, unpriced = { sellPrice = 3 }, { sellPrice = 90 }, {}
+	check("Target: worn gear comes first", pick({ dear, cheap, worn }) == worn)
+	check("Target: else the bag item that sells for least", pick({ dear, unpriced, cheap }) == cheap)
+	check("Target: an item without a vendor price comes last", pick({ unpriced, dear }) == dear)
+	check("Target: the first worn item stays", pick({ worn, { equipped = true, sellPrice = 1 } }) == worn)
+	check("Target: nothing fits", pick({}) == nil and pick(nil) == nil)
 end
 
 if failed > 0 then

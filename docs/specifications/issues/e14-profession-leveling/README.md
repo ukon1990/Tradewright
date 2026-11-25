@@ -32,6 +32,7 @@ Decisions taken with the user:
 - F122: leveling data (candidates from the scan and prices, colour upkeep, craft-queue integration)
 - F123: Leveling view in the profession side panel
 - F124: trainer recipes (skill requirement and cost from a trainer visit)
+- F151: enchants on Forever (cast on gear, not on vellum)
 
 ## Acceptance criteria
 

@@ -5,9 +5,9 @@ local L = Tradewright.L or setmetatable({}, { __index = function(_, text) return
 
 local ReagentPlan = Tradewright.CraftReagentPlan
 local ENCHANTING_VELLUM_ITEM_ID = ReagentPlan.ENCHANTING_VELLUM_ITEM_ID
-local craftIsEnchantRecipe = ReagentPlan.craftIsEnchantRecipe
+local enchantGoesOnVellum = ReagentPlan.enchantGoesOnVellum
 local classifyCraftReagentSlot = ReagentPlan.classifyCraftReagentSlot
-local ensureEnchantingVellumInPlan = ReagentPlan.ensureEnchantingVellumInPlan
+local planEnchantTarget = ReagentPlan.planEnchantTarget
 local cloneReagentPlan = ReagentPlan.cloneReagentPlan
 
 -- Prefer OrderView schematic when Crafting Orders tab is showing an order.
@@ -395,9 +395,9 @@ function Tradewright:BuildProfessionRecipeQueueContext(recipeID, opts)
 		end
 	end
 
-	-- Shopping always assumes vellum for enchants, whichever eval the plan came from.
-	if craftIsEnchantRecipe(recipeData) and type(eval.reagentPlan) == "table" then
-		ensureEnchantingVellumInPlan(eval.reagentPlan, recipeData, true)
+	-- Where enchants go on a vellum, shopping always assumes one, whichever eval the plan came from.
+	if enchantGoesOnVellum(recipeData) and type(eval.reagentPlan) == "table" then
+		planEnchantTarget(eval.reagentPlan, recipeData, true)
 		eval.requiredTargetReagent = true
 		eval.requiredTargetReagentItemID = ENCHANTING_VELLUM_ITEM_ID
 		eval.requiredTargetReagentAuto = true

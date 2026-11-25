@@ -230,6 +230,11 @@ local function salvageSpellOf(eval)
 	return eval.isSalvage and tonumber(eval.recipeSpellID) or nil
 end
 
+-- An enchant cast on gear makes no item; its line is crafted onto gear and counted per cast.
+local function enchantSpellOf(eval)
+	return eval.enchantsGear and tonumber(eval.recipeSpellID) or nil
+end
+
 -- What the evaluation said when the craft was queued; the queue views show it until the line is
 -- evaluated again.
 local function evaluationSnapshot(eval, crafterLabel, confidence)
@@ -254,6 +259,20 @@ local function evaluationSnapshot(eval, crafterLabel, confidence)
 	}
 end
 
+-- Who the line says should craft it: the label the caller gives, else the opportunity's recommended
+-- crafter, else the queuing character.
+local function recommendedCrafterLabel(ctx, characterKey)
+	local crafterLabel = ctx.recommendedCrafterLabel
+	if not crafterLabel and ctx.opportunityRow then
+		crafterLabel = select(1, Tradewright:GetCraftRecommendedCrafter(ctx.opportunityRow))
+	end
+	return crafterLabel or Tradewright:GetDashboardSidebarCharacterLabel(
+		characterKey,
+		Tradewright.db.characters and Tradewright.db.characters[characterKey],
+		Tradewright:GetCharacterKey()
+	)
+end
+
 local function buildEntryFromEval(ctx, quantity)
 	local eval = ctx.eval
 	if not eval then
@@ -270,18 +289,7 @@ local function buildEntryFromEval(ctx, quantity)
 		return nil
 	end
 
-	local crafterLabel = ctx.recommendedCrafterLabel
-	if not crafterLabel and ctx.opportunityRow then
-		crafterLabel = select(1, Tradewright:GetCraftRecommendedCrafter(ctx.opportunityRow))
-	end
-	if not crafterLabel then
-		crafterLabel = Tradewright:GetDashboardSidebarCharacterLabel(
-			characterKey,
-			Tradewright.db.characters and Tradewright.db.characters[characterKey],
-			Tradewright:GetCharacterKey()
-		)
-	end
-
+	local crafterLabel = recommendedCrafterLabel(ctx, characterKey)
 	local confidence = ctx.confidence or Tradewright:ResolveCraftConfidenceState(eval, ctx.dataSource)
 
 	return {
@@ -300,6 +308,7 @@ local function buildEntryFromEval(ctx, quantity)
 		scenarioBaseQualityIndex = tonumber(eval.scenarioBaseQualityIndex),
 		outputIcon = eval.outputIcon,
 		salvageSpellID = salvageSpellOf(eval),
+		enchantSpellID = enchantSpellOf(eval),
 		reagentPlan = copyReagentPlan(eval.reagentPlan),
 		snapshot = evaluationSnapshot(eval, crafterLabel, confidence),
 		addedAt = time(),

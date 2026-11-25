@@ -78,12 +78,13 @@
 | [f117-shared-ui-helpers](issues/e13-code-health/f117-shared-ui-helpers/README.md) | Shared UI helpers | done |
 | [f118-split-data-util-foreverlogic](issues/e13-code-health/f118-split-data-util-foreverlogic/README.md) | Split Data.lua, Util.lua and ForeverLogic.lua | done |
 | [f119-rename-namespace](issues/e13-code-health/f119-rename-namespace/README.md) | Rename ProfessionExporter to Tradewright | done |
-| [e14-profession-leveling](issues/e14-profession-leveling/README.md) | Profession leveling: cheapest route in the profession side panel | done |
+| [e14-profession-leveling](issues/e14-profession-leveling/README.md) | Profession leveling: cheapest route in the profession side panel | done; F151 implemented, not checked in game |
 | [f120-skill-up-maths](issues/e14-profession-leveling/f120-skill-up-maths/README.md) | Skill-up maths | done |
 | [f121-route-maths](issues/e14-profession-leveling/f121-route-maths/README.md) | Route maths | done |
 | [f122-leveling-data](issues/e14-profession-leveling/f122-leveling-data/README.md) | Leveling data and craft queue integration | done |
 | [f123-leveling-view](issues/e14-profession-leveling/f123-leveling-view/README.md) | Leveling view in the profession side panel | done |
 | [f124-trainer-recipes](issues/e14-profession-leveling/f124-trainer-recipes/README.md) | Trainer recipes | done |
+| [f151-forever-enchants](issues/e14-profession-leveling/f151-forever-enchants/README.md) | Enchants on Forever: cast on gear, not on vellum | implemented, not checked in game |
 | [e15-reagent-stash](issues/e15-reagent-stash/README.md) | Stash reagents: bank deposit, take for the queue, reagent mail | done |
 | [f125-deposit-reagents-in-the-bank](issues/e15-reagent-stash/f125-deposit-reagents-in-the-bank/README.md) | Deposit reagents in the bank | done |
 | [f126-take-queue-materials-from-the-bank](issues/e15-reagent-stash/f126-take-queue-materials-from-the-bank/README.md) | Take the craft queue's materials from the bank | done |
@@ -118,6 +119,6 @@
 | [f149-profession-rail](issues/e21-docked-panels/f149-profession-rail/README.md) | Profession panel uses the rail | implemented, not checked in game |
 | [f150-mail-rail](issues/e21-docked-panels/f150-mail-rail/README.md) | Mail panel uses the rail | implemented, not checked in game |
 
-Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E07 follow-ups: F55, then F56 → F57 → F58. E10: F80 first (no dependencies), then F81 and F82. E13: F105, F106, F119, then F107 and F108; F109 and F110 (after F106); F117 (after F109); F111; F112; F113; then the splits F114, F115, F116, F118. E14: F120 → F121 → F122 → F123, then F124. E15: F125 → F126, F127. E18: F134 (stands alone), F135, then F136 and F137, then F138. E20: after F136 and F138 are checked in game, F141 and F142 (independent), then F143 → F144, then F145, F146, F147. E21: F148, then F149 and F150 (independent).
+Suggested order: F40 → F43 → F42 → F41 → F44, then F50 and F70 (independent of each other), then the rest of E07, E08 and E09. E07 follow-ups: F55, then F56 → F57 → F58. E10: F80 first (no dependencies), then F81 and F82. E13: F105, F106, F119, then F107 and F108; F109 and F110 (after F106); F117 (after F109); F111; F112; F113; then the splits F114, F115, F116, F118. E14: F120 → F121 → F122 → F123, then F124; F151 after F124. E15: F125 → F126, F127. E18: F134 (stands alone), F135, then F136 and F137, then F138. E20: after F136 and F138 are checked in game, F141 and F142 (independent), then F143 → F144, then F145, F146, F147. E21: F148, then F149 and F150 (independent).
 
 Research behind E06 to E09: [WoW gold making market strategies](../research/gold-making-market-strategies.md). Designs: [Tradewright Screens](https://claude.ai/artifact/3fV6WrMyawZwaKEAhNnSs5), section "Finding gold"; E14 in section "Profession leveling (E14)"; E21 in section "Proposed, not built yet: folding the docked side panels".

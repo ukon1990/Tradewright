@@ -191,6 +191,57 @@ local function craftSalvageRecipe(pe, row, amount)
 	return false
 end
 
+-- The items an enchant can go on, as the profession window's target picker lists them, each as
+-- `{ location, itemID, equipped, sellPrice }`. nil when the client cannot tell.
+local function enchantTargetItems(pe, recipeSpellID)
+	if not (C_TradeSkillUI.GetEnchantItems and C_Item and C_Item.GetItemLocation) then
+		return nil
+	end
+	local ok, itemGUIDs = pcall(C_TradeSkillUI.GetEnchantItems, recipeSpellID)
+	if not ok or type(itemGUIDs) ~= "table" then
+		return nil
+	end
+	local items = {}
+	for _, itemGUID in ipairs(itemGUIDs) do
+		local location = C_Item.GetItemLocation(itemGUID)
+		if location and location:IsValid() then
+			local itemID = C_Item.GetItemID(location)
+			items[#items + 1] = {
+				location = location, itemID = itemID, equipped = location:IsEquipmentSlot(), sellPrice = pe:GetItemVendorSellCopper(itemID),
+			}
+		end
+	end
+	return items
+end
+
+--- The gear an enchant cast on gear would go on (see EnchantLogic.PickTarget): `{ location, itemID,
+--- equipped }`, or nil when nothing the player wears or carries fits. The second value is false when
+--- the client cannot tell which items fit.
+function Tradewright:FindEnchantTarget(recipeSpellID)
+	local items = enchantTargetItems(self, tonumber(recipeSpellID))
+	if not items then
+		return nil, false
+	end
+	return self.EnchantLogic.PickTarget(items), true
+end
+
+-- An enchant cast on gear goes on the item FindEnchantTarget picks, one cast per click. The game
+-- itself asks before it replaces an enchant or binds the item. Without a target, or a client that
+-- cannot cast on one, the recipe opens for the player to pick the item.
+local function craftEnchantOnGear(pe, row, recipeSpellID)
+	local target, fitKnown = pe:FindEnchantTarget(recipeSpellID)
+	if target and C_TradeSkillUI.CraftEnchant and pcall(C_TradeSkillUI.CraftEnchant, recipeSpellID, 1, nil, target.location) then
+		return true
+	end
+	pe:JumpToProfessionRecipe(recipeSpellID, row.skillLineID)
+	if fitKnown and not target then
+		pe:PrintMessage(string.format(L["%s needs an item to enchant, and nothing you wear or carry fits."], row.recipeLabel or ""))
+	else
+		pe:PrintMessage(string.format(L["Pick the item to enchant with %s in the profession window."], row.recipeLabel or ""))
+	end
+	return false
+end
+
 -- A shown, enabled button, or nil.
 local function usableButton(button)
 	return button and button:IsShown() and button:IsEnabled() and button or nil
@@ -248,6 +299,12 @@ local function craftResultItemID(result)
 	return itemID or tonumber(result.itemID)
 end
 
+-- The spell a queue line is counted off by, one craft per cast: salvage gives random items and an
+-- enchant cast on gear gives none, so neither can be counted by a crafted item. nil for other lines.
+local function castCountedSpell(entry)
+	return tonumber(entry.salvageSpellID or entry.enchantSpellID)
+end
+
 -- Counts a finished craft off a queue line; a crafting-order line also leaves the crafting-order queue.
 local function deductQueueEntry(pe, queueKey, entry, craftedItemID, craftedQuantity)
 	local orderID = tonumber(entry.orderID)
@@ -264,7 +321,7 @@ local function deductPendingCraft(pe, storage, craftedItemID, craftedQuantity)
 	local pending = activePendingCraft(pe)
 	local queueKey = pending and pending.queueKey
 	local entry = queueKey and storage[queueKey]
-	if not entry then
+	if not entry or castCountedSpell(entry) then
 		return false
 	end
 	if pending.outputItemID and craftedItemID and tonumber(craftedItemID) ~= tonumber(pending.outputItemID) then
@@ -282,7 +339,7 @@ local function deductByOutputItem(pe, storage, craftedItemID, craftedQuantity)
 		return false
 	end
 	for queueKey, entry in pairs(storage) do
-		if tonumber(entry and entry.outputItemID) == tonumber(craftedItemID) then
+		if tonumber(entry and entry.outputItemID) == tonumber(craftedItemID) and not castCountedSpell(entry) then
 			deductQueueEntry(pe, queueKey, entry, craftedItemID, craftedQuantity)
 			return true
 		end
@@ -340,24 +397,36 @@ function Tradewright:OnProfessionRecipeCraftedResult(craftingItemResultData)
 	finishOpenCraftingOrder(self, craftedItemID)
 end
 
---- UNIT_SPELLCAST_SUCCEEDED: a salvage recipe gives random items, so its queue line cannot be counted
---- down by a crafted item. The cast of the recipe itself counts it, one craft per cast.
+--- UNIT_SPELLCAST_SUCCEEDED: counts a salvage or enchant-on-gear line down by one per cast of its
+--- recipe (see castCountedSpell).
 function Tradewright:OnUnitSpellcastSucceeded(unit, _, spellID)
 	if unit ~= "player" or not self.GetCraftQueueStorage then
 		return
 	end
 	local characterKey = self:GetCharacterKey()
 	for queueKey, entry in pairs(self:GetCraftQueueStorage()) do
-		if type(entry) == "table" and entry.salvageSpellID == spellID and entry.characterKey == characterKey then
+		if type(entry) == "table" and castCountedSpell(entry) == spellID and entry.characterKey == characterKey then
 			self:UpdateCraftQueueQuantity(queueKey, (tonumber(entry.quantity) or 0) - 1)
 			return
 		end
 	end
 end
 
---- Crafts a queue row inside the click: through the open recipe's Create button, or by recipe id
---- while another recipe shows, which is then opened with the queued quantity filled in. A crafting
---- order row instead steps through its order in the orders tab.
+-- A recipe that makes an item: through the open recipe's Create button, or by recipe id while
+-- another recipe shows, which is then opened with the amount filled in.
+local function craftRecipe(pe, row, recipeSpellID, craftAmount)
+	if startOpenRecipeCraft(pe, recipeSpellID, craftAmount) then
+		return true
+	end
+	craftUnopenedRecipe(pe, recipeSpellID, craftAmount)
+	pe:JumpToProfessionRecipe(recipeSpellID, row.skillLineID)
+	setQuantityWhenOpen(pe, recipeSpellID, craftAmount)
+	return true
+end
+
+--- Crafts a queue row inside the click (see craftRecipe). A crafting order row instead steps through
+--- its order in the orders tab, a salvage row works on one stack, and an enchant cast on gear goes on
+--- the item FindEnchantTarget picks.
 function Tradewright:CraftProfessionQueueRecipe(row)
 	if type(row) ~= "table" then
 		return false
@@ -374,12 +443,8 @@ function Tradewright:CraftProfessionQueueRecipe(row)
 	local craftAmount = math.max(1, math.floor(tonumber(row.quantity) or 1))
 	if row.salvageSpellID then
 		return craftSalvageRecipe(self, row, craftAmount)
+	elseif row.enchantSpellID then
+		return craftEnchantOnGear(self, row, recipeSpellID)
 	end
-	if startOpenRecipeCraft(self, recipeSpellID, craftAmount) then
-		return true
-	end
-	craftUnopenedRecipe(self, recipeSpellID, craftAmount)
-	self:JumpToProfessionRecipe(recipeSpellID, row.skillLineID)
-	setQuantityWhenOpen(self, recipeSpellID, craftAmount)
-	return true
+	return craftRecipe(self, row, recipeSpellID, craftAmount)
 end

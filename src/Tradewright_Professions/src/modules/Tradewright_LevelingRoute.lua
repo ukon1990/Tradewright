@@ -235,9 +235,27 @@ local function candidateReagents(evaluation)
 	return reagents
 end
 
+-- What one craft gives back, in each give-back mode, and the item it makes for later steps to reuse.
+local function priceGiveBack(self, candidate, evaluation)
+	-- A salvage recipe (Prospecting, Milling) makes no one item: nothing to reuse or sell to a vendor,
+	-- but what it gives on average can be sold at auction once its yield is known.
+	if evaluation.isSalvage then
+		candidate.auctionGiveBack = evaluation.saleNet and evaluation.saleNet * evaluation.outputQty or nil
+	elseif evaluation.enchantsGear then
+		-- An enchant cast on gear stays on that gear: nothing to sell or reuse. Its output id is a
+		-- stand-in and must not be priced as an item.
+		candidate.enchantsGear = true
+	else
+		candidate.vendorGiveBack, candidate.auctionGiveBack = giveBackPerCraft(self, evaluation)
+		candidate.disenchantGiveBack, candidate.disenchantBasis = disenchantPerCraft(self, evaluation)
+		candidate.outputItemID = tonumber(evaluation.outputItemID)
+		candidate.outputQuantity = math.max(1, tonumber(evaluation.outputQty) or 1)
+	end
+end
+
 -- Cost and give-back of one craft, read from the crafts engine. A recipe it cannot price (a missing
--- material price, or no crafted item to value, as with enchants) gets no `materialCost`. A salvage
--- recipe is priced with the cheapest item it can destroy.
+-- material price, or no crafted item to value) gets no `materialCost`. A salvage recipe is priced
+-- with the cheapest item it can destroy; an enchant cast on gear by its reagents alone.
 local function priceCandidate(self, candidate, build, workItem)
 	local evaluation = self:EvaluateCraftScenario(
 		build.characterKey, build.professionData, tonumber(workItem.recipeKey) or workItem.recipeKey, workItem.recipeData, MARKET_PRICING)
@@ -248,16 +266,7 @@ local function priceCandidate(self, candidate, build, workItem)
 	candidate.name = evaluation.recipeName or candidate.name
 	candidate.materialCost = evaluation.fullMatCost
 	candidate.reagents = candidateReagents(evaluation)
-	-- A salvage recipe (Prospecting, Milling) makes no one item: nothing to reuse or sell to a vendor,
-	-- but what it gives on average can be sold at auction once its yield is known.
-	if evaluation.isSalvage then
-		candidate.auctionGiveBack = evaluation.saleNet and evaluation.saleNet * evaluation.outputQty or nil
-	else
-		candidate.vendorGiveBack, candidate.auctionGiveBack = giveBackPerCraft(self, evaluation)
-		candidate.disenchantGiveBack, candidate.disenchantBasis = disenchantPerCraft(self, evaluation)
-		candidate.outputItemID = tonumber(evaluation.outputItemID)
-		candidate.outputQuantity = math.max(1, tonumber(evaluation.outputQty) or 1)
-	end
+	priceGiveBack(self, candidate, evaluation)
 end
 
 local function buildCandidate(self, build, workItem)
