@@ -32,10 +32,12 @@ local function setMailField(box, text)
 	end
 end
 
+-- Skips locked slots: an item just attached (or split from) stays in its bag slot, locked,
+-- until the server answers, so without this every pick lands on the same slot.
 local function findBagSlotForItem(itemID)
 	local foundBag, foundSlot, stack
 	Tradewright:ForEachBagSlot(nil, function(bag, slot, info)
-		if info and tonumber(info.itemID) == tonumber(itemID) and (tonumber(info.stackCount) or 0) > 0 then
+		if info and not info.isLocked and tonumber(info.itemID) == tonumber(itemID) and (tonumber(info.stackCount) or 0) > 0 then
 			foundBag, foundSlot, stack = bag, slot, tonumber(info.stackCount)
 			return true
 		end
@@ -52,14 +54,12 @@ local function attachItemQuantity(itemID, quantity)
 			return false, quantity - remaining
 		end
 		local take = math.min(remaining, stack)
+		-- A split puts the part on the cursor; picking the slot up again would drop it back.
 		if take < stack and C_Container.SplitContainerItem then
 			C_Container.SplitContainerItem(bag, slot, take)
-			bag, slot = findBagSlotForItem(itemID)
-			if not bag then
-				return false, quantity - remaining
-			end
+		else
+			C_Container.PickupContainerItem(bag, slot)
 		end
-		C_Container.PickupContainerItem(bag, slot)
 		ClickSendMailItemButton()
 		remaining = remaining - take
 	end
